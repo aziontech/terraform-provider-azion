@@ -57,7 +57,6 @@ func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 	}
 }
 
-// Configure prepares a HashiCups API client for data sources and resources.
 func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var config AzionProviderModel
 	diags := req.Config.Get(ctx, &config)
@@ -69,7 +68,7 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	APIToken := os.Getenv("APIToken")
+	APIToken := os.Getenv(consts.APITokenEnvVarKey)
 
 	if !config.APIToken.IsNull() {
 		APIToken = config.APIToken.ValueString()
@@ -88,7 +87,9 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 
 // DataSources defines the data sources implemented in the provider.
 func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return nil
+	return []func() datasource.DataSource{
+		dataSourceAzionZone,
+	}
 }
 
 // Resources defines the resources implemented in the provider.
