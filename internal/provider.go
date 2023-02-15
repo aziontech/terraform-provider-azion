@@ -3,6 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"os"
+	"regexp"
+	"terraform-provider-azion/internal/consts"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -11,9 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"os"
-	"regexp"
-	"terraform-provider-azion/internal/consts"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -45,7 +46,7 @@ func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 		Attributes: map[string]schema.Attribute{
 			consts.APITokenSchemaKey: schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: fmt.Sprintf("The API Token for operations. Alternatively, can be configured using the `%s` environment variable. Must provide only one of `api_key`, `api_token`, `api_user_service_key`.", consts.APITokenEnvVarKey),
+				MarkdownDescription: fmt.Sprintf("The API Token for operations. Must provide as `%s`. Alternatively, can be configured using the `%s` environment variable.", consts.APITokenSchemaKey, consts.APITokenEnvVarKey),
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`[A-Za-z0-9-_]{40}`),
@@ -87,9 +88,7 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 
 // DataSources defines the data sources implemented in the provider.
 func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		dataSourceAzionZone,
-	}
+	return []func() datasource.DataSource{}
 }
 
 // Resources defines the resources implemented in the provider.
