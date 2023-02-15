@@ -4,7 +4,7 @@ NAMESPACE=edu
 NAME=azion
 BINARY=terraform-provider-${NAME}
 VERSION=0.3.1
-OS_ARCH=darwin_amd64
+OS_ARCH=linux_amd64
 
 default: install
 
@@ -24,3 +24,9 @@ test:
 
 testacc: 
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m   
+
+clean:
+	rm -rf ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}/${BINARY}
+	rm -rf ./examples/.terraform*
+	rm -f ./examples/terraform.tfstate.backup
+	rm -f ./examples/terraform.tfstate
