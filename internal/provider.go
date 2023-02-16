@@ -11,12 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"os"
 	"regexp"
 	"terraform-provider-azion/internal/consts"
 )
 
-// Ensure the implementation satisfies the expected interfaces
 var (
 	_ provider.Provider = &azionProvider{}
 )
@@ -25,7 +25,6 @@ type AzionProviderModel struct {
 	APIToken types.String `tfsdk:"api_token"`
 }
 
-// azionProvider is the provider implementation.
 type azionProvider struct {
 	version string
 }
@@ -34,12 +33,10 @@ func New() provider.Provider {
 	return &azionProvider{}
 }
 
-// Metadata returns the provider type name.
 func (p *azionProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "azionProvider"
+	resp.TypeName = "azion"
 }
 
-// Schema defines the provider-level schema for configuration data.
 func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -58,6 +55,7 @@ func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 }
 
 func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	tflog.Debug(ctx, fmt.Sprintf("Configuring Azion Client"))
 	var config AzionProviderModel
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -79,20 +77,20 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	idnsConfig := idns.NewConfiguration()
 	idnsConfig.AddDefaultHeader("Authorization", "token"+APIToken)
 
+	ctx = tflog.SetField(ctx, "AZION_TERRAFORM_TOKEN", APIToken)
+
 	client := idns.NewAPIClient(idnsConfig)
 
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
 
-// DataSources defines the data sources implemented in the provider.
 func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		dataSourceAzionZone,
 	}
 }
 
-// Resources defines the resources implemented in the provider.
 func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource {
 	return nil
 }
