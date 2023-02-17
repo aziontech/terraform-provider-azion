@@ -10,3 +10,7 @@ provider "azion" {
 }
 
 data "azion_zones" "dev" {}
+
+output "dev_zones" {
+  value = data.azion_zones.dev
+}

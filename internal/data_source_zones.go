@@ -24,28 +24,22 @@ type ZoneDataSource struct {
 }
 
 type ZoneDataSourceModel struct {
-	SchemaVersion types.Int64            `tfsdk:"schemaVersion"`
-	Count         types.Int64            `tfsdk:"count"`
-	TotalPages    types.Int64            `tfsdk:"totalPages"`
+	SchemaVersion types.Int64            `tfsdk:"schema_version"`
+	Counter       types.Int64            `tfsdk:"counter"`
+	TotalPages    types.Int64            `tfsdk:"total_pages"`
 	Links         *GetZonesResponseLinks `tfsdk:"links"`
 	Results       []Zone                 `tfsdk:"results"`
 }
 
 type GetZonesResponseLinks struct {
-	Previous types.String `tfsdk:"Previous"`
-	Next     types.String `tfsdk:"Next"`
+	Previous types.String `tfsdk:"previous"`
+	Next     types.String `tfsdk:"next"`
 }
 type Zone struct {
-	Id          types.Int64    `tfsdk:"id"`
-	Name        types.String   `tfsdk:"name"`
-	Domain      types.String   `tfsdk:"domain"`
-	IsActive    types.Bool     `tfsdk:"is_active"`
-	Retry       types.Int64    `tfsdk:"retry"`
-	NxTtl       types.Int64    `tfsdk:"nxTtl"`
-	SoaTtl      types.Int64    `tfsdk:"soaTtl"`
-	Refresh     types.Int64    `tfsdk:"refresh"`
-	Expiry      types.Int64    `tfsdk:"expiry"`
-	Nameservers []types.String `tfsdk:"nameservers"`
+	Id       types.Int64  `tfsdk:"id"`
+	Name     types.String `tfsdk:"name"`
+	Domain   types.String `tfsdk:"domain"`
+	IsActive types.Bool   `tfsdk:"is_active"`
 }
 
 func (d *ZoneDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -56,51 +50,50 @@ func (d *ZoneDataSource) Configure(_ context.Context, req datasource.ConfigureRe
 }
 
 func (d *ZoneDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	tflog.Debug(ctx, fmt.Sprintf("Metadada Name"))
-	ctx = tflog.SetField(ctx, "Provider_typeName", req.ProviderTypeName)
 	resp.TypeName = req.ProviderTypeName + "_zones"
 }
 
 func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"links": schema.ListNestedAttribute{
+			"schema_version": schema.Int64Attribute{
 				Computed: true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"previous": schema.StringAttribute{
-							Computed: true,
-						},
-						"next": schema.StringAttribute{
-							Computed: true,
-						},
-					},
-				},
+			},
+			"counter": schema.Int64Attribute{
+				Computed: true,
 			},
 			"total_pages": schema.Int64Attribute{
 				Computed: true,
+			},
+			"links": schema.SingleNestedAttribute{
+				Computed: true,
+				Attributes: map[string]schema.Attribute{
+					"previous": schema.StringAttribute{
+						Computed: true,
+					},
+					"next": schema.StringAttribute{
+						Computed: true,
+					},
+				},
 			},
 			"results": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"domain": schema.StringAttribute{
-							Required: true,
+							Computed: true,
 						},
 						"is_active": schema.BoolAttribute{
-							Required: true,
+							Computed: true,
 						},
 						"name": schema.StringAttribute{
-							Required: true,
+							Computed: true,
 						},
 						"id": schema.Int64Attribute{
-							Required: true,
+							Computed: true,
 						},
 					},
 				},
-			},
-			"schema_version": schema.Int64Attribute{
-				Computed: true,
 			},
 		},
 	}
@@ -109,7 +102,6 @@ func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 
 func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	tflog.Debug(ctx, fmt.Sprintf("Reading Zones"))
-	var state ZoneDataSourceModel
 	zoneResponse, _, err := d.client.ZonesApi.GetZones(ctx).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -117,33 +109,34 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			err.Error(),
 		)
 	}
-
-	attributes := map[string]interface{}{
-		//"count":          result.Count,
-		"total_pages":    zoneResponse.TotalPages,
-		"schema_version": zoneResponse.SchemaVersion,
+	var previous, next string
+	if zoneResponse.Links != nil {
+		if zoneResponse.Links.Previous.Get() != nil {
+			previous = *zoneResponse.Links.Previous.Get()
+		}
+		if zoneResponse.Links.Next.Get() != nil {
+			next = *zoneResponse.Links.Next.Get()
+		}
+	}
+	zoneState := ZoneDataSourceModel{
+		SchemaVersion: types.Int64Value(int64(*zoneResponse.SchemaVersion)),
+		TotalPages:    types.Int64Value(int64(*zoneResponse.TotalPages)),
+		Counter:       types.Int64Value(int64(*zoneResponse.Count)),
+		Links: &GetZonesResponseLinks{
+			Previous: types.StringValue(previous),
+			Next:     types.StringValue(next),
+		},
 	}
 
-	links := map[string]interface{}{
-		//"count":    result.Count,
-		"previous": zoneResponse.Links.Previous,
-		"next":     zoneResponse.Links.Next,
-	}
-
-	attributes["links"] = links
-
-	var res []interface{}
-	for _, result := range zoneResponse.Results {
-		res = append(res, map[string]interface{}{
-			"domain":    result.Domain,
-			"is_active": result.IsActive,
-			"name":      result.Name,
-			"id":        result.Id,
+	for _, resultZone := range zoneResponse.Results {
+		zoneState.Results = append(zoneState.Results, Zone{
+			Domain:   types.StringValue(*resultZone.Domain),
+			IsActive: types.BoolValue(*resultZone.IsActive),
+			Name:     types.StringValue(*resultZone.Name),
+			Id:       types.Int64Value(int64(*resultZone.Id)),
 		})
 	}
-
-	attributes["results"] = res
-	diags := resp.State.Set(ctx, &state)
+	diags := resp.State.Set(ctx, &zoneState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
