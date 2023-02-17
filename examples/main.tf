@@ -6,12 +6,7 @@ terraform {
   }
 }
 provider "azion" {
-  api_token  = "5941152beb56dd1f27425a9b1744ff407d903d64"
+  api_token  = "55e6a1a3b0a16d30ba70a360bb19566724244226"
 }
 
-data "azion_zones" "this" {
-
-    output "dev_zones" {
-      value = data.azion_coffees.dev
-    }
-}
+data "azion_zones" "dev" {}

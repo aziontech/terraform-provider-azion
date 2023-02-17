@@ -24,11 +24,11 @@ type ZoneDataSource struct {
 }
 
 type ZoneDataSourceModel struct {
-	SchemaVersion types.Int64            `tfsdk:"SchemaVersion"`
-	Count         types.Int64            `tfsdk:"Count"`
-	TotalPages    types.Int64            `tfsdk:"TotalPages"`
-	Links         *GetZonesResponseLinks `tfsdk:"Links"`
-	Results       []Zone                 `tfsdk:"Results"`
+	SchemaVersion types.Int64            `tfsdk:"schemaVersion"`
+	Count         types.Int64            `tfsdk:"count"`
+	TotalPages    types.Int64            `tfsdk:"totalPages"`
+	Links         *GetZonesResponseLinks `tfsdk:"links"`
+	Results       []Zone                 `tfsdk:"results"`
 }
 
 type GetZonesResponseLinks struct {
@@ -36,27 +36,28 @@ type GetZonesResponseLinks struct {
 	Next     types.String `tfsdk:"Next"`
 }
 type Zone struct {
-	Id          types.Int64    `tfsdk:"Id"`
-	Name        types.String   `tfsdk:"Name"`
-	Domain      types.String   `tfsdk:"Domain"`
-	IsActive    types.Bool     `tfsdk:"IsActive"`
-	Retry       types.Int64    `tfsdk:"Retry"`
-	NxTtl       types.Int64    `tfsdk:"NxTtl"`
-	SoaTtl      types.Int64    `tfsdk:"SoaTtl"`
-	Refresh     types.Int64    `tfsdk:"Refresh"`
-	Expiry      types.Int64    `tfsdk:"Expiry"`
-	Nameservers []types.String `tfsdk:"Nameservers"`
+	Id          types.Int64    `tfsdk:"id"`
+	Name        types.String   `tfsdk:"name"`
+	Domain      types.String   `tfsdk:"domain"`
+	IsActive    types.Bool     `tfsdk:"is_active"`
+	Retry       types.Int64    `tfsdk:"retry"`
+	NxTtl       types.Int64    `tfsdk:"nxTtl"`
+	SoaTtl      types.Int64    `tfsdk:"soaTtl"`
+	Refresh     types.Int64    `tfsdk:"refresh"`
+	Expiry      types.Int64    `tfsdk:"expiry"`
+	Nameservers []types.String `tfsdk:"nameservers"`
 }
 
 func (d *ZoneDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
-
 	d.client = req.ProviderData.(*idns.APIClient)
 }
 
-func (d *ZoneDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *ZoneDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	tflog.Debug(ctx, fmt.Sprintf("Metadada Name"))
+	ctx = tflog.SetField(ctx, "Provider_typeName", req.ProviderTypeName)
 	resp.TypeName = req.ProviderTypeName + "_zones"
 }
 

@@ -9,7 +9,7 @@ OS_ARCH=linux_amd64
 default: install
 
 build:
-	go build -o ${BINARY}
+	go build -gcflags="all=-N -l" -o ${BINARY}
 
 release:
 	goreleaser release --rm-dist --snapshot --skip-publish  --skip-sign
