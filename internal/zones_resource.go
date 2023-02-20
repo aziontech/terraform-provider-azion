@@ -98,14 +98,14 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	// Generate API request body from plan
-	zoneRequest := r.client
-	var items []zones
+	zoneRequest := r.client.ZonesApi.PostZone(ctx).Zone()
+
+	var items []*idns.Zone
 	for _, item := range plan.zones {
-		items = append(items, hashicups.OrderItem{
-			Coffee: hashicups.Coffee{
-				ID: int(item.Coffee.ID.ValueInt64()),
-			},
-			Quantity: int(item.Quantity.ValueInt64()),
+		items = append(items, idns.Zone{
+			Name:     string(item.Name.ValueString()),
+			Domain:   item.Domain.ValueString(),
+			IsActive: item.IsActive.ValueBool(),
 		})
 	}
 
