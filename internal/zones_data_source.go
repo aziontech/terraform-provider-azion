@@ -105,9 +105,10 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	zoneResponse, _, err := d.client.ZonesApi.GetZones(ctx).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Read Azion Zones",
+			"Token has expired",
 			err.Error(),
 		)
+		return
 	}
 	var previous, next string
 	if zoneResponse.Links != nil {
