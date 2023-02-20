@@ -7,24 +7,6 @@ const (
 	// Environment variable key for the API token configuration.
 	APITokenEnvVarKey = "AZION_TERRAFORM_TOKEN"
 
-	// Schema key for the API key configuration.
-	APIKeySchemaKey = "api_key"
-
-	// Environment variable key for the API key configuration.
-	APIKeyEnvVarKey = "azion_API_KEY"
-
-	// Schema key for the email configuration.
-	EmailSchemaKey = "email"
-
-	// Environment variable key for the email configuration.
-	EmailEnvVarKey = "azion_EMAIL"
-
-	// Schema key for the API user service key configuration.
-	APIUserServiceKeySchemaKey = "api_user_service_key"
-
-	// Environment variable key for the API user service key configuration.
-	APIUserServiceKeyEnvVarKey = "azion_API_USER_SERVICE_KEY"
-
 	// Schema key for the API hostname configuration.
 	APIHostnameSchemaKey = "api_hostname"
 
