@@ -128,7 +128,6 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			Next:     types.StringValue(next),
 		},
 	}
-
 	for _, resultZone := range zoneResponse.Results {
 		zoneState.Results = append(zoneState.Results, Zone{
 			Domain:   types.StringValue(*resultZone.Domain),

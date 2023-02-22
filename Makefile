@@ -30,3 +30,6 @@ clean:
 	rm -rf ./examples/.terraform*
 	rm -f ./examples/terraform.tfstate.backup
 	rm -f ./examples/terraform.tfstate
+	rm -rf ./examples/Resource/.terraform*
+	rm -f ./examples/Resource/terraform.tfstate.backup
+	rm -f ./examples/Resource/terraform.tfstate

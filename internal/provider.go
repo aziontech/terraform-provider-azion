@@ -81,5 +81,7 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 }
 
 func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource {
-	return nil
+	return []func() resource.Resource{
+		NewZoneResource,
+	}
 }
