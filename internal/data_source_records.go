@@ -32,6 +32,11 @@ type RecordsDataSourceModel struct {
 	Results       *GetRecordsResponseResults `tfsdk:"results"`
 }
 
+type GetZonesResponseLinks struct {
+	Previous types.String `tfsdk:"previous"`
+	Next     types.String `tfsdk:"next"`
+}
+
 type GetRecordsResponseResults struct {
 	ZoneId  types.Int64  `tfsdk:"zone_id"`
 	Domain  types.String `tfsdk:"domain"`
