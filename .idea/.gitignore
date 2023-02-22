@@ -1,0 +1,24 @@
+# testing and custom build code
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+*.log
+
+# local files
+.DS_Store
+/dist
+
+# vscode
+.vscode/
+__debug_bin
+
+# eclipse
+.classpath
+.project
+.settings
+
+# IntelliJ
+/.idea/
+*.ipr
+*.iws
+*.iml
