@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"github.com/aziontech/azionapi-go-sdk/idns"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -29,7 +28,7 @@ type zoneResource struct {
 type zoneResourceModel struct {
 	IDplan        types.String `tfsdk:"idplan"`
 	SchemaVersion types.Int64  `tfsdk:"schema_version"`
-	zone          zoneModel    `tfsdk:"zone"`
+	zone          *zoneModel   `tfsdk:"zone"`
 	LastUpdated   types.String `tfsdk:"last_updated"`
 }
 
@@ -112,7 +111,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	plan.IDplan = types.StringValue(strconv.Itoa(int(*createZone.Results[0].Id)))
 	plan.SchemaVersion = types.Int64Value(int64(*createZone.SchemaVersion))
 	for _, resultZone := range createZone.Results {
-		plan.zone = zoneModel{
+		plan.zone = &zoneModel{
 			Domain:   types.StringValue(*resultZone.Domain),
 			IsActive: types.BoolValue(*resultZone.IsActive),
 			Name:     types.StringValue(*resultZone.Name),
@@ -148,7 +147,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	// Overwrite items with refreshed state
-	state.zone = zoneModel{
+	state.zone = &zoneModel{
 		Domain:   types.StringValue(*order.Results.Domain),
 		IsActive: types.BoolValue(*order.Results.IsActive),
 		Name:     types.StringValue(*order.Results.Name),
@@ -175,5 +174,5 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Retrieve import ID and save to id attribute
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	//resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
