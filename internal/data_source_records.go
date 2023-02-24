@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -20,6 +19,10 @@ func dataSourceAzionRecords() datasource.DataSource {
 	return &RecordsDataSource{}
 }
 
+type AzionZoneidModel struct {
+	ZoneId types.Int64 `tfsdk:"zoneid"`
+}
+
 type RecordsDataSource struct {
 	client *idns.APIClient
 }
@@ -28,11 +31,11 @@ type RecordsDataSourceModel struct {
 	SchemaVersion types.Int64                `tfsdk:"schema_version"`
 	Counter       types.Int64                `tfsdk:"counter"`
 	TotalPages    types.Int64                `tfsdk:"total_pages"`
-	Links         *GetZonesResponseLinks     `tfsdk:"links"`
+	Links         *GetRecordsResponseLinks   `tfsdk:"links"`
 	Results       *GetRecordsResponseResults `tfsdk:"results"`
 }
 
-type GetZonesResponseLinks struct {
+type GetRecordsResponseLinks struct {
 	Previous types.String `tfsdk:"previous"`
 	Next     types.String `tfsdk:"next"`
 }
@@ -53,7 +56,7 @@ type Record struct {
 	Ttl         types.Int64    `tfsdk:"ttl"`
 }
 
-func (d *RecordsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+func (d *RecordsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -67,6 +70,9 @@ func (d *RecordsDataSource) Metadata(ctx context.Context, req datasource.Metadat
 func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"zoneid": schema.Int64Attribute{
+				Required: true,
+			},
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
@@ -110,7 +116,8 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 									Computed: true,
 								},
 								"answers_list": schema.ListAttribute{
-									Computed: true,
+									Optional:    true,
+									ElementType: types.StringType,
 								},
 								"policy": schema.StringAttribute{
 									Computed: true,
@@ -128,18 +135,42 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			},
 		},
 	}
+}
 
+func (d *RecordsDataSource) errorPrint(resp *datasource.ReadResponse, errMsg string) {
+	var usrMsg string
+	switch errMsg {
+	case "404 Not Found":
+		usrMsg = "No Records Found"
+	case "401 Unauthorized":
+		usrMsg = "Unauthorized Token"
+	default:
+		usrMsg = "Cannot read Azion response"
+	}
+
+	resp.Diagnostics.AddError(
+		usrMsg,
+		errMsg,
+	)
 }
 
 func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	tflog.Debug(ctx, fmt.Sprintf("Reading Records"))
-	zoneId := 2468 /*TODO read this from config*/
+	tflog.Debug(ctx, "Reading Records")
+	//zoneId := 2553 /*TODO read this from config*/
+
+	var config AzionZoneidModel
+	diags2 := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags2...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ZoneId := config.ZoneId.ValueInt64()
+	zoneId := ZoneId
+
 	recordsResponse, _, err := d.client.RecordsApi.GetZoneRecords(ctx, int32(zoneId)).Execute()
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Azion Records",
-			err.Error(),
-		)
+		d.errorPrint(resp, err.Error())
+		return
 	}
 	var previous, next string
 	if recordsResponse.Links != nil {
@@ -155,18 +186,24 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		SchemaVersion: types.Int64Value(int64(*recordsResponse.SchemaVersion)),
 		TotalPages:    types.Int64Value(int64(*recordsResponse.TotalPages)),
 		Counter:       types.Int64Value(int64(*recordsResponse.Count)),
-		Links: &GetZonesResponseLinks{
+		Links: &GetRecordsResponseLinks{
 			Previous: types.StringValue(previous),
 			Next:     types.StringValue(next),
 		},
-		Results: &GetRecordsResponseResults{
-			ZoneId: types.Int64Value(int64(*recordsResponse.Results.ZoneId)),
-			Domain: types.StringValue(*recordsResponse.Results.Domain),
-		},
+		Results: &GetRecordsResponseResults{},
+	}
+
+	if recordsResponse.Results.ZoneId != nil {
+		recordsState.Results.ZoneId = types.Int64Value(int64(*recordsResponse.Results.ZoneId))
+	}
+
+	if recordsResponse.Results.ZoneDomain != nil {
+		recordsState.Results.Domain = types.StringValue(*recordsResponse.Results.ZoneDomain)
 	}
 
 	for _, resultRecords := range recordsResponse.Results.Records {
 		var r = Record{
+			RecordId:    types.Int64Value(int64(*resultRecords.RecordId)),
 			Entry:       types.StringValue(*resultRecords.Entry),
 			Description: types.StringValue(*resultRecords.Description),
 			Policy:      types.StringValue(*resultRecords.Policy),

@@ -6,11 +6,13 @@ terraform {
   }
 }
 provider "azion" {
-  api_token  = "5d8ece2bd706de3823577ef25c170748437568ed"
+  api_token  = ""
 }
 
-data "azion_zones" "dev" {}
+data "azion_records" "dev" {
+  zoneid = 
+}
 
-output "dev_zones" {
-  value = data.azion_zones.dev
+output "dev_records" {
+  value = data.azion_records.dev
 }

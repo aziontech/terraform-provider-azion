@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -10,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"os"
 )
 
 var (
@@ -51,10 +52,6 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	APIToken := os.Getenv("api_token")
 
 	if !config.APIToken.IsNull() {
@@ -77,6 +74,7 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		dataSourceAzionZone,
+		dataSourceAzionRecords,
 	}
 }
 
