@@ -11,9 +11,9 @@ provider "azion" {
 
 resource "azion_order" "dev" {
   zone = {
-      domain: "ex3.com",
-      is_active: true,
-      name: "Hosted Zone criado pela terraform"
+      domain = "ex3.com",
+      is_active = true,
+      name = "Hosted"
     }
 }
 
