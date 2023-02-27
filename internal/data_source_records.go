@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -17,10 +18,6 @@ var (
 
 func dataSourceAzionRecords() datasource.DataSource {
 	return &RecordsDataSource{}
-}
-
-type AzionZoneidModel struct {
-	ZoneId types.Int64 `tfsdk:"zoneid"`
 }
 
 type RecordsDataSource struct {
@@ -70,9 +67,6 @@ func (d *RecordsDataSource) Metadata(ctx context.Context, req datasource.Metadat
 func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"zoneid": schema.Int64Attribute{
-				Required: true,
-			},
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
@@ -94,10 +88,10 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				},
 			},
 			"results": schema.SingleNestedAttribute{
-				Computed: true,
+				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"zone_id": schema.Int64Attribute{
-						Computed: true,
+						Required: true,
 					},
 					"domain": schema.StringAttribute{
 						Computed: true,
@@ -156,18 +150,16 @@ func (d *RecordsDataSource) errorPrint(resp *datasource.ReadResponse, errMsg str
 
 func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	tflog.Debug(ctx, "Reading Records")
-	//zoneId := 2553 /*TODO read this from config*/
 
-	var config AzionZoneidModel
-	diags2 := req.Config.Get(ctx, &config)
+	var getZoneId GetRecordsResponseResults
+	diags2 := req.Config.GetAttribute(ctx, path.Root("results"), &getZoneId)
 	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	ZoneId := config.ZoneId.ValueInt64()
-	zoneId := ZoneId
+	ZoneId := getZoneId.ZoneId.ValueInt64()
 
-	recordsResponse, _, err := d.client.RecordsApi.GetZoneRecords(ctx, int32(zoneId)).Execute()
+	recordsResponse, _, err := d.client.RecordsApi.GetZoneRecords(ctx, int32(ZoneId)).Execute()
 	if err != nil {
 		d.errorPrint(resp, err.Error())
 		return

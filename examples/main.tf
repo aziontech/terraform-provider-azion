@@ -10,7 +10,9 @@ provider "azion" {
 }
 
 data "azion_records" "dev" {
-  zoneid = 
+  results = {
+    zone_id = ""
+  }
 }
 
 output "dev_records" {
