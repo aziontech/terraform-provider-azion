@@ -6,12 +6,12 @@ terraform {
   }
 }
 provider "azion" {
-  api_token  = "25b58e5da327dfe81e77adf99a6cee05c27e7c3d"
+  api_token  = "ae21724627cc5f3fac461060caf86ac0dacfa00f"
 }
 
 resource "azion_order" "dev" {
   zone = {
-      domain: "ex11.com",
+      domain: "3ex.com",
       is_active: true,
       name: "Hosted Zone criado pela terraform"
     }

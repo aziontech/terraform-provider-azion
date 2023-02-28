@@ -89,19 +89,19 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 						Description: "Enable description of the DNS.",
 					},
 					"retry": schema.Int64Attribute{
-						Optional: true,
+						Computed: true,
 					},
 					"nxttl": schema.Int64Attribute{
-						Optional: true,
+						Computed: true,
 					},
 					"soattl": schema.Int64Attribute{
-						Optional: true,
+						Computed: true,
 					},
 					"refresh": schema.Int64Attribute{
-						Optional: true,
+						Computed: true,
 					},
 					"expiry": schema.Int64Attribute{
-						Optional: true,
+						Computed: true,
 					},
 					"nameservers": schema.ListAttribute{
 						Optional:    true,
@@ -144,7 +144,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 			errMsg = "No Records Found"
 		case "401 Unauthorized":
 			errMsg = "Unauthorized Token"
-		case "400 Bad Request ":
+		case "400 Bad Request":
 			errMsg = "This zone is already in use."
 		default:
 			errMsg = "Cannot read Azion response"
@@ -222,7 +222,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 }
 
-// Update updates the resource and sets the updated Terraform state on success.
+// Update updates the resource_zones and sets the updated Terraform state on success.
 func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan zoneResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -268,7 +268,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 }
 
-// Delete deletes the resource and removes the Terraform state on success.
+// Delete deletes the resource_zones and removes the Terraform state on success.
 func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state zoneResourceModel
 	diags := req.State.Get(ctx, &state)
