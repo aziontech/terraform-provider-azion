@@ -36,7 +36,7 @@ type GetZonesResponseLinks struct {
 	Next     types.String `tfsdk:"next"`
 }
 type Zone struct {
-	Id       types.Int64  `tfsdk:"id"`
+	ID       types.Int64  `tfsdk:"id"`
 	Name     types.String `tfsdk:"name"`
 	Domain   types.String `tfsdk:"domain"`
 	IsActive types.Bool   `tfsdk:"is_active"`
@@ -133,7 +133,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			Domain:   types.StringValue(*resultZone.Domain),
 			IsActive: types.BoolValue(*resultZone.IsActive),
 			Name:     types.StringValue(*resultZone.Name),
-			Id:       types.Int64Value(int64(*resultZone.Id)),
+			ID:       types.Int64Value(int64(*resultZone.Id)),
 		})
 	}
 	diags := resp.State.Set(ctx, &zoneState)

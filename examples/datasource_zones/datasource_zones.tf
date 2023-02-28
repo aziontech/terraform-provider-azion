@@ -6,9 +6,8 @@ terraform {
   }
 }
 provider "azion" {
-  api_token  = "22692e0c6f5bb53800e40ae139d32e5a5f58ae82"
+  api_token  = "token"
 }
-
 data "azion_zones" "dev" {}
 
 output "dev_zones" {

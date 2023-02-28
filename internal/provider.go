@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"github.com/aziontech/azionapi-go-sdk/idns"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"os"
+	"regexp"
 )
 
 var (
@@ -37,7 +40,14 @@ func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"api_token": schema.StringAttribute{
-				Optional: true,
+				Required:            true,
+				MarkdownDescription: fmt.Sprintf("The API Token for operations. Must provide `api_token`"),
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`[A-Za-z0-9-_]{40}`),
+						"API tokens must be 40 characters long and only contain characters a-z, A-Z, 0-9, hyphens and underscores",
+					),
+				},
 			},
 		},
 	}
@@ -48,10 +58,6 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	var config AzionProviderModel
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -77,6 +83,7 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		dataSourceAzionZone,
+		dataSourceAzionRecords,
 	}
 }
 
