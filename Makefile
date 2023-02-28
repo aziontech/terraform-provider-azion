@@ -1,15 +1,15 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=hashicorp.com
-NAMESPACE=edu
+NAMESPACE=dev
 NAME=azion
 BINARY=terraform-provider-${NAME}
-VERSION=0.3.1
-OS_ARCH=linux_amd64
+VERSION=0.0.1
+OS_ARCH=darwin_amd64
 
 default: install
 
 build:
-	go build -o ${BINARY}
+	go build -gcflags="all=-N -l" -o ${BINARY}
 
 release:
 	goreleaser release --rm-dist --snapshot --skip-publish  --skip-sign
