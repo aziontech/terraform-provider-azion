@@ -2,11 +2,11 @@ package provider
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -25,6 +25,7 @@ type RecordsDataSource struct {
 }
 
 type RecordsDataSourceModel struct {
+	ZoneId        types.Int64                `tfsdk:"zone_id"`
 	SchemaVersion types.Int64                `tfsdk:"schema_version"`
 	Counter       types.Int64                `tfsdk:"counter"`
 	TotalPages    types.Int64                `tfsdk:"total_pages"`
@@ -67,6 +68,9 @@ func (d *RecordsDataSource) Metadata(ctx context.Context, req datasource.Metadat
 func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"zone_id": schema.Int64Attribute{
+				Optional: true,
+			},
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
@@ -88,10 +92,10 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				},
 			},
 			"results": schema.SingleNestedAttribute{
-				Required: true,
+				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"zone_id": schema.Int64Attribute{
-						Required: true,
+						Computed: true,
 					},
 					"domain": schema.StringAttribute{
 						Computed: true,
@@ -151,15 +155,15 @@ func (d *RecordsDataSource) errorPrint(resp *datasource.ReadResponse, errMsg str
 func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	tflog.Debug(ctx, "Reading Records")
 
-	var getZoneId GetRecordsResponseResults
-	diags2 := req.Config.GetAttribute(ctx, path.Root("results"), &getZoneId)
-	resp.Diagnostics.Append(diags2...)
+	var getZoneId types.Int64
+	diags := req.Config.GetAttribute(ctx, path.Root("zone_id"), &getZoneId)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	ZoneId := getZoneId.ZoneId.ValueInt64()
+	zoneId := int32(getZoneId.ValueInt64())
 
-	recordsResponse, _, err := d.client.RecordsApi.GetZoneRecords(ctx, int32(ZoneId)).Execute()
+	recordsResponse, _, err := d.client.RecordsApi.GetZoneRecords(ctx, zoneId).Execute()
 	if err != nil {
 		d.errorPrint(resp, err.Error())
 		return
@@ -175,6 +179,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	recordsState := RecordsDataSourceModel{
+		ZoneId:        getZoneId,
 		SchemaVersion: types.Int64Value(int64(*recordsResponse.SchemaVersion)),
 		TotalPages:    types.Int64Value(int64(*recordsResponse.TotalPages)),
 		Counter:       types.Int64Value(int64(*recordsResponse.Count)),
@@ -210,7 +215,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		recordsState.Results.Records = append(recordsState.Results.Records, r)
 	}
 
-	diags := resp.State.Set(ctx, &recordsState)
+	diags = resp.State.Set(ctx, &recordsState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
