@@ -10,16 +10,15 @@ func TestAccZonesDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Read testing
+
 			{
 				Config: providerConfig + `data "azion_zones" "test" {}`,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Verify number of zones returned
 					resource.TestCheckResourceAttr("data.azion_zones.test", "zones.0.counter", "2"),
 					resource.TestCheckResourceAttr("data.azion_zones.test", "zones.0.links.#", "1"),
 					resource.TestCheckResourceAttr("data.azion_zones.test", "zones.0.results.#", "2"),
-					resource.TestCheckResourceAttr("data.azion_zones.test", "zones.0.results.0.id", "1"),
-					resource.TestCheckResourceAttr("data.azion_zones.test", "zones.0.results.1.id", "2"),
+					resource.TestCheckResourceAttr("data.azion_zones.test", "zones.0.results.0.id", "2580"),
+					resource.TestCheckResourceAttr("data.azion_zones.test", "zones.0.results.1.id", "2581"),
 					resource.TestCheckResourceAttr("data.azion_zones.test", "zones.0.schema_version", "3"),
 					resource.TestCheckResourceAttr("data.azion_zones.test", "zones.0.total_pages", "1"),
 				),

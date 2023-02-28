@@ -5,8 +5,9 @@ terraform {
     }
   }
 }
+
 provider "azion" {
-  api_token  = "<security token>"
+  api_token  = "token"
 }
 
 data "azion_records" "dev" {

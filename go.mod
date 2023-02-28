@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/aziontech/azionapi-go-sdk v0.26.0
 	github.com/hashicorp/terraform-plugin-framework v1.1.1
+	github.com/hashicorp/terraform-plugin-framework-validators v0.10.0
 	github.com/hashicorp/terraform-plugin-go v0.14.3
 	github.com/hashicorp/terraform-plugin-log v0.8.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.24.1
