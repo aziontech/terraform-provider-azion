@@ -33,7 +33,7 @@ type zoneResource struct {
 type zoneResourceModel struct {
 	ID            types.String `tfsdk:"id"`
 	SchemaVersion types.Int64  `tfsdk:"schema_version"`
-	Zone          zoneModel    `tfsdk:"zone"`
+	Zone          *zoneModel   `tfsdk:"zone"`
 	LastUpdated   types.String `tfsdk:"last_updated"`
 }
 
@@ -51,7 +51,7 @@ type zoneModel struct {
 }
 
 func (r *zoneResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_order"
+	resp.TypeName = req.ProviderTypeName + "_zone"
 }
 
 func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -162,7 +162,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 			slice = append(slice, types.StringValue(Nameservers))
 
 		}
-		plan.Zone = zoneModel{
+		plan.Zone = &zoneModel{
 			ID:          types.Int64Value(int64(*resultZone.Id)),
 			Name:        types.StringValue(*resultZone.Name),
 			Domain:      types.StringValue(*resultZone.Domain),
@@ -193,8 +193,8 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	order, response, err := r.client.ZonesApi.GetZone(ctx, int32(state.Zone.ID.ValueInt64())).Execute()
+	idPlan, err := strconv.Atoi(state.ID.ValueString())
+	order, response, err := r.client.ZonesApi.GetZone(ctx, int32(idPlan)).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -215,7 +215,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	for _, Nameservers := range order.Results.Nameservers {
 		slice = append(slice, types.StringValue(Nameservers))
 	}
-	state.Zone = zoneModel{
+	state.Zone = &zoneModel{
 		ID:          types.Int64Value(int64(*order.Results.Id)),
 		Name:        types.StringValue(*order.Results.Name),
 		Domain:      types.StringValue(*order.Results.Domain),
@@ -280,7 +280,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		for _, Nameservers := range resultZone.Nameservers {
 			slice = append(slice, types.StringValue(Nameservers))
 		}
-		plan.Zone = zoneModel{
+		plan.Zone = &zoneModel{
 			ID:          types.Int64Value(int64(*resultZone.Id)),
 			Name:        types.StringValue(*resultZone.Name),
 			Domain:      types.StringValue(*resultZone.Domain),

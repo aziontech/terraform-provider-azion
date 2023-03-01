@@ -29,6 +29,7 @@ type ZoneDataSourceModel struct {
 	TotalPages    types.Int64            `tfsdk:"total_pages"`
 	Links         *GetZonesResponseLinks `tfsdk:"links"`
 	Results       []Zone                 `tfsdk:"results"`
+	ID            types.String           `tfsdk:"id"`
 }
 
 type GetZonesResponseLinks struct {
@@ -56,6 +57,9 @@ func (d *ZoneDataSource) Metadata(ctx context.Context, req datasource.MetadataRe
 func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+			},
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
@@ -136,6 +140,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			ID:       types.Int64Value(int64(*resultZone.Id)),
 		})
 	}
+	zoneState.ID = types.StringValue("placeholder")
 	diags := resp.State.Set(ctx, &zoneState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

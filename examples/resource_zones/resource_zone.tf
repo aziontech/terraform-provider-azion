@@ -9,14 +9,14 @@ provider "azion" {
   api_token  = ""
 }
 
-resource "azion_order" "dev" {
+resource "azion_zone" "dev" {
   zone = {
-      domain: "1-test.com",
+      domain: "5-test.com",
       is_active: true,
-      name: "test create terraform"
+      name: "test Alterado terraform"
     }
 }
 
 output "dev_order" {
-  value = azion_order.dev
+  value = azion_zone.dev
 }

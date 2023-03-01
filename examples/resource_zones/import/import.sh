@@ -1,2 +1,2 @@
 # Order can be imported by specifying the numeric identifier.
-terraform import azion_order.example 2580
+terraform import azion_resource.example 2580
