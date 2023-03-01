@@ -7,11 +7,11 @@ terraform {
 }
 
 provider "azion" {
-  api_token  = "token"
+  api_token  = "<token>"
 }
 
 data "azion_records" "dev" {
-  zone_id = <zone_id>
+  zone_id = 2595
 }
 
 output "dev_records" {

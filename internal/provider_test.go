@@ -8,7 +8,7 @@ import (
 const (
 	providerConfig = `
 provider "azion" {
-  api_token  = "ae21724627cc5f3fac461060caf86ac0dacfa00f"
+  api_token  = "<token>"
 }
 `
 )

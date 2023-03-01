@@ -31,6 +31,7 @@ type RecordsDataSourceModel struct {
 	TotalPages    types.Int64                `tfsdk:"total_pages"`
 	Links         *GetRecordsResponseLinks   `tfsdk:"links"`
 	Results       *GetRecordsResponseResults `tfsdk:"results"`
+	Id            types.String               `tfsdk:"id"`
 }
 
 type GetRecordsResponseLinks struct {
@@ -68,6 +69,9 @@ func (d *RecordsDataSource) Metadata(ctx context.Context, req datasource.Metadat
 func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Optional: true,
+			},
 			"zone_id": schema.Int64Attribute{
 				Optional: true,
 			},
@@ -189,6 +193,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		},
 		Results: &GetRecordsResponseResults{},
 	}
+	recordsState.Id = types.StringValue("placeholder")
 
 	if recordsResponse.Results.ZoneId != nil {
 		recordsState.Results.ZoneId = types.Int64Value(int64(*recordsResponse.Results.ZoneId))
