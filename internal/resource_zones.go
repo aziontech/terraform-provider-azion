@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"github.com/aziontech/azionapi-go-sdk/idns"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -12,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"io"
 	"strconv"
+	"terraform-provider-azion/internal/utils"
 	"time"
 )
 
@@ -160,7 +160,6 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		var slice []types.String
 		for _, Nameservers := range resultZone.Nameservers {
 			slice = append(slice, types.StringValue(Nameservers))
-
 		}
 		plan.Zone = &zoneModel{
 			ID:          types.Int64Value(int64(*resultZone.Id)),
@@ -172,7 +171,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 			Refresh:     types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.Refresh))),
 			Expiry:      types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.Expiry))),
 			SoaTtl:      types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.SoaTtl))),
-			Nameservers: sliceStringTypeToList(slice),
+			Nameservers: utils.SliceStringTypeToList(slice),
 		}
 	}
 
@@ -225,7 +224,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		Refresh:     types.Int64Value(int64(*idns.NullableInt32.Get(order.Results.Refresh))),
 		Expiry:      types.Int64Value(int64(*idns.NullableInt32.Get(order.Results.Expiry))),
 		SoaTtl:      types.Int64Value(int64(*idns.NullableInt32.Get(order.Results.SoaTtl))),
-		Nameservers: sliceStringTypeToList(slice),
+		Nameservers: utils.SliceStringTypeToList(slice),
 	}
 
 	diags = resp.State.Set(ctx, &state)
@@ -290,7 +289,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			Refresh:     types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.Refresh))),
 			Expiry:      types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.Expiry))),
 			SoaTtl:      types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.SoaTtl))),
-			Nameservers: sliceStringTypeToList(slice),
+			Nameservers: utils.SliceStringTypeToList(slice),
 		}
 	}
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -323,15 +322,4 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
-}
-
-func sliceStringTypeToList(slice []types.String) types.List {
-	if len(slice) == 0 {
-		return types.ListNull(types.StringType)
-	}
-	strs := []attr.Value{}
-	for _, value := range slice {
-		strs = append(strs, value)
-	}
-	return types.ListValueMust(types.StringType, strs)
 }

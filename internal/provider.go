@@ -83,12 +83,15 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		dataSourceAzionZone,
+		dataSourceAzionZones,
 		dataSourceAzionRecords,
+		dataSourceAzionDNSSec,
 	}
 }
 
 func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewZoneResource,
+		NewDnssecResource,
 	}
 }
