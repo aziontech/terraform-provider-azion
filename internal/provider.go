@@ -3,6 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"os"
+	"regexp"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -12,8 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"os"
-	"regexp"
 )
 
 var (
@@ -90,5 +91,6 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewZoneResource,
+		NewRecordResource,
 	}
 }

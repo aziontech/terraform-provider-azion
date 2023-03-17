@@ -13,8 +13,8 @@ func TestAccResourceRecords(t *testing.T) {
 			// Create and Read testing
 			{
 				Config: providerConfig + `
-				resource "azion_records" "dev" {
-					zone_id = 2553
+				resource "azion_records" "test" {
+					zone_id = 2638
 					record = {
 					  record_type= "A"
 					  entry = "www"
@@ -41,7 +41,7 @@ func TestAccResourceRecords(t *testing.T) {
 
 					resource.TestCheckResourceAttr("data.azion_records.test", "schema_version", "3"),
 					resource.TestCheckResourceAttr("data.azion_records.test", "total_pages", "1"),
-					resource.TestCheckResourceAttr("data.azion_records.test", "zone_id", "2553"),
+					resource.TestCheckResourceAttr("data.azion_records.test", "zone_id", "2638"),
 				),
 			},
 			// ImportState testing
@@ -56,8 +56,8 @@ func TestAccResourceRecords(t *testing.T) {
 			// Update and Read testing
 			{
 				Config: providerConfig + `
-				resource "azion_records" "dev" {
-					zone_id = 2553
+				resource "azion_records" "test" {
+					zone_id = 2638
 					record = {
 					  record_type= "A"
 					  entry = "ww2"
@@ -84,7 +84,7 @@ func TestAccResourceRecords(t *testing.T) {
 
 					resource.TestCheckResourceAttr("data.azion_records.test", "schema_version", "3"),
 					resource.TestCheckResourceAttr("data.azion_records.test", "total_pages", "1"),
-					resource.TestCheckResourceAttr("data.azion_records.test", "zone_id", "2595"),
+					resource.TestCheckResourceAttr("data.azion_records.test", "zone_id", "2638"),
 				),
 			},
 			// Delete testing automatically occurs in TestCase
