@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io"
+	"strconv"
 	"terraform-provider-azion/internal/utils"
 )
 
@@ -33,7 +34,7 @@ type ZoneDataSourceModel struct {
 }
 
 type Zone struct {
-	ID          types.Int64  `tfsdk:"zone_id"`
+	ZoneID      types.Int64  `tfsdk:"zone_id"`
 	Name        types.String `tfsdk:"name"`
 	Domain      types.String `tfsdk:"domain"`
 	IsActive    types.Bool   `tfsdk:"is_active"`
@@ -112,15 +113,22 @@ func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	tflog.Debug(ctx, fmt.Sprintf("Reading Zones"))
 
-	var getZoneId types.Int64
+	var getZoneId types.String
 	diags := req.Config.GetAttribute(ctx, path.Root("id"), &getZoneId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId := int32(getZoneId.ValueInt64())
+	zoneId, err := strconv.Atoi(getZoneId.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Value Conversion error ",
+			"Could not conversion ID",
+		)
+		return
+	}
 
-	zoneResponse, response, err := d.client.ZonesApi.GetZone(ctx, zoneId).Execute()
+	zoneResponse, response, err := d.client.ZonesApi.GetZone(ctx, int32(zoneId)).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -143,7 +151,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	zoneState := ZoneDataSourceModel{
 		SchemaVersion: types.Int64Value(int64(*zoneResponse.SchemaVersion)),
 		Results: Zone{
-			ID:          types.Int64Value(int64(*zoneResponse.Results.Id)),
+			ZoneID:      types.Int64Value(int64(*zoneResponse.Results.Id)),
 			Name:        types.StringValue(*zoneResponse.Results.Name),
 			Domain:      types.StringValue(*zoneResponse.Results.Domain),
 			IsActive:    types.BoolValue(*zoneResponse.Results.IsActive),
