@@ -1,1 +1,6 @@
+.DS_Store
 examples/.terraform.lock.hcl
+.terraform/
+.terraform.*
+*.tfstate
+terraform.tfstate.backup

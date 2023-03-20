@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -27,8 +28,8 @@ type RecordsDataSource struct {
 type RecordsDataSourceModel struct {
 	ZoneId        types.Int64                `tfsdk:"zone_id"`
 	SchemaVersion types.Int64                `tfsdk:"schema_version"`
-	Counter       types.Int64                `tfsdk:"counter"`
 	TotalPages    types.Int64                `tfsdk:"total_pages"`
+	Counter       types.Int64                `tfsdk:"counter"`
 	Links         *GetRecordsResponseLinks   `tfsdk:"links"`
 	Results       *GetRecordsResponseResults `tfsdk:"results"`
 	Id            types.String               `tfsdk:"id"`
@@ -139,17 +140,18 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 	}
 }
 
-func (d *RecordsDataSource) errorPrint(resp *datasource.ReadResponse, errMsg string) {
+func (d *RecordsDataSource) errorPrint(resp *datasource.ReadResponse, errCode int) {
 	var usrMsg string
-	switch errMsg {
-	case "404 Not Found":
+	switch errCode {
+	case 404:
 		usrMsg = "No Records Found"
-	case "401 Unauthorized":
+	case 401:
 		usrMsg = "Unauthorized Token"
 	default:
 		usrMsg = "Cannot read Azion response"
 	}
 
+	errMsg := fmt.Sprintf("%d - %s", errCode, usrMsg)
 	resp.Diagnostics.AddError(
 		usrMsg,
 		errMsg,
@@ -167,9 +169,9 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 	zoneId := int32(getZoneId.ValueInt64())
 
-	recordsResponse, _, err := d.client.RecordsApi.GetZoneRecords(ctx, zoneId).Execute()
+	recordsResponse, httpResp, err := d.client.RecordsApi.GetZoneRecords(ctx, zoneId).Execute()
 	if err != nil {
-		d.errorPrint(resp, err.Error())
+		d.errorPrint(resp, httpResp.StatusCode)
 		return
 	}
 	var previous, next string

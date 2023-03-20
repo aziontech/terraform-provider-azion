@@ -28,8 +28,7 @@ testacc:
 clean:
 	rm -rf ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}/${BINARY}
 	rm -rf ./examples/.terraform*
-	rm -f ./examples/terraform.tfstate.backup
-	rm -f ./examples/terraform.tfstate
 	rm -rf ./examples/resource/.terraform*
-	rm -f ./examples/resource/terraform.tfstate.backup
-	rm -f ./examples/resource/terraform.tfstate
+	find ./examples/ -name ".terraform*" -exec rm {} \;
+	find ./examples/ -name *.lock.hcl -exec rm {} \;
+	find ./examples/ -name "*tfstate*" -exec rm {} \;
