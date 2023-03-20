@@ -33,12 +33,10 @@ type recordResource struct {
 }
 
 type recordResourceModel struct {
-	// ID            types.String `tfsdk:"id"`
+	ZoneId        types.String `tfsdk:"zone_id"`
 	Record        *recordModel `tfsdk:"record"`
 	SchemaVersion types.Int64  `tfsdk:"schema_version"`
 	LastUpdated   types.String `tfsdk:"last_updated"`
-	// ZoneId        types.Int64  `tfsdk:"zone_id"`
-	ZoneId types.String `tfsdk:"zone_id"`
 }
 
 type recordModel struct {
@@ -58,24 +56,17 @@ func (r *recordResource) Metadata(_ context.Context, req resource.MetadataReques
 func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			// "id": schema.StringAttribute{
-			// 	Description: "Numeric identifier.",
-			// 	Computed:    true,
-			// 	PlanModifiers: []planmodifier.String{
-			// 		stringplanmodifier.UseStateForUnknown(),
-			// 	},
-			// },
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema Version.",
 				Computed:    true,
 			},
 			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the order.",
+				Description: "Timestamp of the last Terraform update.",
 				Computed:    true,
 			},
-			// "zone_id": schema.StringAttribute{
 			"zone_id": schema.StringAttribute{
-				Required: true,
+				Description: "Zone identification.",
+				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -131,8 +122,8 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	record := idns.RecordPostOrPut{
 		RecordType: idns.PtrString(plan.Record.RecordType.ValueString()),
 		Entry:      idns.PtrString(plan.Record.Entry.ValueString()),
+		Ttl:        idns.PtrInt32(int32(plan.Record.Ttl.ValueInt64())),
 		// Description: idns.PtrString(plan.Results.Description.ValueString()),
-		Ttl: idns.PtrInt32(int32(plan.Record.Ttl.ValueInt64())),
 	}
 
 	for _, answerList := range plan.Record.AnswersList {
@@ -143,7 +134,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not conversion ID",
+			"Could not convert Zone ID",
 		)
 		return
 	}
@@ -175,13 +166,13 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	plan.ZoneId = types.StringValue(plan.ZoneId.ValueString())
 
 	plan.Record = &recordModel{
-		Id:         types.Int64Value(int64(*createRecord.Results.Id)),
-		RecordType: types.StringValue(*createRecord.Results.RecordType),
-		Ttl:        types.Int64Value(int64(*createRecord.Results.Ttl)),
-		Policy:     types.StringValue(*createRecord.Results.Policy),
-		Entry:      types.StringValue(*createRecord.Results.Entry),
-		// Description: types.StringValue(*createRecord.Results.Description),
+		Id:          types.Int64Value(int64(*createRecord.Results.Id)),
+		RecordType:  types.StringValue(*createRecord.Results.RecordType),
+		Ttl:         types.Int64Value(int64(*createRecord.Results.Ttl)),
+		Policy:      types.StringValue(*createRecord.Results.Policy),
+		Entry:       types.StringValue(*createRecord.Results.Entry),
 		AnswersList: slice,
+		// Description: types.StringValue(*createRecord.Results.Description),
 	}
 
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -228,17 +219,15 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// idState := state.ZoneId.ValueString()
+
 	idState, err := strconv.Atoi(state.ZoneId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not conversion ID",
+			"Could not convert Zone ID",
 		)
 		return
 	}
-
-	// idState, _ := strconv.Atoi(path.Root("zone_id").String())
 
 	recordsResponse, httpResp, err := r.client.RecordsApi.GetZoneRecords(ctx, int32(idState)).Execute()
 	if err != nil {
@@ -247,8 +236,6 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	state.SchemaVersion = types.Int64Value(int64(*recordsResponse.SchemaVersion))
-
-	// state.ZoneId = types.Int64Value(int64(int32(idState)))
 
 	for _, resultRecord := range recordsResponse.Results.Records {
 		state.Record = &recordModel{
@@ -286,19 +273,16 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	// idPlan := plan.ZoneId.ValueInt64()
-
 	idPlan, err := strconv.Atoi(plan.ZoneId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not conversion ID",
+			"Could not convert Zone ID",
 		)
 		return
 	}
 
 	record := idns.RecordPostOrPut{
-		// Id:         idns.PtrInt32(int32(state.Results.Id.ValueInt64())),
 		Entry:      idns.PtrString(plan.Record.Entry.ValueString()),
 		Policy:     idns.PtrString(plan.Record.Policy.ValueString()),
 		RecordType: idns.PtrString(plan.Record.RecordType.ValueString()),
@@ -336,13 +320,13 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	plan.Record = &recordModel{
-		Id:         types.Int64Value(int64(*updateRecord.Results.Id)),
-		RecordType: types.StringValue(*updateRecord.Results.RecordType),
-		Ttl:        types.Int64Value(int64(*updateRecord.Results.Ttl)),
-		Policy:     types.StringValue(*updateRecord.Results.Policy),
-		Entry:      types.StringValue(*updateRecord.Results.Entry),
-		// Description: types.StringValue(*updateRecord.Results.Description),
+		Id:          types.Int64Value(int64(*updateRecord.Results.Id)),
+		RecordType:  types.StringValue(*updateRecord.Results.RecordType),
+		Ttl:         types.Int64Value(int64(*updateRecord.Results.Ttl)),
+		Policy:      types.StringValue(*updateRecord.Results.Policy),
+		Entry:       types.StringValue(*updateRecord.Results.Entry),
 		AnswersList: answerList,
+		// Description: types.StringValue(*updateRecord.Results.Description),
 	}
 
 	diags = resp.State.Set(ctx, plan)
@@ -364,7 +348,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not conversion ID",
+			"Could not convert Zone ID",
 		)
 		return
 	}
