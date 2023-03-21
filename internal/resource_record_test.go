@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestAccResourceRecords(t *testing.T) {
+func TestAccResourceRecord(t *testing.T) {
 	// * * * * This test will be implemented
 	// * * * * in the next project phase
 

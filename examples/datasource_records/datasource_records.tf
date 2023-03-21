@@ -11,7 +11,7 @@ provider "azion" {
 }
 
 data "azion_records" "dev" {
-  zone_id = 2595
+  zone_id = 2638
 }
 
 output "dev_records" {

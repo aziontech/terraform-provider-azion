@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aziontech/azionapi-go-sdk/idns"
@@ -50,7 +51,7 @@ type recordModel struct {
 }
 
 func (r *recordResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_records"
+	resp.TypeName = req.ProviderTypeName + "_record"
 }
 
 func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -138,24 +139,13 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
-	createRecord, response, err := r.client.RecordsApi.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute()
+	createRecord, httpResponse, err := r.client.RecordsApi.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
-			resp.Diagnostics.AddError(
-				err.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		usrMsg, errMsg := errorPrint(httpResponse.StatusCode)
+		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return
 	}
 
-	// plan.ID = types.StringValue(strconv.Itoa(int(*createRecord.Results.Id)))
 	plan.SchemaVersion = types.Int64Value(int64(*createRecord.SchemaVersion))
 
 	var slice []types.String
@@ -184,15 +174,19 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 }
 
-func (r *recordResource) AtoiNoError(strToConv types.String) int64 {
-	intReturn, err := strconv.ParseInt(strToConv.String(), 10, 64)
+func AtoiNoError(strToConv string, resp *resource.ReadResponse) int64 {
+	intReturn, err := strconv.ParseInt(strToConv, 10, 64)
 	if err != nil {
-		fmt.Println("Error converting data: ", err)
+		resp.Diagnostics.AddError(
+			"Value Conversion error ",
+			"Could not convert String to Int",
+		)
+		return 0
 	}
 	return intReturn
 }
 
-func (r *recordResource) errorPrint(resp *resource.ReadResponse, errCode int) {
+func errorPrint(errCode int) (string, string) {
 	var usrMsg string
 	switch errCode {
 	case 404:
@@ -204,10 +198,7 @@ func (r *recordResource) errorPrint(resp *resource.ReadResponse, errCode int) {
 	}
 
 	errMsg := fmt.Sprintf("%d - %s", errCode, usrMsg)
-	resp.Diagnostics.AddError(
-		usrMsg,
-		errMsg,
-	)
+	return usrMsg, errMsg
 }
 
 func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -220,24 +211,26 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	idState, err := strconv.Atoi(state.ZoneId.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Value Conversion error ",
-			"Could not convert Zone ID",
-		)
-		return
+	valueFromCmd := strings.Split(state.ZoneId.ValueString(), "/")
+	idZone := AtoiNoError(valueFromCmd[0], resp)
+	var idRecord int64
+	if len(valueFromCmd) > 1 {
+		idRecord = AtoiNoError(valueFromCmd[1], resp)
 	}
 
-	recordsResponse, httpResp, err := r.client.RecordsApi.GetZoneRecords(ctx, int32(idState)).Execute()
+	recordsResponse, httpResponse, err := r.client.RecordsApi.GetZoneRecords(ctx, int32(idZone)).Execute()
 	if err != nil {
-		r.errorPrint(resp, httpResp.StatusCode)
+		usrMsg, errMsg := errorPrint(httpResponse.StatusCode)
+		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return
 	}
 
 	state.SchemaVersion = types.Int64Value(int64(*recordsResponse.SchemaVersion))
 
 	for _, resultRecord := range recordsResponse.Results.Records {
+		if types.Int64Value(int64(*resultRecord.RecordId)) != types.Int64Value(int64(idRecord)) {
+			continue
+		}
 		state.Record = &recordModel{
 			Id:         types.Int64Value(int64(*resultRecord.RecordId)),
 			RecordType: types.StringValue(*resultRecord.RecordType),

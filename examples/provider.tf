@@ -6,5 +6,5 @@ terraform {
   }
 }
 provider "azion" {
-  api_token  = "permission-token"
+  api_token  = "<token>"
 }

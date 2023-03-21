@@ -5,15 +5,16 @@ terraform {
     }
   }
 }
+
 provider "azion" {
-  api_token  = ""
+  api_token  = "<token>"
 }
 
-resource "azion_records" "dev" {
-  zone_id = 2553
+resource "azion_record" "dev" {
+  zone_id = 2638
   record = {
     record_type= "A"
-    entry = "site2"
+    entry = "site"
     answers_list = [
       "8.8.8.8",
       "1.1.1.1"
@@ -23,6 +24,6 @@ resource "azion_records" "dev" {
   }
 }
 
-output "dev_records" {
-  value = azion_records.dev
+output "dev_record" {
+  value = azion_record.dev
 }
