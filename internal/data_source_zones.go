@@ -11,24 +11,24 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &ZoneDataSource{}
-	_ datasource.DataSourceWithConfigure = &ZoneDataSource{}
+	_ datasource.DataSource              = &ZonesDataSource{}
+	_ datasource.DataSourceWithConfigure = &ZonesDataSource{}
 )
 
-func dataSourceAzionZone() datasource.DataSource {
-	return &ZoneDataSource{}
+func dataSourceAzionZones() datasource.DataSource {
+	return &ZonesDataSource{}
 }
 
-type ZoneDataSource struct {
+type ZonesDataSource struct {
 	client *idns.APIClient
 }
 
-type ZoneDataSourceModel struct {
+type ZonesDataSourceModel struct {
 	SchemaVersion types.Int64            `tfsdk:"schema_version"`
 	Counter       types.Int64            `tfsdk:"counter"`
 	TotalPages    types.Int64            `tfsdk:"total_pages"`
 	Links         *GetZonesResponseLinks `tfsdk:"links"`
-	Results       []Zone                 `tfsdk:"results"`
+	Results       []Zones                `tfsdk:"results"`
 	ID            types.String           `tfsdk:"id"`
 }
 
@@ -36,25 +36,25 @@ type GetZonesResponseLinks struct {
 	Previous types.String `tfsdk:"previous"`
 	Next     types.String `tfsdk:"next"`
 }
-type Zone struct {
+type Zones struct {
 	ID       types.Int64  `tfsdk:"id"`
 	Name     types.String `tfsdk:"name"`
 	Domain   types.String `tfsdk:"domain"`
 	IsActive types.Bool   `tfsdk:"is_active"`
 }
 
-func (d *ZoneDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+func (d *ZonesDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	d.client = req.ProviderData.(*idns.APIClient)
 }
 
-func (d *ZoneDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *ZonesDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_zones"
 }
 
-func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *ZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -104,7 +104,7 @@ func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 
 }
 
-func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	tflog.Debug(ctx, fmt.Sprintf("Reading Zones"))
 	zoneResponse, _, err := d.client.ZonesApi.GetZones(ctx).Execute()
 	if err != nil {
@@ -123,7 +123,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			next = *zoneResponse.Links.Next.Get()
 		}
 	}
-	zoneState := ZoneDataSourceModel{
+	zoneState := ZonesDataSourceModel{
 		SchemaVersion: types.Int64Value(int64(*zoneResponse.SchemaVersion)),
 		TotalPages:    types.Int64Value(int64(*zoneResponse.TotalPages)),
 		Counter:       types.Int64Value(int64(*zoneResponse.Count)),
@@ -133,7 +133,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		},
 	}
 	for _, resultZone := range zoneResponse.Results {
-		zoneState.Results = append(zoneState.Results, Zone{
+		zoneState.Results = append(zoneState.Results, Zones{
 			Domain:   types.StringValue(*resultZone.Domain),
 			IsActive: types.BoolValue(*resultZone.IsActive),
 			Name:     types.StringValue(*resultZone.Name),
