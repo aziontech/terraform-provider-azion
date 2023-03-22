@@ -213,6 +213,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	valueFromCmd := strings.Split(state.ZoneId.ValueString(), "/")
 	idZone := AtoiNoError(valueFromCmd[0], resp)
+	state.ZoneId = types.StringValue(valueFromCmd[0])
 	var idRecord int64
 	if len(valueFromCmd) > 1 {
 		idRecord = AtoiNoError(valueFromCmd[1], resp)
