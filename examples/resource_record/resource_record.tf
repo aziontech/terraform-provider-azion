@@ -8,6 +8,7 @@ terraform {
 
 provider "azion" {
   api_token  = "<token>"
+  
 }
 
 resource "azion_record" "dev" {
