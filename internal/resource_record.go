@@ -141,7 +141,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 	createRecord, httpResponse, err := r.client.RecordsApi.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute()
 	if err != nil {
-		usrMsg, errMsg := errorPrint(httpResponse.StatusCode)
+		usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return
 	}
@@ -186,15 +186,17 @@ func AtoiNoError(strToConv string, resp *resource.ReadResponse) int64 {
 	return intReturn
 }
 
-func errorPrint(errCode int) (string, string) {
+func errorPrint(errCode int, err error) (string, string) {
 	var usrMsg string
 	switch errCode {
-	case 404:
-		usrMsg = "No Records Found"
+	case 400:
+		usrMsg = "Bad Request"
 	case 401:
 		usrMsg = "Unauthorized Token"
+	case 404:
+		usrMsg = "No Records Found"
 	default:
-		usrMsg = "Cannot read Azion response"
+		usrMsg = err.Error()
 	}
 
 	errMsg := fmt.Sprintf("%d - %s", errCode, usrMsg)
@@ -221,7 +223,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	recordsResponse, httpResponse, err := r.client.RecordsApi.GetZoneRecords(ctx, int32(idZone)).Execute()
 	if err != nil {
-		usrMsg, errMsg := errorPrint(httpResponse.StatusCode)
+		usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return
 	}
