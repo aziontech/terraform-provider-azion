@@ -169,6 +169,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
 		bodyBytes, _ := io.ReadAll(httpResponse.Body)
 		resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
+
 		return
 	}
 
