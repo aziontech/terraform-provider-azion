@@ -280,7 +280,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 			state.Record.AnswersList = append(state.Record.AnswersList, types.StringValue(answer))
 		}
 
-		if resultRecord.Policy == idns.PtrString("weighted") {
+		if *resultRecord.Policy == "weighted" {
 			state.Record.Weight = types.Int64Value(int64(*resultRecord.Weight))
 			state.Record.Description = types.StringValue(*resultRecord.Description)
 		}
@@ -357,12 +357,8 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	if plan.Record.Policy.ValueString() == "weighted" {
-		if updateRecord.Results.Weight != nil {
-			plan.Record.Weight = types.Int64Value(int64(*updateRecord.Results.Weight))
-		}
-		if updateRecord.Results.Description != nil {
-			plan.Record.Description = types.StringValue(*updateRecord.Results.Description)
-		}
+		plan.Record.Weight = types.Int64Value(int64(*updateRecord.Results.Weight))
+		plan.Record.Description = types.StringValue(*updateRecord.Results.Description)
 	}
 
 	diags = resp.State.Set(ctx, plan)
