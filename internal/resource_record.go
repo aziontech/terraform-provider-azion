@@ -47,7 +47,8 @@ type recordModel struct {
 	Ttl         types.Int64    `tfsdk:"ttl"`
 	Policy      types.String   `tfsdk:"policy"`
 	Entry       types.String   `tfsdk:"entry"`
-	// Description types.String   `tfsdk:"description"`
+	Weight      types.Int64    `tfsdk:"weight"`
+	Description types.String   `tfsdk:"description"`
 }
 
 func (r *recordResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -78,24 +79,34 @@ func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					"id": schema.Int64Attribute{
 						Computed: true,
 					},
-					"entry": schema.StringAttribute{
-						Required: true,
+					"record_type": schema.StringAttribute{
+						Required:    true,
+						Description: "Defines the record type (A, CNAME, MX, NS, etc...)",
 					},
-					// "description": schema.StringAttribute{
-					// 	Optional: true,
-					// },
+					"entry": schema.StringAttribute{
+						Required:    true,
+						Description: "The first part of domain or 'Name'",
+					},
 					"answers_list": schema.ListAttribute{
 						Required:    true,
 						ElementType: types.StringType,
+						Description: "Defines the values for this record",
 					},
 					"policy": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: "Must be 'simple' or 'weighted'",
 					},
-					"record_type": schema.StringAttribute{
-						Required: true,
+					"weight": schema.Int64Attribute{
+						Optional:    true,
+						Description: "You can only use this field when policy is 'weighted'",
+					},
+					"description": schema.StringAttribute{
+						Optional:    true,
+						Description: "You can only use this field when policy is 'weighted'",
 					},
 					"ttl": schema.Int64Attribute{
-						Required: true,
+						Required:    true,
+						Description: "Time-to-live defines max-time for packets life in seconds",
 					},
 				},
 			},
@@ -124,7 +135,21 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		RecordType: idns.PtrString(plan.Record.RecordType.ValueString()),
 		Entry:      idns.PtrString(plan.Record.Entry.ValueString()),
 		Ttl:        idns.PtrInt32(int32(plan.Record.Ttl.ValueInt64())),
-		// Description: idns.PtrString(plan.Results.Description.ValueString()),
+		Policy:     idns.PtrString(plan.Record.Policy.ValueString()),
+	}
+
+	if plan.Record.Policy.ValueString() == "weighted" {
+		if idns.PtrInt32(int32(plan.Record.Weight.ValueInt64())) != nil {
+			record.Weight = idns.PtrInt32(int32(plan.Record.Weight.ValueInt64()))
+		}
+		if idns.PtrString(plan.Record.Description.ValueString()) != nil {
+			record.Description = idns.PtrString(plan.Record.Description.ValueString())
+		}
+	} else {
+		plan.Record.Weight = types.Int64Value(0)
+		plan.Record.Description = types.StringValue("")
+		record.Weight = idns.PtrInt32(50)
+		record.Description = idns.PtrString("")
 	}
 
 	for _, answerList := range plan.Record.AnswersList {
@@ -141,8 +166,10 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 	createRecord, httpResponse, err := r.client.RecordsApi.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute()
 	if err != nil {
-		usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
-		resp.Diagnostics.AddError(usrMsg, errMsg)
+		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
+		bodyBytes, _ := io.ReadAll(httpResponse.Body)
+		resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
+
 		return
 	}
 
@@ -162,7 +189,15 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		Policy:      types.StringValue(*createRecord.Results.Policy),
 		Entry:       types.StringValue(*createRecord.Results.Entry),
 		AnswersList: slice,
-		// Description: types.StringValue(*createRecord.Results.Description),
+	}
+
+	if plan.Record.Policy.ValueString() == "weighted" {
+		if createRecord.Results.Weight != nil {
+			plan.Record.Weight = types.Int64Value(int64(*createRecord.Results.Weight))
+		}
+		if *createRecord.Results.Description != "" {
+			plan.Record.Description = types.StringValue(*createRecord.Results.Description)
+		}
 	}
 
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -240,10 +275,14 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 			Ttl:        types.Int64Value(int64(*resultRecord.Ttl)),
 			Policy:     types.StringValue(*resultRecord.Policy),
 			Entry:      types.StringValue(*resultRecord.Entry),
-			// Description: types.StringValue(*resultRecord.Description),
 		}
 		for _, answer := range resultRecord.AnswersList {
 			state.Record.AnswersList = append(state.Record.AnswersList, types.StringValue(answer))
+		}
+
+		if idns.PtrString(*resultRecord.Policy) == idns.PtrString("weighted") {
+			state.Record.Weight = types.Int64Value(int64(*resultRecord.Weight))
+			state.Record.Description = types.StringValue(*resultRecord.Description)
 		}
 	}
 
@@ -279,30 +318,23 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	record := idns.RecordPostOrPut{
-		Entry:      idns.PtrString(plan.Record.Entry.ValueString()),
-		Policy:     idns.PtrString(plan.Record.Policy.ValueString()),
-		RecordType: idns.PtrString(plan.Record.RecordType.ValueString()),
-		Ttl:        idns.PtrInt32(int32(plan.Record.Ttl.ValueInt64())),
+		Entry:       idns.PtrString(plan.Record.Entry.ValueString()),
+		Policy:      idns.PtrString(plan.Record.Policy.ValueString()),
+		RecordType:  idns.PtrString(plan.Record.RecordType.ValueString()),
+		Ttl:         idns.PtrInt32(int32(plan.Record.Ttl.ValueInt64())),
+		Weight:      idns.PtrInt32(int32(plan.Record.Weight.ValueInt64())),
+		Description: idns.PtrString(plan.Record.Description.ValueString()),
 	}
 
 	for _, planAnswerList := range plan.Record.AnswersList {
 		record.AnswersList = append(record.AnswersList, planAnswerList.ValueString())
 	}
 
-	updateRecord, response, err := r.client.RecordsApi.PutZoneRecord(ctx, int32(idPlan), int32(state.Record.Id.ValueInt64())).RecordPostOrPut(record).Execute()
+	updateRecord, httpResponse, err := r.client.RecordsApi.PutZoneRecord(ctx, int32(idPlan), int32(state.Record.Id.ValueInt64())).RecordPostOrPut(record).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
-			resp.Diagnostics.AddError(
-				err.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
+		bodyBytes, _ := io.ReadAll(httpResponse.Body)
+		resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
 		return
 	}
 
@@ -322,7 +354,15 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Policy:      types.StringValue(*updateRecord.Results.Policy),
 		Entry:       types.StringValue(*updateRecord.Results.Entry),
 		AnswersList: answerList,
-		// Description: types.StringValue(*updateRecord.Results.Description),
+	}
+
+	if plan.Record.Policy.ValueString() == "weighted" {
+		if updateRecord.Results.Weight != nil {
+			plan.Record.Weight = types.Int64Value(int64(*updateRecord.Results.Weight))
+		}
+		if updateRecord.Results.Description != nil {
+			plan.Record.Description = types.StringValue(*updateRecord.Results.Description)
+		}
 	}
 
 	diags = resp.State.Set(ctx, plan)

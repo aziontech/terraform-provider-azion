@@ -16,10 +16,12 @@ resource "azion_record" "dev" {
     record_type= "A"
     entry = "site"
     answers_list = [
-      "8.8.8.8",
-      "1.1.1.1"
+      "8.8.8.8"
     ]
-    policy = "simple"
+    # policy = "simple"
+    policy = "weighted"
+    weight = 50
+    description = "This is a description"
     ttl = 20
   }
 }
