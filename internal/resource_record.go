@@ -280,7 +280,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 			state.Record.AnswersList = append(state.Record.AnswersList, types.StringValue(answer))
 		}
 
-		if idns.PtrString(*resultRecord.Policy) == idns.PtrString("weighted") {
+		if resultRecord.Policy == idns.PtrString("weighted") {
 			state.Record.Weight = types.Int64Value(int64(*resultRecord.Weight))
 			state.Record.Description = types.StringValue(*resultRecord.Description)
 		}
