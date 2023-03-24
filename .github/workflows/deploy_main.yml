@@ -27,7 +27,7 @@ jobs:
         id: tag_ver
         uses: anothrNick/github-tag-action@1.37.0
         env:
-          RELEASE_BRANCHES: master
+          RELEASE_BRANCHES: master,main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
 
