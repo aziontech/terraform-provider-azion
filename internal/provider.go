@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
@@ -55,7 +54,7 @@ func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 }
 
 func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	tflog.Debug(ctx, fmt.Sprintf("Configuring Azion Client"))
+
 	var config AzionProviderModel
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -72,8 +71,6 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	}
 	idnsConfig := idns.NewConfiguration()
 	idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-
-	ctx = tflog.SetField(ctx, "AZION_TERRAFORM_TOKEN", APIToken)
 
 	client := idns.NewAPIClient(idnsConfig)
 

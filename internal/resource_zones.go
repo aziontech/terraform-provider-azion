@@ -193,6 +193,13 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 	idPlan, err := strconv.Atoi(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Value Conversion error ",
+			"Could not conversion ID",
+		)
+		return
+	}
 	order, response, err := r.client.ZonesApi.GetZone(ctx, int32(idPlan)).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)

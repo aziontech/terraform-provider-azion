@@ -2,13 +2,11 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io"
 )
 
@@ -141,7 +139,6 @@ func algorithmtypeDS() map[string]schema.Attribute {
 }
 
 func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	tflog.Debug(ctx, fmt.Sprintf("Reading DNSSEC"))
 
 	var getZoneId types.Int64
 	diags := req.Config.GetAttribute(ctx, path.Root("zone_id"), &getZoneId)
@@ -168,7 +165,7 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 	dnsSecEnabled := *getDnsSec.Results.IsEnabled
-	if dnsSecEnabled != false {
+	if dnsSecEnabled {
 		dnsSecState := &dnsSecDataSourceModel{
 			SchemaVersion: types.Int64Value(int64(*getDnsSec.SchemaVersion)),
 			ZoneId:        getZoneId,

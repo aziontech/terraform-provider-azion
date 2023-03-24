@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -10,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io"
 	"strconv"
 	"time"
@@ -138,8 +136,6 @@ func (r *dnssecResource) Configure(_ context.Context, req resource.ConfigureRequ
 
 func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 
-	tflog.Debug(ctx, fmt.Sprintf("Reading DNSSEC"))
-
 	var getZoneId types.String
 	diags := req.Plan.GetAttribute(ctx, path.Root("zone_id"), &getZoneId)
 	resp.Diagnostics.Append(diags...)
@@ -236,7 +232,7 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 	dnsSecEnabled := *getDnsSec.Results.IsEnabled
-	if dnsSecEnabled != false {
+	if dnsSecEnabled {
 		state.DnsSec = &dnsSecModel{
 			IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
 			Status:    types.StringValue(*getDnsSec.Results.Status),
@@ -313,7 +309,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	dnsSecEnabled := *enableDnsSec.Results.IsEnabled
-	if dnsSecEnabled != false {
+	if dnsSecEnabled {
 		plan.DnsSec = &dnsSecModel{
 			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
 			Status:    types.StringValue(*enableDnsSec.Results.Status),
