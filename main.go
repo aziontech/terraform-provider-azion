@@ -15,8 +15,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "hashicorp.com/dev/azion",
-		Debug:   debug,
+		Address: "registry.terraform.io/aziontech/azion",
 	}
 
 	err := providerserver.Serve(context.Background(), provider.New, opts)
