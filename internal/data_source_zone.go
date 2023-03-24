@@ -2,13 +2,11 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io"
 	"strconv"
 	"terraform-provider-azion/internal/utils"
@@ -111,7 +109,6 @@ func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 }
 
 func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	tflog.Debug(ctx, fmt.Sprintf("Reading Zones"))
 
 	var getZoneId types.String
 	diags := req.Config.GetAttribute(ctx, path.Root("id"), &getZoneId)

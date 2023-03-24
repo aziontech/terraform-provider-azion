@@ -1,6 +1,6 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
-HOSTNAME=hashicorp.com
-NAMESPACE=dev
+HOSTNAME=github.com
+NAMESPACE=actions
 NAME=azion
 BINARY=terraform-provider-${NAME}
 VERSION=0.0.1
@@ -22,6 +22,14 @@ GOFMT ?= $(shell which gofmt)
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
 default: install
+
+checks:
+	@go fmt ./...
+	@go vet ./...
+	@staticcheck ./...
+	@gosec ./...
+	@goimports -w ./internal
+	@govulncheck ./...
 
 .PHONY: build
 build:
