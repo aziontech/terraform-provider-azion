@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -99,11 +100,9 @@ func (d *ZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 			},
 		},
 	}
-
 }
 
 func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-
 	zoneResponse, _, err := d.client.ZonesApi.GetZones(ctx).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(

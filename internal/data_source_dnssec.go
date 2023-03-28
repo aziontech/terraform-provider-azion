@@ -2,12 +2,13 @@ package provider
 
 import (
 	"context"
+	"io"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"io"
 )
 
 var (
@@ -95,7 +96,6 @@ func (d *dnsSecDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 		},
 	}
-
 }
 func DnsDelegationSignerDS() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
@@ -139,7 +139,6 @@ func algorithmtypeDS() map[string]schema.Attribute {
 }
 
 func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-
 	var getZoneId types.Int64
 	diags := req.Config.GetAttribute(ctx, path.Root("zone_id"), &getZoneId)
 	resp.Diagnostics.Append(diags...)
@@ -192,7 +191,6 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
 	} else {
 		dnsSecState := &dnsSecDataSourceModel{
 			SchemaVersion: types.Int64Value(int64(*getDnsSec.SchemaVersion)),
@@ -209,5 +207,4 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			return
 		}
 	}
-
 }
