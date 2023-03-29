@@ -10,9 +10,8 @@ jobs:
     name: golangci-lint
     runs-on: ubuntu-latest
     steps:
-      - steps:
-          - name: Setting GIT
-            run: git config --global url."https://${{ secrets.GLOBAL_TOKEN }}:x-oauth-basic@github.com/aziontech".insteadOf "https://github.com/aziontech"
+      - name: Setting GIT
+        run: git config --global url."https://${{ secrets.GLOBAL_TOKEN }}:x-oauth-basic@github.com/aziontech".insteadOf "https://github.com/aziontech"
 
       - name: Checkout code
         uses: actions/checkout@v3
