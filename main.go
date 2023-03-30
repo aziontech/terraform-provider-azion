@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"log"
-	"terraform-provider-azion/internal"
+
+	"github.com/aziontech/terraform-provider-azion/internal"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
 func main() {

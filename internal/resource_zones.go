@@ -4,8 +4,9 @@ import (
 	"context"
 	"io"
 	"strconv"
-	"terraform-provider-azion/internal/utils"
 	"time"
+
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/path"
