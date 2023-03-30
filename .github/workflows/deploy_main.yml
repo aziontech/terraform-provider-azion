@@ -23,6 +23,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Go Report
+        uses: creekorful/goreportcard-action@v1.0
+
       - name: Bump version and push tag
         id: tag_ver
         uses: anothrNick/github-tag-action@1.37.0

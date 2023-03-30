@@ -18,9 +18,6 @@ jobs:
         with:
           fetch-depth: 0 # needed for `only-new-issues` to compare diffs
 
-      - name: Go Report
-        uses: creekorful/goreportcard-action@v1.0
-
       - name: Set up Go
         uses: actions/setup-go@v4
 

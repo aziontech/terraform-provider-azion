@@ -80,6 +80,10 @@ get-gosec-deps:
 	@ cd $(GOPATH); \
 		$(GO) get -u github.com/securego/gosec/cmd/gosec
 
+generate-changelog:
+	@echo "==> Generating changelog..."
+	@sh -c "'$(CURDIR)/scripts/generate-changelog.sh'"
+
 .PHONY: clean
 clean:
 	rm -rf ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}/${BINARY}

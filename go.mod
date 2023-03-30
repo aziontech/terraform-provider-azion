@@ -1,4 +1,4 @@
-module terraform-provider-azion
+module github.com/aziontech/terraform-provider-azion
 
 go 1.19
 
