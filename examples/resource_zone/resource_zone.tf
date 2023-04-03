@@ -7,7 +7,7 @@ terraform {
   }
 }
 provider "azion" {
-  api_token  = "azion9252873bb250dfac51625125cfd702e57af"
+  api_token  = "token"
 }
 
 resource "azion_zone" "dev" {
