@@ -1,14 +1,15 @@
 terraform {
   required_providers {
     azion = {
-      source  = "hashicorp.com/dev/azion"
+      source = "aziontech/azion"
+      version = "0.2.0"
     }
   }
 }
 
-provider "azion" {
-  api_token  = "<token>"
-}
+#provider "azion" {
+#  api_token  = "<token>"
+#}
 
 resource "azion_record" "dev" {
   zone_id = 2638

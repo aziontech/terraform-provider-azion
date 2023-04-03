@@ -1,17 +1,25 @@
 terraform {
   required_providers {
     azion = {
-      source  = "hashicorp.com/dev/azion"
+      source = "aziontech/azion"
+      version = "0.2.0"
     }
   }
 }
 provider "azion" {
-  api_token  = "<token>"
+  api_token  = "azion9252873bb250dfac51625125cfd702e57af"
 }
-data "azion_zone" "dev" {
+
+data "azion_zones" "getAll" {}
+
+data "azion_zone" "byID" {
   id = 2580
 }
 
 output "dev_zone" {
-  value = data.azion_zone.dev
+  value = data.azion_zone.byID
+}
+
+output "dev_zones" {
+  value = data.azion_zones.getAll.id
 }
