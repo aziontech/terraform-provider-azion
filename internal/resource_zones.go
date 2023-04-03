@@ -2,6 +2,12 @@ package provider
 
 import (
 	"context"
+	"io"
+	"strconv"
+	"time"
+
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -9,10 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"io"
-	"strconv"
-	"terraform-provider-azion/internal/utils"
-	"time"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -124,7 +126,6 @@ func (r *zoneResource) Configure(_ context.Context, req resource.ConfigureReques
 }
 
 func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-
 	var plan zoneResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -185,14 +186,13 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 }
 
 func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-
 	var state zoneResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	idPlan, err := strconv.Atoi(state.ID.ValueString())
+	idPlan, err := strconv.ParseUint(state.ID.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -248,7 +248,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	idPlan, err := strconv.Atoi(plan.ID.ValueString())
+	idPlan, err := strconv.ParseUint(plan.ID.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -316,7 +316,8 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	_, _, err := r.client.ZonesApi.DeleteZone(ctx, int32(state.Zone.ID.ValueInt64())).Execute()
+	zoneId := int32(state.Zone.ID.ValueInt64())
+	_, _, err := r.client.ZonesApi.DeleteZone(ctx, zoneId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Azion API",
@@ -327,6 +328,5 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 }
 
 func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

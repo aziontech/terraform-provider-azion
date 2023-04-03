@@ -2,14 +2,16 @@ package provider
 
 import (
 	"context"
+	"io"
+	"strconv"
+
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"io"
-	"strconv"
-	"terraform-provider-azion/internal/utils"
 )
 
 var (
@@ -105,18 +107,16 @@ func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 		},
 	}
-
 }
 
 func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-
 	var getZoneId types.String
 	diags := req.Config.GetAttribute(ctx, path.Root("id"), &getZoneId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId, err := strconv.Atoi(getZoneId.ValueString())
+	zoneId, err := strconv.ParseUint(getZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",

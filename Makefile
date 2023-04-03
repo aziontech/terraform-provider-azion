@@ -19,17 +19,13 @@ GOSEC ?= $(GOBIN)/gosec
 GORELEASER ?= $(shell which goreleaser)
 GOLINT ?= $(shell which golint)
 GOFMT ?= $(shell which gofmt)
-GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
+GOFMT_FILES?=$$(find . -name '*.go')
 
 default: install
 
 checks:
 	@go fmt ./...
 	@go vet ./...
-	@staticcheck ./...
-	@gosec ./...
-	@goimports -w ./internal
-	@govulncheck ./...
 
 .PHONY: build
 build:
@@ -48,20 +44,9 @@ install: build
 	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
 	mv ${BINARY} ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
 
-.PHONY: test
-test: 
-	$(GO) test -i $(TEST) || exit 1
-	echo $(TEST) | xargs -t -n4 $(GO) test -v $(TESTARGS) -timeout=30s -parallel=4
-
 .PHONY: testacc
 testacc: 
 	TF_ACC=1 $(GO) test $(TEST) -v $(TESTARGS) -timeout 120m
-
-tools:
-	$(GO) get github.com/kisielk/errcheck
-	$(GO) get golang.org/x/lint
-	$(GO) install github.com/securego/gosec/v2/cmd/gosec@latest
-	$(GO) install github.com/goreleaser/goreleaser@latest
 
 .PHONY: vet
 vet:
@@ -76,12 +61,28 @@ fmt:
 	@$(GOFMT) -w $(GOFMT_FILES)
 
 .PHONY: lint
-lint: tools
-	@$(GOLINT) ./...
+lint: get-lint-deps ## running GoLint
+	@ $(GOBIN)/golangci-lint run ./...
+
+.PHONY: get-lint-deps
+get-lint-deps:
+	@if [ ! -x $(GOBIN)/golangci-lint ]; then\
+		curl -sfL \
+		https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.31.0 ;\
+	fi
 
 .PHONY: sec
-sec: tools
+sec: get-gosec-deps
 	@$(GOSEC) ./...
+
+.PHONY: get-gosec-deps
+get-gosec-deps:
+	@ cd $(GOPATH); \
+		$(GO) get -u github.com/securego/gosec/cmd/gosec
+
+generate-changelog:
+	@echo "==> Generating changelog..."
+	@sh -c "'$(CURDIR)/scripts/generate-changelog.sh'"
 
 .PHONY: clean
 clean:

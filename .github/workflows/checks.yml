@@ -1,0 +1,31 @@
+name: checks
+on:  [pull_request]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Install tools
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+      - name: Staticcheck
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          staticcheck ./...
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        env:
+          GOROOT: ''
+        with:
+          args: ./...
+      - name: Run Check
+        run: make checks

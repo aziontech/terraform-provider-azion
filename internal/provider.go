@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"regexp"
 
@@ -25,7 +24,6 @@ type AzionProviderModel struct {
 }
 
 type azionProvider struct {
-	version string
 }
 
 func New() provider.Provider {
@@ -40,8 +38,7 @@ func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"api_token": schema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: fmt.Sprintf("The API Token for operations. Must provide `api_token`"),
+				Required: true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`[A-Za-z0-9-_]{40}`),
@@ -54,7 +51,6 @@ func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 }
 
 func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-
 	var config AzionProviderModel
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)

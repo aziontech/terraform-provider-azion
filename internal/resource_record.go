@@ -123,7 +123,6 @@ func (r *recordResource) Configure(_ context.Context, req resource.ConfigureRequ
 }
 
 func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-
 	var plan recordResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -156,7 +155,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		record.AnswersList = append(record.AnswersList, answerList.ValueString())
 	}
 
-	zoneId, err := strconv.Atoi(plan.ZoneId.ValueString())
+	zoneId, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -308,7 +307,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	idPlan, err := strconv.Atoi(plan.ZoneId.ValueString())
+	idPlan, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -376,7 +375,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	idState, err := strconv.Atoi(state.ZoneId.ValueString())
+	idState, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",

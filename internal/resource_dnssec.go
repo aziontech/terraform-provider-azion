@@ -2,6 +2,10 @@ package provider
 
 import (
 	"context"
+	"io"
+	"strconv"
+	"time"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -9,9 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"io"
-	"strconv"
-	"time"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -135,7 +136,6 @@ func (r *dnssecResource) Configure(_ context.Context, req resource.ConfigureRequ
 }
 
 func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-
 	var getZoneId types.String
 	diags := req.Plan.GetAttribute(ctx, path.Root("zone_id"), &getZoneId)
 	resp.Diagnostics.Append(diags...)
@@ -143,7 +143,7 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	zoneId, err := strconv.Atoi(getZoneId.ValueString())
+	zoneId, err := strconv.ParseUint(getZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -200,14 +200,13 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 }
 
 func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-
 	var state dnssecResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId, err := strconv.Atoi(state.ZoneId.ValueString())
+	zoneId, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -254,7 +253,6 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
 	} else {
 		state.DnsSec = &dnsSecModel{
 			IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
@@ -277,7 +275,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	idPlan, err := strconv.Atoi(plan.ZoneId.ValueString())
+	idPlan, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -343,7 +341,6 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 			return
 		}
 	}
-
 }
 
 func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -353,7 +350,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId, err := strconv.Atoi(state.ZoneId.ValueString())
+	zoneId, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -381,10 +378,8 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
-
 }
 
 func (r *dnssecResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-
 	resource.ImportStatePassthroughID(ctx, path.Root("zone_id"), req, resp)
 }
