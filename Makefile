@@ -80,6 +80,13 @@ get-gosec-deps:
 	@ cd $(GOPATH); \
 		$(GO) get -u github.com/securego/gosec/cmd/gosec
 
+docs: tools
+	@sh -c "'$(CURDIR)/scripts/generate-docs.sh'"
+
+tools:
+	@echo "==> Installing development tooling..."
+	go generate -tags tools tools/tools.go
+
 generate-changelog:
 	@echo "==> Generating changelog..."
 	@sh -c "'$(CURDIR)/scripts/generate-changelog.sh'"

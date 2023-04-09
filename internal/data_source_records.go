@@ -74,7 +74,8 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Optional: true,
 			},
 			"zone_id": schema.Int64Attribute{
-				Optional: true,
+				Optional:    true,
+				Description: "The zone identifier to target for the resource.",
 			},
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
@@ -103,7 +104,8 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 						Computed: true,
 					},
 					"domain": schema.StringAttribute{
-						Computed: true,
+						Computed:    true,
+						Description: "Zone name of the found DNS record.",
 					},
 					"records": schema.ListNestedAttribute{
 						Computed: true,
@@ -126,10 +128,12 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 									Computed: true,
 								},
 								"record_type": schema.StringAttribute{
-									Computed: true,
+									Computed:    true,
+									Description: "DNS record type to filter record results on.",
 								},
 								"ttl": schema.Int64Attribute{
-									Computed: true,
+									Computed:    true,
+									Description: "TTL of the found DNS record.",
 								},
 							},
 						},

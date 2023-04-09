@@ -71,7 +71,8 @@ func (d *dnsSecDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Optional: true,
 			},
 			"zone_id": schema.Int64Attribute{
-				Optional: true,
+				Description: "The zone identifier to target for the resource.",
+				Optional:    true,
 			},
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema Version.",
@@ -82,15 +83,16 @@ func (d *dnsSecDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Attributes: map[string]schema.Attribute{
 					"is_enabled": schema.BoolAttribute{
 						Optional:    true,
-						Description: "Enable description of the DNS.",
+						Description: "Zone DNSSEC flags for enabled.",
 					},
 					"status": schema.StringAttribute{
 						Optional:    true,
-						Description: "Domain description of the DNS.",
+						Description: "The status of the Zone DNSSEC.",
 					},
 					"delegation_signer": schema.SingleNestedAttribute{
-						Optional:   true,
-						Attributes: DnsDelegationSignerDS(),
+						Description: "Zone DNSSEC delegation-signer.",
+						Optional:    true,
+						Attributes:  DnsDelegationSignerDS(),
 					},
 				},
 			},
@@ -100,40 +102,46 @@ func (d *dnsSecDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 func DnsDelegationSignerDS() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"digesttype": schema.SingleNestedAttribute{
-			Computed:   true,
-			Attributes: digesttypeDS(),
+			Description: "Digest Type for Zone DNSSEC.",
+			Computed:    true,
+			Attributes:  digesttypeDS(),
 		},
 		"algorithmtype": schema.SingleNestedAttribute{
-			Computed:   true,
-			Attributes: algorithmtypeDS(),
+			Description: "Digest algorithm use for Zone DNSSEC.",
+			Computed:    true,
+			Attributes:  algorithmtypeDS(),
 		},
 		"digest": schema.StringAttribute{
 			Optional:    true,
-			Description: "Domain description of the DNS.",
+			Description: "Zone DNSSEC digest.",
 		},
 		"keytag": schema.Int64Attribute{
 			Optional:    true,
-			Description: "Domain description of the DNS.",
+			Description: "Key Tag for the Zone DNSSEC.",
 		},
 	}
 }
 func digesttypeDS() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"id": schema.Int64Attribute{
-			Computed: true,
+			Description: "The ID of this digest.",
+			Computed:    true,
 		},
 		"slug": schema.StringAttribute{
-			Computed: true,
+			Description: "The Slug of this digest.",
+			Computed:    true,
 		},
 	}
 }
 func algorithmtypeDS() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"id": schema.Int64Attribute{
-			Computed: true,
+			Description: "The ID of this algorithm.",
+			Computed:    true,
 		},
 		"slug": schema.StringAttribute{
-			Computed: true,
+			Description: "The Slug of this algorithm.",
+			Computed:    true,
 		},
 	}
 }
