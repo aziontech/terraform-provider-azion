@@ -36,9 +36,11 @@ func (p *azionProvider) Metadata(_ context.Context, _ provider.MetadataRequest, 
 
 func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "The Azion provider is used to interact with resources supported by Azion. The provider needs to be configured with the proper credentials before it can be used.",
 		Attributes: map[string]schema.Attribute{
 			"api_token": schema.StringAttribute{
-				Required: true,
+				Required:    true,
+				Description: "A registered token for Azion API - https://api.azion.com/#authentication-types. Alternatively, can be configured using the environment variable.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`[A-Za-z0-9-_]{40}`),

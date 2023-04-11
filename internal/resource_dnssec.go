@@ -62,7 +62,8 @@ func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"zone_id": schema.StringAttribute{
-				Optional: true,
+				Required:    true,
+				Description: "The zone identifier to target for the resource.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -80,15 +81,16 @@ func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Attributes: map[string]schema.Attribute{
 					"is_enabled": schema.BoolAttribute{
 						Required:    true,
-						Description: "Enable description of the DNS.",
+						Description: "Zone DNSSEC flags for enabled.",
 					},
 					"status": schema.StringAttribute{
-						Computed:    true,
-						Description: "Domain description of the DNS.",
+						Optional:    true,
+						Description: "The status of the Zone DNSSEC.",
 					},
 					"delegation_signer": schema.SingleNestedAttribute{
-						Computed:   true,
-						Attributes: DnsDelegationSigner(),
+						Description: "Zone DNSSEC delegation-signer.",
+						Optional:    true,
+						Attributes:  DnsDelegationSigner(),
 					},
 				},
 			},
@@ -99,30 +101,34 @@ func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 func DnsDelegationSigner() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"digesttype": schema.SingleNestedAttribute{
-			Computed:   true,
-			Attributes: DnsDelegationSignerDigestTypeScheme(),
+			Computed:    true,
+			Description: "Digest Type for Zone DNSSEC.",
+			Attributes:  DnsDelegationSignerDigestTypeScheme(),
 		},
 		"algorithmtype": schema.SingleNestedAttribute{
-			Computed:   true,
-			Attributes: DnsDelegationSignerDigestTypeScheme(),
+			Computed:    true,
+			Description: "Digest algorithm use for Zone DNSSEC.",
+			Attributes:  DnsDelegationSignerDigestTypeScheme(),
 		},
 		"digest": schema.StringAttribute{
 			Computed:    true,
-			Description: "Domain description of the DNS.",
+			Description: "Zone DNSSEC digest.",
 		},
 		"keytag": schema.Int64Attribute{
 			Computed:    true,
-			Description: "Domain description of the DNS.",
+			Description: "Key Tag for the Zone DNSSEC.",
 		},
 	}
 }
 func DnsDelegationSignerDigestTypeScheme() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"id": schema.Int64Attribute{
-			Computed: true,
+			Description: "The ID of this digest.",
+			Computed:    true,
 		},
 		"slug": schema.StringAttribute{
-			Computed: true,
+			Description: "The Slug of this digest.",
+			Computed:    true,
 		},
 	}
 }
