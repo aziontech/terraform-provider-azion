@@ -1,9 +1,9 @@
 # Azion Terraform Provider
 
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/aziontech/terraform-provider-azion)](https://goreportcard.com/report/github.com/aziontech/terraform-provider-azion)
 <!--- # Documentation: https://registry.terraform.io/providers/azion/azion/latest/docs
 -->
-[![Go Report Card](https://goreportcard.com/badge/github.com/aziontech/terraform-provider-azion)](https://goreportcard.com/report/github.com/aziontech/terraform-provider-azion)
 
 ## Quick links
 * [Requirements](#Requirements)
