@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
@@ -74,7 +73,6 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	idnsConfig := idns.NewConfiguration()
 	idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
 	userAgent := fmt.Sprintf(consts.UserAgentDefault, req.TerraformVersion, p.version)
-	tflog.Debug(ctx, "Estou aqui "+userAgent)
 	idnsConfig.UserAgent = userAgent
 
 	client := idns.NewAPIClient(idnsConfig)
@@ -100,10 +98,8 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 	}
 }
 
-func New(version string) func() provider.Provider {
-	return func() provider.Provider {
-		return &azionProvider{
-			version: version,
-		}
+func New(version string) provider.Provider {
+	return &azionProvider{
+		version: version,
 	}
 }

@@ -24,7 +24,7 @@ func main() {
 
 	ctx := context.Background()
 	providers := []func() tfprotov6.ProviderServer{
-		providerserver.NewProtocol6(framework.New(version)()),
+		providerserver.NewProtocol6(framework.New(version)),
 	}
 
 	muxServer, err := tf6muxserver.NewMuxServer(ctx, providers...)
