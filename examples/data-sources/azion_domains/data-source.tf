@@ -1,11 +1,3 @@
-terraform {
-  required_providers {
-    azion = {
-      source  = "github.com/actions/azion"
-    }
-  }
-}
-
 provider "azion" {
   api_token  = "<token>"
 }

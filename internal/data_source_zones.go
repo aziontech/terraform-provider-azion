@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -19,7 +18,7 @@ func dataSourceAzionZones() datasource.DataSource {
 }
 
 type ZonesDataSource struct {
-	client *idns.APIClient
+	client *apiClient
 }
 
 type ZonesDataSourceModel struct {
@@ -46,7 +45,7 @@ func (d *ZonesDataSource) Configure(_ context.Context, req datasource.ConfigureR
 	if req.ProviderData == nil {
 		return
 	}
-	d.client = req.ProviderData.(*idns.APIClient)
+	d.client = req.ProviderData.(*apiClient)
 }
 
 func (d *ZonesDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -103,7 +102,7 @@ func (d *ZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 }
 
 func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	zoneResponse, _, err := d.client.ZonesApi.GetZones(ctx).Execute()
+	zoneResponse, _, err := d.client.idnsApi.ZonesApi.GetZones(ctx).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Token has expired",

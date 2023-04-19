@@ -1,44 +1,29 @@
 package provider
 
 import (
-	"os"
-
 	"github.com/aziontech/azionapi-go-sdk/domains"
 	"github.com/aziontech/azionapi-go-sdk/idns"
 )
 
-type azClient struct {
-	APIToken      string
-	IdnsConfig    *idns.Configuration
-	DomainsConfig *domains.Configuration
-}
-
 type apiClient struct {
+	idnsConfig *idns.Configuration
 	idnsApi    *idns.APIClient
-	domainsApi *domains.APIClient
+
+	domainsConfig *domains.Configuration
+	domainsApi    *domains.APIClient
 }
 
-func Client() *apiClient {
-	APIToken := os.Getenv("api_token")
-	var config AzionProviderModel
-	if !config.APIToken.IsNull() {
-		APIToken = config.APIToken.ValueString()
+func Client(APIToken string) *apiClient {
+	client := &apiClient{
+		idnsConfig:    idns.NewConfiguration(),
+		domainsConfig: domains.NewConfiguration(),
 	}
 
-	client := &azClient{
-		IdnsConfig:    idns.NewConfiguration(),
-		DomainsConfig: domains.NewConfiguration(),
-	}
+	client.domainsApi = domains.NewAPIClient(client.domainsConfig)
+	client.domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
 
-	var apiClients *apiClient
+	client.idnsApi = idns.NewAPIClient(client.idnsConfig)
+	client.idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
 
-	domainsConfig := client.DomainsConfig
-	domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-	apiClients.domainsApi = domains.NewAPIClient(domainsConfig)
-
-	idnsConfig := client.IdnsConfig
-	idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-	apiClients.idnsApi = idns.NewAPIClient(idnsConfig)
-
-	return apiClients
+	return client
 }

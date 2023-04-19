@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"os"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -57,54 +58,16 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// APIToken := os.Getenv("api_token")
 
-	// if !config.APIToken.IsNull() {
-	// 	APIToken = config.APIToken.ValueString()
-	// }
-	// if resp.Diagnostics.HasError() {
-	// 	return
-	// }
-	// domainsConfig := domains.NewConfiguration()
-	// domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-	// client := domains.NewAPIClient(domainsConfig)
-
-	client := Client()
-	// var apiClients *apiClient
-
-	// domainsConfig := client.DomainsConfig
-	// domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-	// apiClients.domainsApi = domains.NewAPIClient(domainsConfig)
-
-	// idnsConfig := client.IdnsConfig
-	// idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-	// apiClients.idnsApi = idns.NewAPIClient(idnsConfig)
-
-	resp.DataSourceData = client
-	resp.ResourceData = client
-}
-
-func (p *azionProvider) Configure2(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var config AzionProviderModel
-	diags := req.Config.Get(ctx, &config)
-	resp.Diagnostics.Append(diags...)
+	APIToken := os.Getenv("api_token")
+	if !config.APIToken.IsNull() {
+		APIToken = config.APIToken.ValueString()
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// APIToken := os.Getenv("api_token")
 
-	// if !config.APIToken.IsNull() {
-	// 	APIToken = config.APIToken.ValueString()
-	// }
-	// if resp.Diagnostics.HasError() {
-	// 	return
-	// }
-	// idnsConfig := domains.NewConfiguration()
-	// idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-
-	//client := domains.NewAPIClient(idnsConfig)
-	client := Client()
-
+	client := Client(APIToken)
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }

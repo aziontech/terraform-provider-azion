@@ -24,7 +24,7 @@ func dataSourceAzionZone() datasource.DataSource {
 }
 
 type ZoneDataSource struct {
-	client *idns.APIClient
+	client *apiClient
 }
 
 type ZoneDataSourceModel struct {
@@ -50,7 +50,7 @@ func (d *ZoneDataSource) Configure(_ context.Context, req datasource.ConfigureRe
 	if req.ProviderData == nil {
 		return
 	}
-	d.client = req.ProviderData.(*idns.APIClient)
+	d.client = req.ProviderData.(*apiClient)
 }
 
 func (d *ZoneDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -125,7 +125,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	zoneResponse, response, err := d.client.ZonesApi.GetZone(ctx, int32(zoneId)).Execute()
+	zoneResponse, response, err := d.client.idnsApi.ZonesApi.GetZone(ctx, int32(zoneId)).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {

@@ -145,7 +145,7 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	for _, resultDomain := range domainsResponse.Results {
-		var d = DomainResults{
+		var dr = DomainResults{
 			ID:                types.Int64Value(int64(resultDomain.Id)),
 			Name:              types.StringValue(resultDomain.Name),
 			CnameAccessOnly:   types.BoolValue(*resultDomain.CnameAccessOnly),
@@ -154,12 +154,12 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			DomainName:        types.StringValue(*resultDomain.DomainName),
 		}
 		if resultDomain.Environment != nil {
-			d.Environment = types.StringValue(*resultDomain.Environment)
+			dr.Environment = types.StringValue(*resultDomain.Environment)
 		}
 		for _, cname := range resultDomain.Cnames {
-			d.Cnames = append(d.Cnames, types.StringValue(cname))
+			dr.Cnames = append(dr.Cnames, types.StringValue(cname))
 		}
-		domainState.Results = append(domainState.Results, d)
+		domainState.Results = append(domainState.Results, dr)
 	}
 
 	domainState.ID = types.StringValue("placeholder")

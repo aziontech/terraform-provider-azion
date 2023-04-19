@@ -27,7 +27,7 @@ func NewDnssecResource() resource.Resource {
 }
 
 type dnssecResource struct {
-	client *idns.APIClient
+	client *apiClient
 }
 
 type dnssecResourceModel struct {
@@ -138,7 +138,7 @@ func (r *dnssecResource) Configure(_ context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	r.client = req.ProviderData.(*idns.APIClient)
+	r.client = req.ProviderData.(*apiClient)
 }
 
 func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -161,7 +161,7 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		IsEnabled: idns.PtrBool(true),
 	}
 
-	enableDnsSec, response, err := r.client.DNSSECApi.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
+	enableDnsSec, response, err := r.client.idnsApi.DNSSECApi.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -220,7 +220,7 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
-	getDnsSec, response, err := r.client.DNSSECApi.GetZoneDnsSec(ctx, int32(zoneId)).Execute()
+	getDnsSec, response, err := r.client.idnsApi.DNSSECApi.GetZoneDnsSec(ctx, int32(zoneId)).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -294,7 +294,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		IsEnabled: idns.PtrBool(plan.DnsSec.IsEnabled.ValueBool()),
 	}
 
-	enableDnsSec, response, err := r.client.DNSSECApi.PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute()
+	enableDnsSec, response, err := r.client.idnsApi.DNSSECApi.PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -368,7 +368,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		IsEnabled: idns.PtrBool(false),
 	}
 
-	_, response, err := r.client.DNSSECApi.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
+	_, response, err := r.client.idnsApi.DNSSECApi.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
