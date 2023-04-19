@@ -31,10 +31,6 @@ type azionProvider struct {
 	version string
 }
 
-func New() provider.Provider {
-	return &azionProvider{}
-}
-
 func (p *azionProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "azion"
 	resp.Version = p.version
