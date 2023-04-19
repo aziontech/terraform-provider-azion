@@ -2,10 +2,8 @@ package provider
 
 import (
 	"context"
-	"os"
 	"regexp"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -59,18 +57,53 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	APIToken := os.Getenv("api_token")
+	// APIToken := os.Getenv("api_token")
 
-	if !config.APIToken.IsNull() {
-		APIToken = config.APIToken.ValueString()
-	}
+	// if !config.APIToken.IsNull() {
+	// 	APIToken = config.APIToken.ValueString()
+	// }
+	// if resp.Diagnostics.HasError() {
+	// 	return
+	// }
+	// domainsConfig := domains.NewConfiguration()
+	// domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	// client := domains.NewAPIClient(domainsConfig)
+
+	client := Client()
+	// var apiClients *apiClient
+
+	// domainsConfig := client.DomainsConfig
+	// domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	// apiClients.domainsApi = domains.NewAPIClient(domainsConfig)
+
+	// idnsConfig := client.IdnsConfig
+	// idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	// apiClients.idnsApi = idns.NewAPIClient(idnsConfig)
+
+	resp.DataSourceData = client
+	resp.ResourceData = client
+}
+
+func (p *azionProvider) Configure2(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var config AzionProviderModel
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	idnsConfig := idns.NewConfiguration()
-	idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	// APIToken := os.Getenv("api_token")
 
-	client := idns.NewAPIClient(idnsConfig)
+	// if !config.APIToken.IsNull() {
+	// 	APIToken = config.APIToken.ValueString()
+	// }
+	// if resp.Diagnostics.HasError() {
+	// 	return
+	// }
+	// idnsConfig := domains.NewConfiguration()
+	// idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+
+	//client := domains.NewAPIClient(idnsConfig)
+	client := Client()
 
 	resp.DataSourceData = client
 	resp.ResourceData = client
@@ -82,6 +115,7 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionZones,
 		dataSourceAzionRecords,
 		dataSourceAzionDNSSec,
+		dataSourceAzionDomains,
 	}
 }
 
