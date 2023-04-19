@@ -124,7 +124,6 @@ func (d *DomainsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 }
 
 func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	//domainsResponse, _, err := d.client.DomainsApi.GetDomains(ctx).Execute()
 	domainsResponse, _, err := d.client.domainsApi.DomainsApi.GetDomains(ctx).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
