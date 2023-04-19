@@ -37,6 +37,7 @@ func New() provider.Provider {
 
 func (p *azionProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "azion"
+	resp.Version = p.version
 }
 
 func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
