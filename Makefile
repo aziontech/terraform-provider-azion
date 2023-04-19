@@ -2,8 +2,8 @@ TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=github.com
 NAMESPACE=actions
 NAME=azion
-BINARY=terraform-provider-${NAME}
-VERSION=0.0.1
+VERSION=$(shell git describe --tags --always)
+DEV_VERSION=0.1.0
 OS_ARCH=${GOHOSTOS}_${GOHOSTARCH}
 CURDIR=$(shell pwd)
 
@@ -21,15 +21,18 @@ GOLINT ?= $(shell which golint)
 GOFMT ?= $(shell which gofmt)
 GOFMT_FILES?=$$(find . -name '*.go')
 
-default: install
+default: build
+
+install: vet fmtcheck
+	go install -ldflags="-X github.com/cloudflare/terraform-provider-cloudflare/main.version=$(VERSION)"
+
+build: vet fmtcheck
+build:
+	$(GO) build -gcflags="all=-N -l" -ldflags="-X github.com/aziontech/terraform-provider-azion/main.version=$(VERSION)" -o ${BINARY}
 
 checks:
 	@go fmt ./...
 	@go vet ./...
-
-.PHONY: build
-build:
-	$(GO) build -gcflags="all=-N -l" -o ${BINARY}
 
 .PHONY: release
 release: tools
@@ -39,10 +42,20 @@ release: tools
 clean-release:
 	rm -Rf dist/*
 
-.PHONY: install
-install: build
-	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
-	mv ${BINARY} ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}
+clean-dev:
+	@echo "==> Removing development version ($(DEV_VERSION))"
+	@rm -rf ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}/terraform-provider-azion_$(DEV_VERSION)
+	@rm -rf ./terraformScripts/.terraform*
+	@rm -rf ./terraformScripts/resource/.terraform*
+	@find ./terraformScripts/ -name ".terraform*" -exec rm {} \;
+	@find ./terraformScripts/ -name *.lock.hcl -exec rm {} \;
+	@find ./terraformScripts/ -name "*tfstate*" -exec rm {} \;
+
+install-dev: clean-dev
+	@echo "==> Building development version ($(DEV_VERSION))"
+	go build -gcflags="all=-N -l" -o terraform-provider-azion_$(DEV_VERSION)
+	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}
+	mv terraform-provider-azion_$(DEV_VERSION) ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}
 
 .PHONY: testacc
 testacc: 
@@ -90,12 +103,3 @@ tools:
 generate-changelog:
 	@echo "==> Generating changelog..."
 	@sh -c "'$(CURDIR)/scripts/generate-changelog.sh'"
-
-.PHONY: clean
-clean:
-	rm -rf ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${VERSION}/${OS_ARCH}/${BINARY}
-	rm -rf ./examples/.terraform*
-	rm -rf ./examples/resource/.terraform*
-	find ./examples/ -name ".terraform*" -exec rm {} \;
-	find ./examples/ -name *.lock.hcl -exec rm {} \;
-	find ./examples/ -name "*tfstate*" -exec rm {} \;

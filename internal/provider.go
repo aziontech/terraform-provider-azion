@@ -2,10 +2,12 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"regexp"
 
 	"github.com/aziontech/azionapi-go-sdk/idns"
+	"github.com/aziontech/terraform-provider-azion/internal/consts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -24,14 +26,15 @@ type AzionProviderModel struct {
 }
 
 type azionProvider struct {
-}
-
-func New() provider.Provider {
-	return &azionProvider{}
+	// version is set to the provider version on release, "dev" when the
+	// provider is built and ran locally, and "test" when running acceptance
+	// testing.
+	version string
 }
 
 func (p *azionProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "azion"
+	resp.Version = p.version
 }
 
 func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
@@ -69,6 +72,8 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	}
 	idnsConfig := idns.NewConfiguration()
 	idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	userAgent := fmt.Sprintf(consts.UserAgentDefault, req.TerraformVersion, p.version)
+	idnsConfig.UserAgent = userAgent
 
 	client := idns.NewAPIClient(idnsConfig)
 
@@ -90,5 +95,11 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewZoneResource,
 		NewRecordResource,
 		NewDnssecResource,
+	}
+}
+
+func New(version string) provider.Provider {
+	return &azionProvider{
+		version: version,
 	}
 }
