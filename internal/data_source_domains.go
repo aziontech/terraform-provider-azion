@@ -89,29 +89,37 @@ func (d *DomainsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.Int64Attribute{
-							Computed: true,
+							Computed:    true,
+							Description: "Identification of this entry.",
 						},
 						"name": schema.StringAttribute{
-							Computed: true,
+							Computed:    true,
+							Description: "Name of this entry.",
 						},
 						"cnames": schema.ListAttribute{
 							Computed:    true,
 							ElementType: types.StringType,
+							Description: "List of domains to use as URLs for your files.",
 						},
 						"cname_access_only": schema.BoolAttribute{
-							Computed: true,
+							Computed:    true,
+							Description: "Allow access to your URL only via provided CNAMEs.",
 						},
 						"is_active": schema.BoolAttribute{
-							Computed: true,
+							Computed:    true,
+							Description: "Make access to your URL only via provided CNAMEs.",
 						},
 						"edge_application_id": schema.Int64Attribute{
-							Computed: true,
+							Computed:    true,
+							Description: "Edge Application associated ID.",
 						},
 						"digital_certificate_id": schema.Int64Attribute{
-							Computed: true,
+							Computed:    true,
+							Description: "Digital Certificate associated ID.",
 						},
 						"domain_name": schema.StringAttribute{
-							Computed: true,
+							Computed:    true,
+							Description: "Domain name attributed by Azion to this configuration.",
 						},
 						"environment": schema.StringAttribute{
 							Computed: true,
