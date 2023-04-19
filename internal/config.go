@@ -13,7 +13,7 @@ type apiClient struct {
 	domainsApi    *domains.APIClient
 }
 
-func Client(APIToken string) *apiClient {
+func Client(APIToken string, userAgent string) *apiClient {
 	client := &apiClient{
 		idnsConfig:    idns.NewConfiguration(),
 		domainsConfig: domains.NewConfiguration(),
@@ -21,9 +21,11 @@ func Client(APIToken string) *apiClient {
 
 	client.domainsApi = domains.NewAPIClient(client.domainsConfig)
 	client.domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.domainsConfig.UserAgent = userAgent
 
 	client.idnsApi = idns.NewAPIClient(client.idnsConfig)
 	client.idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.idnsConfig.UserAgent = userAgent
 
 	return client
 }

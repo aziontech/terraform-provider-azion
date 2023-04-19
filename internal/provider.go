@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"regexp"
 
+	"github.com/aziontech/terraform-provider-azion/internal/consts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -23,6 +25,10 @@ type AzionProviderModel struct {
 }
 
 type azionProvider struct {
+	// version is set to the provider version on release, "dev" when the
+	// provider is built and ran locally, and "test" when running acceptance
+	// testing.
+	version string
 }
 
 func New() provider.Provider {
@@ -67,7 +73,9 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 		return
 	}
 
-	client := Client(APIToken)
+	userAgent := fmt.Sprintf(consts.UserAgentDefault, req.TerraformVersion, p.version)
+
+	client := Client(APIToken, userAgent)
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
