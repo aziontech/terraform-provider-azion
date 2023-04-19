@@ -98,3 +98,9 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewDnssecResource,
 	}
 }
+
+func New(version string) provider.Provider {
+	return &azionProvider{
+		version: version,
+	}
+}
