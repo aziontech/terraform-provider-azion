@@ -45,13 +45,16 @@ clean-release:
 clean-dev:
 	@echo "==> Removing development version ($(DEV_VERSION))"
 	@rm -rf ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}/terraform-provider-azion_$(DEV_VERSION)
-	@rm -rf ./terraformScripts/.terraform*
-	@rm -rf ./terraformScripts/resource/.terraform*
-	@find ./terraformScripts/ -name ".terraform*" -exec rm {} \;
-	@find ./terraformScripts/ -name *.lock.hcl -exec rm {} \;
-	@find ./terraformScripts/ -name "*tfstate*" -exec rm {} \;
+	@if [ -d ./terraformScripts ]; then \
+  		echo "==> Removing terraform Files "; \
+		rm -rf ./terraformScripts/.terraform*; \
+		rm -rf ./terraformScripts/resource/.terraform*; \
+		find ./terraformScripts/ -name ".terraform*" -exec rm {} \; ; \
+		find ./terraformScripts/ -name *.lock.hcl -exec rm {} \; ; \
+		find ./terraformScripts/ -name "*tfstate*" -exec rm {} \; ; \
+	fi
 
-install-dev: clean-dev
+install-dev:
 	@echo "==> Building development version ($(DEV_VERSION))"
 	go build -gcflags="all=-N -l" -o terraform-provider-azion_$(DEV_VERSION)
 	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}
