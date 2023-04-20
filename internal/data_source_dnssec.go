@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -21,7 +20,7 @@ func dataSourceAzionDNSSec() datasource.DataSource {
 }
 
 type dnsSecDataSource struct {
-	client *idns.APIClient
+	client *apiClient
 }
 
 type dnsSecDataSourceModel struct {
@@ -57,7 +56,7 @@ func (d *dnsSecDataSource) Configure(_ context.Context, req datasource.Configure
 	if req.ProviderData == nil {
 		return
 	}
-	d.client = req.ProviderData.(*idns.APIClient)
+	d.client = req.ProviderData.(*apiClient)
 }
 
 func (d *dnsSecDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -155,7 +154,7 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 	zoneId := int32(getZoneId.ValueInt64())
 
-	getDnsSec, response, err := d.client.DNSSECApi.GetZoneDnsSec(ctx, zoneId).Execute()
+	getDnsSec, response, err := d.client.idnsApi.DNSSECApi.GetZoneDnsSec(ctx, zoneId).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {

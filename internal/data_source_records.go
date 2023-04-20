@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -22,7 +21,7 @@ func dataSourceAzionRecords() datasource.DataSource {
 }
 
 type RecordsDataSource struct {
-	client *idns.APIClient
+	client *apiClient
 }
 
 type RecordsDataSourceModel struct {
@@ -60,7 +59,7 @@ func (d *RecordsDataSource) Configure(ctx context.Context, req datasource.Config
 	if req.ProviderData == nil {
 		return
 	}
-	d.client = req.ProviderData.(*idns.APIClient)
+	d.client = req.ProviderData.(*apiClient)
 }
 
 func (d *RecordsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -173,7 +172,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 	zoneId := int32(getZoneId.ValueInt64())
 
-	recordsResponse, httpResp, err := d.client.RecordsApi.GetZoneRecords(ctx, zoneId).Execute()
+	recordsResponse, httpResp, err := d.client.idnsApi.RecordsApi.GetZoneRecords(ctx, zoneId).Execute()
 	if err != nil {
 		d.errorPrint(resp, httpResp.StatusCode)
 		return

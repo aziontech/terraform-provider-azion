@@ -30,7 +30,7 @@ func NewRecordResource() resource.Resource {
 }
 
 type recordResource struct {
-	client *idns.APIClient
+	client *apiClient
 }
 
 type recordResourceModel struct {
@@ -119,7 +119,7 @@ func (r *recordResource) Configure(_ context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	r.client = req.ProviderData.(*idns.APIClient)
+	r.client = req.ProviderData.(*apiClient)
 }
 
 func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -163,7 +163,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
-	createRecord, httpResponse, err := r.client.RecordsApi.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute()
+	createRecord, httpResponse, err := r.client.idnsApi.RecordsApi.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute()
 	if err != nil {
 		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
 		bodyBytes, _ := io.ReadAll(httpResponse.Body)
@@ -255,7 +255,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 		idRecord = AtoiNoError(valueFromCmd[1], resp)
 	}
 
-	recordsResponse, httpResponse, err := r.client.RecordsApi.GetZoneRecords(ctx, int32(idZone)).Execute()
+	recordsResponse, httpResponse, err := r.client.idnsApi.RecordsApi.GetZoneRecords(ctx, int32(idZone)).Execute()
 	if err != nil {
 		usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
@@ -329,7 +329,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		record.AnswersList = append(record.AnswersList, planAnswerList.ValueString())
 	}
 
-	updateRecord, httpResponse, err := r.client.RecordsApi.PutZoneRecord(ctx, int32(idPlan), int32(state.Record.Id.ValueInt64())).RecordPostOrPut(record).Execute()
+	updateRecord, httpResponse, err := r.client.idnsApi.RecordsApi.PutZoneRecord(ctx, int32(idPlan), int32(state.Record.Id.ValueInt64())).RecordPostOrPut(record).Execute()
 	if err != nil {
 		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
 		bodyBytes, _ := io.ReadAll(httpResponse.Body)
@@ -384,7 +384,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	_, _, err = r.client.RecordsApi.DeleteZoneRecord(ctx, int32(idState), int32(state.Record.Id.ValueInt64())).Execute()
+	_, _, err = r.client.idnsApi.RecordsApi.DeleteZoneRecord(ctx, int32(idState), int32(state.Record.Id.ValueInt64())).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Azion API",

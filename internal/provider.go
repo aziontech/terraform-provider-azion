@@ -6,7 +6,6 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/aziontech/terraform-provider-azion/internal/consts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -62,21 +61,18 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	APIToken := os.Getenv("api_token")
 
+	APIToken := os.Getenv("api_token")
 	if !config.APIToken.IsNull() {
 		APIToken = config.APIToken.ValueString()
 	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	idnsConfig := idns.NewConfiguration()
-	idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+
 	userAgent := fmt.Sprintf(consts.UserAgentDefault, req.TerraformVersion, p.version)
-	idnsConfig.UserAgent = userAgent
 
-	client := idns.NewAPIClient(idnsConfig)
-
+	client := Client(APIToken, userAgent)
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
@@ -87,6 +83,7 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionZones,
 		dataSourceAzionRecords,
 		dataSourceAzionDNSSec,
+		dataSourceAzionDomains,
 	}
 }
 
