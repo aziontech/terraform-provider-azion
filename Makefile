@@ -23,12 +23,12 @@ GOFMT_FILES?=$$(find . -name '*.go')
 
 default: build
 
-install: vet fmtcheck
-	go install -ldflags="-X github.com/cloudflare/terraform-provider-cloudflare/main.version=$(VERSION)"
+install: checks
+	go install -ldflags="-X github.com/aziontech/terraform-provider-azion/main.version=$(VERSION)"
 
-build: vet fmtcheck
+build: checks
 build:
-	$(GO) build -gcflags="all=-N -l" -ldflags="-X github.com/aziontech/terraform-provider-azion/main.version=$(VERSION)" -o ${BINARY}
+	$(GO) build -ldflags="-X github.com/aziontech/terraform-provider-azion/main.version=$(VERSION)" -o terraform-provider-azion;
 
 checks:
 	@go fmt ./...
