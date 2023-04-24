@@ -6,6 +6,7 @@ import (
 	"github.com/aziontech/azionapi-go-sdk/domains"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -14,29 +15,26 @@ var (
 	_ datasource.DataSourceWithConfigure = &DomainsDataSource{}
 )
 
-func dataSourceAzionDomains() datasource.DataSource {
-	return &DomainsDataSource{}
+func dataSourceAzionDomain() datasource.DataSource {
+	return &DomainDataSource{}
 }
 
-type DomainsDataSource struct {
+type DomainDataSource struct {
 	client *apiClient
 }
 
-type DomainsDataSourceModel struct {
-	SchemaVersion types.Int64              `tfsdk:"schema_version"`
-	Counter       types.Int64              `tfsdk:"counter"`
-	TotalPages    types.Int64              `tfsdk:"total_pages"`
-	Links         *GetDomainsResponseLinks `tfsdk:"links"`
-	Results       []DomainsResults         `tfsdk:"results"`
-	ID            types.String             `tfsdk:"id"`
+type DomainDataSourceModel struct {
+	SchemaVersion types.Int64   `tfsdk:"schema_version"`
+	Results       DomainResults `tfsdk:"results"`
+	ID            types.String  `tfsdk:"id"`
 }
 
-type GetDomainsResponseLinks struct {
+type GetDomainResponseLinks struct {
 	Previous types.String `tfsdk:"previous"`
 	Next     types.String `tfsdk:"next"`
 }
 
-type DomainsResults struct {
+type DomainResults struct {
 	ID                   types.Int64    `tfsdk:"id"`
 	Name                 types.String   `tfsdk:"name"`
 	Cnames               []types.String `tfsdk:"cnames"`
@@ -48,18 +46,18 @@ type DomainsResults struct {
 	Environment          types.String   `tfsdk:"environment"`
 }
 
-func (d *DomainsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+func (d *DomainDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	d.client = req.ProviderData.(*apiClient)
 }
 
-func (d *DomainsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *DomainDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_domains"
 }
 
-func (d *DomainsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *DomainDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -132,8 +130,15 @@ func (d *DomainsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 	}
 }
 
-func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	domainsResponse, _, err := d.client.domainsApi.DomainsApi.GetDomains(ctx).Execute()
+func (d *DomainDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var getDomainId types.String
+	diags := req.Config.GetAttribute(ctx, path.Root("id"), &getDomainId)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	domainResponse, _, err := d.client.domainsApi.DomainsApi.GetDomain(ctx, getDomainId.ValueString()).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Token has expired",
@@ -142,37 +147,22 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	domainState := DomainsDataSourceModel{
-		SchemaVersion: types.Int64Value(int64(domainsResponse.SchemaVersion)),
-		Counter:       types.Int64Value(int64(domainsResponse.Count)),
-		TotalPages:    types.Int64Value(int64(domainsResponse.TotalPages)),
-		Links: &GetDomainsResponseLinks{
-			Previous: types.StringValue(domainsResponse.Links.Previous),
-			Next:     types.StringValue(domainsResponse.Links.Next),
+	domainState := DomainDataSourceModel{
+		SchemaVersion: types.Int64Value(int64(domainResponse.SchemaVersion)),
+		Results: DomainResults{
+			ID:                   types.Int64Value(int64(domainResponse.Results.Id)),
+			Name:                 types.StringValue(domainResponse.Results.Name),
+			CnameAccessOnly:      types.BoolValue(*domainResponse.Results.CnameAccessOnly),
+			IsActive:             types.BoolValue(*domainResponse.Results.IsActive),
+			EdgeApplicationId:    types.Int64Value(int64(*domainResponse.Results.EdgeApplicationId)),
+			DigitalCertificateId: types.Int64Value(int64(*domains.NullableInt64.Get(domainResponse.Results.DigitalCertificateId))),
+			DomainName:           types.StringValue(*domainResponse.Results.DomainName),
+			Environment:          types.StringValue(*domainResponse.Results.Environment),
 		},
 	}
 
-	for _, resultDomain := range domainsResponse.Results {
-		var dr = DomainsResults{
-			ID:                   types.Int64Value(int64(resultDomain.Id)),
-			Name:                 types.StringValue(resultDomain.Name),
-			CnameAccessOnly:      types.BoolValue(*resultDomain.CnameAccessOnly),
-			IsActive:             types.BoolValue(*resultDomain.IsActive),
-			EdgeApplicationId:    types.Int64Value(int64(*resultDomain.EdgeApplicationId)),
-			DigitalCertificateId: types.Int64Value(int64(*domains.NullableInt64.Get(resultDomain.DigitalCertificateId))),
-			DomainName:           types.StringValue(*resultDomain.DomainName),
-		}
-		if resultDomain.Environment != nil {
-			dr.Environment = types.StringValue(*resultDomain.Environment)
-		}
-		for _, cname := range resultDomain.Cnames {
-			dr.Cnames = append(dr.Cnames, types.StringValue(cname))
-		}
-		domainState.Results = append(domainState.Results, dr)
-	}
-
 	domainState.ID = types.StringValue("placeholder")
-	diags := resp.State.Set(ctx, &domainState)
+	diags = resp.State.Set(ctx, &domainState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
