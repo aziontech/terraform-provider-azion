@@ -12,12 +12,12 @@ ifeq (, $(GO))
 $(error "No go binary found in $(PATH), please install go 1.19 or higher before continue")
 endif
 
-GOBIN ?= $(shell $(GO) env | grep GOBIN)
+GOPATH ?= $(shell $(GO) env GOPATH)
+GOBIN ?= $(GOPATH)/bin
 GOHOSTOS ?= $(shell $(GO) env GOHOSTOS || echo unknown)
 GOHOSTARCH ?= $(shell $(GO) env GOHOSTARCH || echo unknown)
 GOSEC ?= $(GOBIN)/gosec
 GORELEASER ?= $(shell which goreleaser)
-GOLINT ?= $(shell which golint)
 GOFMT ?= $(shell which gofmt)
 GOFMT_FILES?=$$(find . -name '*.go')
 
@@ -45,13 +45,16 @@ clean-release:
 clean-dev:
 	@echo "==> Removing development version ($(DEV_VERSION))"
 	@rm -rf ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}/terraform-provider-azion_$(DEV_VERSION)
-	@rm -rf ./terraformScripts/.terraform*
-	@rm -rf ./terraformScripts/resource/.terraform*
-	@find ./terraformScripts/ -name ".terraform*" -exec rm {} \;
-	@find ./terraformScripts/ -name *.lock.hcl -exec rm {} \;
-	@find ./terraformScripts/ -name "*tfstate*" -exec rm {} \;
+	@if [ -d ./terraformScripts ]; then \
+  		echo "==> Removing terraform Files "; \
+		rm -rf ./terraformScripts/.terraform*; \
+		rm -rf ./terraformScripts/resource/.terraform*; \
+		find ./terraformScripts/ -name ".terraform*" -exec rm {} \; ; \
+		find ./terraformScripts/ -name *.lock.hcl -exec rm {} \; ; \
+		find ./terraformScripts/ -name "*tfstate*" -exec rm {} \; ; \
+	fi
 
-install-dev: clean-dev
+install-dev:
 	@echo "==> Building development version ($(DEV_VERSION))"
 	go build -gcflags="all=-N -l" -o terraform-provider-azion_$(DEV_VERSION)
 	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}
@@ -75,23 +78,25 @@ fmt:
 
 .PHONY: lint
 lint: get-lint-deps ## running GoLint
-	@ $(GOBIN)/golangci-lint run ./...
+	@ $(GOBIN)/golangci-lint run ./... --config .golintci.yml
 
 .PHONY: get-lint-deps
 get-lint-deps:
 	@if [ ! -x $(GOBIN)/golangci-lint ]; then\
 		curl -sfL \
-		https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.31.0 ;\
+		https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.52.2 ;\
 	fi
 
 .PHONY: sec
 sec: get-gosec-deps
-	@$(GOSEC) ./...
+	@ -$(GOSEC) ./...
 
 .PHONY: get-gosec-deps
 get-gosec-deps:
-	@ cd $(GOPATH); \
-		$(GO) get -u github.com/securego/gosec/cmd/gosec
+	@if [ ! -x $(GOBIN)/gosec ]; then\
+		curl -sfL \
+		https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b $(GOBIN) v2.15.0 ;\
+	fi
 
 docs: tools
 	@sh -c "'$(CURDIR)/scripts/generate-docs.sh'"
