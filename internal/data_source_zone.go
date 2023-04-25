@@ -61,43 +61,51 @@ func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Optional: true,
+				Description: "Numeric identifier of the data source.",
+				Optional:    true,
 			},
 			"schema_version": schema.Int64Attribute{
-				Computed: true,
+				Description: "Schema Version.",
+				Computed:    true,
 			},
 			"results": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"zone_id": schema.Int64Attribute{
-						Required: true,
+						Description: "The zone identifier to target for the resource.",
+						Required:    true,
 					},
 					"name": schema.StringAttribute{
+						Description: "The name of the zone. Must provide only one of zone_id, name.",
 						Computed:    true,
-						Description: "Name description of the DNS.",
 					},
 					"domain": schema.StringAttribute{
 						Computed:    true,
-						Description: "Domain description of the DNS.",
+						Description: "Domain name attributed by Azion to this configuration.",
 					},
 					"is_active": schema.BoolAttribute{
 						Computed:    true,
-						Description: "Enable description of the DNS.",
+						Description: "Status of the zone.",
 					},
 					"retry": schema.Int64Attribute{
-						Computed: true,
+						Computed:    true,
+						Description: "The rate at which a secondary server will retry to refresh the primary zone file if the initial refresh failed.",
 					},
 					"nxttl": schema.Int64Attribute{
-						Computed: true,
+						Computed:    true,
+						Description: "In the event that requesting the domain results in a non-existent query (NXDOMAIN), this is the amount of time that is respected by the recursor to return the NXDOMAIN response.",
 					},
 					"soattl": schema.Int64Attribute{
-						Computed: true,
+						Computed:    true,
+						Description: "The interval at which the SOA record itself is refreshed.",
 					},
 					"refresh": schema.Int64Attribute{
-						Computed: true,
+						Computed:    true,
+						Description: "The interval at which secondary servers (secondary DNS) are set to refresh the primary zone file from the primary server.",
 					},
 					"expiry": schema.Int64Attribute{
-						Computed: true,
+						Computed:    true,
+						Description: "If Refresh and Retry fail repeatedly, this is the time period after which the primary should be considered gone and no longer authoritative for the given zone.",
 					},
 					"nameservers": schema.ListAttribute{
 						Computed:    true,

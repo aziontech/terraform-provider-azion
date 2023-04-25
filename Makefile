@@ -1,6 +1,6 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=github.com
-NAMESPACE=actions
+NAMESPACE=aziontech
 NAME=azion
 VERSION=$(shell git describe --tags --always)
 DEV_VERSION=0.1.0

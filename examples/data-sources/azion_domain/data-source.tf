@@ -1,3 +1,3 @@
-data "azion_domain" "dev" {
+data "azion_domain" "example" {
   id = "<domain_id>"
 }
