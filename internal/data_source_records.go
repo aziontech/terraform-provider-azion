@@ -73,17 +73,20 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Optional: true,
 			},
 			"zone_id": schema.Int64Attribute{
-				Optional:    true,
+				Required:    true,
 				Description: "The zone identifier to target for the resource.",
 			},
 			"schema_version": schema.Int64Attribute{
-				Computed: true,
+				Description: "Schema Version.",
+				Computed:    true,
 			},
 			"counter": schema.Int64Attribute{
-				Computed: true,
+				Description: "The total number of records.",
+				Computed:    true,
 			},
 			"total_pages": schema.Int64Attribute{
-				Computed: true,
+				Description: "The total number of pages.",
+				Computed:    true,
 			},
 			"links": schema.SingleNestedAttribute{
 				Computed: true,
@@ -100,7 +103,8 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"zone_id": schema.Int64Attribute{
-						Computed: true,
+						Description: "The zone identifier to target for the resource.",
+						Computed:    true,
 					},
 					"domain": schema.StringAttribute{
 						Computed:    true,
@@ -111,10 +115,12 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"record_id": schema.Int64Attribute{
-									Computed: true,
+									Description: "The record identifier.",
+									Computed:    true,
 								},
 								"entry": schema.StringAttribute{
-									Computed: true,
+									Computed:    true,
+									Description: "The first part of domain or 'Name'.",
 								},
 								"description": schema.StringAttribute{
 									Computed: true,
@@ -122,9 +128,11 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 								"answers_list": schema.ListAttribute{
 									Optional:    true,
 									ElementType: types.StringType,
+									Description: "List of answers replied by DNS Authoritative to that Record.",
 								},
 								"policy": schema.StringAttribute{
-									Computed: true,
+									Computed:    true,
+									Description: "Must be 'simple' or 'weighted'.",
 								},
 								"record_type": schema.StringAttribute{
 									Computed:    true,
@@ -132,7 +140,7 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 								},
 								"ttl": schema.Int64Attribute{
 									Computed:    true,
-									Description: "TTL of the found DNS record.",
+									Description: "Time-to-live defines max-time for packets life in seconds.",
 								},
 							},
 						},

@@ -67,7 +67,7 @@ func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed:    true,
 			},
 			"zone_id": schema.StringAttribute{
-				Description: "Zone identification.",
+				Description: "The zone identifier to target for the resource.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -81,32 +81,32 @@ func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					},
 					"record_type": schema.StringAttribute{
 						Required:    true,
-						Description: "Defines the record type (A, CNAME, MX, NS, etc...)",
+						Description: "Defines the record type (A, CNAME, MX, NS).",
 					},
 					"entry": schema.StringAttribute{
 						Required:    true,
-						Description: "The first part of domain or 'Name'",
+						Description: "The first part of domain or 'Name'.",
 					},
 					"answers_list": schema.ListAttribute{
 						Required:    true,
 						ElementType: types.StringType,
-						Description: "Defines the values for this record",
+						Description: "List of answers replied by DNS Authoritative to that Record.",
 					},
 					"policy": schema.StringAttribute{
 						Required:    true,
-						Description: "Must be 'simple' or 'weighted'",
+						Description: "Must be 'simple' or 'weighted'.",
 					},
 					"weight": schema.Int64Attribute{
 						Optional:    true,
-						Description: "You can only use this field when policy is 'weighted'",
+						Description: "You can only use this field when policy is 'weighted'.",
 					},
 					"description": schema.StringAttribute{
 						Optional:    true,
-						Description: "You can only use this field when policy is 'weighted'",
+						Description: "You can only use this field when policy is 'weighted'.",
 					},
 					"ttl": schema.Int64Attribute{
 						Required:    true,
-						Description: "Time-to-live defines max-time for packets life in seconds",
+						Description: "Time-to-live defines max-time for packets life in seconds.",
 					},
 				},
 			},

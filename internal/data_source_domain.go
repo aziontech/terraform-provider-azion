@@ -2,8 +2,10 @@ package provider
 
 import (
 	"context"
+	"io"
 
 	"github.com/aziontech/azionapi-go-sdk/domains"
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -29,21 +31,16 @@ type DomainDataSourceModel struct {
 	ID            types.String  `tfsdk:"id"`
 }
 
-type GetDomainResponseLinks struct {
-	Previous types.String `tfsdk:"previous"`
-	Next     types.String `tfsdk:"next"`
-}
-
 type DomainResults struct {
-	ID                   types.Int64    `tfsdk:"id"`
-	Name                 types.String   `tfsdk:"name"`
-	Cnames               []types.String `tfsdk:"cnames"`
-	CnameAccessOnly      types.Bool     `tfsdk:"cname_access_only"`
-	IsActive             types.Bool     `tfsdk:"is_active"`
-	EdgeApplicationId    types.Int64    `tfsdk:"edge_application_id"`
-	DigitalCertificateId types.Int64    `tfsdk:"digital_certificate_id"`
-	DomainName           types.String   `tfsdk:"domain_name"`
-	Environment          types.String   `tfsdk:"environment"`
+	ID                   types.Int64  `tfsdk:"id"`
+	Name                 types.String `tfsdk:"name"`
+	Cnames               types.List   `tfsdk:"cnames"`
+	CnameAccessOnly      types.Bool   `tfsdk:"cname_access_only"`
+	IsActive             types.Bool   `tfsdk:"is_active"`
+	EdgeApplicationId    types.Int64  `tfsdk:"edge_application_id"`
+	DigitalCertificateId types.Int64  `tfsdk:"digital_certificate_id"`
+	DomainName           types.String `tfsdk:"domain_name"`
+	Environment          types.String `tfsdk:"environment"`
 }
 
 func (d *DomainDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -54,75 +51,56 @@ func (d *DomainDataSource) Configure(_ context.Context, req datasource.Configure
 }
 
 func (d *DomainDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_domains"
+	resp.TypeName = req.ProviderTypeName + "_domain"
 }
 
 func (d *DomainDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				Required: true,
 			},
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
-			"counter": schema.Int64Attribute{
-				Computed: true,
-			},
-			"total_pages": schema.Int64Attribute{
-				Computed: true,
-			},
-			"links": schema.SingleNestedAttribute{
+			"results": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
-					"previous": schema.StringAttribute{
-						Computed: true,
+					"id": schema.Int64Attribute{
+						Computed:    true,
+						Description: "Identification of this entry.",
 					},
-					"next": schema.StringAttribute{
-						Computed: true,
+					"name": schema.StringAttribute{
+						Computed:    true,
+						Description: "Name of this entry.",
 					},
-				},
-			},
-			"results": schema.ListNestedAttribute{
-				Computed: true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"id": schema.Int64Attribute{
-							Computed:    true,
-							Description: "Identification of this entry.",
-						},
-						"name": schema.StringAttribute{
-							Computed:    true,
-							Description: "Name of this entry.",
-						},
-						"cnames": schema.ListAttribute{
-							Computed:    true,
-							ElementType: types.StringType,
-							Description: "List of domains to use as URLs for your files.",
-						},
-						"cname_access_only": schema.BoolAttribute{
-							Computed:    true,
-							Description: "Allow access to your URL only via provided CNAMEs.",
-						},
-						"is_active": schema.BoolAttribute{
-							Computed:    true,
-							Description: "Make access to your URL only via provided CNAMEs.",
-						},
-						"edge_application_id": schema.Int64Attribute{
-							Computed:    true,
-							Description: "Edge Application associated ID.",
-						},
-						"digital_certificate_id": schema.Int64Attribute{
-							Computed:    true,
-							Description: "Digital Certificate associated ID.",
-						},
-						"domain_name": schema.StringAttribute{
-							Computed:    true,
-							Description: "Domain name attributed by Azion to this configuration.",
-						},
-						"environment": schema.StringAttribute{
-							Computed: true,
-						},
+					"cnames": schema.ListAttribute{
+						Computed:    true,
+						ElementType: types.StringType,
+						Description: "List of domains to use as URLs for your files.",
+					},
+					"cname_access_only": schema.BoolAttribute{
+						Computed:    true,
+						Description: "Allow access to your URL only via provided CNAMEs.",
+					},
+					"is_active": schema.BoolAttribute{
+						Computed:    true,
+						Description: "Status of the domain.",
+					},
+					"edge_application_id": schema.Int64Attribute{
+						Computed:    true,
+						Description: "Edge Application associated ID.",
+					},
+					"digital_certificate_id": schema.Int64Attribute{
+						Computed:    true,
+						Description: "Digital Certificate associated ID.",
+					},
+					"domain_name": schema.StringAttribute{
+						Computed:    true,
+						Description: "Domain name attributed by Azion to this configuration.",
+					},
+					"environment": schema.StringAttribute{
+						Computed: true,
 					},
 				},
 			},
@@ -138,30 +116,48 @@ func (d *DomainDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	domainResponse, _, err := d.client.domainsApi.DomainsApi.GetDomain(ctx, getDomainId.ValueString()).Execute()
+	domainResponse, response, err := d.client.domainsApi.DomainsApi.GetDomain(ctx, getDomainId.ValueString()).Execute()
 	if err != nil {
+		bodyBytes, erro := io.ReadAll(response.Body)
+		if erro != nil {
+			resp.Diagnostics.AddError(
+				err.Error(),
+				"err",
+			)
+		}
+		bodyString := string(bodyBytes)
 		resp.Diagnostics.AddError(
-			"Token has expired",
 			err.Error(),
+			bodyString,
 		)
 		return
 	}
 
-	domainState := DomainDataSourceModel{
-		SchemaVersion: types.Int64Value(int64(domainResponse.SchemaVersion)),
-		Results: DomainResults{
-			ID:                   types.Int64Value(int64(domainResponse.Results.Id)),
-			Name:                 types.StringValue(domainResponse.Results.Name),
-			CnameAccessOnly:      types.BoolValue(*domainResponse.Results.CnameAccessOnly),
-			IsActive:             types.BoolValue(*domainResponse.Results.IsActive),
-			EdgeApplicationId:    types.Int64Value(int64(*domainResponse.Results.EdgeApplicationId)),
-			DigitalCertificateId: types.Int64Value(int64(*domains.NullableInt64.Get(domainResponse.Results.DigitalCertificateId))),
-			DomainName:           types.StringValue(*domainResponse.Results.DomainName),
-			Environment:          types.StringValue(*domainResponse.Results.Environment),
-		},
+	var slice []types.String
+	for _, Cnames := range domainResponse.Results.Cnames {
+		slice = append(slice, types.StringValue(Cnames))
 	}
 
-	domainState.ID = types.StringValue("placeholder")
+	domainState := DomainDataSourceModel{
+		SchemaVersion: types.Int64Value(domainResponse.SchemaVersion),
+		Results: DomainResults{
+			ID:                types.Int64Value(domainResponse.Results.Id),
+			Name:              types.StringValue(domainResponse.Results.Name),
+			CnameAccessOnly:   types.BoolValue(*domainResponse.Results.CnameAccessOnly),
+			IsActive:          types.BoolValue(*domainResponse.Results.IsActive),
+			EdgeApplicationId: types.Int64Value(*domainResponse.Results.EdgeApplicationId),
+			DomainName:        types.StringValue(*domainResponse.Results.DomainName),
+			Cnames:            utils.SliceStringTypeToList(slice),
+		},
+	}
+	if domainResponse.Results.Environment != nil {
+		domainState.Results.Environment = types.StringValue(*domainResponse.Results.Environment)
+	}
+	if domainResponse.Results.DigitalCertificateId.Get() != nil {
+		domainState.Results.DigitalCertificateId = types.Int64Value(*domains.NullableInt64.Get(domainResponse.Results.DigitalCertificateId))
+	}
+
+	domainState.ID = types.StringValue("Get By ID Domain")
 	diags = resp.State.Set(ctx, &domainState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

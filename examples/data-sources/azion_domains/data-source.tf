@@ -1,2 +1,2 @@
-data "azion_domains" "examples" {}
-
+data "azion_domains" "example" {
+}

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"io"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -35,7 +36,7 @@ type GetZonesResponseLinks struct {
 	Next     types.String `tfsdk:"next"`
 }
 type Zones struct {
-	ID       types.Int64  `tfsdk:"id"`
+	ZoneId   types.Int64  `tfsdk:"zone_id"`
 	Name     types.String `tfsdk:"name"`
 	Domain   types.String `tfsdk:"domain"`
 	IsActive types.Bool   `tfsdk:"is_active"`
@@ -56,16 +57,20 @@ func (d *ZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				Description: "Numeric identifier of the data source.",
+				Computed:    true,
 			},
 			"schema_version": schema.Int64Attribute{
-				Computed: true,
+				Description: "Schema Version.",
+				Computed:    true,
 			},
 			"counter": schema.Int64Attribute{
-				Computed: true,
+				Description: "The total number of zones.",
+				Computed:    true,
 			},
 			"total_pages": schema.Int64Attribute{
-				Computed: true,
+				Description: "The total number of pages.",
+				Computed:    true,
 			},
 			"links": schema.SingleNestedAttribute{
 				Computed: true,
@@ -83,16 +88,20 @@ func (d *ZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"domain": schema.StringAttribute{
-							Computed: true,
+							Description: "Domain name attributed by Azion to this configuration.",
+							Computed:    true,
 						},
 						"is_active": schema.BoolAttribute{
-							Computed: true,
+							Computed:    true,
+							Description: "Status of the zone.",
 						},
 						"name": schema.StringAttribute{
-							Computed: true,
+							Description: "The name of the zone. Must provide only one of zone_id, name.",
+							Computed:    true,
 						},
-						"id": schema.Int64Attribute{
-							Computed: true,
+						"zone_id": schema.Int64Attribute{
+							Description: "The zone identifier to target for the resource.",
+							Computed:    true,
 						},
 					},
 				},
@@ -102,11 +111,19 @@ func (d *ZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 }
 
 func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	zoneResponse, _, err := d.client.idnsApi.ZonesApi.GetZones(ctx).Execute()
+	zoneResponse, response, err := d.client.idnsApi.ZonesApi.GetZones(ctx).Execute()
 	if err != nil {
+		bodyBytes, erro := io.ReadAll(response.Body)
+		if erro != nil {
+			resp.Diagnostics.AddError(
+				err.Error(),
+				"err",
+			)
+		}
+		bodyString := string(bodyBytes)
 		resp.Diagnostics.AddError(
-			"Token has expired",
 			err.Error(),
+			bodyString,
 		)
 		return
 	}
@@ -130,13 +147,13 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 	for _, resultZone := range zoneResponse.Results {
 		zoneState.Results = append(zoneState.Results, Zones{
+			ZoneId:   types.Int64Value(int64(*resultZone.Id)),
+			Name:     types.StringValue(*resultZone.Name),
 			Domain:   types.StringValue(*resultZone.Domain),
 			IsActive: types.BoolValue(*resultZone.IsActive),
-			Name:     types.StringValue(*resultZone.Name),
-			ID:       types.Int64Value(int64(*resultZone.Id)),
 		})
 	}
-	zoneState.ID = types.StringValue("placeholder")
+	zoneState.ID = types.StringValue("Get All Zones")
 	diags := resp.State.Set(ctx, &zoneState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
