@@ -251,6 +251,7 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan DomainResourceModel
 	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -258,6 +259,9 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	var state DomainResourceModel
 	diagsDomain := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diagsDomain...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	domainId := strconv.Itoa(int(state.Domain.ID.ValueInt64()))
 	updateDomainRequest := domains.UpdateDomainRequest{
