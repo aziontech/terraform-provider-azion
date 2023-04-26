@@ -93,6 +93,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewZoneResource,
 		NewRecordResource,
 		NewDnssecResource,
+		NewDomainResource,
 	}
 }
 

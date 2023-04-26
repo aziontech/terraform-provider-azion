@@ -21,6 +21,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 
 	client.domainsApi = domains.NewAPIClient(client.domainsConfig)
 	client.domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.domainsConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.domainsConfig.UserAgent = userAgent
 
 	client.idnsApi = idns.NewAPIClient(client.idnsConfig)
