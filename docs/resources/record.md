@@ -36,7 +36,7 @@ resource "azion_record" "examples" {
 ### Required
 
 - `record` (Attributes) (see [below for nested schema](#nestedatt--record))
-- `zone_id` (String) Zone identification.
+- `zone_id` (String) The zone identifier to target for the resource.
 
 ### Read-Only
 
@@ -48,16 +48,16 @@ resource "azion_record" "examples" {
 
 Required:
 
-- `answers_list` (List of String) Defines the values for this record
-- `entry` (String) The first part of domain or 'Name'
-- `policy` (String) Must be 'simple' or 'weighted'
-- `record_type` (String) Defines the record type (A, CNAME, MX, NS, etc...)
-- `ttl` (Number) Time-to-live defines max-time for packets life in seconds
+- `answers_list` (List of String) List of answers replied by DNS Authoritative to that Record.
+- `entry` (String) The first part of domain or 'Name'.
+- `policy` (String) Must be 'simple' or 'weighted'.
+- `record_type` (String) Defines the record type (A, CNAME, MX, NS).
+- `ttl` (Number) Time-to-live defines max-time for packets life in seconds.
 
 Optional:
 
-- `description` (String) You can only use this field when policy is 'weighted'
-- `weight` (Number) You can only use this field when policy is 'weighted'
+- `description` (String) You can only use this field when policy is 'weighted'.
+- `weight` (Number) You can only use this field when policy is 'weighted'.
 
 Read-Only:
 

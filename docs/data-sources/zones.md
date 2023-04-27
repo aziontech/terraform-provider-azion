@@ -21,12 +21,12 @@ data "azion_zones" "examples" {}
 
 ### Read-Only
 
-- `counter` (Number)
-- `id` (String) The ID of this resource.
+- `counter` (Number) The total number of zones.
+- `id` (String) Numeric identifier of the data source.
 - `links` (Attributes) (see [below for nested schema](#nestedatt--links))
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number)
-- `total_pages` (Number)
+- `schema_version` (Number) Schema Version.
+- `total_pages` (Number) The total number of pages.
 
 <a id="nestedatt--links"></a>
 ### Nested Schema for `links`
@@ -42,9 +42,9 @@ Read-Only:
 
 Read-Only:
 
-- `domain` (String)
-- `id` (Number)
-- `is_active` (Boolean)
-- `name` (String)
+- `domain` (String) Domain name attributed by Azion to this configuration.
+- `is_active` (Boolean) Status of the zone.
+- `name` (String) The name of the zone. Must provide only one of zone_id, name.
+- `zone_id` (Number) The zone identifier to target for the resource.
 
 
