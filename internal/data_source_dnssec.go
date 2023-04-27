@@ -71,7 +71,7 @@ func (d *dnsSecDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 			"zone_id": schema.Int64Attribute{
 				Description: "The zone identifier to target for the resource.",
-				Optional:    true,
+				Required:    true,
 			},
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema Version.",
