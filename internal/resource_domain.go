@@ -136,6 +136,7 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		CnameAccessOnly:   plan.Domain.CnameAccessOnly.ValueBool(),
 		Name:              plan.Domain.Name.ValueString(),
 	}
+
 	requestCnames := plan.Domain.Cnames.ElementsAs(ctx, &domain.Cnames, false)
 	resp.Diagnostics.Append(requestCnames...)
 	if resp.Diagnostics.HasError() {
