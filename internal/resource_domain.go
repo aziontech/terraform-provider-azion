@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aziontech/azionapi-go-sdk/domains"
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -38,15 +39,15 @@ type DomainResourceModel struct {
 }
 
 type DomainResourceResults struct {
-	ID                   types.Int64    `tfsdk:"id"`
-	Name                 types.String   `tfsdk:"name"`
-	Cnames               []types.String `tfsdk:"cnames"`
-	CnameAccessOnly      types.Bool     `tfsdk:"cname_access_only"`
-	IsActive             types.Bool     `tfsdk:"is_active"`
-	EdgeApplicationId    types.Int64    `tfsdk:"edge_application_id"`
-	DigitalCertificateId types.Int64    `tfsdk:"digital_certificate_id"`
-	DomainName           types.String   `tfsdk:"domain_name"`
-	Environment          types.String   `tfsdk:"environment"`
+	ID                   types.Int64  `tfsdk:"id"`
+	Name                 types.String `tfsdk:"name"`
+	Cnames               types.Set    `tfsdk:"cnames"`
+	CnameAccessOnly      types.Bool   `tfsdk:"cname_access_only"`
+	IsActive             types.Bool   `tfsdk:"is_active"`
+	EdgeApplicationId    types.Int64  `tfsdk:"edge_application_id"`
+	DigitalCertificateId types.Int64  `tfsdk:"digital_certificate_id"`
+	DomainName           types.String `tfsdk:"domain_name"`
+	Environment          types.String `tfsdk:"environment"`
 }
 
 func (r *domainResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -80,7 +81,7 @@ func (r *domainResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Required:    true,
 						Description: "Name of this entry.",
 					},
-					"cnames": schema.ListAttribute{
+					"cnames": schema.SetAttribute{
 						Required:    true,
 						ElementType: types.StringType,
 						Description: "List of domains to use as URLs for your files.",
@@ -135,8 +136,10 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		CnameAccessOnly:   plan.Domain.CnameAccessOnly.ValueBool(),
 		Name:              plan.Domain.Name.ValueString(),
 	}
-	for _, Cnames := range plan.Domain.Cnames {
-		domain.Cnames = append(domain.Cnames, Cnames.ValueString())
+	requestCnames := plan.Domain.Cnames.ElementsAs(ctx, &domain.Cnames, false)
+	resp.Diagnostics.Append(requestCnames...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 	if plan.Domain.DigitalCertificateId.ValueInt64() > 0 {
 		domain.DigitalCertificateId = *domains.NewNullableInt64(domains.PtrInt64(plan.Domain.DigitalCertificateId.ValueInt64()))
@@ -160,8 +163,8 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 	plan.SchemaVersion = types.Int64Value(createDomain.SchemaVersion)
 	var slice []types.String
-	for i := len(createDomain.Results.Cnames) - 1; i >= 0; i-- {
-		slice = append(slice, types.StringValue(createDomain.Results.Cnames[i]))
+	for _, Cnames := range createDomain.Results.Cnames {
+		slice = append(slice, types.StringValue(Cnames))
 	}
 	plan.Domain = &DomainResourceResults{
 		ID:                types.Int64Value(createDomain.Results.Id),
@@ -170,7 +173,7 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		IsActive:          types.BoolValue(*createDomain.Results.IsActive),
 		EdgeApplicationId: types.Int64Value(*createDomain.Results.EdgeApplicationId),
 		DomainName:        types.StringValue(*createDomain.Results.DomainName),
-		Cnames:            slice,
+		Cnames:            utils.SliceStringTypeToSet(slice),
 	}
 
 	if createDomain.Results.Environment != nil {
@@ -232,7 +235,7 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 		IsActive:          types.BoolValue(*getDomain.Results.IsActive),
 		EdgeApplicationId: types.Int64Value(*getDomain.Results.EdgeApplicationId),
 		DomainName:        types.StringValue(*getDomain.Results.DomainName),
-		Cnames:            slice,
+		Cnames:            utils.SliceStringTypeToSet(slice),
 	}
 	if getDomain.Results.Environment != nil {
 		state.Domain.Environment = types.StringValue(*getDomain.Results.Environment)
@@ -273,10 +276,11 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if plan.Domain.DigitalCertificateId.ValueInt64() > 0 {
 		updateDomainRequest.DigitalCertificateId = *domains.NewNullableInt64(domains.PtrInt64(plan.Domain.DigitalCertificateId.ValueInt64()))
 	}
-	for _, Cnames := range plan.Domain.Cnames {
-		updateDomainRequest.Cnames = append(updateDomainRequest.Cnames, Cnames.ValueString())
+	requestCnames := plan.Domain.Cnames.ElementsAs(ctx, &updateDomainRequest.Cnames, false)
+	resp.Diagnostics.Append(requestCnames...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-
 	updateDomain, response, err := r.client.domainsApi.DomainsApi.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
@@ -306,7 +310,7 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 		IsActive:          types.BoolValue(*updateDomain.Results.IsActive),
 		EdgeApplicationId: types.Int64Value(*updateDomain.Results.EdgeApplicationId),
 		DomainName:        types.StringValue(*updateDomain.Results.DomainName),
-		Cnames:            slice,
+		Cnames:            utils.SliceStringTypeToSet(slice),
 	}
 
 	if updateDomain.Results.Environment != nil {
