@@ -31,7 +31,7 @@ resource "azion_zone" "example" {
 
 ### Read-Only
 
-- `id` (String) Numeric identifier of the order.
+- `id` (String) Numeric identifier of the resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the order.
 - `schema_version` (Number) Schema Version.
 
@@ -40,19 +40,19 @@ resource "azion_zone" "example" {
 
 Required:
 
-- `domain` (String) Domain description of the DNS.
-- `is_active` (Boolean) Enable description of the DNS.
-- `name` (String) Name description of the DNS.
+- `domain` (String) Domain name attributed by Azion to this configuration.
+- `is_active` (Boolean) Status of the zone.
+- `name` (String) The name of the zone. Must provide only one of zone_id, name.
 
 Read-Only:
 
-- `expiry` (Number)
+- `expiry` (Number) If Refresh and Retry fail repeatedly, this is the time period after which the primary should be considered gone and no longer authoritative for the given zone.
 - `id` (Number)
 - `nameservers` (List of String)
-- `nxttl` (Number)
-- `refresh` (Number)
-- `retry` (Number)
-- `soattl` (Number)
+- `nxttl` (Number) In the event that requesting the domain results in a non-existent query (NXDOMAIN), this is the amount of time that is respected by the recursor to return the NXDOMAIN response.
+- `refresh` (Number) The interval at which secondary servers (secondary DNS) are set to refresh the primary zone file from the primary server.
+- `retry` (Number) The rate at which a secondary server will retry to refresh the primary zone file if the initial refresh failed.
+- `soattl` (Number) The interval at which the SOA record itself is refreshed.
 
 ## Import
 

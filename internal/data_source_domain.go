@@ -32,7 +32,7 @@ type DomainDataSourceModel struct {
 }
 
 type DomainResults struct {
-	ID                   types.Int64  `tfsdk:"id"`
+	DomainId             types.Int64  `tfsdk:"domain_id"`
 	Name                 types.String `tfsdk:"name"`
 	Cnames               types.List   `tfsdk:"cnames"`
 	CnameAccessOnly      types.Bool   `tfsdk:"cname_access_only"`
@@ -58,17 +58,19 @@ func (d *DomainDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Required: true,
+				Description: "Identifier of the data source.",
+				Optional:    true,
 			},
 			"schema_version": schema.Int64Attribute{
-				Computed: true,
+				Description: "Schema Version.",
+				Computed:    true,
 			},
 			"results": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
-					"id": schema.Int64Attribute{
-						Computed:    true,
-						Description: "Identification of this entry.",
+					"domain_id": schema.Int64Attribute{
+						Description: "The domain identifier to target for the resource.",
+						Required:    true,
 					},
 					"name": schema.StringAttribute{
 						Computed:    true,
@@ -141,7 +143,7 @@ func (d *DomainDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	domainState := DomainDataSourceModel{
 		SchemaVersion: types.Int64Value(domainResponse.SchemaVersion),
 		Results: DomainResults{
-			ID:                types.Int64Value(domainResponse.Results.Id),
+			DomainId:          types.Int64Value(domainResponse.Results.Id),
 			Name:              types.StringValue(domainResponse.Results.Name),
 			CnameAccessOnly:   types.BoolValue(*domainResponse.Results.CnameAccessOnly),
 			IsActive:          types.BoolValue(*domainResponse.Results.IsActive),
