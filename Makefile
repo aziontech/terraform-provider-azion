@@ -32,6 +32,7 @@ build:
 
 checks:
 	@go fmt ./...
+	@staticcheck ./...
 	@go vet ./...
 
 .PHONY: release
@@ -62,7 +63,7 @@ install-dev:
 
 .PHONY: testacc
 testacc: 
-	TF_ACC=1 $(GO) test $(TEST) -v $(TESTARGS) -timeout 120m
+	TF_ACC=1 $(GO) test -mod=vendor ./internal/. -v
 
 .PHONY: vet
 vet:
