@@ -1,0 +1,1 @@
+terraform import azion_domain.example <domain_id>
