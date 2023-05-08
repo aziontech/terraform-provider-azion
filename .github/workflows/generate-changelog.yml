@@ -1,11 +1,7 @@
 name: Generate CHANGELOG
 on:
   pull_request_target:
-    types: [closed]
-  workflow_run:
-    workflows: [Generate registry documentation]
-    types:
-      - completed
+    types: [created]
   workflow_dispatch:
 jobs:
   generate-changelog:
