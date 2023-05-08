@@ -19,7 +19,9 @@ jobs:
               MSG="Update CHANGELOG.md (Manual Trigger)"
             else
               MSG="Update CHANGELOG.md for #${{ github.event.pull_request.number }}"
-            fi            
+            fi
+            git config --global user.email changelogbot@azion.com
+            git config --global user.name changelogbot
             git add CHANGELOG.md
             git commit -m "$MSG"
             git push
