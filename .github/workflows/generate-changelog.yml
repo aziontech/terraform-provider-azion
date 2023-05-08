@@ -1,7 +1,5 @@
 name: Generate CHANGELOG
-on:
-  on: [pull_request_target]
-  workflow_dispatch:
+on: [pull_request_target]
 jobs:
   generate-changelog:
     if: github.event.pull_request.merged || github.event_name == 'workflow_dispatch'
