@@ -1,7 +1,7 @@
 name: Generate CHANGELOG
 on:
   pull_request_target:
-    types: [created]
+    types: [opened]
   workflow_dispatch:
 jobs:
   generate-changelog:
