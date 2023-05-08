@@ -18,7 +18,7 @@ The Azion provider is used to interact with resources supported by Azion. The pr
 # directive to prevent breaking changes occurring unannounced.
 terraform {
   required_providers {
-    cloudflare = {
+    azion = {
       source = "aziontech/azion"
       version = "~≳ 0.2.0"
     }
