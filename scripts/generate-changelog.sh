@@ -11,18 +11,18 @@ CHANGELOG_TMP_FILE_NAME="CHANGELOG.tmp"
 TARGET_SHA=$(git rev-parse HEAD)
 PREVIOUS_RELEASE_SHA=$(git rev-list -n 1 $(git describe --abbrev=0 --match='v*.*.*' --tags))
 
-#if [ $TARGET_SHA == $PREVIOUS_RELEASE_SHA ]; then
-#  echo "Nothing to do"
-#  exit 0
-#fi
-#
-#PREVIOUS_CHANGELOG=$(sed -n -e "/## $(git describe --abbrev=0 --match='v*.*.*' --tags | tr -d v)/,\$p" $__parent/$CHANGELOG_FILE_NAME)
-#
-#if [ -z "$PREVIOUS_CHANGELOG" ]
-#then
-#    echo "Unable to locate previous changelog contents."
-#    exit 1
-#fi
+if [ $TARGET_SHA == $PREVIOUS_RELEASE_SHA ]; then
+  echo "Nothing to do"
+  exit 0
+fi
+
+PREVIOUS_CHANGELOG=$(sed -n -e "/## $(git describe --abbrev=0 --match='v*.*.*' --tags | tr -d v)/,\$p" $__parent/$CHANGELOG_FILE_NAME)
+
+if [ -z "$PREVIOUS_CHANGELOG" ]
+then
+    echo "Unable to locate previous changelog contents."
+    exit 1
+fi
 
 CHANGELOG=$($(go env GOPATH)/bin/changelog-build -this-release $TARGET_SHA \
                       -last-release $PREVIOUS_RELEASE_SHA \
