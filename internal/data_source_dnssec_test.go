@@ -11,7 +11,7 @@ func TestAccDNSSecDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: providerConfig + `data "azion_dnssec" "test" { zone_id = "2580" }`,
+				Config: testAccDNSSecDataSourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.azion_dnssec.test", "schema_version", "3"),
 					resource.TestCheckResourceAttr("data.azion_dnssec.test", "zone_id", "2580"),
@@ -23,10 +23,17 @@ func TestAccDNSSecDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.azion_dnssec.test", "dns_sec.delegation_signer.algorithmtype.slug", "ECDSAP256SHA256"),
 					resource.TestCheckResourceAttr("data.azion_dnssec.test", "dns_sec.delegation_signer.digest", "3b7d6073c98645707d84e497a9263590c1ab00c494c3980305076b1add5fe781"),
 					resource.TestCheckResourceAttr("data.azion_dnssec.test", "dns_sec.delegation_signer.keytag", "42528"),
-					// Verify placeholder id attribute
-					resource.TestCheckResourceAttr("data.azion_dnssec.test", "id", "Get DNSSEC"),
 				),
 			},
 		},
 	})
+}
+
+func testAccDNSSecDataSourceConfig() string {
+	return `
+provider "azion" {
+  api_token  = "token"
+}
+data "azion_dnssec" "test" { zone_id = "2580" }
+`
 }

@@ -31,7 +31,7 @@ type dnssecResource struct {
 }
 
 type dnssecResourceModel struct {
-	ZoneId        types.String `tfsdk:"zone_id"`
+	ID            types.String `tfsdk:"id"`
 	SchemaVersion types.Int64  `tfsdk:"schema_version"`
 	DnsSec        *dnsSecModel `tfsdk:"dns_sec"`
 	LastUpdated   types.String `tfsdk:"last_updated"`
@@ -61,11 +61,12 @@ func (r *dnssecResource) Metadata(_ context.Context, req resource.MetadataReques
 func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"zone_id": schema.StringAttribute{
-				Required:    true,
+			"id": schema.StringAttribute{
 				Description: "The zone identifier to target for the resource.",
+				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"schema_version": schema.Int64Attribute{
@@ -84,12 +85,12 @@ func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Description: "Zone DNSSEC flags for enabled.",
 					},
 					"status": schema.StringAttribute{
-						Optional:    true,
+						Computed:    true,
 						Description: "The status of the Zone DNSSEC.",
 					},
 					"delegation_signer": schema.SingleNestedAttribute{
 						Description: "Zone DNSSEC delegation-signer.",
-						Optional:    true,
+						Computed:    true,
 						Attributes:  DnsDelegationSigner(),
 					},
 				},
@@ -142,14 +143,14 @@ func (r *dnssecResource) Configure(_ context.Context, req resource.ConfigureRequ
 }
 
 func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var getZoneId types.String
-	diags := req.Plan.GetAttribute(ctx, path.Root("zone_id"), &getZoneId)
+	var plan dnssecResourceModel
+	diags := req.Config.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	zoneId, err := strconv.ParseUint(getZoneId.ValueString(), 10, 16)
+	zoneId, err := strconv.ParseUint(plan.ID.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -157,8 +158,9 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
+
 	dnsSec := idns.DnsSec{
-		IsEnabled: idns.PtrBool(true),
+		IsEnabled: idns.PtrBool(plan.DnsSec.IsEnabled.ValueBool()),
 	}
 
 	enableDnsSec, response, err := r.client.idnsApi.DNSSECApi.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
@@ -177,31 +179,43 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
-	var plan dnssecResourceModel
-	plan.ZoneId = getZoneId
-	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
-	plan.DnsSec = &dnsSecModel{
-		IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
-		Status:    types.StringValue(*enableDnsSec.Results.Status),
-		DelegationSigner: &DnsDelegationSignerModel{
-			DigestType: &DnsDelegationSignerDigestType{
-				Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.DigestType.Id)),
-				Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.DigestType.Slug),
-			},
-			AlgorithmType: &DnsDelegationSignerDigestType{
-				Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
-				Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
-			},
-			Digest: types.StringValue(*enableDnsSec.Results.DelegationSigner.Digest),
-			KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
-		},
-	}
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
+	dnsSecEnabled := *enableDnsSec.Results.IsEnabled
+	if dnsSecEnabled {
+		plan.DnsSec = &dnsSecModel{
+			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
+			Status:    types.StringValue(*enableDnsSec.Results.Status),
+			DelegationSigner: &DnsDelegationSignerModel{
+				DigestType: &DnsDelegationSignerDigestType{
+					Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.DigestType.Id)),
+					Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.DigestType.Slug),
+				},
+				AlgorithmType: &DnsDelegationSignerDigestType{
+					Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
+					Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
+				},
+				Digest: types.StringValue(*enableDnsSec.Results.DelegationSigner.Digest),
+				KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
+			},
+		}
 
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+		diags = resp.State.Set(ctx, plan)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		plan.DnsSec = &dnsSecModel{
+			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
+			Status:    types.StringValue(*enableDnsSec.Results.Status),
+		}
+
+		diags = resp.State.Set(ctx, &plan)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 }
 
@@ -212,7 +226,7 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 16)
+	zoneId, err := strconv.ParseUint(state.ID.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -281,7 +295,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	idPlan, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 16)
+	idPlan, err := strconv.ParseUint(plan.ID.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -356,7 +370,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 16)
+	zoneId, err := strconv.ParseUint(state.ID.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -387,5 +401,5 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 func (r *dnssecResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("zone_id"), req, resp)
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
