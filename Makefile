@@ -99,7 +99,8 @@ get-gosec-deps:
 		https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b $(GOBIN) v2.15.0 ;\
 	fi
 
-docs: tools
+docs1: tools
+	chmod u+r+x ./scripts/generate-docs.sh
 	@sh -c "'$(CURDIR)/scripts/generate-docs.sh'"
 
 tools:
