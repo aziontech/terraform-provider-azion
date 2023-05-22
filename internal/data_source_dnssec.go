@@ -170,8 +170,7 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		)
 		return
 	}
-	dnsSecEnabled := *getDnsSec.Results.IsEnabled
-	if dnsSecEnabled {
+	if getDnsSec.Results.DelegationSigner != nil {
 		dnsSecState := &dnsSecDataSourceModel{
 			SchemaVersion: types.Int64Value(int64(*getDnsSec.SchemaVersion)),
 			ZoneId:        getZoneId,
