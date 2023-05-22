@@ -41,7 +41,7 @@ Required:
 
 - `is_enabled` (Boolean) Zone DNSSEC flags for enabled.
 
-Optional:
+Read-Only:
 
 - `delegation_signer` (Attributes) Zone DNSSEC delegation-signer. (see [below for nested schema](#nestedatt--dns_sec--delegation_signer))
 - `status` (String) The status of the Zone DNSSEC.
