@@ -18,13 +18,12 @@ provider "azion" {
 
 var (
 	testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-		"azionProvider": func() (tfprotov6.ProviderServer, error) {
-			ctx := context.Background()
+		"azion": func() (tfprotov6.ProviderServer, error) {
 			providers := []func() tfprotov6.ProviderServer{
 				providerserver.NewProtocol6(New("test")),
 			}
 
-			return tf6muxserver.NewMuxServer(ctx, providers...)
+			return tf6muxserver.NewMuxServer(context.Background(), providers...)
 		},
 	}
 )

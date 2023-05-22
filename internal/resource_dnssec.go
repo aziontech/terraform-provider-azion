@@ -84,12 +84,12 @@ func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Description: "Zone DNSSEC flags for enabled.",
 					},
 					"status": schema.StringAttribute{
-						Optional:    true,
+						Computed:    true,
 						Description: "The status of the Zone DNSSEC.",
 					},
 					"delegation_signer": schema.SingleNestedAttribute{
 						Description: "Zone DNSSEC delegation-signer.",
-						Optional:    true,
+						Computed:    true,
 						Attributes:  DnsDelegationSigner(),
 					},
 				},
@@ -142,14 +142,14 @@ func (r *dnssecResource) Configure(_ context.Context, req resource.ConfigureRequ
 }
 
 func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var getZoneId types.String
-	diags := req.Plan.GetAttribute(ctx, path.Root("zone_id"), &getZoneId)
+	var plan dnssecResourceModel
+	diags := req.Config.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	zoneId, err := strconv.ParseUint(getZoneId.ValueString(), 10, 16)
+	zoneId, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -158,7 +158,7 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 	dnsSec := idns.DnsSec{
-		IsEnabled: idns.PtrBool(true),
+		IsEnabled: idns.PtrBool(plan.DnsSec.IsEnabled.ValueBool()),
 	}
 
 	enableDnsSec, response, err := r.client.idnsApi.DNSSECApi.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
@@ -177,24 +177,29 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
-	var plan dnssecResourceModel
-	plan.ZoneId = getZoneId
 	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
-	plan.DnsSec = &dnsSecModel{
-		IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
-		Status:    types.StringValue(*enableDnsSec.Results.Status),
-		DelegationSigner: &DnsDelegationSignerModel{
-			DigestType: &DnsDelegationSignerDigestType{
-				Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.DigestType.Id)),
-				Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.DigestType.Slug),
+	if enableDnsSec.Results.DelegationSigner != nil {
+		plan.DnsSec = &dnsSecModel{
+			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
+			Status:    types.StringValue(*enableDnsSec.Results.Status),
+			DelegationSigner: &DnsDelegationSignerModel{
+				DigestType: &DnsDelegationSignerDigestType{
+					Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.DigestType.Id)),
+					Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.DigestType.Slug),
+				},
+				AlgorithmType: &DnsDelegationSignerDigestType{
+					Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
+					Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
+				},
+				Digest: types.StringValue(*enableDnsSec.Results.DelegationSigner.Digest),
+				KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
 			},
-			AlgorithmType: &DnsDelegationSignerDigestType{
-				Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
-				Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
-			},
-			Digest: types.StringValue(*enableDnsSec.Results.DelegationSigner.Digest),
-			KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
-		},
+		}
+	} else {
+		plan.DnsSec = &dnsSecModel{
+			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
+			Status:    types.StringValue(*enableDnsSec.Results.Status),
+		}
 	}
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -236,8 +241,7 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
-	dnsSecEnabled := *getDnsSec.Results.IsEnabled
-	if dnsSecEnabled {
+	if getDnsSec.Results.DelegationSigner != nil {
 		state.DnsSec = &dnsSecModel{
 			IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
 			Status:    types.StringValue(*getDnsSec.Results.Status),
@@ -254,22 +258,16 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 				KeyTag: types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.KeyTag)),
 			},
 		}
-		diags = resp.State.Set(ctx, &state)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
 	} else {
 		state.DnsSec = &dnsSecModel{
 			IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
 			Status:    types.StringValue(*getDnsSec.Results.Status),
 		}
-
-		diags = resp.State.Set(ctx, &state)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	}
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }
 
@@ -312,8 +310,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
-	dnsSecEnabled := *enableDnsSec.Results.IsEnabled
-	if dnsSecEnabled {
+	if enableDnsSec.Results.DelegationSigner != nil {
 		plan.DnsSec = &dnsSecModel{
 			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
 			Status:    types.StringValue(*enableDnsSec.Results.Status),
@@ -331,21 +328,16 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 			},
 		}
 
-		diags = resp.State.Set(ctx, plan)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
 	} else {
 		plan.DnsSec = &dnsSecModel{
 			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
 			Status:    types.StringValue(*enableDnsSec.Results.Status),
 		}
-		diags = resp.State.Set(ctx, plan)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	}
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }
 
