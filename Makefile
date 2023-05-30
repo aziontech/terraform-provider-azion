@@ -1,4 +1,4 @@
-TEST?=$$(go list ./... | grep -v 'vendor')
+TEST?=$$(go list ./...)
 HOSTNAME=github.com
 NAMESPACE=aziontech
 NAME=azion
@@ -63,7 +63,7 @@ install-dev:
 
 .PHONY: testacc
 testacc: 
-	TF_ACC=1 $(GO) test -mod=vendor ./internal/. -v
+	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m -parallel 1
 
 .PHONY: vet
 vet:
