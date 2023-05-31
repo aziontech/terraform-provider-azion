@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -14,7 +15,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &EdgeFunctionsDataSource{}
 )
 
-func dataSourceAzionEdgeFunction() datasource.DataSource {
+func dataSourceAzionEdgeFunctions() datasource.DataSource {
 	return &EdgeFunctionsDataSource{}
 }
 
@@ -27,7 +28,7 @@ type EdgeFunctionsDataSourceModel struct {
 	Counter       types.Int64                    `tfsdk:"counter"`
 	TotalPages    types.Int64                    `tfsdk:"total_pages"`
 	Links         *GetEdgeFunctionsResponseLinks `tfsdk:"links"`
-	Results       []EdgeFunctionResults          `tfsdk:"results"`
+	Results       []EdgeFunctionsResults         `tfsdk:"results"`
 	ID            types.String                   `tfsdk:"id"`
 }
 
@@ -36,12 +37,12 @@ type GetEdgeFunctionsResponseLinks struct {
 	Next     types.String `tfsdk:"next"`
 }
 
-type EdgeFunctionResults struct {
+type EdgeFunctionsResults struct {
 	FunctionID     types.Int64  `tfsdk:"function_id"`
 	Name           types.String `tfsdk:"name"`
 	Language       types.String `tfsdk:"language"`
 	Code           types.String `tfsdk:"code"`
-	JSONArgs       types.List   `tfsdk:"json_args"`
+	JSONArgs       types.Map    `tfsdk:"json_args"`
 	FunctionToRun  types.String `tfsdk:"function_to_run"`
 	InitiatorType  types.String `tfsdk:"initiator_type"`
 	IsActive       types.Bool   `tfsdk:"active"`
@@ -49,7 +50,6 @@ type EdgeFunctionResults struct {
 	Modified       types.String `tfsdk:"modified"`
 	ReferenceCount types.Int64  `tfsdk:"reference_count"`
 	Version        types.String `tfsdk:"version"`
-	Vendor         types.String `tfsdk:"vendor"`
 }
 
 func (d *EdgeFunctionsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -113,9 +113,9 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 							Description: "Code of the function.",
 							Computed:    true,
 						},
-						"json_args": schema.ListAttribute{
-							Computed:    true,
+						"json_args": schema.MapAttribute{
 							ElementType: types.StringType,
+							Computed:    true,
 							Description: "JSON arguments of the function.",
 						},
 						"function_to_run": schema.StringAttribute{
@@ -144,10 +144,6 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 						},
 						"version": schema.StringAttribute{
 							Description: "Version of the function.",
-							Computed:    true,
-						},
-						"vendor": schema.StringAttribute{
-							Description: "The vendor of the function.",
 							Computed:    true,
 						},
 					},
@@ -184,6 +180,7 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 			next = *functionsResponse.Links.Next
 		}
 	}
+
 	edgeFunctionsState := EdgeFunctionsDataSourceModel{
 		SchemaVersion: types.Int64Value(*functionsResponse.SchemaVersion),
 		TotalPages:    types.Int64Value(*functionsResponse.TotalPages),
@@ -195,16 +192,24 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 
 	for _, resultEdgeFunctions := range functionsResponse.GetResults() {
-
-		edgeFunctionsState.Results = append(edgeFunctionsState.Results, EdgeFunctionResults{
+		jsonArgs, _ := utils.ConvertInterfaceToMap(resultEdgeFunctions.JsonArgs)
+		edgeFunctionsState.Results = append(edgeFunctionsState.Results, EdgeFunctionsResults{
 			FunctionID:    types.Int64Value(*resultEdgeFunctions.Id),
 			Name:          types.StringValue(*resultEdgeFunctions.Name),
 			Language:      types.StringValue(*resultEdgeFunctions.Language),
+			Code:          types.StringValue(*resultEdgeFunctions.Code),
+			JSONArgs:      utils.MapToTypesMap(jsonArgs),
 			InitiatorType: types.StringValue(*resultEdgeFunctions.InitiatorType),
 			IsActive:      types.BoolValue(*resultEdgeFunctions.Active),
 			LastEditor:    types.StringValue(*resultEdgeFunctions.LastEditor),
 			Modified:      types.StringValue(*resultEdgeFunctions.Modified),
 		})
+		if resultEdgeFunctions.ReferenceCount != nil {
+			edgeFunctionsState.Results[len(edgeFunctionsState.Results)-1].ReferenceCount = types.Int64Value(*resultEdgeFunctions.ReferenceCount)
+		}
+		if resultEdgeFunctions.FunctionToRun != nil {
+			edgeFunctionsState.Results[len(edgeFunctionsState.Results)-1].FunctionToRun = types.StringValue(*resultEdgeFunctions.FunctionToRun)
+		}
 	}
 	edgeFunctionsState.ID = types.StringValue("Get All Edge Functions")
 	diags := resp.State.Set(ctx, &edgeFunctionsState)
@@ -212,4 +217,5 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 }
