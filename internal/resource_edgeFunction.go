@@ -293,6 +293,7 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		Language: edgefunctions.PtrString(plan.EdgeFunction.Language.ValueString()),
 		Code:     edgefunctions.PtrString(plan.EdgeFunction.Code.ValueString()),
 		Active:   edgefunctions.PtrBool(plan.EdgeFunction.IsActive.ValueBool()),
+		JsonArgs: nil,
 	}
 	//requestJsonArgs := plan.EdgeFunction.JSONArgs.ElementsAs(ctx, &updateEdgeFunctionRequest.JsonArgs, false)
 	//resp.Diagnostics.Append(requestJsonArgs...)
