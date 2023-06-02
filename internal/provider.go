@@ -96,6 +96,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewRecordResource,
 		NewDnssecResource,
 		NewDomainResource,
+		NewEdgeFunctionResource,
 	}
 }
 
