@@ -41,7 +41,7 @@ func (p *azionProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 		Description: "The Azion provider is used to interact with resources supported by Azion. The provider needs to be configured with the proper credentials before it can be used.",
 		Attributes: map[string]schema.Attribute{
 			"api_token": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "A registered token for Azion API - https://api.azion.com/#authentication-types. Alternatively, can be configured using the environment variable.",
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
@@ -62,7 +62,7 @@ func (p *azionProvider) Configure(ctx context.Context, req provider.ConfigureReq
 		return
 	}
 
-	APIToken := os.Getenv("api_token")
+	APIToken := os.Getenv("AZION_API_TOKEN")
 	if !config.APIToken.IsNull() {
 		APIToken = config.APIToken.ValueString()
 	}
