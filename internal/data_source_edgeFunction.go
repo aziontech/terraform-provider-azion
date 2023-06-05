@@ -2,10 +2,10 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strconv"
 
-	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -41,7 +41,7 @@ type EdgeFunctionResults struct {
 	Name           types.String `tfsdk:"name"`
 	Language       types.String `tfsdk:"language"`
 	Code           types.String `tfsdk:"code"`
-	JSONArgs       types.Map    `tfsdk:"json_args"`
+	JSONArgs       types.String `tfsdk:"json_args"`
 	FunctionToRun  types.String `tfsdk:"function_to_run"`
 	InitiatorType  types.String `tfsdk:"initiator_type"`
 	IsActive       types.Bool   `tfsdk:"active"`
@@ -92,8 +92,7 @@ func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Description: "Code of the function.",
 						Computed:    true,
 					},
-					"json_args": schema.MapAttribute{
-						ElementType: types.StringType,
+					"json_args": schema.StringAttribute{
 						Computed:    true,
 						Description: "JSON arguments of the function.",
 					},
@@ -164,7 +163,7 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		)
 		return
 	}
-	jsonArgs, _ := utils.ConvertInterfaceToMap(functionsResponse.Results.JsonArgs)
+	jsonArgs := fmt.Sprintf("%v", functionsResponse.Results.JsonArgs)
 	EdgeFunctionState := EdgeFunctionDataSourceModel{
 		SchemaVersion: types.Int64Value(int64(*functionsResponse.SchemaVersion)),
 		Results: EdgeFunctionResults{
@@ -172,7 +171,7 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 			Name:          types.StringValue(*functionsResponse.Results.Name),
 			Language:      types.StringValue(*functionsResponse.Results.Language),
 			Code:          types.StringValue(*functionsResponse.Results.Code),
-			JSONArgs:      utils.MapToTypesMap(jsonArgs),
+			JSONArgs:      types.StringValue(jsonArgs),
 			InitiatorType: types.StringValue(*functionsResponse.Results.InitiatorType),
 			IsActive:      types.BoolValue(*functionsResponse.Results.Active),
 			LastEditor:    types.StringValue(*functionsResponse.Results.LastEditor),

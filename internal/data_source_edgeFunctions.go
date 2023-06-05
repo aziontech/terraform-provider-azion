@@ -2,9 +2,9 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"io"
 
-	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -42,7 +42,7 @@ type EdgeFunctionsResults struct {
 	Name           types.String `tfsdk:"name"`
 	Language       types.String `tfsdk:"language"`
 	Code           types.String `tfsdk:"code"`
-	JSONArgs       types.Map    `tfsdk:"json_args"`
+	JSONArgs       types.String `tfsdk:"json_args"`
 	FunctionToRun  types.String `tfsdk:"function_to_run"`
 	InitiatorType  types.String `tfsdk:"initiator_type"`
 	IsActive       types.Bool   `tfsdk:"active"`
@@ -113,8 +113,7 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 							Description: "Code of the function.",
 							Computed:    true,
 						},
-						"json_args": schema.MapAttribute{
-							ElementType: types.StringType,
+						"json_args": schema.StringAttribute{
 							Computed:    true,
 							Description: "JSON arguments of the function.",
 						},
@@ -192,13 +191,13 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 
 	for _, resultEdgeFunctions := range functionsResponse.GetResults() {
-		jsonArgs, _ := utils.ConvertInterfaceToMap(resultEdgeFunctions.JsonArgs)
+		jsonArgs := fmt.Sprintf("%v", resultEdgeFunctions.JsonArgs)
 		edgeFunctionsState.Results = append(edgeFunctionsState.Results, EdgeFunctionsResults{
 			FunctionID:    types.Int64Value(*resultEdgeFunctions.Id),
 			Name:          types.StringValue(*resultEdgeFunctions.Name),
 			Language:      types.StringValue(*resultEdgeFunctions.Language),
 			Code:          types.StringValue(*resultEdgeFunctions.Code),
-			JSONArgs:      utils.MapToTypesMap(jsonArgs),
+			JSONArgs:      types.StringValue(jsonArgs),
 			InitiatorType: types.StringValue(*resultEdgeFunctions.InitiatorType),
 			IsActive:      types.BoolValue(*resultEdgeFunctions.Active),
 			LastEditor:    types.StringValue(*resultEdgeFunctions.LastEditor),
