@@ -2,10 +2,10 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strconv"
 
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -163,7 +163,17 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		)
 		return
 	}
-	jsonArgs := fmt.Sprintf("%v", functionsResponse.Results.JsonArgs)
+
+	jsonArgsStr, err := utils.ConvertInterfaceToString(functionsResponse.Results.JsonArgs)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			err.Error(),
+			"err",
+		)
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	EdgeFunctionState := EdgeFunctionDataSourceModel{
 		SchemaVersion: types.Int64Value(int64(*functionsResponse.SchemaVersion)),
 		Results: EdgeFunctionResults{
@@ -171,7 +181,7 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 			Name:          types.StringValue(*functionsResponse.Results.Name),
 			Language:      types.StringValue(*functionsResponse.Results.Language),
 			Code:          types.StringValue(*functionsResponse.Results.Code),
-			JSONArgs:      types.StringValue(jsonArgs),
+			JSONArgs:      types.StringValue(jsonArgsStr),
 			InitiatorType: types.StringValue(*functionsResponse.Results.InitiatorType),
 			IsActive:      types.BoolValue(*functionsResponse.Results.Active),
 			LastEditor:    types.StringValue(*functionsResponse.Results.LastEditor),

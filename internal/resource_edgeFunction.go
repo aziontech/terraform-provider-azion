@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strconv"
 	"time"
@@ -146,7 +145,7 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	requestJsonArgs, err := utils.ConvertInterfaceToMap(plan.EdgeFunction.JSONArgs.ValueString())
+	planJsonArgs, err := utils.ConvertStringToInterface(plan.EdgeFunction.JSONArgs.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -162,7 +161,7 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 		Language: edgefunctions.PtrString(plan.EdgeFunction.Language.ValueString()),
 		Code:     edgefunctions.PtrString(plan.EdgeFunction.Code.ValueString()),
 		Active:   edgefunctions.PtrBool(plan.EdgeFunction.IsActive.ValueBool()),
-		JsonArgs: requestJsonArgs,
+		JsonArgs: planJsonArgs,
 	}
 
 	createEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsApi.EdgeFunctionsPost(ctx).CreateEdgeFunctionRequest(edgeFunction).Execute()
@@ -182,13 +181,23 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	jsonArgs := fmt.Sprintf("%v", createEdgeFunction.Results.JsonArgs)
+	jsonArgsStr, err := utils.ConvertInterfaceToString(createEdgeFunction.Results.JsonArgs)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			err.Error(),
+			"err",
+		)
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	plan.EdgeFunction = &edgeFunctionResourceResults{
 		FunctionID:    types.Int64Value(*createEdgeFunction.Results.Id),
 		Name:          types.StringValue(*createEdgeFunction.Results.Name),
 		Language:      types.StringValue(*createEdgeFunction.Results.Language),
 		Code:          types.StringValue(*createEdgeFunction.Results.Code),
-		JSONArgs:      types.StringValue(jsonArgs),
+		JSONArgs:      types.StringValue(jsonArgsStr),
 		InitiatorType: types.StringValue(*createEdgeFunction.Results.InitiatorType),
 		IsActive:      types.BoolValue(*createEdgeFunction.Results.Active),
 		LastEditor:    types.StringValue(*createEdgeFunction.Results.LastEditor),
@@ -228,7 +237,7 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
-				"Could not convert Zone ID",
+				"Could not convert Edge Function ID",
 			)
 			return
 		}
@@ -251,7 +260,17 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	jsonArgs := fmt.Sprintf("%v", getEdgeFunction.Results.JsonArgs)
+	jsonArgsStr, err := utils.ConvertInterfaceToString(getEdgeFunction.Results.JsonArgs)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			err.Error(),
+			"err",
+		)
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	EdgeFunctionState := EdgeFunctionDataSourceModel{
 		SchemaVersion: types.Int64Value(int64(*getEdgeFunction.SchemaVersion)),
 		Results: EdgeFunctionResults{
@@ -259,7 +278,7 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 			Name:          types.StringValue(*getEdgeFunction.Results.Name),
 			Language:      types.StringValue(*getEdgeFunction.Results.Language),
 			Code:          types.StringValue(*getEdgeFunction.Results.Code),
-			JSONArgs:      types.StringValue(jsonArgs),
+			JSONArgs:      types.StringValue(jsonArgsStr),
 			InitiatorType: types.StringValue(*getEdgeFunction.Results.InitiatorType),
 			IsActive:      types.BoolValue(*getEdgeFunction.Results.Active),
 			LastEditor:    types.StringValue(*getEdgeFunction.Results.LastEditor),
@@ -295,7 +314,7 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	requestJsonArgs, err := utils.ConvertInterfaceToMap(plan.EdgeFunction.JSONArgs.ValueString())
+	requestJsonArgs, err := utils.ConvertStringToInterface(plan.EdgeFunction.JSONArgs.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -309,7 +328,6 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 	edgeFunctionId := state.EdgeFunction.FunctionID.ValueInt64()
 	updateEdgeFunctionRequest := edgefunctions.PutEdgeFunctionRequest{
 		Name:     edgefunctions.PtrString(plan.EdgeFunction.Name.ValueString()),
-		Language: edgefunctions.PtrString(plan.EdgeFunction.Language.ValueString()),
 		Code:     edgefunctions.PtrString(plan.EdgeFunction.Code.ValueString()),
 		Active:   edgefunctions.PtrBool(plan.EdgeFunction.IsActive.ValueBool()),
 		JsonArgs: requestJsonArgs,
@@ -332,13 +350,23 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	jsonArgs := fmt.Sprintf("%v", updateEdgeFunction.Results.JsonArgs)
+	jsonArgsStr, err := utils.ConvertInterfaceToString(updateEdgeFunction.Results.JsonArgs)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			err.Error(),
+			"err",
+		)
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	plan.EdgeFunction = &edgeFunctionResourceResults{
 		FunctionID:    types.Int64Value(*updateEdgeFunction.Results.Id),
 		Name:          types.StringValue(*updateEdgeFunction.Results.Name),
 		Language:      types.StringValue(*updateEdgeFunction.Results.Language),
 		Code:          types.StringValue(*updateEdgeFunction.Results.Code),
-		JSONArgs:      types.StringValue(jsonArgs),
+		JSONArgs:      types.StringValue(jsonArgsStr),
 		InitiatorType: types.StringValue(*updateEdgeFunction.Results.InitiatorType),
 		IsActive:      types.BoolValue(*updateEdgeFunction.Results.Active),
 		LastEditor:    types.StringValue(*updateEdgeFunction.Results.LastEditor),
@@ -351,7 +379,7 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		plan.EdgeFunction.FunctionToRun = types.StringValue(*updateEdgeFunction.Results.FunctionToRun)
 	}
 	plan.SchemaVersion = types.Int64Value(int64(*updateEdgeFunction.SchemaVersion))
-	plan.ID = types.StringValue("Update edgeFunction")
+	plan.ID = types.StringValue(strconv.FormatInt(*updateEdgeFunction.Results.Id, 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)

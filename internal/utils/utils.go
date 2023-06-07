@@ -20,6 +20,9 @@ func SliceStringTypeToList(slice []types.String) types.List {
 }
 
 func SliceStringTypeToSet(slice []types.String) types.Set {
+	if len(slice) == 0 {
+		return types.SetNull(types.StringType)
+	}
 	strs := []attr.Value{}
 	for _, value := range slice {
 		strs = append(strs, value)
@@ -27,7 +30,7 @@ func SliceStringTypeToSet(slice []types.String) types.Set {
 	return types.SetValueMust(types.StringType, strs)
 }
 
-func ConvertInterfaceToMap(jsonArgs string) (map[string]interface{}, error) {
+func ConvertStringToInterface(jsonArgs string) (interface{}, error) {
 
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(jsonArgs), &data)
@@ -36,4 +39,15 @@ func ConvertInterfaceToMap(jsonArgs string) (map[string]interface{}, error) {
 		return nil, err
 	}
 	return data, err
+}
+
+func ConvertInterfaceToString(jsonArgs interface{}) (string, error) {
+
+	jsonArgsStr, err := json.Marshal(jsonArgs)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return "", err
+	}
+
+	return string(jsonArgsStr), err
 }
