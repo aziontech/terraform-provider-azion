@@ -327,7 +327,6 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 				KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
 			},
 		}
-
 	} else {
 		plan.DnsSec = &dnsSecModel{
 			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),

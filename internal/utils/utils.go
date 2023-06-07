@@ -31,7 +31,6 @@ func SliceStringTypeToSet(slice []types.String) types.Set {
 }
 
 func ConvertStringToInterface(jsonArgs string) (interface{}, error) {
-
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(jsonArgs), &data)
 	if err != nil {
@@ -42,7 +41,6 @@ func ConvertStringToInterface(jsonArgs string) (interface{}, error) {
 }
 
 func ConvertInterfaceToString(jsonArgs interface{}) (string, error) {
-
 	jsonArgsStr, err := json.Marshal(jsonArgs)
 	if err != nil {
 		fmt.Println("Error:", err)
