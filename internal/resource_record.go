@@ -155,7 +155,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		record.AnswersList = append(record.AnswersList, answerList.ValueString())
 	}
 
-	zoneId, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 16)
+	zoneId, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -307,7 +307,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	idPlan, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 16)
+	idPlan, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -375,7 +375,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	idState, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 16)
+	idState, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
