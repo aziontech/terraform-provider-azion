@@ -8,6 +8,50 @@ description: |-
 
 # azion_edge_function (Resource)
 
+~> **Note about Json_Args**
+Parameter `json_args` must be specified with `jsonencode` function
+
+~> **Note about Code**
+Parameter `code` must be specified with local_file specified in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file
+
+## Example Usage
+
+```terraform
+resource "azion_edge_function" "example" {
+  edge_function = {
+    name           = "Function Terraform Example"
+    code           = file("${path.module}/example.txt")
+    language       = "javascript"
+    initiator_type = "edge_application"
+    json_args      = jsonencode(
+      {"key" = "Value",
+        "key" = "example"
+      })
+    active         = true/false
+  }
+}
+```
+
+```terraform
+resource "local_file" "content_file" {
+  filename = "${path.module}/example.json"
+  content  = file("${path.module}/example.json")
+}
+
+resource "azion_edge_function" "ex" {
+  edge_function = {
+    name           = "Function Terraform Example"
+    code =         local_file.content_file.content
+    language       = "javascript"
+    initiator_type = "edge_application"
+    json_args      = jsonencode(
+      {"key" = "Value",
+        "key" = "example"
+      })
+    active         = true
+  }
+}
+```
 
 
 
@@ -46,4 +90,11 @@ Read-Only:
 - `reference_count` (Number) The reference count of the function.
 - `version` (String) Version of the function.
 
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+terraform import azion_edge_function.example <edge_function_id>
+```
 
