@@ -99,7 +99,7 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 					Attributes: map[string]schema.Attribute{
 						"function_id": schema.Int64Attribute{
 							Description: "The function identifier.",
-							Required:    true,
+							Computed:    true,
 						},
 						"name": schema.StringAttribute{
 							Description: "Name of the function.",

@@ -2,7 +2,7 @@ package provider
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"strconv"
 
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -67,7 +67,7 @@ func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Numeric identifier of the data source.",
-				Optional:    true,
+				Required:    true,
 			},
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema Version.",
@@ -78,7 +78,7 @@ func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Attributes: map[string]schema.Attribute{
 					"function_id": schema.Int64Attribute{
 						Description: "The function identifier.",
-						Required:    true,
+						Computed:    true,
 					},
 					"name": schema.StringAttribute{
 						Description: "Name of the function.",
@@ -149,18 +149,8 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsApi.EdgeFunctionsIdGet(ctx, int64(edgeFunctionId)).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
-			resp.Diagnostics.AddError(
-				err.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		usrMsg, errMsg := errPrint(response.StatusCode, err)
+		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return
 	}
 
@@ -201,4 +191,21 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+func errPrint(errCode int, err error) (string, string) {
+	var usrMsg string
+	switch errCode {
+	case 400:
+		usrMsg = "Bad Request"
+	case 401:
+		usrMsg = "Unauthorized Token"
+	case 404:
+		usrMsg = "No Edge Function found"
+	default:
+		usrMsg = err.Error()
+	}
+
+	errMsg := fmt.Sprintf("%d - %s", errCode, usrMsg)
+	return usrMsg, errMsg
 }

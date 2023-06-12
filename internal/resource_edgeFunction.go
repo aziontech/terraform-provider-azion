@@ -406,7 +406,7 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
-				"Could not convert Zone ID",
+				"Could not convert Edge Function ID",
 			)
 			return
 		}
