@@ -128,7 +128,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not conversion ID",
+			"Could not convert ID",
 		)
 		return
 	}

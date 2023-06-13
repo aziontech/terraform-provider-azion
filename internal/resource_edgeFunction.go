@@ -233,7 +233,7 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 	if state.EdgeFunction != nil {
 		edgeFunctionId = state.EdgeFunction.FunctionID.ValueInt64()
 	} else {
-		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 16)
+		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
@@ -402,7 +402,7 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 	if state.EdgeFunction != nil {
 		edgeFunctionId = state.EdgeFunction.FunctionID.ValueInt64()
 	} else {
-		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 16)
+		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",

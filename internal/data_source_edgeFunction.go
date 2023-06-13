@@ -138,11 +138,11 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	edgeFunctionId, err := strconv.ParseUint(getEdgeFunctionId.ValueString(), 10, 16)
+	edgeFunctionId, err := strconv.ParseUint(getEdgeFunctionId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not conversion ID",
+			"Could not convert ID",
 		)
 		return
 	}
