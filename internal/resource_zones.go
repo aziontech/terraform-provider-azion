@@ -197,7 +197,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	idPlan, err := strconv.ParseUint(state.ID.ValueString(), 10, 16)
+	idPlan, err := strconv.ParseUint(state.ID.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -253,7 +253,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	idPlan, err := strconv.ParseUint(plan.ID.ValueString(), 10, 16)
+	idPlan, err := strconv.ParseUint(plan.ID.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
