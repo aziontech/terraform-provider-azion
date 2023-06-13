@@ -153,7 +153,7 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not conversion ID",
+			"Could not convert ID",
 		)
 		return
 	}
@@ -217,7 +217,7 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 32)
+	zoneId, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -279,7 +279,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	idPlan, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 32)
+	idPlan, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -327,7 +327,6 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 				KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
 			},
 		}
-
 	} else {
 		plan.DnsSec = &dnsSecModel{
 			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
@@ -348,7 +347,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 32)
+	zoneId, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 16)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",

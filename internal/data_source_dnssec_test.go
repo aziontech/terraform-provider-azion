@@ -11,7 +11,7 @@ func TestAccDNSSecDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDNSSecDataSourceConfig(),
+				Config: providerConfig + testAccDNSSecDataSourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.azion_dnssec.test", "schema_version", "3"),
 					resource.TestCheckResourceAttr("data.azion_dnssec.test", "zone_id", "2580"),
@@ -31,9 +31,6 @@ func TestAccDNSSecDataSource(t *testing.T) {
 
 func testAccDNSSecDataSourceConfig() string {
 	return `
-provider "azion" {
-  api_token  = "token"
-}
 data "azion_dnssec" "test" { zone_id = "2580" }
 `
 }
