@@ -195,14 +195,14 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	jsonArgsStr, err := utils.SliceIntInterfaceTypeToList(edgeApplicationsResponse.Results.HttpPort)
+	sliceHTTPPort, err := utils.SliceIntInterfaceTypeToList(edgeApplicationsResponse.Results.HttpPort)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
 			"err",
 		)
 	}
-	jsonArgsStr2, err := utils.SliceIntInterfaceTypeToList(edgeApplicationsResponse.Results.HttpsPort)
+	sliceHTTPSPort, err := utils.SliceIntInterfaceTypeToList(edgeApplicationsResponse.Results.HttpsPort)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -213,25 +213,25 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 	EdgeApplicationState := EdgeApplicationDataSourceModel{
 		SchemaVersion: types.Int64Value(edgeApplicationsResponse.SchemaVersion),
 		Results: &EdgeApplicationResult{
-			ID:                types.Int64Value(edgeApplicationsResponse.Results.Id),
-			Name:              types.StringValue(edgeApplicationsResponse.Results.Name),
-			DeliveryProtocol:  types.StringValue(edgeApplicationsResponse.Results.DeliveryProtocol),
-			HTTPPort:          jsonArgsStr,
-			HTTPSPort:         jsonArgsStr2,
-			MinimumTLSVersion: types.StringValue(edgeApplicationsResponse.Results.MinimumTlsVersion),
-			Active:            types.BoolValue(edgeApplicationsResponse.Results.Active),
-			DebugRules:        types.BoolValue(edgeApplicationsResponse.Results.DebugRules),
-			HTTP3:             types.BoolValue(edgeApplicationsResponse.Results.Http3),
-			//SupportedCiphers:          types.StringValue(edgeApplicationsResponse.Results.SupportedCiphers),
-			ApplicationAcceleration: types.BoolValue(edgeApplicationsResponse.Results.ApplicationAcceleration),
-			Caching:                 types.BoolValue(edgeApplicationsResponse.Results.Caching),
-			DeviceDetection:         types.BoolValue(edgeApplicationsResponse.Results.DeviceDetection),
-			EdgeFirewall:            types.BoolValue(edgeApplicationsResponse.Results.EdgeFirewall),
-			EdgeFunctions:           types.BoolValue(edgeApplicationsResponse.Results.EdgeFunctions),
-			ImageOptimization:       types.BoolValue(edgeApplicationsResponse.Results.ImageOptimization),
-			LoadBalancer:            types.BoolValue(edgeApplicationsResponse.Results.LoadBalancer),
-			RawLogs:                 types.BoolValue(edgeApplicationsResponse.Results.RawLogs),
-			WebApplicationFirewall:  types.BoolValue(edgeApplicationsResponse.Results.WebApplicationFirewall),
+			ID:                      types.Int64Value(edgeApplicationsResponse.Results.GetId()),
+			Name:                    types.StringValue(edgeApplicationsResponse.Results.GetName()),
+			DeliveryProtocol:        types.StringValue(edgeApplicationsResponse.Results.GetDeliveryProtocol()),
+			HTTPPort:                sliceHTTPPort,
+			HTTPSPort:               sliceHTTPSPort,
+			MinimumTLSVersion:       types.StringValue(edgeApplicationsResponse.Results.GetMinimumTlsVersion()),
+			Active:                  types.BoolValue(edgeApplicationsResponse.Results.GetActive()),
+			DebugRules:              types.BoolValue(edgeApplicationsResponse.Results.GetDebugRules()),
+			HTTP3:                   types.BoolValue(edgeApplicationsResponse.Results.GetHttp3()),
+			SupportedCiphers:        types.StringValue(edgeApplicationsResponse.Results.GetSupportedCiphers()),
+			ApplicationAcceleration: types.BoolValue(edgeApplicationsResponse.Results.GetApplicationAcceleration()),
+			Caching:                 types.BoolValue(edgeApplicationsResponse.Results.GetCaching()),
+			DeviceDetection:         types.BoolValue(edgeApplicationsResponse.Results.GetDeviceDetection()),
+			EdgeFirewall:            types.BoolValue(edgeApplicationsResponse.Results.GetEdgeFirewall()),
+			EdgeFunctions:           types.BoolValue(edgeApplicationsResponse.Results.GetEdgeFunctions()),
+			ImageOptimization:       types.BoolValue(edgeApplicationsResponse.Results.GetImageOptimization()),
+			LoadBalancer:            types.BoolValue(edgeApplicationsResponse.Results.GetLoadBalancer()),
+			RawLogs:                 types.BoolValue(edgeApplicationsResponse.Results.GetRawLogs()),
+			WebApplicationFirewall:  types.BoolValue(edgeApplicationsResponse.Results.GetWebApplicationFirewall()),
 		},
 	}
 

@@ -4,8 +4,10 @@ import (
 	"context"
 	"io"
 
+	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -26,6 +28,8 @@ type EdgeApplicationsDataSourceModel struct {
 	SchemaVersion types.Int64                      `tfsdk:"schema_version"`
 	Counter       types.Int64                      `tfsdk:"counter"`
 	TotalPages    types.Int64                      `tfsdk:"total_pages"`
+	Page          types.Int64                      `tfsdk:"page"`
+	PageSize      types.Int64                      `tfsdk:"page_size"`
 	Links         *GetEdgeAplicationsResponseLinks `tfsdk:"links"`
 	Results       []EdgeApplicationsResult         `tfsdk:"results"`
 	ID            types.String                     `tfsdk:"id"`
@@ -72,6 +76,14 @@ func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.Sche
 			"counter": schema.Int64Attribute{
 				Description: "The total number of edge applications.",
 				Computed:    true,
+			},
+			"page": schema.Int64Attribute{
+				Description: "The page number of edge applications.",
+				Optional:    true,
+			},
+			"page_size": schema.Int64Attribute{
+				Description: "The Page Size number of edge applications.",
+				Optional:    true,
 			},
 			"total_pages": schema.Int64Attribute{
 				Description: "The total number of pages.",
@@ -148,7 +160,24 @@ func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.Sche
 }
 
 func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	edgeAppResponse, response, err := e.client.edgeAplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsGet(ctx).Execute()
+
+	var Page types.Int64
+	var PageSize types.Int64
+	diags := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
+	diags = req.Config.GetAttribute(ctx, path.Root("page_size"), &PageSize)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if Page.ValueInt64() == 0 {
+		Page = types.Int64Value(1)
+	}
+	if PageSize.ValueInt64() == 0 {
+		Page = types.Int64Value(10)
+	}
+
+	edgeAppResponse, response, err := e.client.edgeAplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -174,6 +203,8 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 	}
 
 	edgeApplicationsState := EdgeApplicationsDataSourceModel{
+		Page:          Page,
+		PageSize:      PageSize,
 		SchemaVersion: types.Int64Value(edgeAppResponse.SchemaVersion),
 		TotalPages:    types.Int64Value(edgeAppResponse.TotalPages),
 		Counter:       types.Int64Value(edgeAppResponse.Count),
@@ -182,31 +213,36 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 			Next:     types.StringValue(next),
 		},
 	}
-	var origins []ApplicationOrigins
 	for _, resultEdgeApplication := range edgeAppResponse.GetResults() {
-		for _, origin := range resultEdgeApplication.GetOrigins() {
-			origins = append(origins, ApplicationOrigins{
-				Name:       types.StringValue(*origin.Name),
-				OriginType: types.StringValue(*origin.OriginType),
-				OriginID:   types.StringValue(*origin.OriginId),
-			})
-		}
 		edgeApplicationsState.Results = append(edgeApplicationsState.Results, EdgeApplicationsResult{
-			ID:           types.Int64Value(*resultEdgeApplication.Id),
-			Name:         types.StringValue(*resultEdgeApplication.Name),
-			Active:       types.BoolValue(*resultEdgeApplication.Active),
-			DebugRules:   types.BoolValue(*resultEdgeApplication.DebugRules),
-			LastEditor:   types.StringValue(*resultEdgeApplication.LastEditor),
-			LastModified: types.StringValue(*resultEdgeApplication.LastModified),
-			Origins:      origins,
+			ID:           types.Int64Value(resultEdgeApplication.GetId()),
+			Name:         types.StringValue(resultEdgeApplication.GetName()),
+			Active:       types.BoolValue(resultEdgeApplication.GetActive()),
+			DebugRules:   types.BoolValue(resultEdgeApplication.GetDebugRules()),
+			LastEditor:   types.StringValue(resultEdgeApplication.GetLastEditor()),
+			LastModified: types.StringValue(resultEdgeApplication.GetLastModified()),
+			Origins:      GetOrigins(resultEdgeApplication.GetOrigins()),
 		})
 
 	}
 
 	edgeApplicationsState.ID = types.StringValue("Get All Edge Application")
-	diags := resp.State.Set(ctx, &edgeApplicationsState)
+	diags = resp.State.Set(ctx, &edgeApplicationsState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+func GetOrigins(EdgeOrigins []edgeapplications.ApplicationOrigins) []ApplicationOrigins {
+	var origins []ApplicationOrigins
+	for _, origin := range EdgeOrigins {
+		origins = append(origins, ApplicationOrigins{
+			Name:       types.StringValue(*origin.Name),
+			OriginType: types.StringValue(*origin.OriginType),
+			OriginID:   types.StringValue(*origin.OriginId),
+		})
+	}
+
+	return origins
 }
