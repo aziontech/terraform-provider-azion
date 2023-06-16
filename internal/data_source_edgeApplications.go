@@ -160,12 +160,16 @@ func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.Sche
 }
 
 func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-
 	var Page types.Int64
 	var PageSize types.Int64
-	diags := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
-	diags = req.Config.GetAttribute(ctx, path.Root("page_size"), &PageSize)
-	resp.Diagnostics.Append(diags...)
+	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
+	resp.Diagnostics.Append(diagsPage...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("page_size"), &PageSize)
+	resp.Diagnostics.Append(diagsPageSize...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -223,11 +227,9 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 			LastModified:  types.StringValue(resultEdgeApplication.GetLastModified()),
 			Origins:       GetOrigins(resultEdgeApplication.GetOrigins()),
 		})
-
 	}
-
 	edgeApplicationsState.ID = types.StringValue("Get All Edge Application")
-	diags = resp.State.Set(ctx, &edgeApplicationsState)
+	diags := resp.State.Set(ctx, &edgeApplicationsState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

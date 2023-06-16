@@ -162,7 +162,6 @@ func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.Schem
 }
 
 func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-
 	var getEdgeApplicationId types.String
 	diags := req.Config.GetAttribute(ctx, path.Root("id"), &getEdgeApplicationId)
 	resp.Diagnostics.Append(diags...)
