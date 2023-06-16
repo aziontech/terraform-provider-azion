@@ -31,7 +31,7 @@ type EdgeApplicationDataSourceModel struct {
 }
 
 type EdgeApplicationResult struct {
-	ID                      types.Int64  `tfsdk:"id"`
+	ApplicationID           types.Int64  `tfsdk:"application_id"`
 	Name                    types.String `tfsdk:"name"`
 	DeliveryProtocol        types.String `tfsdk:"delivery_protocol"`
 	HTTPPort                types.List   `tfsdk:"http_port"`
@@ -68,7 +68,7 @@ func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.Schem
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Identifier of the data source.",
-				Optional:    true,
+				Required:    true,
 			},
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema Version.",
@@ -77,9 +77,9 @@ func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.Schem
 			"results": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
-					"id": schema.Int64Attribute{
+					"application_id": schema.Int64Attribute{
 						Description: "The Edge Application identifier.",
-						Required:    true,
+						Computed:    true,
 					},
 					"name": schema.StringAttribute{
 						Description: "The name of the Edge Application.",
@@ -213,7 +213,7 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 	EdgeApplicationState := EdgeApplicationDataSourceModel{
 		SchemaVersion: types.Int64Value(edgeApplicationsResponse.SchemaVersion),
 		Results: &EdgeApplicationResult{
-			ID:                      types.Int64Value(edgeApplicationsResponse.Results.GetId()),
+			ApplicationID:           types.Int64Value(edgeApplicationsResponse.Results.GetId()),
 			Name:                    types.StringValue(edgeApplicationsResponse.Results.GetName()),
 			DeliveryProtocol:        types.StringValue(edgeApplicationsResponse.Results.GetDeliveryProtocol()),
 			HTTPPort:                sliceHTTPPort,

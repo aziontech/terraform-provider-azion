@@ -5,15 +5,13 @@ resource "local_file" "content_file" {
 
 resource "azion_edge_function" "example" {
   edge_function = {
-    name           = "Function Terraform Test 5 API"
+    name           = "Function Terraform Example"
     code =         local_file.content_file.content
     language       = "javascript"
     initiator_type = "edge_application"
     json_args      = jsonencode(
-      {"key": "Value",
-        "chave":"4",
-        "oi" = "false",
-        "teste" = false
+      {"key" = "Value",
+        "key" = "example"
       })
     active         = true
   }

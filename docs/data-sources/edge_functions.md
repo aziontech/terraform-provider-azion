@@ -13,7 +13,7 @@ description: |-
 ## Example Usage
 
 ```terraform
-data "azion_edge_function" "example" {  
+data "azion_edge_functions" "example" {
 }
 ```
 

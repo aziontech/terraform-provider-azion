@@ -40,13 +40,13 @@ type GetEdgeAplicationsResponseLinks struct {
 }
 
 type EdgeApplicationsResult struct {
-	ID           types.Int64          `tfsdk:"id"`
-	Name         types.String         `tfsdk:"name"`
-	Active       types.Bool           `tfsdk:"active"`
-	DebugRules   types.Bool           `tfsdk:"debug_rules"`
-	LastEditor   types.String         `tfsdk:"last_editor"`
-	LastModified types.String         `tfsdk:"last_modified"`
-	Origins      []ApplicationOrigins `tfsdk:"origins"`
+	ApplicationID types.Int64          `tfsdk:"application_id"`
+	Name          types.String         `tfsdk:"name"`
+	Active        types.Bool           `tfsdk:"active"`
+	DebugRules    types.Bool           `tfsdk:"debug_rules"`
+	LastEditor    types.String         `tfsdk:"last_editor"`
+	LastModified  types.String         `tfsdk:"last_modified"`
+	Origins       []ApplicationOrigins `tfsdk:"origins"`
 }
 
 type ApplicationOrigins struct {
@@ -71,7 +71,7 @@ func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.Sche
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Identifier of the data source.",
-				Optional:    true,
+				Computed:    true,
 			},
 			"counter": schema.Int64Attribute{
 				Description: "The total number of edge applications.",
@@ -108,9 +108,9 @@ func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.Sche
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id": schema.Int64Attribute{
+						"application_id": schema.Int64Attribute{
 							Description: "The edge application identifier.",
-							Required:    true,
+							Computed:    true,
 						},
 						"name": schema.StringAttribute{
 							Computed:    true,
@@ -215,13 +215,13 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 	}
 	for _, resultEdgeApplication := range edgeAppResponse.GetResults() {
 		edgeApplicationsState.Results = append(edgeApplicationsState.Results, EdgeApplicationsResult{
-			ID:           types.Int64Value(resultEdgeApplication.GetId()),
-			Name:         types.StringValue(resultEdgeApplication.GetName()),
-			Active:       types.BoolValue(resultEdgeApplication.GetActive()),
-			DebugRules:   types.BoolValue(resultEdgeApplication.GetDebugRules()),
-			LastEditor:   types.StringValue(resultEdgeApplication.GetLastEditor()),
-			LastModified: types.StringValue(resultEdgeApplication.GetLastModified()),
-			Origins:      GetOrigins(resultEdgeApplication.GetOrigins()),
+			ApplicationID: types.Int64Value(resultEdgeApplication.GetId()),
+			Name:          types.StringValue(resultEdgeApplication.GetName()),
+			Active:        types.BoolValue(resultEdgeApplication.GetActive()),
+			DebugRules:    types.BoolValue(resultEdgeApplication.GetDebugRules()),
+			LastEditor:    types.StringValue(resultEdgeApplication.GetLastEditor()),
+			LastModified:  types.StringValue(resultEdgeApplication.GetLastModified()),
+			Origins:       GetOrigins(resultEdgeApplication.GetOrigins()),
 		})
 
 	}
