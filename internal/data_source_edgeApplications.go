@@ -174,7 +174,7 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 		Page = types.Int64Value(1)
 	}
 	if PageSize.ValueInt64() == 0 {
-		Page = types.Int64Value(10)
+		PageSize = types.Int64Value(10)
 	}
 
 	edgeAppResponse, response, err := e.client.edgeAplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
