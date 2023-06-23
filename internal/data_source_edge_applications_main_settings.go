@@ -63,7 +63,7 @@ func (e *EdgeApplicationsDataSource) Configure(_ context.Context, req datasource
 }
 
 func (e *EdgeApplicationsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_applications"
+	resp.TypeName = req.ProviderTypeName + "_edge_applications_main_settings"
 }
 
 func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
