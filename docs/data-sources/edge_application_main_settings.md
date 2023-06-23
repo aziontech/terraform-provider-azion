@@ -6,7 +6,7 @@ description: |-
   
 ---
 
-# azion_edge_application (Data Source)
+# azion_edge_application_main_settings (Data Source)
 
 
 
