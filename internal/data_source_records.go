@@ -63,7 +63,7 @@ func (d *RecordsDataSource) Configure(ctx context.Context, req datasource.Config
 }
 
 func (d *RecordsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_records"
+	resp.TypeName = req.ProviderTypeName + "_intelligent_dns_records"
 }
 
 func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {

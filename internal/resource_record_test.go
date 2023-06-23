@@ -14,7 +14,7 @@ func TestAccResourceRecord(t *testing.T) {
 	//			// Create and Read testing
 	//			{
 	//				Config: providerConfig + `
-	//				resource "azion_records" "dev" {
+	//				resource "azion_intelligent_dns_records" "dev" {
 	//					zone_id = 2638
 	//					record = {
 	//					  record_type= "A"
@@ -31,12 +31,12 @@ func TestAccResourceRecord(t *testing.T) {
 	// `,
 	//
 	//		Check: resource.ComposeAggregateTestCheckFunc(
-	//			resource.TestCheckResourceAttr("azion_records.dev", "schema_version", "3"),
+	//			resource.TestCheckResourceAttr("azion_intelligent_dns_records.dev", "schema_version", "3"),
 	//		),
 	//	},
 	//	// ImportState testing
 	//	{
-	//		ResourceName:            "azion_records.dev",
+	//		ResourceName:            "azion_intelligent_dns_records.dev",
 	//		ImportState:             true,
 	//		ImportStateVerify:       true,
 	//		ImportStateVerifyIgnore: []string{"last_updated"},
@@ -44,7 +44,7 @@ func TestAccResourceRecord(t *testing.T) {
 	//	// Update and Read testing
 	//	{
 	//		Config: providerConfig + `
-	//		resource "azion_records" "dev" {
+	//		resource "azion_intelligent_dns_records" "dev" {
 	//			zone_id = 2638
 	//			record = {
 	//			  record_type= "A"
@@ -61,7 +61,7 @@ func TestAccResourceRecord(t *testing.T) {
 	// `,
 	//
 	//				Check: resource.ComposeAggregateTestCheckFunc(
-	//					resource.TestCheckResourceAttr("azion_records.dev", "schema_version", "3"),
+	//					resource.TestCheckResourceAttr("azion_intelligent_dns_records.dev", "schema_version", "3"),
 	//				),
 	//			},
 	//			// Delete testing automatically occurs in TestCase

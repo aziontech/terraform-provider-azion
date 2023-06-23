@@ -55,7 +55,7 @@ type DnsDelegationSignerDigestType struct {
 }
 
 func (r *dnssecResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_dnssec"
+	resp.TypeName = req.ProviderTypeName + "_intelligent_dns_dnssec"
 }
 
 func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

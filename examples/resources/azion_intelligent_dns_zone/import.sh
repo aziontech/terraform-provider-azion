@@ -1,0 +1,1 @@
+terraform import azion_intelligent_dns_zone.example <zone_id>

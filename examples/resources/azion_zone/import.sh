@@ -1,1 +1,0 @@
-terraform import azion_zone.example <zone_id>

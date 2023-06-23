@@ -60,7 +60,7 @@ func (d *dnsSecDataSource) Configure(_ context.Context, req datasource.Configure
 }
 
 func (d *dnsSecDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_dnssec"
+	resp.TypeName = req.ProviderTypeName + "_intelligent_dns_dnssec"
 }
 
 func (d *dnsSecDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {

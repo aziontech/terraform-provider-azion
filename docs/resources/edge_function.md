@@ -12,7 +12,7 @@ description: |-
 Parameter `json_args` must be specified with `jsonencode` function
 
 ~> **Note about Code**
-Parameter `code` must be specified with local_file specified in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file
+Parameter `code` may be specified with local_file in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file
 
 ## Example Usage
 

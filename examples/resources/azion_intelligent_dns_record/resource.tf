@@ -1,4 +1,4 @@
-resource "azion_record" "examples" {
+resource "azion_intelligent_dns_record" "examples" {
   zone_id = "<zone_id>"
   record = {
     record_type= "A"

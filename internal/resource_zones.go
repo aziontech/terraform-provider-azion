@@ -53,7 +53,7 @@ type zoneModel struct {
 }
 
 func (r *zoneResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_zone"
+	resp.TypeName = req.ProviderTypeName + "_intelligent_dns_zone"
 }
 
 func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

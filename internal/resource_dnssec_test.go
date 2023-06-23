@@ -1,7 +1,7 @@
 package provider
 
 //func TestAccResourceDnsSec(t *testing.T) {
-//	resourceName := "azion_dnssec.examples"
+//	resourceName := "azion_intelligent_dns_dnssec.examples"
 //	resource.ParallelTest(t, resource.TestCase{
 //		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 //		CheckDestroy:             testAccDNSSecResourceDestroy,
@@ -49,7 +49,7 @@ package provider
 //provider "azion" {
 //  api_token  = "token"
 //}
-//resource "azion_dnssec" "examples" {
+//resource "azion_intelligent_dns_dnssec" "examples" {
 //  id = "2595"
 //  dns_sec = {
 //      is_enabled = true
@@ -63,7 +63,7 @@ package provider
 //provider "azion" {
 //  api_token  = "token"
 //}
-//resource "azion_dnssec" "examples" {
+//resource "azion_intelligent_dns_dnssec" "examples" {
 //  id = "2595"
 //  dns_sec = {
 //      is_enabled = false

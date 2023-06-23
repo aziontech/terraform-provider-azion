@@ -30,12 +30,12 @@ provider "azion" {
 }
 
 # Create a zone
-resource "azion_zone" "example" {
+resource "azion_intelligent_dns_zone" "example" {
   # ...
 }
 
 # Create a record
-resource "azion_record" "example" {
+resource "azion_intelligent_dns_record" "example" {
   # ...
 }
 ```
@@ -45,5 +45,4 @@ resource "azion_record" "example" {
 
 ### Optional
 
-- `api_token` (String) A registered token for Azion API - https://api.azion.com/#authentication-types. Alternatively, can be configured using the environment variable.
-- `AZION_API_TOKEN` (String) This is configured using the environment variable.
+- `api_token` (String) A registered token for Azion API - https://api.azion.com/#authentication-types. Alternatively, can be configured using the environment variable - `AZION_API_TOKEN`.
