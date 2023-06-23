@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -208,7 +209,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 }
 
-func AtoiNoError(strToConv string, resp *resource.ReadResponse) int64 {
+func AtoiNoError(strToConv string, resp *resource.ReadResponse) int32 {
 	intReturn, err := strconv.ParseInt(strToConv, 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -217,7 +218,14 @@ func AtoiNoError(strToConv string, resp *resource.ReadResponse) int64 {
 		)
 		return 0
 	}
-	return intReturn
+	if intReturn > math.MaxInt32 || intReturn < math.MinInt32 {
+		resp.Diagnostics.AddError(
+			"Value Overflow error",
+			"Converted value exceeds the range of int32",
+		)
+		return 0
+	}
+	return int32(intReturn)
 }
 
 func errorPrint(errCode int, err error) (string, string) {
@@ -250,12 +258,12 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 	valueFromCmd := strings.Split(state.ZoneId.ValueString(), "/")
 	idZone := AtoiNoError(valueFromCmd[0], resp)
 	state.ZoneId = types.StringValue(valueFromCmd[0])
-	var idRecord int64
+	var idRecord int32
 	if len(valueFromCmd) > 1 {
 		idRecord = AtoiNoError(valueFromCmd[1], resp)
 	}
 
-	recordsResponse, httpResponse, err := r.client.idnsApi.RecordsApi.GetZoneRecords(ctx, int32(idZone)).Execute()
+	recordsResponse, httpResponse, err := r.client.idnsApi.RecordsApi.GetZoneRecords(ctx, idZone).Execute()
 	if err != nil {
 		usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
