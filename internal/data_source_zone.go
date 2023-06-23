@@ -54,7 +54,7 @@ func (d *ZoneDataSource) Configure(_ context.Context, req datasource.ConfigureRe
 }
 
 func (d *ZoneDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_zone"
+	resp.TypeName = req.ProviderTypeName + "_intelligent_dns_zone"
 }
 
 func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {

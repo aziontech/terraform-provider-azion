@@ -30,12 +30,12 @@ provider "azion" {
 }
 
 # Create a zone
-resource "azion_zone" "example" {
+resource "azion_intelligent_dns_zone" "example" {
   # ...
 }
 
 # Create a record
-resource "azion_record" "example" {
+resource "azion_intelligent_dns_record" "example" {
   # ...
 }
 ```

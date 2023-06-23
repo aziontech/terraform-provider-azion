@@ -1,1 +1,1 @@
-data "azion_zones" "examples" {}
+data "azion_intelligent_dns_zones" "examples" {}

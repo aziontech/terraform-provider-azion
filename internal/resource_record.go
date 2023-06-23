@@ -52,7 +52,7 @@ type recordModel struct {
 }
 
 func (r *recordResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_record"
+	resp.TypeName = req.ProviderTypeName + "_intelligent_dns_record"
 }
 
 func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

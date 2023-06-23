@@ -1,1 +1,1 @@
-terraform import azion_zone.example <zone_id>
+terraform import azion_intelligent_dns_zone.example <zone_id>
