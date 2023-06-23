@@ -8,7 +8,11 @@ description: |-
 
 # azion_edge_function (Resource)
 
+~> **Note about Json_Args**
+Parameter `json_args` must be specified with `jsonencode` function
 
+~> **Note about Code**
+Parameter `code` may be specified with local_file in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file
 
 ## Example Usage
 

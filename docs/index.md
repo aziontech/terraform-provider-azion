@@ -45,4 +45,4 @@ resource "azion_intelligent_dns_record" "example" {
 
 ### Optional
 
-- `api_token` (String) A registered token for Azion API - https://api.azion.com/#authentication-types. Alternatively, can be configured using the environment variable.
+- `api_token` (String) A registered token for Azion API - https://api.azion.com/#authentication-types. Alternatively, can be configured using the environment variable - `AZION_API_TOKEN`.
