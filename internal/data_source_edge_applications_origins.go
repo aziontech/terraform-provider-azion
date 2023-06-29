@@ -149,7 +149,7 @@ func (o *OriginsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 									},
 									"weight": schema.StringAttribute{
 										Description: "Weight of the origin.",
-										Optional:    true,
+										Computed:    true,
 									},
 									"server_role": schema.StringAttribute{
 										Description: "Server role of the origin.",
@@ -196,15 +196,15 @@ func (o *OriginsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 						},
 						"hmac_region_name": schema.StringAttribute{
 							Description: "HMAC region name.",
-							Optional:    true,
+							Computed:    true,
 						},
 						"hmac_access_key": schema.StringAttribute{
 							Description: "HMAC access key.",
-							Optional:    true,
+							Computed:    true,
 						},
 						"hmac_secret_key": schema.StringAttribute{
 							Description: "HMAC secret key.",
-							Optional:    true,
+							Computed:    true,
 						},
 					},
 				},
