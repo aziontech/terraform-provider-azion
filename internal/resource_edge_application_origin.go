@@ -107,7 +107,7 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Required:    true,
 					},
 					"origin_type": schema.StringAttribute{
-						Description: "Identifies the source of a record." +
+						Description: "Identifies the source of a record.\n" +
 							"~> **Note about Origin Type**\n" +
 							"Accepted values: `single_origin`(default), `load_balancer` and `live_ingest`\n\n",
 						Optional: true,
@@ -140,7 +140,7 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 					},
 					"origin_protocol_policy": schema.StringAttribute{
-						Description: "Protocols for connection to the origin." +
+						Description: "Protocols for connection to the origin.\n" +
 							"~> **Note about Origin Protocol Policy**\n" +
 							"Accepted values: `preserve`(default), `http` and `https`\n\n",
 						Optional: true,
@@ -151,7 +151,7 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Computed:    true,
 					},
 					"host_header": schema.StringAttribute{
-						Description: "Host header value that will be delivered to the origin." +
+						Description: "Host header value that will be delivered to the origin.\n" +
 							"~> **Note about Host Header**\n" +
 							"Accepted values: `${host}`(default) and must be specified with `$${host}`\n\n",
 						Required: true,

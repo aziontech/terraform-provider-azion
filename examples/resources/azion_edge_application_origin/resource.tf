@@ -1,11 +1,11 @@
 resource "azion_edge_application_origin" "example" {
-  edge_application_id = 1681826892
+  edge_application_id = <edge_application_id>
   origin = {
     name = "Terraform Example"
     origin_type = "single_origin"
     addresses: [
       {
-        "address": "httpbin2.org"
+        "address": "terraform.org"
       }
     ],
     origin_protocol_policy: "http",
