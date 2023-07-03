@@ -107,8 +107,11 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Required:    true,
 					},
 					"origin_type": schema.StringAttribute{
-						Description: "Origin type.",
-						Optional:    true,
+						Description: "Identifies the source of a record." +
+							"~> **Note about Origin Type**\n" +
+							"Accepted values: `single_origin`(default), `load_balancer` and `live_ingest`\n\n",
+						Optional: true,
+						Computed: true,
 					},
 					"addresses": schema.ListNestedAttribute{
 						Required: true,
@@ -137,16 +140,21 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 					},
 					"origin_protocol_policy": schema.StringAttribute{
-						Description: "Origin protocol policy.",
-						Optional:    true,
+						Description: "Protocols for connection to the origin." +
+							"~> **Note about Origin Protocol Policy**\n" +
+							"Accepted values: `preserve`(default), `http` and `https`\n\n",
+						Optional: true,
+						Computed: true,
 					},
 					"is_origin_redirection_enabled": schema.BoolAttribute{
 						Description: "Whether origin redirection is enabled.",
 						Computed:    true,
 					},
 					"host_header": schema.StringAttribute{
-						Description: "Host header value.",
-						Required:    true,
+						Description: "Host header value that will be delivered to the origin." +
+							"~> **Note about Host Header**\n" +
+							"Accepted values: `${host}`(default) and must be specified with `$${host}`\n\n",
+						Required: true,
 					},
 					"method": schema.StringAttribute{
 						Description: "HTTP method used by the origin.",
@@ -169,6 +177,7 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					"hmac_authentication": schema.BoolAttribute{
 						Description: "Whether HMAC authentication is enabled.",
 						Optional:    true,
+						Computed:    true,
 					},
 					"hmac_region_name": schema.StringAttribute{
 						Description: "HMAC region name.",
@@ -217,14 +226,29 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 		})
 	}
 
+	var originProtocolPolicy string
+	if plan.Origin.OriginProtocolPolicy.IsNull() || plan.Origin.OriginProtocolPolicy.ValueString() == "" {
+		originProtocolPolicy = "preserve"
+	}
+
+	var OriginType string
+	if plan.Origin.OriginType.IsNull() || plan.Origin.OriginType.ValueString() == "" {
+		OriginType = "single_origin"
+	}
+
+	var hmacAuthentication bool
+	if plan.Origin.HMACAuthentication.IsNull() || plan.Origin.HMACAuthentication.ValueBool() {
+		hmacAuthentication = false
+	}
+
 	originRequest := edgeapplications.CreateOriginsRequest{
 		Name:                 plan.Origin.Name.ValueString(),
 		Addresses:            addressesRequest,
-		OriginType:           edgeapplications.PtrString(plan.Origin.OriginType.ValueString()),
-		OriginProtocolPolicy: edgeapplications.PtrString(plan.Origin.OriginProtocolPolicy.ValueString()),
+		OriginType:           edgeapplications.PtrString(OriginType),
+		OriginProtocolPolicy: edgeapplications.PtrString(originProtocolPolicy),
 		HostHeader:           plan.Origin.HostHeader.ValueString(),
 		OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
-		HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
+		HmacAuthentication:   edgeapplications.PtrBool(hmacAuthentication),
 		HmacRegionName:       edgeapplications.PtrString(plan.Origin.HMACRegionName.ValueString()),
 		HmacAccessKey:        edgeapplications.PtrString(plan.Origin.HMACAccessKey.ValueString()),
 		HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
@@ -359,6 +383,7 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 		HMACSecretKey:              types.StringValue(originResponse.Results.GetHmacSecretKey()),
 	}
 	state.ID = types.StringValue(strconv.FormatInt(originResponse.Results.OriginId, 10))
+	state.ApplicationID = types.Int64Value(ApplicationID)
 	state.SchemaVersion = types.Int64Value(originResponse.SchemaVersion)
 
 	diags = resp.State.Set(ctx, &state)
