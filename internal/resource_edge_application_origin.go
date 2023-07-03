@@ -229,16 +229,22 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	var originProtocolPolicy string
 	if plan.Origin.OriginProtocolPolicy.IsNull() || plan.Origin.OriginProtocolPolicy.ValueString() == "" {
 		originProtocolPolicy = "preserve"
+	} else {
+		originProtocolPolicy = plan.Origin.OriginProtocolPolicy.ValueString()
 	}
 
 	var OriginType string
 	if plan.Origin.OriginType.IsNull() || plan.Origin.OriginType.ValueString() == "" {
 		OriginType = "single_origin"
+	} else {
+		OriginType = plan.Origin.OriginType.ValueString()
 	}
 
 	var hmacAuthentication bool
 	if plan.Origin.HMACAuthentication.IsNull() || plan.Origin.HMACAuthentication.ValueBool() {
 		hmacAuthentication = false
+	} else {
+		hmacAuthentication = plan.Origin.HMACAuthentication.ValueBool()
 	}
 
 	originRequest := edgeapplications.CreateOriginsRequest{
@@ -391,7 +397,6 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 }
 
 func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
