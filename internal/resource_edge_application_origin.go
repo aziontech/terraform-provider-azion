@@ -163,6 +163,7 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					"origin_path": schema.StringAttribute{
 						Description: "Path of the origin.",
 						Optional:    true,
+						Computed:    true,
 					},
 					"connection_timeout": schema.Int64Attribute{
 						Description: "Connection timeout in seconds.",
@@ -182,14 +183,17 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					"hmac_region_name": schema.StringAttribute{
 						Description: "HMAC region name.",
 						Optional:    true,
+						Computed:    true,
 					},
 					"hmac_access_key": schema.StringAttribute{
 						Description: "HMAC access key.",
 						Optional:    true,
+						Computed:    true,
 					},
 					"hmac_secret_key": schema.StringAttribute{
 						Description: "HMAC secret key.",
 						Optional:    true,
+						Computed:    true,
 					},
 				},
 			},
