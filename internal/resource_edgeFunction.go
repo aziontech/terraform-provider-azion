@@ -59,6 +59,11 @@ func (r *edgeFunctionResource) Metadata(_ context.Context, req resource.Metadata
 
 func (r *edgeFunctionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "" +
+			"~> **Note about Json_Args**\n" +
+			"Parameter `json_args` must be specified with `jsonencode` function\n\n" +
+			"~> **Note about Code**\n" +
+			"Parameter `code` may be specified with local_file in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
