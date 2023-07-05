@@ -181,7 +181,8 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 		PageSize = types.Int64Value(10)
 	}
 
-	edgeAppResponse, response, err := e.client.edgeAplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	edgeAppResponse, response, err := e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {

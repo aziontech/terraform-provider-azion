@@ -1,0 +1,1 @@
+terraform import azion_edge_application_origin.example <edge_application_id>/<origin_key>

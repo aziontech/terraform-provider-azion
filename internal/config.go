@@ -19,16 +19,16 @@ type apiClient struct {
 	edgefunctionsConfig *edgefunctions.Configuration
 	edgefunctionsApi    *edgefunctions.APIClient
 
-	edgeAplicationsConfig *edgeapplications.Configuration
-	edgeAplicationsApi    *edgeapplications.APIClient
+	edgeApplicationsConfig *edgeapplications.Configuration
+	edgeApplicationsApi    *edgeapplications.APIClient
 }
 
 func Client(APIToken string, userAgent string) *apiClient {
 	client := &apiClient{
-		idnsConfig:            idns.NewConfiguration(),
-		domainsConfig:         domains.NewConfiguration(),
-		edgefunctionsConfig:   edgefunctions.NewConfiguration(),
-		edgeAplicationsConfig: edgeapplications.NewConfiguration(),
+		idnsConfig:             idns.NewConfiguration(),
+		domainsConfig:          domains.NewConfiguration(),
+		edgefunctionsConfig:    edgefunctions.NewConfiguration(),
+		edgeApplicationsConfig: edgeapplications.NewConfiguration(),
 	}
 
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
@@ -52,10 +52,10 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.edgefunctionsConfig.UserAgent = userAgent
 	client.edgefunctionsApi = edgefunctions.NewAPIClient(client.edgefunctionsConfig)
 
-	client.edgeAplicationsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-	client.edgeAplicationsConfig.AddDefaultHeader("Accept", "application/json; version=3")
-	client.edgeAplicationsConfig.UserAgent = userAgent
-	client.edgeAplicationsApi = edgeapplications.NewAPIClient(client.edgeAplicationsConfig)
+	client.edgeApplicationsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.edgeApplicationsConfig.AddDefaultHeader("Accept", "application/json; version=3")
+	client.edgeApplicationsConfig.UserAgent = userAgent
+	client.edgeApplicationsApi = edgeapplications.NewAPIClient(client.edgeApplicationsConfig)
 
 	return client
 }

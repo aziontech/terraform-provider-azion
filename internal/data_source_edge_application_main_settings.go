@@ -177,7 +177,8 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	edgeApplicationsResponse, response, err := e.client.edgeAplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsIdGet(ctx, getEdgeApplicationId.ValueString()).Execute()
+	edgeApplicationsResponse, response, err := e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsIdGet(ctx, getEdgeApplicationId.ValueString()).Execute()
+
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
