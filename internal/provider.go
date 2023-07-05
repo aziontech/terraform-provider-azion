@@ -89,6 +89,8 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionEdgeFunction,
 		dataSourceAzionEdgeApplications,
 		dataSourceAzionEdgeApplication,
+		dataSourceAzionEdgeApplicationsEdgeFunctionsInstance,
+		dataSourceAzionEdgeApplicationEdgeFunctionInstance,
 	}
 }
 
