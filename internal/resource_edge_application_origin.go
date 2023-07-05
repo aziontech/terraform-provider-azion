@@ -231,10 +231,10 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	var originProtocolPolicy string
-	if plan.Origin.OriginProtocolPolicy.IsNull() {
+	if plan.Origin.OriginProtocolPolicy.IsUnknown() {
 		originProtocolPolicy = "preserve"
 	} else {
-		if plan.Origin.OriginProtocolPolicy.ValueString() == "" {
+		if plan.Origin.OriginProtocolPolicy.ValueString() == "" || plan.Origin.OriginProtocolPolicy.IsNull() {
 			resp.Diagnostics.AddError("Origin Protocol Policy",
 				"Is not null, Possible choices are: [preserve(default), http, https]")
 			return
@@ -243,12 +243,12 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	var OriginType string
-	if plan.Origin.OriginType.IsNull() {
+	if plan.Origin.OriginType.IsUnknown() {
 		OriginType = "single_origin"
 	} else {
-		if plan.Origin.OriginType.ValueString() == "" {
+		if plan.Origin.OriginType.ValueString() == "" || plan.Origin.OriginType.IsNull() {
 			resp.Diagnostics.AddError("Origin Type",
-				"Is not null, Possible choices are: [single_origin(default), load_balancer, live_ingest]")
+				"Is not null, Possible choices are: [single_origin]")
 			return
 		}
 		OriginType = plan.Origin.OriginType.ValueString()
@@ -459,10 +459,10 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	var originProtocolPolicy string
-	if plan.Origin.OriginProtocolPolicy.IsNull() {
+	if plan.Origin.OriginProtocolPolicy.IsUnknown() {
 		originProtocolPolicy = "preserve"
 	} else {
-		if plan.Origin.OriginProtocolPolicy.ValueString() == "" {
+		if plan.Origin.OriginProtocolPolicy.ValueString() == "" || plan.Origin.OriginProtocolPolicy.IsNull() {
 			resp.Diagnostics.AddError("Origin Protocol Policy",
 				"Is not null, Possible choices are: [preserve(default), http, https]")
 			return
@@ -471,12 +471,12 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	var OriginType string
-	if plan.Origin.OriginType.IsNull() {
+	if plan.Origin.OriginType.IsUnknown() {
 		OriginType = "single_origin"
 	} else {
-		if plan.Origin.OriginType.ValueString() == "" {
+		if plan.Origin.OriginType.ValueString() == "" || plan.Origin.OriginType.IsNull() {
 			resp.Diagnostics.AddError("Origin Type",
-				"Is not null, Possible choices are: [single_origin(default), load_balancer, live_ingest]")
+				"Is not null, Possible choices are: [single_origin]")
 			return
 		}
 		OriginType = plan.Origin.OriginType.ValueString()
