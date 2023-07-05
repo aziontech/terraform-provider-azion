@@ -231,24 +231,27 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	var originProtocolPolicy string
-	if plan.Origin.OriginProtocolPolicy.IsNull() || plan.Origin.OriginProtocolPolicy.ValueString() == "" {
+	if plan.Origin.OriginProtocolPolicy.IsNull() {
 		originProtocolPolicy = "preserve"
 	} else {
+		if plan.Origin.OriginProtocolPolicy.ValueString() == "" {
+			resp.Diagnostics.AddError("Origin Protocol Policy",
+				"Is not null, Possible choices are: [preserve(default), http, https]")
+			return
+		}
 		originProtocolPolicy = plan.Origin.OriginProtocolPolicy.ValueString()
 	}
 
 	var OriginType string
-	if plan.Origin.OriginType.IsNull() || plan.Origin.OriginType.ValueString() == "" {
+	if plan.Origin.OriginType.IsNull() {
 		OriginType = "single_origin"
 	} else {
+		if plan.Origin.OriginType.ValueString() == "" {
+			resp.Diagnostics.AddError("Origin Type",
+				"Is not null, Possible choices are: [single_origin(default), load_balancer, live_ingest]")
+			return
+		}
 		OriginType = plan.Origin.OriginType.ValueString()
-	}
-
-	var hmacAuthentication bool
-	if plan.Origin.HMACAuthentication.IsNull() || plan.Origin.HMACAuthentication.ValueBool() {
-		hmacAuthentication = false
-	} else {
-		hmacAuthentication = plan.Origin.HMACAuthentication.ValueBool()
 	}
 
 	originRequest := edgeapplications.CreateOriginsRequest{
@@ -258,7 +261,7 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 		OriginProtocolPolicy: edgeapplications.PtrString(originProtocolPolicy),
 		HostHeader:           plan.Origin.HostHeader.ValueString(),
 		OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
-		HmacAuthentication:   edgeapplications.PtrBool(hmacAuthentication),
+		HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
 		HmacRegionName:       edgeapplications.PtrString(plan.Origin.HMACRegionName.ValueString()),
 		HmacAccessKey:        edgeapplications.PtrString(plan.Origin.HMACAccessKey.ValueString()),
 		HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
@@ -455,11 +458,35 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 		})
 	}
 
+	var originProtocolPolicy string
+	if plan.Origin.OriginProtocolPolicy.IsNull() {
+		originProtocolPolicy = "preserve"
+	} else {
+		if plan.Origin.OriginProtocolPolicy.ValueString() == "" {
+			resp.Diagnostics.AddError("Origin Protocol Policy",
+				"Is not null, Possible choices are: [preserve(default), http, https]")
+			return
+		}
+		originProtocolPolicy = plan.Origin.OriginProtocolPolicy.ValueString()
+	}
+
+	var OriginType string
+	if plan.Origin.OriginType.IsNull() {
+		OriginType = "single_origin"
+	} else {
+		if plan.Origin.OriginType.ValueString() == "" {
+			resp.Diagnostics.AddError("Origin Type",
+				"Is not null, Possible choices are: [single_origin(default), load_balancer, live_ingest]")
+			return
+		}
+		OriginType = plan.Origin.OriginType.ValueString()
+	}
+
 	originRequest := edgeapplications.UpdateOriginsRequest{
 		Name:                 plan.Origin.Name.ValueString(),
 		Addresses:            addressesRequest,
-		OriginType:           edgeapplications.PtrString(plan.Origin.OriginType.ValueString()),
-		OriginProtocolPolicy: edgeapplications.PtrString(plan.Origin.OriginProtocolPolicy.ValueString()),
+		OriginType:           edgeapplications.PtrString(OriginType),
+		OriginProtocolPolicy: edgeapplications.PtrString(originProtocolPolicy),
 		HostHeader:           plan.Origin.HostHeader.ValueString(),
 		OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
 		HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
