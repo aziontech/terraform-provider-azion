@@ -3,8 +3,11 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -64,4 +67,23 @@ func ConvertInterfaceToString(jsonArgs interface{}) (string, error) {
 	}
 
 	return string(jsonArgsStr), err
+}
+
+func AtoiNoError(strToConv string, resp *resource.ReadResponse) int32 {
+	intReturn, err := strconv.ParseInt(strToConv, 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Value Conversion error ",
+			"Could not convert String to Int",
+		)
+		return 0
+	}
+	if intReturn > math.MaxInt32 || intReturn < math.MinInt32 {
+		resp.Diagnostics.AddError(
+			"Value Overflow error",
+			"Converted value exceeds the range of int32",
+		)
+		return 0
+	}
+	return int32(intReturn)
 }

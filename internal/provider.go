@@ -91,6 +91,8 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionEdgeApplication,
 		dataSourceAzionEdgeApplicationsEdgeFunctionsInstance,
 		dataSourceAzionEdgeApplicationEdgeFunctionInstance,
+		dataSourceAzionEdgeApplicationsOrigins,
+		dataSourceAzionEdgeApplicationOrigin,
 	}
 }
 
@@ -101,6 +103,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewDnssecResource,
 		NewDomainResource,
 		NewEdgeFunctionResource,
+		NewEdgeApplicationOriginResource,
 	}
 }
 
