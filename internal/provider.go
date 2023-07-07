@@ -104,6 +104,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewDomainResource,
 		NewEdgeFunctionResource,
 		NewEdgeApplicationOriginResource,
+		NewEdgeApplicationEdgeFunctionsInstanceResource,
 	}
 }
 

@@ -2,8 +2,9 @@ package provider
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"io"
+
+	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -108,7 +109,7 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Read(ctx context.Context
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	edgeFunctionInstancesResponse, response, err := d.client.edgeAplicationsApi.EdgeApplicationsEdgeFunctionsInstancesApi.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdGet(ctx, EdgeApplicationId.ValueInt64(), EdgeFunctionInstanceId.ValueInt64()).Execute()
+	edgeFunctionInstancesResponse, response, err := d.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesApi.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdGet(ctx, EdgeApplicationId.ValueInt64(), EdgeFunctionInstanceId.ValueInt64()).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {

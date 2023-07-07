@@ -2,8 +2,9 @@ package provider
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"io"
+
+	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -56,7 +57,7 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Configure(_ context.Con
 }
 
 func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_applications_edge_functions_instance"
+	resp.TypeName = req.ProviderTypeName + "_edge_application_edge_functions_instance"
 }
 
 func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -157,7 +158,7 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Contex
 		PageSize = types.Int64Value(10)
 	}
 
-	edgeFunctionInstancesResponse, response, err := d.client.edgeAplicationsApi.EdgeApplicationsEdgeFunctionsInstancesApi.EdgeApplicationsEdgeApplicationIdFunctionsInstancesGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	edgeFunctionInstancesResponse, response, err := d.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesApi.EdgeApplicationsEdgeApplicationIdFunctionsInstancesGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
