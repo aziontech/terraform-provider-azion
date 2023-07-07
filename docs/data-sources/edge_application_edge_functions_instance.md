@@ -6,7 +6,7 @@ description: |-
   
 ---
 
-# azion_edge_applications_edge_functions_instance (Data Source)
+# azion_edge_application_edge_functions_instance (Data Source)
 
 
 
