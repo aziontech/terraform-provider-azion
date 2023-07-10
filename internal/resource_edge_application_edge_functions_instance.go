@@ -88,7 +88,8 @@ func (r *edgeFunctionsInstanceResource) Schema(_ context.Context, _ resource.Sch
 					},
 					"args": schema.StringAttribute{
 						Description: "JSON arguments of the function.",
-						Required:    true,
+						Optional:    true,
+						Computed:    true,
 					},
 				},
 			},
@@ -118,7 +119,19 @@ func (r *edgeFunctionsInstanceResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	planJsonArgs, err := utils.ConvertStringToInterface(plan.EdgeFunction.Args.ValueString())
+	var argsStr string
+	if plan.EdgeFunction.Args.IsUnknown() {
+		argsStr = "{}"
+	} else {
+		if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
+			resp.Diagnostics.AddError("Args",
+				"Is not null")
+			return
+		}
+		argsStr = plan.EdgeFunction.Args.ValueString()
+	}
+
+	planJsonArgs, err := utils.ConvertStringToInterface(argsStr)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -295,7 +308,19 @@ func (r *edgeFunctionsInstanceResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	requestJsonArgsStr, err := utils.ConvertStringToInterface(plan.EdgeFunction.Args.ValueString())
+	var argsStr string
+	if plan.EdgeFunction.Args.IsUnknown() {
+		argsStr = "{}"
+	} else {
+		if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
+			resp.Diagnostics.AddError("Args",
+				"Is not null")
+			return
+		}
+		argsStr = plan.EdgeFunction.Args.ValueString()
+	}
+
+	requestJsonArgsStr, err := utils.ConvertStringToInterface(argsStr)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
