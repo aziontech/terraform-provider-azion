@@ -45,9 +45,12 @@ resource "azion_edge_application_edge_functions_instance" "example" {
 
 Required:
 
-- `args` (String) JSON arguments of the function.
 - `edge_function_id` (Number) The edge function identifier.
 - `name` (String) Name of the function.
+
+Optional:
+
+- `args` (String) JSON arguments of the function.
 
 Read-Only:
 
