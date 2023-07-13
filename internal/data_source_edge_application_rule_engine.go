@@ -27,7 +27,6 @@ type RuleEngineDataSource struct {
 type RuleEngineDataSourceModel struct {
 	SchemaVersion types.Int64           `tfsdk:"schema_version"`
 	ID            types.String          `tfsdk:"id"`
-	Phase         types.String          `tfsdk:"phase"`
 	ApplicationID types.Int64           `tfsdk:"edge_application_id"`
 	Results       RuleEngineResultModel `tfsdk:"results"`
 }
@@ -77,10 +76,6 @@ func (r *RuleEngineDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Description: "Identifier of the data source.",
 				Computed:    true,
 			},
-			"phase": schema.StringAttribute{
-				Description: "Identifier of the phase - Rules Engine data source.",
-				Required:    true,
-			},
 			"edge_application_id": schema.Int64Attribute{
 				Description: "The edge application identifier.",
 				Required:    true,
@@ -102,7 +97,7 @@ func (r *RuleEngineDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 					},
 					"phase": schema.StringAttribute{
 						Description: "The phase in which the rule is executed (e.g., default, request, response).",
-						Computed:    true,
+						Required:    true,
 					},
 					"behaviors": schema.ListNestedAttribute{
 						Computed: true,
@@ -178,7 +173,7 @@ func (r *RuleEngineDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	diagsPhase := req.Config.GetAttribute(ctx, path.Root("phase"), &phase)
+	diagsPhase := req.Config.GetAttribute(ctx, path.Root("results").AtName("phase"), &phase)
 	resp.Diagnostics.Append(diagsPhase...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -250,7 +245,6 @@ func (r *RuleEngineDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	edgeApplicationsRuleEngineState := RuleEngineDataSourceModel{
 		ApplicationID: edgeApplicationID,
-		Phase:         phase,
 		SchemaVersion: types.Int64Value(ruleEngineResponse.SchemaVersion),
 		Results:       rulesEngineResults,
 	}

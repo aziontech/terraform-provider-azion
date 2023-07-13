@@ -27,7 +27,6 @@ type RulesEngineDataSource struct {
 type RulesEngineDataSourceModel struct {
 	SchemaVersion types.Int64                             `tfsdk:"schema_version"`
 	ID            types.String                            `tfsdk:"id"`
-	Phase         types.String                            `tfsdk:"phase"`
 	ApplicationID types.Int64                             `tfsdk:"edge_application_id"`
 	Counter       types.Int64                             `tfsdk:"counter"`
 	TotalPages    types.Int64                             `tfsdk:"total_pages"`
@@ -82,10 +81,6 @@ func (r *RulesEngineDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Description: "Identifier of the data source.",
 				Computed:    true,
 			},
-			"phase": schema.StringAttribute{
-				Description: "Identifier of the phase - Rules Engine data source.",
-				Required:    true,
-			},
 			"edge_application_id": schema.Int64Attribute{
 				Description: "The edge application identifier.",
 				Required:    true,
@@ -122,7 +117,7 @@ func (r *RulesEngineDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Computed:    true,
 			},
 			"results": schema.ListNestedAttribute{
-				Computed: true,
+				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.Int64Attribute{
@@ -135,7 +130,7 @@ func (r *RulesEngineDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						},
 						"phase": schema.StringAttribute{
 							Description: "The phase in which the rule is executed (e.g., default, request, response).",
-							Computed:    true,
+							Required:    true,
 						},
 						"behaviors": schema.ListNestedAttribute{
 							Computed: true,
@@ -213,7 +208,7 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	diagsPhase := req.Config.GetAttribute(ctx, path.Root("phase"), &phase)
+	diagsPhase := req.Config.GetAttribute(ctx, path.Root("results").AtName("phase"), &phase)
 	resp.Diagnostics.Append(diagsPhase...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -312,7 +307,6 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 		ApplicationID: edgeApplicationID,
 		Page:          Page,
 		PageSize:      PageSize,
-		Phase:         phase,
 		Results:       rulesEngineResults,
 		TotalPages:    types.Int64Value(rulesEngineResponse.TotalPages),
 		Counter:       types.Int64Value(rulesEngineResponse.Count),
