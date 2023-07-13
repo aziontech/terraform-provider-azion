@@ -255,5 +255,4 @@ func (r *RuleEngineDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 }

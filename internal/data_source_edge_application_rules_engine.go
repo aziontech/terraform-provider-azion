@@ -322,5 +322,4 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 }
