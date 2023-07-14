@@ -208,7 +208,7 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	diagsPhase := req.Config.GetAttribute(ctx, path.Root("results").AtName("phase"), &phase)
+	diagsPhase := req.Config.GetAttribute(ctx, path.Root("results").AtListIndex(0).AtName("phase"), &phase)
 	resp.Diagnostics.Append(diagsPhase...)
 	if resp.Diagnostics.HasError() {
 		return
