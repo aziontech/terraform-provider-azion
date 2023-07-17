@@ -74,12 +74,9 @@ Required:
 - `name` (String) The name of the rules engine rule.
 - `phase` (String) The phase in which the rule is executed (e.g., default, request, response).
 
-Optional:
-
-- `description` (String) The description of the rules engine rule.
-
 Read-Only:
 
+- `description` (String) The description of the rules engine rule.
 - `id` (Number) The ID of the rules engine rule.
 - `is_active` (Boolean) The status of the rules engine rule.
 - `order` (Number) The order of the rule in the rules engine.
