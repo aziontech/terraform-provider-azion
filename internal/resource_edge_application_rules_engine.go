@@ -161,7 +161,7 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 					},
 					"description": schema.StringAttribute{
 						Description: "The description of the rules engine rule.",
-						Optional:    true,
+						Computed:    true,
 					},
 				},
 			},
@@ -202,7 +202,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 	for _, behavior := range plan.RulesEngine.Behaviors {
 		behaviors = append(behaviors, edgeapplications.RulesEngineBehavior{
 			Name:   behavior.Name.ValueString(),
-			Target: behavior.Target.ValueString(),
+			Target: edgeapplications.PtrString(behavior.Target.ValueString()),
 		})
 	}
 
@@ -245,16 +245,9 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 
 	var behaviorsResult []RulesEngineBehaviorResourceModel
 	for _, behavior := range rulesEngineResponse.Results.Behaviors {
-		target, err := utils.ConvertInterfaceToString(behavior.GetTarget())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				err.Error(),
-				"err",
-			)
-		}
 		behaviorsResult = append(behaviorsResult, RulesEngineBehaviorResourceModel{
 			Name:   types.StringValue(behavior.GetName()),
-			Target: types.StringValue(target),
+			Target: types.StringValue(behavior.GetTarget()),
 		})
 	}
 
@@ -274,14 +267,14 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		})
 	}
 	rulesEngineResults := &RulesEngineResourceResults{
-		ID:        types.Int64Value(rulesEngineResponse.Results.GetId()),
-		Name:      types.StringValue(rulesEngineResponse.Results.GetName()),
-		Phase:     types.StringValue(rulesEngineResponse.Results.GetPhase()),
-		Behaviors: behaviorsResult,
-		Criteria:  criteriaResult,
-		IsActive:  types.BoolValue(rulesEngineResponse.Results.GetIsActive()),
-		Order:     types.Int64Value(rulesEngineResponse.Results.GetOrder()),
-		//Description: types.StringValue(rules.GetDescription()),
+		ID:          types.Int64Value(rulesEngineResponse.Results.GetId()),
+		Name:        types.StringValue(rulesEngineResponse.Results.GetName()),
+		Phase:       types.StringValue(rulesEngineResponse.Results.GetPhase()),
+		Behaviors:   behaviorsResult,
+		Criteria:    criteriaResult,
+		IsActive:    types.BoolValue(rulesEngineResponse.Results.GetIsActive()),
+		Order:       types.Int64Value(rulesEngineResponse.Results.GetOrder()),
+		Description: types.StringValue(rulesEngineResponse.Results.GetDescription()),
 	}
 
 	plan = RulesEngineResourceModel{
@@ -359,16 +352,9 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 
 	var behaviors []RulesEngineBehaviorResourceModel
 	for _, behavior := range ruleEngineResponse.Results.Behaviors {
-		target, err := utils.ConvertInterfaceToString(behavior.GetTarget())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				err.Error(),
-				"err",
-			)
-		}
 		behaviors = append(behaviors, RulesEngineBehaviorResourceModel{
 			Name:   types.StringValue(behavior.GetName()),
-			Target: types.StringValue(target),
+			Target: types.StringValue(behavior.GetTarget()),
 		})
 	}
 
@@ -387,21 +373,15 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 			Entries: criterionSet,
 		})
 	}
-	rulesEngineResults := &RulesEngineResourceResults{
-		ID:        types.Int64Value(ruleEngineResponse.Results.GetId()),
-		Name:      types.StringValue(ruleEngineResponse.Results.GetName()),
-		Phase:     types.StringValue(ruleEngineResponse.Results.GetPhase()),
-		Behaviors: behaviors,
-		Criteria:  criteria,
-		IsActive:  types.BoolValue(ruleEngineResponse.Results.GetIsActive()),
-		Order:     types.Int64Value(ruleEngineResponse.Results.GetOrder()),
-		//Description: types.StringValue(rules.GetDescription()),
-	}
-
-	state = RulesEngineResourceModel{
-		ApplicationID: types.Int64Value(edgeApplicationID),
-		SchemaVersion: types.Int64Value(ruleEngineResponse.SchemaVersion),
-		RulesEngine:   rulesEngineResults,
+	state.RulesEngine = &RulesEngineResourceResults{
+		ID:          types.Int64Value(ruleEngineResponse.Results.GetId()),
+		Name:        types.StringValue(ruleEngineResponse.Results.GetName()),
+		Phase:       types.StringValue(ruleEngineResponse.Results.GetPhase()),
+		Behaviors:   behaviors,
+		Criteria:    criteria,
+		IsActive:    types.BoolValue(ruleEngineResponse.Results.GetIsActive()),
+		Order:       types.Int64Value(ruleEngineResponse.Results.GetOrder()),
+		Description: types.StringValue(ruleEngineResponse.Results.GetDescription()),
 	}
 
 	diags = resp.State.Set(ctx, &state)
@@ -458,7 +438,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 	for _, behavior := range plan.RulesEngine.Behaviors {
 		behaviors = append(behaviors, edgeapplications.RulesEngineBehavior{
 			Name:   behavior.Name.ValueString(),
-			Target: behavior.Target.ValueString(),
+			Target: edgeapplications.PtrString(behavior.Target.ValueString()),
 		})
 	}
 
@@ -521,16 +501,9 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 
 	var behaviorsResult []RulesEngineBehaviorResourceModel
 	for _, behavior := range rulesEngineResponse.Results.Behaviors {
-		target, err := utils.ConvertInterfaceToString(behavior.GetTarget())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				err.Error(),
-				"err",
-			)
-		}
 		behaviorsResult = append(behaviorsResult, RulesEngineBehaviorResourceModel{
 			Name:   types.StringValue(behavior.GetName()),
-			Target: types.StringValue(target),
+			Target: types.StringValue(behavior.GetTarget()),
 		})
 	}
 
@@ -550,14 +523,14 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		})
 	}
 	rulesEngineResults := &RulesEngineResourceResults{
-		ID:        types.Int64Value(rulesEngineResponse.Results.GetId()),
-		Name:      types.StringValue(rulesEngineResponse.Results.GetName()),
-		Phase:     types.StringValue(rulesEngineResponse.Results.GetPhase()),
-		Behaviors: behaviorsResult,
-		Criteria:  criteriaResult,
-		IsActive:  types.BoolValue(rulesEngineResponse.Results.GetIsActive()),
-		Order:     types.Int64Value(rulesEngineResponse.Results.GetOrder()),
-		//Description: types.StringValue(rules.GetDescription()),
+		ID:          types.Int64Value(rulesEngineResponse.Results.GetId()),
+		Name:        types.StringValue(rulesEngineResponse.Results.GetName()),
+		Phase:       types.StringValue(rulesEngineResponse.Results.GetPhase()),
+		Behaviors:   behaviorsResult,
+		Criteria:    criteriaResult,
+		IsActive:    types.BoolValue(rulesEngineResponse.Results.GetIsActive()),
+		Order:       types.Int64Value(rulesEngineResponse.Results.GetOrder()),
+		Description: types.StringValue(rulesEngineResponse.Results.GetDescription()),
 	}
 
 	plan = RulesEngineResourceModel{

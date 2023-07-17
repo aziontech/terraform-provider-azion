@@ -195,7 +195,6 @@ func (r *RulesEngineDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 		},
 	}
 }
-
 func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var edgeApplicationID types.Int64
 	var phase types.String
