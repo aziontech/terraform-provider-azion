@@ -161,7 +161,7 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 					},
 					"description": schema.StringAttribute{
 						Description: "The description of the rules engine rule.",
-						Computed:    true,
+						Optional:    true,
 					},
 				},
 			},
