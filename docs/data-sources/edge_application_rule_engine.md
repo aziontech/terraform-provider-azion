@@ -43,14 +43,11 @@ Required:
 - `id` (Number) The ID of the rules engine rule.
 - `phase` (String) The phase in which the rule is executed (e.g., default, request, response).
 
-Optional:
-
-- `description` (String) The description of the rules engine rule.
-
 Read-Only:
 
 - `behaviors` (Attributes List) (see [below for nested schema](#nestedatt--results--behaviors))
 - `criteria` (Attributes List) (see [below for nested schema](#nestedatt--results--criteria))
+- `description` (String) The description of the rules engine rule.
 - `is_active` (Boolean) The status of the rules engine rule.
 - `name` (String) The name of the rules engine rule.
 - `order` (Number) The order of the rule in the rules engine.
@@ -58,13 +55,10 @@ Read-Only:
 <a id="nestedatt--results--behaviors"></a>
 ### Nested Schema for `results.behaviors`
 
-Optional:
-
-- `target` (String) The target of the behavior.
-
 Read-Only:
 
 - `name` (String) The name of the behavior.
+- `target` (String) The target of the behavior.
 
 
 <a id="nestedatt--results--criteria"></a>
