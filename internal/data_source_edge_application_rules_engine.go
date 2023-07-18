@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -142,7 +141,7 @@ func (r *RulesEngineDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 									},
 									"target": schema.StringAttribute{
 										Description: "The target of the behavior.",
-										Optional:    true,
+										Computed:    true,
 									},
 								},
 							},
@@ -187,7 +186,7 @@ func (r *RulesEngineDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						},
 						"description": schema.StringAttribute{
 							Description: "The description of the rules engine rule.",
-							Optional:    true,
+							Computed:    true,
 						},
 					},
 				},
@@ -232,7 +231,7 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 		PageSize = types.Int64Value(10)
 	}
 
-	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineApi.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).Execute()
+	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineApi.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -261,16 +260,9 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 	for _, rules := range rulesEngineResponse.Results {
 		var behaviors []RulesEngineBehaviorModel
 		for _, behavior := range rules.Behaviors {
-			target, err := utils.ConvertInterfaceToString(behavior.GetTarget())
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-			}
 			behaviors = append(behaviors, RulesEngineBehaviorModel{
 				Name:   types.StringValue(behavior.GetName()),
-				Target: types.StringValue(target),
+				Target: types.StringValue(behavior.GetTarget()),
 			})
 		}
 
@@ -290,14 +282,14 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 			})
 		}
 		rulesEngineResults = append(rulesEngineResults, RulesEngineResultModel{
-			ID:        types.Int64Value(rules.GetId()),
-			Name:      types.StringValue(rules.GetName()),
-			Phase:     types.StringValue(rules.GetPhase()),
-			Behaviors: behaviors,
-			Criteria:  criteria,
-			IsActive:  types.BoolValue(rules.GetIsActive()),
-			Order:     types.Int64Value(rules.GetOrder()),
-			//Description: types.StringValue(rules.GetDescription()),
+			ID:          types.Int64Value(rules.GetId()),
+			Name:        types.StringValue(rules.GetName()),
+			Phase:       types.StringValue(rules.GetPhase()),
+			Behaviors:   behaviors,
+			Criteria:    criteria,
+			IsActive:    types.BoolValue(rules.GetIsActive()),
+			Order:       types.Int64Value(rules.GetOrder()),
+			Description: types.StringValue(rules.GetDescription()),
 		})
 	}
 

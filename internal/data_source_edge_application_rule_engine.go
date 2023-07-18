@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -109,7 +108,7 @@ func (r *RuleEngineDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 								},
 								"target": schema.StringAttribute{
 									Description: "The target of the behavior.",
-									Optional:    true,
+									Computed:    true,
 								},
 							},
 						},
@@ -154,7 +153,7 @@ func (r *RuleEngineDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 					},
 					"description": schema.StringAttribute{
 						Description: "The description of the rules engine rule.",
-						Optional:    true,
+						Computed:    true,
 					},
 				},
 			},
@@ -204,16 +203,9 @@ func (r *RuleEngineDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	var behaviors []RuleEngineBehaviorModel
 	for _, behavior := range ruleEngineResponse.Results.Behaviors {
-		target, err := utils.ConvertInterfaceToString(behavior.GetTarget())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				err.Error(),
-				"err",
-			)
-		}
 		behaviors = append(behaviors, RuleEngineBehaviorModel{
 			Name:   types.StringValue(behavior.GetName()),
-			Target: types.StringValue(target),
+			Target: types.StringValue(behavior.GetTarget()),
 		})
 	}
 
@@ -233,14 +225,14 @@ func (r *RuleEngineDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		})
 	}
 	rulesEngineResults := RuleEngineResultModel{
-		ID:        types.Int64Value(ruleEngineResponse.Results.GetId()),
-		Name:      types.StringValue(ruleEngineResponse.Results.GetName()),
-		Phase:     types.StringValue(ruleEngineResponse.Results.GetPhase()),
-		Behaviors: behaviors,
-		Criteria:  criteria,
-		IsActive:  types.BoolValue(ruleEngineResponse.Results.GetIsActive()),
-		Order:     types.Int64Value(ruleEngineResponse.Results.GetOrder()),
-		//Description: types.StringValue(rules.GetDescription()),
+		ID:          types.Int64Value(ruleEngineResponse.Results.GetId()),
+		Name:        types.StringValue(ruleEngineResponse.Results.GetName()),
+		Phase:       types.StringValue(ruleEngineResponse.Results.GetPhase()),
+		Behaviors:   behaviors,
+		Criteria:    criteria,
+		IsActive:    types.BoolValue(ruleEngineResponse.Results.GetIsActive()),
+		Order:       types.Int64Value(ruleEngineResponse.Results.GetOrder()),
+		Description: types.StringValue(ruleEngineResponse.Results.GetDescription()),
 	}
 
 	edgeApplicationsRuleEngineState := RuleEngineDataSourceModel{
