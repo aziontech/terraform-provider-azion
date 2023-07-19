@@ -6,7 +6,7 @@ description: |-
   
 ---
 
-# azion_edge_application_rules_engine (Resource)
+# azion_edge_application_rule_engine (Resource)
 
 
 
