@@ -157,8 +157,8 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		Counter:       types.Int64Value(domainsResponse.Count),
 		TotalPages:    types.Int64Value(domainsResponse.TotalPages),
 		Links: &GetDomainsResponseLinks{
-			Previous: types.StringValue(domainsResponse.Links.Previous),
-			Next:     types.StringValue(domainsResponse.Links.Next),
+			Previous: types.StringValue(domainsResponse.Links.GetPrevious()),
+			Next:     types.StringValue(domainsResponse.Links.GetNext()),
 		},
 	}
 
@@ -170,10 +170,10 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		var dr = DomainsResults{
 			ID:                types.Int64Value(resultDomain.Id),
 			Name:              types.StringValue(resultDomain.Name),
-			CnameAccessOnly:   types.BoolValue(*resultDomain.CnameAccessOnly),
-			IsActive:          types.BoolValue(*resultDomain.IsActive),
-			EdgeApplicationId: types.Int64Value(*resultDomain.EdgeApplicationId),
-			DomainName:        types.StringValue(*resultDomain.DomainName),
+			CnameAccessOnly:   types.BoolValue(resultDomain.CnameAccessOnly),
+			IsActive:          types.BoolValue(resultDomain.IsActive),
+			EdgeApplicationId: types.Int64Value(resultDomain.EdgeApplicationId),
+			DomainName:        types.StringValue(resultDomain.DomainName),
 			Cnames:            utils.SliceStringTypeToList(slice),
 		}
 		if resultDomain.Environment != nil {

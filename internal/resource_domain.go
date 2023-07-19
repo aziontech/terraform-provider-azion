@@ -170,10 +170,10 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 	plan.Domain = &DomainResourceResults{
 		ID:                types.Int64Value(createDomain.Results.Id),
 		Name:              types.StringValue(createDomain.Results.Name),
-		CnameAccessOnly:   types.BoolValue(*createDomain.Results.CnameAccessOnly),
-		IsActive:          types.BoolValue(*createDomain.Results.IsActive),
-		EdgeApplicationId: types.Int64Value(*createDomain.Results.EdgeApplicationId),
-		DomainName:        types.StringValue(*createDomain.Results.DomainName),
+		CnameAccessOnly:   types.BoolValue(createDomain.Results.CnameAccessOnly),
+		IsActive:          types.BoolValue(createDomain.Results.IsActive),
+		EdgeApplicationId: types.Int64Value(createDomain.Results.EdgeApplicationId),
+		DomainName:        types.StringValue(createDomain.Results.DomainName),
 		Cnames:            utils.SliceStringTypeToSet(slice),
 	}
 
@@ -232,10 +232,10 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 	state.Domain = &DomainResourceResults{
 		ID:                types.Int64Value(getDomain.Results.Id),
 		Name:              types.StringValue(getDomain.Results.Name),
-		CnameAccessOnly:   types.BoolValue(*getDomain.Results.CnameAccessOnly),
-		IsActive:          types.BoolValue(*getDomain.Results.IsActive),
-		EdgeApplicationId: types.Int64Value(*getDomain.Results.EdgeApplicationId),
-		DomainName:        types.StringValue(*getDomain.Results.DomainName),
+		CnameAccessOnly:   types.BoolValue(getDomain.Results.CnameAccessOnly),
+		IsActive:          types.BoolValue(getDomain.Results.IsActive),
+		EdgeApplicationId: types.Int64Value(getDomain.Results.EdgeApplicationId),
+		DomainName:        types.StringValue(getDomain.Results.DomainName),
 		Cnames:            utils.SliceStringTypeToSet(slice),
 	}
 	if getDomain.Results.Environment != nil {
@@ -307,10 +307,10 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	plan.Domain = &DomainResourceResults{
 		ID:                types.Int64Value(updateDomain.Results.Id),
 		Name:              types.StringValue(updateDomain.Results.Name),
-		CnameAccessOnly:   types.BoolValue(*updateDomain.Results.CnameAccessOnly),
-		IsActive:          types.BoolValue(*updateDomain.Results.IsActive),
-		EdgeApplicationId: types.Int64Value(*updateDomain.Results.EdgeApplicationId),
-		DomainName:        types.StringValue(*updateDomain.Results.DomainName),
+		CnameAccessOnly:   types.BoolValue(updateDomain.Results.CnameAccessOnly),
+		IsActive:          types.BoolValue(updateDomain.Results.IsActive),
+		EdgeApplicationId: types.Int64Value(updateDomain.Results.EdgeApplicationId),
+		DomainName:        types.StringValue(updateDomain.Results.DomainName),
 		Cnames:            utils.SliceStringTypeToSet(slice),
 	}
 
