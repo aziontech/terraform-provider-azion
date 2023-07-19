@@ -162,6 +162,7 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 					"description": schema.StringAttribute{
 						Description: "The description of the rules engine rule.",
 						Optional:    true,
+						Computed:    true,
 					},
 				},
 			},
@@ -221,9 +222,10 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	rulesEngineRequest := edgeapplications.CreateRulesEngineRequest{
-		Name:      plan.RulesEngine.Name.ValueString(),
-		Behaviors: behaviors,
-		Criteria:  criteria,
+		Name:        plan.RulesEngine.Name.ValueString(),
+		Description: plan.RulesEngine.Description.ValueStringPointer(),
+		Behaviors:   behaviors,
+		Criteria:    criteria,
 	}
 
 	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineApi.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesPost(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).CreateRulesEngineRequest(rulesEngineRequest).Execute()
@@ -466,15 +468,17 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 			return
 		}
 		rulesEngineRequest = edgeapplications.UpdateRulesEngineRequest{
-			Name:      plan.RulesEngine.Name.ValueString(),
-			Behaviors: behaviors,
-			Criteria:  criteria,
+			Name:        plan.RulesEngine.Name.ValueString(),
+			Description: plan.RulesEngine.Description.ValueStringPointer(),
+			Behaviors:   behaviors,
+			Criteria:    criteria,
 		}
 	} else {
 		rulesEngineRequest = edgeapplications.UpdateRulesEngineRequest{
-			Name:      plan.RulesEngine.Name.ValueString(),
-			Behaviors: behaviors,
-			Criteria:  criteria,
+			Name:        plan.RulesEngine.Name.ValueString(),
+			Description: plan.RulesEngine.Description.ValueStringPointer(),
+			Behaviors:   behaviors,
+			Criteria:    criteria,
 		}
 	}
 
