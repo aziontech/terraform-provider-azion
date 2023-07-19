@@ -68,7 +68,7 @@ type RulesEngineResourceCriteria struct {
 }
 
 func (r *rulesEngineResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_rules_engine"
+	resp.TypeName = req.ProviderTypeName + "_edge_application_rule_engine"
 }
 
 func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

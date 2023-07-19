@@ -1,1 +1,0 @@
-terraform import azion_edge_application_rules_engine.example <edge_application_id>/<phase>/<RuleID>
