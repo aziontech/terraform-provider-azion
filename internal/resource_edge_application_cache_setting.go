@@ -1,10 +1,17 @@
 package provider
 
 import (
+	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"io"
+	"strconv"
+	"strings"
+	"time"
 )
 
 import (
@@ -32,31 +39,33 @@ type EdgeApplicationCacheSettingsResourceModel struct {
 	SchemaVersion types.Int64                          `tfsdk:"schema_version"`
 	CacheSettings *EdgeApplicationCacheSettingsResults `tfsdk:"cache_settings"`
 	ID            types.String                         `tfsdk:"id"`
+	ApplicationID types.Int64                          `tfsdk:"edge_application_id"`
 	LastUpdated   types.String                         `tfsdk:"last_updated"`
 }
 
 type EdgeApplicationCacheSettingsResults struct {
-	Name                        types.String `tfsdk:"name"`
-	BrowserCacheSettings        types.String `tfsdk:"browser_cache_settings"`
-	BrowserCacheSettingsMaxTTL  types.Int64  `tfsdk:"browser_cache_settings_maximum_ttl"`
-	CDNCacheSettings            types.String `tfsdk:"cdn_cache_settings"`
-	CDNCacheSettingsMaxTTL      types.Int64  `tfsdk:"cdn_cache_settings_maximum_ttl"`
-	CacheByQueryString          types.String `tfsdk:"cache_by_query_string"`
-	QueryStringFields           types.String `tfsdk:"query_string_fields"`
-	EnableQueryStringSort       types.Bool   `tfsdk:"enable_query_string_sort"`
-	CacheByCookies              types.String `tfsdk:"cache_by_cookies"`
-	CookieNames                 types.String `tfsdk:"cookie_names"`
-	AdaptiveDeliveryAction      types.String `tfsdk:"adaptive_delivery_action"`
-	DeviceGroup                 types.List   `tfsdk:"device_group"`
-	EnableCachingForPost        types.Bool   `tfsdk:"enable_caching_for_post"`
-	L2CachingEnabled            types.Bool   `tfsdk:"l2_caching_enabled"`
-	IsSliceConfigurationEnabled types.Bool   `tfsdk:"is_slice_configuration_enabled"`
-	IsSliceEdgeCachingEnabled   types.Bool   `tfsdk:"is_slice_edge_caching_enabled"`
-	IsSliceL2CachingEnabled     types.Bool   `tfsdk:"is_slice_l2_caching_enabled"`
-	SliceConfigurationRange     types.String `tfsdk:"slice_configuration_range"`
-	EnableCachingForOptions     types.Bool   `tfsdk:"enable_caching_for_options"`
-	EnableStaleCache            types.Bool   `tfsdk:"enable_stale_cache"`
-	L2Region                    types.String `tfsdk:"l2_region"`
+	CacheSettingID              types.Int64    `tfsdk:"cache_setting_id"`
+	Name                        types.String   `tfsdk:"name"`
+	BrowserCacheSettings        types.String   `tfsdk:"browser_cache_settings"`
+	BrowserCacheSettingsMaxTTL  types.Int64    `tfsdk:"browser_cache_settings_maximum_ttl"`
+	CDNCacheSettings            types.String   `tfsdk:"cdn_cache_settings"`
+	CDNCacheSettingsMaxTTL      types.Int64    `tfsdk:"cdn_cache_settings_maximum_ttl"`
+	CacheByQueryString          types.String   `tfsdk:"cache_by_query_string"`
+	QueryStringFields           []types.String `tfsdk:"query_string_fields"`
+	EnableQueryStringSort       types.Bool     `tfsdk:"enable_query_string_sort"`
+	CacheByCookies              types.String   `tfsdk:"cache_by_cookies"`
+	CookieNames                 []types.String `tfsdk:"cookie_names"`
+	AdaptiveDeliveryAction      types.String   `tfsdk:"adaptive_delivery_action"`
+	DeviceGroup                 []types.Int64  `tfsdk:"device_group"`
+	EnableCachingForPost        types.Bool     `tfsdk:"enable_caching_for_post"`
+	L2CachingEnabled            types.Bool     `tfsdk:"l2_caching_enabled"`
+	IsSliceConfigurationEnabled types.Bool     `tfsdk:"is_slice_configuration_enabled"`
+	IsSliceEdgeCachingEnabled   types.Bool     `tfsdk:"is_slice_edge_caching_enabled"`
+	IsSliceL2CachingEnabled     types.Bool     `tfsdk:"is_slice_l2_caching_enabled"`
+	SliceConfigurationRange     types.String   `tfsdk:"slice_configuration_range"`
+	EnableCachingForOptions     types.Bool     `tfsdk:"enable_caching_for_options"`
+	EnableStaleCache            types.Bool     `tfsdk:"enable_stale_cache"`
+	L2Region                    types.String   `tfsdk:"l2_region"`
 }
 
 func (r *edgeApplicationCacheSettingsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -72,78 +81,110 @@ func (r *edgeApplicationCacheSettingsResource) Schema(_ context.Context, _ resou
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"edge_application_id": schema.Int64Attribute{
+				Description: "Numeric identifier of the Edge Application",
+				Required:    true,
+			},
 			"schema_version": schema.Int64Attribute{
-				Required: true,
+				Computed: true,
 			},
 			"last_updated": schema.StringAttribute{
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
 			"cache_settings": schema.SingleNestedAttribute{
-				Required: true,
+				Computed: true,
 				Attributes: map[string]schema.Attribute{
+					"cache_setting_id": schema.Int64Attribute{
+						Description: "The cache settings identifier to target for the resource.",
+						Computed:    true,
+					},
 					"name": schema.StringAttribute{
-						Required: true,
+						Description: "Name of the cache settings.",
+						Computed:    true,
 					},
 					"browser_cache_settings": schema.StringAttribute{
-						Optional: true,
+						Description: "Browser cache settings value.",
+						Computed:    true,
 					},
 					"browser_cache_settings_maximum_ttl": schema.Int64Attribute{
-						Optional: true,
+						Description: "Maximum TTL for browser cache settings.",
+						Computed:    true,
 					},
 					"cdn_cache_settings": schema.StringAttribute{
-						Optional: true,
+						Description: "CDN cache settings value.",
+						Computed:    true,
 					},
 					"cdn_cache_settings_maximum_ttl": schema.Int64Attribute{
-						Optional: true,
+						Description: "Maximum TTL for CDN cache settings.",
+						Computed:    true,
 					},
 					"cache_by_query_string": schema.StringAttribute{
-						Optional: true,
+						Description: "Cache by query string settings value.",
+						Computed:    true,
 					},
-					"query_string_fields": schema.StringAttribute{
-						Optional: true,
+					"query_string_fields": schema.ListAttribute{
+						ElementType: types.StringType,
+						Description: "Query string fields for cache settings.",
+						Computed:    true,
 					},
 					"enable_query_string_sort": schema.BoolAttribute{
-						Optional: true,
+						Description: "Enable query string sorting for cache settings.",
+						Computed:    true,
 					},
 					"cache_by_cookies": schema.StringAttribute{
-						Optional: true,
+						Description: "Cache by cookies settings value.",
+						Computed:    true,
 					},
-					"cookie_names": schema.StringAttribute{
-						Optional: true,
+					"cookie_names": schema.ListAttribute{
+						ElementType: types.StringType,
+						Description: "Cookie names for cache settings.",
+						Computed:    true,
 					},
 					"adaptive_delivery_action": schema.StringAttribute{
-						Optional: true,
+						Description: "Adaptive delivery action settings value.",
+						Computed:    true,
 					},
 					"device_group": schema.ListAttribute{
-						Optional: true,
+						Description: "Device group settings.",
+						Computed:    true,
+						ElementType: types.Int64Type,
 					},
 					"enable_caching_for_post": schema.BoolAttribute{
-						Optional: true,
+						Description: "Enable caching for POST requests.",
+						Computed:    true,
 					},
 					"l2_caching_enabled": schema.BoolAttribute{
-						Optional: true,
+						Description: "Enable L2 caching.",
+						Computed:    true,
 					},
 					"is_slice_configuration_enabled": schema.BoolAttribute{
-						Optional: true,
+						Description: "Enable slice configuration.",
+						Computed:    true,
 					},
 					"is_slice_edge_caching_enabled": schema.BoolAttribute{
-						Optional: true,
+						Description: "Enable slice edge caching.",
+						Computed:    true,
 					},
 					"is_slice_l2_caching_enabled": schema.BoolAttribute{
-						Optional: true,
+						Description: "Enable slice L2 caching.",
+						Computed:    true,
 					},
-					"slice_configuration_range": schema.StringAttribute{
-						Optional: true,
+					"slice_configuration_range": schema.BoolAttribute{
+						Description: "Slice configuration range.",
+						Computed:    true,
 					},
 					"enable_caching_for_options": schema.BoolAttribute{
-						Optional: true,
+						Description: "Enable caching for OPTIONS requests.",
+						Computed:    true,
 					},
 					"enable_stale_cache": schema.BoolAttribute{
-						Optional: true,
+						Description: "Enable stale cache.",
+						Computed:    true,
 					},
 					"l2_region": schema.StringAttribute{
-						Optional: true,
+						Description: "L2 region settings value.",
+						Computed:    true,
 					},
 				},
 			},
@@ -166,103 +207,340 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 		return
 	}
 
-	//cacheSettings := edgeapplications.ApplicationCacheCreateRequest{
-	//	Name:                        plan.CacheSettings.Name.ValueString(),
-	//	BrowserCacheSettings:        edgeapplications.PtrString(plan.CacheSettings.BrowserCacheSettings.ValueString()),
-	//	BrowserCacheSettingsMaxTTL:  edgeapplications.PtrInt64(plan.CacheSettings.BrowserCacheSettingsMaximumTTL.ValueInt64()),
-	//	CDNCacheSettings:            edgeapplications.PtrString(plan.CacheSettings.CDNCacheSettings.ValueString()),
-	//	CDNCacheSettingsMaxTTL:      edgeapplications.PtrInt64(plan.CacheSettings.CDNCacheSettingsMaximumTTL.ValueInt64()),
-	//	CacheByQueryString:          edgeapplications.PtrString(plan.CacheSettings.CacheByQueryString.ValueString()),
-	//	QueryStringFields:           edgeapplications.PtrString(plan.CacheSettings.QueryStringFields.ValueString()),
-	//	EnableQueryStringSort:       edgeapplications.PtrBool(plan.CacheSettings.EnableQueryStringSort.ValueBool()),
-	//	CacheByCookies:              edgeapplications.PtrString(plan.CacheSettings.CacheByCookies.ValueString()),
-	//	CookieNames:                 edgeapplications.PtrString(plan.CacheSettings.CookieNames.ValueString()),
-	//	AdaptiveDeliveryAction:      edgeapplications.PtrString(plan.CacheSettings.AdaptiveDeliveryAction.ValueString()),
-	//	DeviceGroup:                 edgeapplications.PtrString(plan.CacheSettings.DeviceGroup.ValueString()),
-	//	EnableCachingForPost:        edgeapplications.PtrBool(plan.CacheSettings.EnableCachingForPost.ValueBool()),
-	//	L2CachingEnabled:            edgeapplications.PtrBool(plan.CacheSettings.L2CachingEnabled.ValueBool()),
-	//	IsSliceConfigurationEnabled: edgeapplications.PtrBool(plan.CacheSettings.IsSliceConfigurationEnabled.ValueBool()),
-	//}
-	//createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsApi.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeid).ApplicationCacheCreateRequest(cacheSettings).Execute()
-	//if err != nil {
-	//	bodyBytes, erro := io.ReadAll(response.Body)
-	//	if erro != nil {
-	//		resp.Diagnostics.AddError(
-	//			err.Error(),
-	//			"err",
-	//		)
-	//	}
-	//	bodyString := string(bodyBytes)
-	//	resp.Diagnostics.AddError(
-	//		err.Error(),
-	//		bodyString,
-	//	)
-	//	return
-	//}
-	//
-	//model.ID = types.Int64(createdCacheSetting.ID)
-	//resp.State = req.Plan
-	//resp.State.Set(ctx, &model)
+	var edgeApplicationID types.Int64
+	diagsEdgeApplicationID := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &edgeApplicationID)
+	resp.Diagnostics.Append(diagsEdgeApplicationID...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cacheSettings := edgeapplications.ApplicationCacheCreateRequest{
+		Name:                           plan.CacheSettings.Name.ValueString(),
+		BrowserCacheSettings:           edgeapplications.PtrString(plan.CacheSettings.BrowserCacheSettings.ValueString()),
+		BrowserCacheSettingsMaximumTtl: edgeapplications.PtrInt64(plan.CacheSettings.BrowserCacheSettingsMaxTTL.ValueInt64()),
+		CdnCacheSettings:               edgeapplications.PtrString(plan.CacheSettings.CDNCacheSettings.ValueString()),
+		CdnCacheSettingsMaximumTtl:     edgeapplications.PtrInt64(plan.CacheSettings.CDNCacheSettingsMaxTTL.ValueInt64()),
+		CacheByQueryString:             edgeapplications.PtrString(plan.CacheSettings.CacheByQueryString.ValueString()),
+		CacheByCookies:                 edgeapplications.PtrString(plan.CacheSettings.CacheByCookies.ValueString()),
+	}
+	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsApi.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute()
+	if err != nil {
+		bodyBytes, erro := io.ReadAll(response.Body)
+		if erro != nil {
+			resp.Diagnostics.AddError(
+				err.Error(),
+				"err",
+			)
+		}
+		bodyString := string(bodyBytes)
+		resp.Diagnostics.AddError(
+			err.Error(),
+			bodyString,
+		)
+		return
+	}
+	var CookieNames []types.String
+	for _, cookieName := range createdCacheSetting.Results.GetCookieNames() {
+		CookieNames = append(CookieNames, types.StringValue(cookieName))
+	}
+	var QueryStringFields []types.String
+	for _, queryStringField := range createdCacheSetting.Results.GetQueryStringFields() {
+		QueryStringFields = append(QueryStringFields, types.StringValue(queryStringField))
+	}
+	var DeviceGroups []types.Int64
+	for _, DeviceGroup := range createdCacheSetting.Results.GetDeviceGroup() {
+		DeviceGroups = append(DeviceGroups, types.Int64Type(DeviceGroup))
+	}
+
+	plan.CacheSettings = &EdgeApplicationCacheSettingsResults{
+		CacheSettingID:              types.Int64Value(createdCacheSetting.Results.GetId()),
+		Name:                        types.StringValue(createdCacheSetting.Results.GetName()),
+		BrowserCacheSettings:        types.StringValue(createdCacheSetting.Results.GetBrowserCacheSettings()),
+		BrowserCacheSettingsMaxTTL:  types.Int64Value(createdCacheSetting.Results.GetBrowserCacheSettingsMaximumTtl()),
+		CDNCacheSettings:            types.StringValue(createdCacheSetting.Results.GetCdnCacheSettings()),
+		CDNCacheSettingsMaxTTL:      types.Int64Value(createdCacheSetting.Results.GetCdnCacheSettingsMaximumTtl()),
+		CacheByQueryString:          types.StringValue(createdCacheSetting.Results.GetCacheByQueryString()),
+		QueryStringFields:           QueryStringFields,
+		EnableQueryStringSort:       types.BoolValue(createdCacheSetting.Results.GetEnableQueryStringSort()),
+		CacheByCookies:              types.StringValue(createdCacheSetting.Results.GetCacheByCookies()),
+		CookieNames:                 CookieNames,
+		AdaptiveDeliveryAction:      types.StringValue(createdCacheSetting.Results.GetAdaptiveDeliveryAction()),
+		DeviceGroup:                 DeviceGroups,
+		EnableCachingForPost:        types.BoolValue(createdCacheSetting.Results.GetEnableCachingForPost()),
+		L2CachingEnabled:            types.BoolValue(createdCacheSetting.Results.GetL2CachingEnabled()),
+		IsSliceConfigurationEnabled: types.BoolValue(createdCacheSetting.Results.GetIsSliceConfigurationEnabled()),
+		IsSliceEdgeCachingEnabled:   types.BoolValue(createdCacheSetting.Results.GetIsSliceEdgeCachingEnabled()),
+		IsSliceL2CachingEnabled:     types.BoolValue(createdCacheSetting.Results.GetIsSliceL2CachingEnabled()),
+		//SliceConfigurationRange:     types.BoolValue(createdCacheSetting.Results.GetSliceConfigurationRange()),
+		EnableCachingForOptions: types.BoolValue(createdCacheSetting.Results.GetEnableCachingForOptions()),
+		EnableStaleCache:        types.BoolValue(createdCacheSetting.Results.GetEnableStaleCache()),
+		L2Region:                types.StringValue(createdCacheSetting.Results.GetL2Region()),
+	}
+
+	plan.SchemaVersion = types.Int64Value(*createdCacheSetting.SchemaVersion)
+	plan.ID = types.StringValue(strconv.FormatInt(createdCacheSetting.Results.GetId(), 10))
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+
+	diags = resp.State.Set(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	//var model CacheSettingsResourceModel
-	//if err := req.State.Get(ctx, &model); err != nil {
-	//	resp.Error(err)
-	//	return
-	//}
-	//
-	//cacheSetting, err := r.client.GetCacheSetting(ctx, model.ID.Value())
-	//if err != nil {
-	//	resp.Error(err)
-	//	return
-	//}
-	//
-	//model = createModelFromCacheSetting(cacheSetting)
-	//resp.State.Set(ctx, &model)
+	var state EdgeApplicationCacheSettingsResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	var EdgeApplicationId int64
+	var CacheSettingId int64
+	valueFromCmd := strings.Split(state.ID.ValueString(), "/")
+	if len(valueFromCmd) > 1 {
+		EdgeApplicationId = int64(utils.AtoiNoError(valueFromCmd[0], resp))
+		CacheSettingId = int64(utils.AtoiNoError(valueFromCmd[1], resp))
+	} else {
+		EdgeApplicationId = state.ApplicationID.ValueInt64()
+		CacheSettingId = state.CacheSettings.CacheSettingID.ValueInt64()
+	}
+
+	if CacheSettingId > 0 {
+		resp.Diagnostics.AddError(
+			"Cache settings ID error ",
+			"is not null",
+		)
+		return
+	}
+
+	cacheSettingResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsApi.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(ctx, EdgeApplicationId, CacheSettingId).Execute()
+	if err != nil {
+		bodyBytes, erro := io.ReadAll(response.Body)
+		if erro != nil {
+			resp.Diagnostics.AddError(
+				err.Error(),
+				"err",
+			)
+		}
+		bodyString := string(bodyBytes)
+		resp.Diagnostics.AddError(
+			err.Error(),
+			bodyString,
+		)
+		return
+	}
+	var CookieNames []types.String
+	for _, cookieName := range cacheSettingResponse.Results.GetCookieNames() {
+		CookieNames = append(CookieNames, types.StringValue(cookieName))
+	}
+	var QueryStringFields []types.String
+	for _, queryStringField := range cacheSettingResponse.Results.GetQueryStringFields() {
+		QueryStringFields = append(QueryStringFields, types.StringValue(queryStringField))
+	}
+	var DeviceGroups []types.Int64
+	for _, DeviceGroup := range cacheSettingResponse.Results.GetDeviceGroup() {
+		DeviceGroups = append(DeviceGroups, types.Int64Type(DeviceGroup))
+	}
+
+	state.CacheSettings = &EdgeApplicationCacheSettingsResults{
+		CacheSettingID:              types.Int64Value(cacheSettingResponse.Results.GetId()),
+		Name:                        types.StringValue(cacheSettingResponse.Results.GetName()),
+		BrowserCacheSettings:        types.StringValue(cacheSettingResponse.Results.GetBrowserCacheSettings()),
+		BrowserCacheSettingsMaxTTL:  types.Int64Value(cacheSettingResponse.Results.GetBrowserCacheSettingsMaximumTtl()),
+		CDNCacheSettings:            types.StringValue(cacheSettingResponse.Results.GetCdnCacheSettings()),
+		CDNCacheSettingsMaxTTL:      types.Int64Value(cacheSettingResponse.Results.GetCdnCacheSettingsMaximumTtl()),
+		CacheByQueryString:          types.StringValue(cacheSettingResponse.Results.GetCacheByQueryString()),
+		QueryStringFields:           QueryStringFields,
+		EnableQueryStringSort:       types.BoolValue(cacheSettingResponse.Results.GetEnableQueryStringSort()),
+		CacheByCookies:              types.StringValue(cacheSettingResponse.Results.GetCacheByCookies()),
+		CookieNames:                 CookieNames,
+		AdaptiveDeliveryAction:      types.StringValue(cacheSettingResponse.Results.GetAdaptiveDeliveryAction()),
+		DeviceGroup:                 DeviceGroups,
+		EnableCachingForPost:        types.BoolValue(cacheSettingResponse.Results.GetEnableCachingForPost()),
+		L2CachingEnabled:            types.BoolValue(cacheSettingResponse.Results.GetL2CachingEnabled()),
+		IsSliceConfigurationEnabled: types.BoolValue(cacheSettingResponse.Results.GetIsSliceConfigurationEnabled()),
+		IsSliceEdgeCachingEnabled:   types.BoolValue(cacheSettingResponse.Results.GetIsSliceEdgeCachingEnabled()),
+		IsSliceL2CachingEnabled:     types.BoolValue(cacheSettingResponse.Results.GetIsSliceL2CachingEnabled()),
+		//SliceConfigurationRange:     types.BoolValue(cacheSettingResponse.Results.GetSliceConfigurationRange()),
+		EnableCachingForOptions: types.BoolValue(cacheSettingResponse.Results.GetEnableCachingForOptions()),
+		EnableStaleCache:        types.BoolValue(cacheSettingResponse.Results.GetEnableStaleCache()),
+		L2Region:                types.StringValue(cacheSettingResponse.Results.GetL2Region()),
+	}
+
+	state.ID = types.StringValue(strconv.FormatInt(cacheSettingResponse.Results.GetId(), 10))
+	state.ApplicationID = types.Int64Value(EdgeApplicationId)
+	state.SchemaVersion = types.Int64Value(cacheSettingResponse.SchemaVersion)
+
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	//var model CacheSettingsResourceModel
-	//if err := req.Plan.Get(ctx, &model); err != nil {
-	//	resp.Error(err)
-	//	return
-	//}
-	//
-	//cacheSetting := createCacheSettingFromModel(model)
-	//updatedCacheSetting, err := r.client.UpdateCacheSetting(ctx, cacheSetting)
-	//if err != nil {
-	//	resp.Error(err)
-	//	return
-	//}
-	//
-	//model.ID = types.Int64(updatedCacheSetting.ID)
-	//resp.State = req.Plan
-	//resp.State.Set(ctx, &model)
+	var plan EdgeApplicationCacheSettingsResourceModel
+	var edgeApplicationID types.Int64
+	var CacheSettingId types.Int64
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state EdgeApplicationCacheSettingsResourceModel
+	diagsOrigin := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diagsOrigin...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.CacheSettings.CacheSettingID.IsNull() {
+		CacheSettingId = state.CacheSettings.CacheSettingID
+	} else {
+		CacheSettingId = plan.CacheSettings.CacheSettingID
+	}
+
+	if CacheSettingId.String() == "" {
+		resp.Diagnostics.AddError(
+			"Origin Key error ",
+			"is not null",
+		)
+		return
+	}
+
+	if plan.ApplicationID.IsNull() {
+		edgeApplicationID = state.ApplicationID
+	} else {
+		edgeApplicationID = plan.ApplicationID
+	}
+
+	if edgeApplicationID.IsNull() {
+		resp.Diagnostics.AddError(
+			"Edge Application ID error ",
+			"is not null",
+		)
+		return
+	}
+
+	cacheSettings := edgeapplications.ApplicationCachePutRequest{
+		Name:                           plan.CacheSettings.Name.ValueString(),
+		BrowserCacheSettings:           edgeapplications.PtrString(plan.CacheSettings.BrowserCacheSettings.ValueString()),
+		BrowserCacheSettingsMaximumTtl: edgeapplications.PtrInt64(plan.CacheSettings.BrowserCacheSettingsMaxTTL.ValueInt64()),
+		CdnCacheSettings:               edgeapplications.PtrString(plan.CacheSettings.CDNCacheSettings.ValueString()),
+		CdnCacheSettingsMaximumTtl:     edgeapplications.PtrInt64(plan.CacheSettings.CDNCacheSettingsMaxTTL.ValueInt64()),
+		CacheByQueryString:             edgeapplications.PtrString(plan.CacheSettings.CacheByQueryString.ValueString()),
+		CacheByCookies:                 edgeapplications.PtrString(plan.CacheSettings.CacheByCookies.ValueString()),
+	}
+	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsApi.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute()
+	if err != nil {
+		bodyBytes, erro := io.ReadAll(response.Body)
+		if erro != nil {
+			resp.Diagnostics.AddError(
+				err.Error(),
+				"err",
+			)
+		}
+		bodyString := string(bodyBytes)
+		resp.Diagnostics.AddError(
+			err.Error(),
+			bodyString,
+		)
+		return
+	}
+
+	var CookieNames []types.String
+	for _, cookieName := range createdCacheSetting.Results.GetCookieNames() {
+		CookieNames = append(CookieNames, types.StringValue(cookieName))
+	}
+	var QueryStringFields []types.String
+	for _, queryStringField := range createdCacheSetting.Results.GetQueryStringFields() {
+		QueryStringFields = append(QueryStringFields, types.StringValue(queryStringField))
+	}
+	var DeviceGroups []types.Int64
+	for _, DeviceGroup := range createdCacheSetting.Results.GetDeviceGroup() {
+		DeviceGroups = append(DeviceGroups, types.Int64Type(DeviceGroup))
+	}
+
+	plan.CacheSettings = &EdgeApplicationCacheSettingsResults{
+		CacheSettingID:             types.Int64Value(createdCacheSetting.Results.GetId()),
+		Name:                       types.StringValue(createdCacheSetting.Results.GetName()),
+		BrowserCacheSettings:       types.StringValue(createdCacheSetting.Results.GetBrowserCacheSettings()),
+		BrowserCacheSettingsMaxTTL: types.Int64Value(createdCacheSetting.Results.GetBrowserCacheSettingsMaximumTtl()),
+		CDNCacheSettings:           types.StringValue(createdCacheSetting.Results.GetCdnCacheSettings()),
+		CDNCacheSettingsMaxTTL:     types.Int64Value(createdCacheSetting.Results.GetCdnCacheSettingsMaximumTtl()),
+		CacheByQueryString:         types.StringValue(createdCacheSetting.Results.GetCacheByQueryString()),
+		QueryStringFields:          QueryStringFields,
+		EnableQueryStringSort:      types.BoolValue(createdCacheSetting.Results.GetEnableQueryStringSort()),
+		CacheByCookies:             types.StringValue(createdCacheSetting.Results.GetCacheByCookies()),
+		CookieNames:                CookieNames,
+		AdaptiveDeliveryAction:     types.StringValue(createdCacheSetting.Results.GetAdaptiveDeliveryAction()),
+		DeviceGroup:                DeviceGroups,
+		EnableCachingForPost:       types.BoolValue(createdCacheSetting.Results.GetEnableCachingForPost()),
+		L2CachingEnabled:           types.BoolValue(createdCacheSetting.Results.GetL2CachingEnabled()),
+		//IsSliceConfigurationEnabled: types.BoolValue(createdCacheSetting.Results.GetIsSliceConfigurationEnabled()),
+		//IsSliceEdgeCachingEnabled:   types.BoolValue(createdCacheSetting.Results.GetIsSliceEdgeCachingEnabled()),
+		//IsSliceL2CachingEnabled:     types.BoolValue(createdCacheSetting.Results.GetIsSliceL2CachingEnabled()),
+		//SliceConfigurationRange:     types.BoolValue(createdCacheSetting.Results.GetSliceConfigurationRange()),
+		EnableCachingForOptions: types.BoolValue(createdCacheSetting.Results.GetEnableCachingForOptions()),
+		EnableStaleCache:        types.BoolValue(createdCacheSetting.Results.GetEnableStaleCache()),
+		L2Region:                types.StringValue(createdCacheSetting.Results.GetL2Region()),
+	}
+
+	plan.SchemaVersion = types.Int64Value(createdCacheSetting.SchemaVersion)
+	plan.ID = types.StringValue(strconv.FormatInt(createdCacheSetting.Results.GetId(), 10))
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+
+	diags = resp.State.Set(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (r *edgeApplicationCacheSettingsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	//var model CacheSettingsResourceModel
-	//if err := req.State.Get(ctx, &model); err != nil {
-	//	resp.Error(err)
-	//	return
-	//}
-	//
-	//err := r.client.DeleteCacheSetting(ctx, model.ID.Value())
-	//if err != nil {
-	//	resp.Error(err)
-	//	return
-	//}
-	//
-	//resp.State.Set(ctx, nil)
+	var state EdgeApplicationCacheSettingsResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	edgeApplicationID := state.ApplicationID.ValueInt64()
+
+	if state.CacheSettings.CacheSettingID.IsNull() {
+		resp.Diagnostics.AddError(
+			"Cache Setting ID error ",
+			"is not null",
+		)
+		return
+	}
+
+	if state.ApplicationID.IsNull() {
+		resp.Diagnostics.AddError(
+			"Edge Application ID error ",
+			"is not null",
+		)
+		return
+	}
+	response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsApi.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute()
+	if err != nil {
+		bodyBytes, erro := io.ReadAll(response.Body)
+		if erro != nil {
+			resp.Diagnostics.AddError(
+				err.Error(),
+				"err",
+			)
+		}
+		bodyString := string(bodyBytes)
+		resp.Diagnostics.AddError(
+			err.Error(),
+			bodyString,
+		)
+		return
+	}
 }
 
 func (r *edgeApplicationCacheSettingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	//id, err := strconv.ParseInt(req.ID, 10, 64)
-	//if err != nil {
-	//	resp.Error(err)
-	//	return
-	//}
-	//
-	//cacheSetting, err := r.client
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
