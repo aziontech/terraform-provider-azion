@@ -43,7 +43,7 @@ type CacheSettingResults struct {
 	CacheByCookies              types.String   `tfsdk:"cache_by_cookies"`
 	CookieNames                 []types.String `tfsdk:"cookie_names"`
 	AdaptiveDeliveryAction      types.String   `tfsdk:"adaptive_delivery_action"`
-	DeviceGroup                 []types.String `tfsdk:"device_group"`
+	DeviceGroup                 []types.Int64  `tfsdk:"device_group"`
 	EnableCachingForPost        types.Bool     `tfsdk:"enable_caching_for_post"`
 	L2CachingEnabled            types.Bool     `tfsdk:"l2_caching_enabled"`
 	IsSliceConfigurationEnabled types.Bool     `tfsdk:"is_slice_configuration_enabled"`
@@ -137,7 +137,7 @@ func (c *CacheSettingDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 					"device_group": schema.ListAttribute{
 						Description: "Device group settings.",
 						Computed:    true,
-						ElementType: types.StringType,
+						ElementType: types.Int64Type,
 					},
 					"enable_caching_for_post": schema.BoolAttribute{
 						Description: "Enable caching for POST requests.",
@@ -221,9 +221,9 @@ func (c *CacheSettingDataSource) Read(ctx context.Context, req datasource.ReadRe
 	for _, queryStringField := range cacheSettingResponse.Results.GetQueryStringFields() {
 		QueryStringFields = append(QueryStringFields, types.StringValue(queryStringField))
 	}
-	var DeviceGroups []types.String
+	var DeviceGroups []types.Int64
 	for _, DeviceGroup := range cacheSettingResponse.Results.GetDeviceGroup() {
-		DeviceGroups = append(DeviceGroups, types.StringValue(DeviceGroup))
+		DeviceGroups = append(DeviceGroups, types.Int64Value(int64(DeviceGroup)))
 	}
 
 	cacheSettingResult := CacheSettingResults{
@@ -245,10 +245,10 @@ func (c *CacheSettingDataSource) Read(ctx context.Context, req datasource.ReadRe
 		IsSliceConfigurationEnabled: types.BoolValue(cacheSettingResponse.Results.GetIsSliceConfigurationEnabled()),
 		IsSliceEdgeCachingEnabled:   types.BoolValue(cacheSettingResponse.Results.GetIsSliceEdgeCachingEnabled()),
 		IsSliceL2CachingEnabled:     types.BoolValue(cacheSettingResponse.Results.GetIsSliceL2CachingEnabled()),
-		//SliceConfigurationRange:     types.BoolValue(cacheSettingResponse.Results.GetSliceConfigurationRange()),
-		EnableCachingForOptions: types.BoolValue(cacheSettingResponse.Results.GetEnableCachingForOptions()),
-		EnableStaleCache:        types.BoolValue(cacheSettingResponse.Results.GetEnableStaleCache()),
-		L2Region:                types.StringValue(cacheSettingResponse.Results.GetL2Region()),
+		SliceConfigurationRange:     types.Int64Value(cacheSettingResponse.Results.GetSliceConfigurationRange()),
+		EnableCachingForOptions:     types.BoolValue(cacheSettingResponse.Results.GetEnableCachingForOptions()),
+		EnableStaleCache:            types.BoolValue(cacheSettingResponse.Results.GetEnableStaleCache()),
+		L2Region:                    types.StringValue(cacheSettingResponse.Results.GetL2Region()),
 	}
 
 	edgeApplicationsCacheSettingsState := CacheSettingDataSourceModel{

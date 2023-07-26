@@ -53,13 +53,13 @@ type CacheSettingsResults struct {
 	CacheByCookies              types.String   `tfsdk:"cache_by_cookies"`
 	CookieNames                 []types.String `tfsdk:"cookie_names"`
 	AdaptiveDeliveryAction      types.String   `tfsdk:"adaptive_delivery_action"`
-	DeviceGroup                 []types.String `tfsdk:"device_group"`
+	DeviceGroup                 []types.Int64  `tfsdk:"device_group"`
 	EnableCachingForPost        types.Bool     `tfsdk:"enable_caching_for_post"`
 	L2CachingEnabled            types.Bool     `tfsdk:"l2_caching_enabled"`
 	IsSliceConfigurationEnabled types.Bool     `tfsdk:"is_slice_configuration_enabled"`
 	IsSliceEdgeCachingEnabled   types.Bool     `tfsdk:"is_slice_edge_caching_enabled"`
 	IsSliceL2CachingEnabled     types.Bool     `tfsdk:"is_slice_l2_caching_enabled"`
-	SliceConfigurationRange     types.Bool     `tfsdk:"slice_configuration_range"`
+	SliceConfigurationRange     types.Int64    `tfsdk:"slice_configuration_range"`
 	EnableCachingForOptions     types.Bool     `tfsdk:"enable_caching_for_options"`
 	EnableStaleCache            types.Bool     `tfsdk:"enable_stale_cache"`
 	L2Region                    types.String   `tfsdk:"l2_region"`
@@ -175,7 +175,7 @@ func (c *CacheSettingsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 						"device_group": schema.ListAttribute{
 							Description: "Device group settings.",
 							Computed:    true,
-							ElementType: types.StringType,
+							ElementType: types.Int64Type,
 						},
 						"enable_caching_for_post": schema.BoolAttribute{
 							Description: "Enable caching for POST requests.",
@@ -197,7 +197,7 @@ func (c *CacheSettingsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 							Description: "Enable slice L2 caching.",
 							Computed:    true,
 						},
-						"slice_configuration_range": schema.BoolAttribute{
+						"slice_configuration_range": schema.Int64Attribute{
 							Description: "Slice configuration range.",
 							Computed:    true,
 						},
@@ -284,9 +284,9 @@ func (c *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 		for _, queryStringField := range resultCacheSettings.GetQueryStringFields() {
 			QueryStringFields = append(QueryStringFields, types.StringValue(queryStringField))
 		}
-		var DeviceGroups []types.String
+		var DeviceGroups []types.Int64
 		for _, DeviceGroup := range resultCacheSettings.GetDeviceGroup() {
-			DeviceGroups = append(DeviceGroups, types.StringValue(DeviceGroup))
+			DeviceGroups = append(DeviceGroups, types.Int64Value(int64(DeviceGroup)))
 		}
 		edgeApplicationsCacheSettingsState.Results = append(edgeApplicationsCacheSettingsState.Results, CacheSettingsResults{
 			CacheSettingID:              types.Int64Value(resultCacheSettings.GetId()),
@@ -307,10 +307,10 @@ func (c *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 			IsSliceConfigurationEnabled: types.BoolValue(resultCacheSettings.GetIsSliceConfigurationEnabled()),
 			IsSliceEdgeCachingEnabled:   types.BoolValue(resultCacheSettings.GetIsSliceEdgeCachingEnabled()),
 			IsSliceL2CachingEnabled:     types.BoolValue(resultCacheSettings.GetIsSliceL2CachingEnabled()),
-			//SliceConfigurationRange:     types.BoolValue(resultCacheSettings.GetSliceConfigurationRange()),
-			EnableCachingForOptions: types.BoolValue(resultCacheSettings.GetEnableCachingForOptions()),
-			EnableStaleCache:        types.BoolValue(resultCacheSettings.GetEnableStaleCache()),
-			L2Region:                types.StringValue(resultCacheSettings.GetL2Region()),
+			SliceConfigurationRange:     types.Int64Value(resultCacheSettings.GetSliceConfigurationRange()),
+			EnableCachingForOptions:     types.BoolValue(resultCacheSettings.GetEnableCachingForOptions()),
+			EnableStaleCache:            types.BoolValue(resultCacheSettings.GetEnableStaleCache()),
+			L2Region:                    types.StringValue(resultCacheSettings.GetL2Region()),
 		})
 	}
 
