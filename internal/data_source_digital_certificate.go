@@ -15,7 +15,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &CertificateDataSource{}
 )
 
-func dataSourceAzionCertificate() datasource.DataSource {
+func dataSourceAzionDigitalCertificate() datasource.DataSource {
 	return &CertificateDataSource{}
 }
 
@@ -24,13 +24,13 @@ type CertificateDataSource struct {
 }
 
 type CertificateDataSourceModel struct {
-	ID            types.String           `tfsdk:"id"`
-	SchemaVersion types.Int64            `tfsdk:"schema_version"`
-	Result        CertificateResultModel `tfsdk:"Result"`
-	CertificateID types.Int64            `tfsdk:"certificateID"`
+	ID            types.String             `tfsdk:"id"`
+	SchemaVersion types.Int64              `tfsdk:"schema_version"`
+	Results       *CertificateResultsModel `tfsdk:"results"`
+	CertificateID types.Int64              `tfsdk:"certificate_id"`
 }
 
-type CertificateResultModel struct {
+type CertificateResultsModel struct {
 	ID                 types.Int64    `tfsdk:"id"`
 	Name               types.String   `tfsdk:"name"`
 	Issuer             types.String   `tfsdk:"issuer"`
@@ -41,6 +41,7 @@ type CertificateResultModel struct {
 	Managed            types.Bool     `tfsdk:"managed"`
 	CSR                types.String   `tfsdk:"csr"`
 	CertificateContent types.String   `tfsdk:"certificate_content"`
+	AzionInformation   types.String   `tfsdk:"azion_information"`
 }
 
 func (c *CertificateDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -51,7 +52,7 @@ func (c *CertificateDataSource) Configure(_ context.Context, req datasource.Conf
 }
 
 func (c *CertificateDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_certificate"
+	resp.TypeName = req.ProviderTypeName + "_digital_certificate"
 }
 
 func (c *CertificateDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -61,7 +62,7 @@ func (c *CertificateDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Description: "Numeric identifier of the data source.",
 				Computed:    true,
 			},
-			"certificateID": schema.Int64Attribute{
+			"certificate_id": schema.Int64Attribute{
 				Description: "Identifier of the certificate.",
 				Required:    true,
 			},
@@ -69,7 +70,7 @@ func (c *CertificateDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Description: "Schema Version.",
 				Computed:    true,
 			},
-			"Result": schema.SingleNestedAttribute{
+			"results": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
@@ -113,6 +114,10 @@ func (c *CertificateDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						Description: "The content of the certificate.",
 						Optional:    true,
 					},
+					"azion_information": schema.StringAttribute{
+						Description: "Information of the digital certificate.",
+						Computed:    true,
+					},
 				},
 			},
 		},
@@ -121,7 +126,7 @@ func (c *CertificateDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 
 func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var getCertificateID types.Int64
-	diags := req.Config.GetAttribute(ctx, path.Root("id"), &getCertificateID)
+	diags := req.Config.GetAttribute(ctx, path.Root("certificate_id"), &getCertificateID)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -145,27 +150,28 @@ func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	var GetSubjectName []types.String
-	for _, subjectName := range certificateResponse.Result.GetSubjectName() {
+	for _, subjectName := range certificateResponse.Results.GetSubjectName() {
 		GetSubjectName = append(GetSubjectName, types.StringValue(subjectName))
 	}
 
 	certificateState := CertificateDataSourceModel{
 		CertificateID: getCertificateID,
 		SchemaVersion: types.Int64Value(int64(*certificateResponse.SchemaVersion)),
-		Result: CertificateResultModel{
-			ID:   types.Int64Value(int64(certificateResponse.Result.GetId())),
-			Name: types.StringValue(certificateResponse.Result.GetName()),
-			//Issuer:             types.StringValue(certificateResponse.Result.Issuer),
-			SubjectName:     GetSubjectName,
-			Validity:        types.StringValue(certificateResponse.Result.GetValidity()),
-			Status:          types.StringValue(certificateResponse.Result.GetStatus()),
-			CertificateType: types.StringValue(certificateResponse.Result.GetCertificateType()),
-			Managed:         types.BoolValue(certificateResponse.Result.GetManaged()),
-			//CSR:                types.StringValue(certificateResponse.Result.GetC),
-			//CertificateContent: types.StringValue(certificateResponse.Result.CertificateContent),
+		Results: &CertificateResultsModel{
+			ID:                 types.Int64Value(int64(certificateResponse.Results.GetId())),
+			Name:               types.StringValue(certificateResponse.Results.GetName()),
+			Issuer:             types.StringValue(certificateResponse.Results.GetIssuer()),
+			SubjectName:        GetSubjectName,
+			Validity:           types.StringValue(certificateResponse.Results.GetValidity()),
+			Status:             types.StringValue(certificateResponse.Results.GetStatus()),
+			CertificateType:    types.StringValue(certificateResponse.Results.GetCertificateType()),
+			Managed:            types.BoolValue(certificateResponse.Results.GetManaged()),
+			CSR:                types.StringValue(certificateResponse.Results.GetCsr()),
+			CertificateContent: types.StringValue(certificateResponse.Results.GetCertificateContent()),
+			AzionInformation:   types.StringValue(certificateResponse.Results.GetAzionInformation()),
 		},
 	}
-	certificateState.ID = types.StringValue("Get All Digital Certificate")
+	certificateState.ID = types.StringValue("Get By ID Digital Certificate")
 	diags = resp.State.Set(ctx, &certificateState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

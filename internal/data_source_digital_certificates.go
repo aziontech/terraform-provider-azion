@@ -14,7 +14,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &DigitalCertificatesDataSource{}
 )
 
-func dataSourceAzionDigitalCertificate() datasource.DataSource {
+func dataSourceAzionDigitalCertificates() datasource.DataSource {
 	return &DigitalCertificatesDataSource{}
 }
 
@@ -28,7 +28,7 @@ type DigitalCertificatesDataSourceModel struct {
 	TotalPages    types.Int64                         `tfsdk:"total_pages"`
 	Links         *GetDigitalCertificateResponseLinks `tfsdk:"links"`
 	SchemaVersion types.Int64                         `tfsdk:"schema_version"`
-	Results       []CertificateInfo                   `tfsdk:"results"`
+	Results       []CertificatesResultModel           `tfsdk:"results"`
 }
 
 type GetDigitalCertificateResponseLinks struct {
@@ -36,15 +36,16 @@ type GetDigitalCertificateResponseLinks struct {
 	Next     types.String `tfsdk:"next"`
 }
 
-type CertificateInfo struct {
-	ID              types.Int64    `tfsdk:"id"`
-	Name            types.String   `tfsdk:"name"`
-	Issuer          types.String   `tfsdk:"issuer"`
-	SubjectName     []types.String `tfsdk:"subject_name"`
-	Validity        types.String   `tfsdk:"validity"`
-	Status          types.String   `tfsdk:"status"`
-	CertificateType types.String   `tfsdk:"certificate_type"`
-	Managed         types.Bool     `tfsdk:"managed"`
+type CertificatesResultModel struct {
+	ID               types.Int64    `tfsdk:"id"`
+	Name             types.String   `tfsdk:"name"`
+	Issuer           types.String   `tfsdk:"issuer"`
+	SubjectName      []types.String `tfsdk:"subject_name"`
+	Validity         types.String   `tfsdk:"validity"`
+	Status           types.String   `tfsdk:"status"`
+	CertificateType  types.String   `tfsdk:"certificate_type"`
+	Managed          types.Bool     `tfsdk:"managed"`
+	AzionInformation types.String   `tfsdk:"azion_information"`
 }
 
 func (d *DigitalCertificatesDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -55,7 +56,7 @@ func (d *DigitalCertificatesDataSource) Configure(_ context.Context, req datasou
 }
 
 func (d *DigitalCertificatesDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_digital_certificate"
+	resp.TypeName = req.ProviderTypeName + "_digital_certificates"
 }
 
 func (d *DigitalCertificatesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -125,6 +126,10 @@ func (d *DigitalCertificatesDataSource) Schema(_ context.Context, _ datasource.S
 							Description: "Indicates whether the digital certificate is managed.",
 							Computed:    true,
 						},
+						"azion_information": schema.StringAttribute{
+							Description: "Information of the digital certificate.",
+							Computed:    true,
+						},
 					},
 				},
 			},
@@ -158,6 +163,27 @@ func (d *DigitalCertificatesDataSource) Read(ctx context.Context, req datasource
 		next = *digitalCertificatesResponse.Links.Next.Get()
 	}
 
+	var results []CertificatesResultModel
+	for _, cert := range digitalCertificatesResponse.Results {
+		var GetSubjectName []types.String
+		for _, subjectName := range cert.GetSubjectName() {
+			GetSubjectName = append(GetSubjectName, types.StringValue(subjectName))
+		}
+		certificateInfo := CertificatesResultModel{
+			ID:               types.Int64Value(int64(cert.GetId())),
+			Name:             types.StringValue(cert.GetName()),
+			Issuer:           types.StringValue(cert.GetIssuer()),
+			SubjectName:      GetSubjectName,
+			Validity:         types.StringValue(cert.GetValidity()),
+			Status:           types.StringValue(cert.GetStatus()),
+			CertificateType:  types.StringValue(cert.GetCertificateType()),
+			Managed:          types.BoolValue(cert.GetManaged()),
+			AzionInformation: types.StringValue(cert.GetAzionInformation()),
+		}
+
+		results = append(results, certificateInfo)
+	}
+
 	digitalCertificateState := DigitalCertificatesDataSourceModel{
 		SchemaVersion: types.Int64Value(int64(digitalCertificatesResponse.GetSchemaVersion())),
 		TotalPages:    types.Int64Value(int64(*digitalCertificatesResponse.TotalPages)),
@@ -166,34 +192,10 @@ func (d *DigitalCertificatesDataSource) Read(ctx context.Context, req datasource
 			Previous: types.StringValue(previous),
 			Next:     types.StringValue(next),
 		},
+		Results: results,
 	}
-
-	var results []CertificateInfo
-	for _, cert := range digitalCertificatesResponse.Results {
-		var GetSubjectName []types.String
-		for _, subjectName := range cert.GetSubjectName() {
-			GetSubjectName = append(GetSubjectName, types.StringValue(subjectName))
-		}
-		certificateInfo := CertificateInfo{
-			ID:   types.Int64Value(int64(cert.GetId())),
-			Name: types.StringValue(cert.GetName()),
-			//Issuer:          types.StringValue(cert2.),
-			SubjectName:     GetSubjectName,
-			Validity:        types.StringValue(cert.Validity),
-			Status:          types.StringValue(cert.Status),
-			CertificateType: types.StringValue(cert.CertificateType),
-			Managed:         types.BoolValue(cert.Managed),
-		}
-
-		results = append(results, certificateInfo)
-	}
-
-	digitalCertificatesState := DigitalCertificatesDataSourceModel{
-		SchemaVersion: types.Int64Value(digitalCertificatesResponse.SchemaVersion),
-		Results:       results,
-	}
-
-	diags := resp.State.Set(ctx, &digitalCertificatesState)
+	digitalCertificateState.ID = types.StringValue("Get All Digital Certificate")
+	diags := resp.State.Set(ctx, &digitalCertificateState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
