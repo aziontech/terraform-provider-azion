@@ -61,7 +61,7 @@ type EdgeApplicationResults struct {
 }
 
 func (r *edgeApplicationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application"
+	resp.TypeName = req.ProviderTypeName + "_edge_application_main_setting"
 }
 
 func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
