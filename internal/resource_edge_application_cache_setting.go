@@ -132,7 +132,6 @@ func (r *edgeApplicationCacheSettingsResource) Schema(_ context.Context, _ resou
 						ElementType: types.StringType,
 						Description: "Query string fields for cache settings.",
 						Optional:    true,
-						Computed:    true,
 					},
 					"enable_query_string_sort": schema.BoolAttribute{
 						Description: "Enable query string sorting for cache settings.",
@@ -157,7 +156,6 @@ func (r *edgeApplicationCacheSettingsResource) Schema(_ context.Context, _ resou
 					"device_group": schema.ListAttribute{
 						Description: "Device group settings.",
 						Optional:    true,
-						Computed:    true,
 						ElementType: types.Int64Type,
 					},
 					"enable_caching_for_post": schema.BoolAttribute{
@@ -233,6 +231,59 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 		return
 	}
 
+	if plan.CacheSettings.CacheByCookies.ValueString() == "ignore" || plan.CacheSettings.CacheByCookies.ValueString() == "all" {
+		if len(plan.CacheSettings.CookieNames) > 0 {
+			resp.Diagnostics.AddError(
+				"cookie_names and cache_by_cookies error ",
+				"When you set cache_by_cookies with `ignore` or `all` you should remove cookie_names from request",
+			)
+			return
+		}
+	}
+
+	if plan.CacheSettings.CacheByCookies.ValueString() == "whitelist" || plan.CacheSettings.CacheByCookies.ValueString() == "blacklist" {
+		if len(plan.CacheSettings.CookieNames) == 0 && plan.CacheSettings.CookieNames == nil {
+			resp.Diagnostics.AddError(
+				"cookie_names error ",
+				"You should set at least one cookie_names",
+			)
+			return
+		}
+	}
+
+	if plan.CacheSettings.CacheByQueryString.ValueString() == "ignore" || plan.CacheSettings.CacheByQueryString.ValueString() == "all" {
+		if len(plan.CacheSettings.QueryStringFields) > 0 {
+			resp.Diagnostics.AddError(
+				"query_string_fields and cache_by_query_string error ",
+				"When you set cache_by_query_string with `ignore` or `all` you should remove query_string_fields from request",
+			)
+			return
+		}
+	}
+
+	if plan.CacheSettings.CacheByQueryString.ValueString() == "whitelist" || plan.CacheSettings.CacheByQueryString.ValueString() == "blacklist" {
+		if len(plan.CacheSettings.QueryStringFields) == 0 && plan.CacheSettings.QueryStringFields == nil {
+			resp.Diagnostics.AddError(
+				"query_string_fields error ",
+				"You should set at least one query_string_fields",
+			)
+			return
+		}
+	}
+
+	var CookieNamesRequest []string
+	for _, cookieName := range plan.CacheSettings.CookieNames {
+		CookieNamesRequest = append(CookieNamesRequest, cookieName.ValueString())
+	}
+	var QueryStringFieldsRequest []string
+	for _, queryStringField := range plan.CacheSettings.QueryStringFields {
+		QueryStringFieldsRequest = append(QueryStringFieldsRequest, queryStringField.ValueString())
+	}
+	var DeviceGroupsRequest []int32
+	for _, DeviceGroup := range plan.CacheSettings.DeviceGroup {
+		DeviceGroupsRequest = append(DeviceGroupsRequest, int32(DeviceGroup.ValueInt64()))
+	}
+
 	cacheSettings := edgeapplications.ApplicationCacheCreateRequest{
 		Name:                           plan.CacheSettings.Name.ValueString(),
 		BrowserCacheSettings:           edgeapplications.PtrString(plan.CacheSettings.BrowserCacheSettings.ValueString()),
@@ -240,7 +291,20 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 		CdnCacheSettings:               edgeapplications.PtrString(plan.CacheSettings.CDNCacheSettings.ValueString()),
 		CdnCacheSettingsMaximumTtl:     edgeapplications.PtrInt64(plan.CacheSettings.CDNCacheSettingsMaxTTL.ValueInt64()),
 		CacheByQueryString:             edgeapplications.PtrString(plan.CacheSettings.CacheByQueryString.ValueString()),
+		QueryStringFields:              QueryStringFieldsRequest,
+		EnableQueryStringSort:          edgeapplications.PtrBool(plan.CacheSettings.EnableQueryStringSort.ValueBool()),
 		CacheByCookies:                 edgeapplications.PtrString(plan.CacheSettings.CacheByCookies.ValueString()),
+		CookieNames:                    CookieNamesRequest,
+		AdaptiveDeliveryAction:         edgeapplications.PtrString(plan.CacheSettings.AdaptiveDeliveryAction.ValueString()),
+		DeviceGroup:                    DeviceGroupsRequest,
+		EnableCachingForPost:           edgeapplications.PtrBool(plan.CacheSettings.EnableCachingForPost.ValueBool()),
+		L2CachingEnabled:               edgeapplications.PtrBool(plan.CacheSettings.L2CachingEnabled.ValueBool()),
+		IsSliceConfigurationEnabled:    edgeapplications.PtrBool(plan.CacheSettings.IsSliceConfigurationEnabled.ValueBool()),
+		IsSliceEdgeCachingEnabled:      edgeapplications.PtrBool(plan.CacheSettings.IsSliceEdgeCachingEnabled.ValueBool()),
+		IsSliceL2CachingEnabled:        edgeapplications.PtrBool(plan.CacheSettings.IsSliceL2CachingEnabled.ValueBool()),
+		SliceConfigurationRange:        edgeapplications.PtrInt64(plan.CacheSettings.SliceConfigurationRange.ValueInt64()),
+		EnableCachingForOptions:        edgeapplications.PtrBool(plan.CacheSettings.EnableCachingForOptions.ValueBool()),
+		EnableStaleCache:               edgeapplications.PtrBool(plan.CacheSettings.EnableStaleCache.ValueBool()),
 	}
 	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsApi.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute()
 	if err != nil {
@@ -443,11 +507,41 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 		return
 	}
 
-	if plan.CacheSettings.QueryStringFields != nil {
-		if plan.CacheSettings.CacheByQueryString.ValueString() == "ignore" || plan.CacheSettings.CacheByQueryString.ValueString() == "all" {
+	if plan.CacheSettings.CacheByQueryString.ValueString() == "ignore" || plan.CacheSettings.CacheByQueryString.ValueString() == "all" {
+		if len(plan.CacheSettings.QueryStringFields) > 0 {
+			resp.Diagnostics.AddError(
+				"cache_by_query_string error ",
+				"When you set cache_by_query_string with `ignore` or `all` you should remove query_string_fields from request",
+			)
+			return
+		}
+	}
+
+	if plan.CacheSettings.CacheByQueryString.ValueString() == "whitelist" || plan.CacheSettings.CacheByQueryString.ValueString() == "blacklist" {
+		if len(plan.CacheSettings.QueryStringFields) == 0 && plan.CacheSettings.QueryStringFields == nil {
 			resp.Diagnostics.AddError(
 				"query_string_fields error ",
-				"cache_by_query_string is not null and cannot be ignore or all, - Accepted values: whitelist, blacklist",
+				"You should set at least one query_string_fields",
+			)
+			return
+		}
+	}
+
+	if plan.CacheSettings.CacheByCookies.ValueString() == "ignore" || plan.CacheSettings.CacheByCookies.ValueString() == "all" {
+		if len(plan.CacheSettings.CookieNames) > 0 {
+			resp.Diagnostics.AddError(
+				"cookie_names and cache_by_cookies error ",
+				"When you set cache_by_cookies with `ignore` or `all` you should remove cookie_names from request",
+			)
+			return
+		}
+	}
+
+	if plan.CacheSettings.CacheByCookies.ValueString() == "whitelist" || plan.CacheSettings.CacheByCookies.ValueString() == "blacklist" {
+		if len(plan.CacheSettings.CookieNames) == 0 && plan.CacheSettings.CookieNames == nil {
+			resp.Diagnostics.AddError(
+				"cookie_names error ",
+				"You should set at least one cookie_names",
 			)
 			return
 		}

@@ -1,0 +1,1 @@
+terraform import azion_edge_application_cache_setting.example <edge_application_id>/<cache_setting_id>
