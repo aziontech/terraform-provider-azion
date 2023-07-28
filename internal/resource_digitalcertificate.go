@@ -247,7 +247,16 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 		)
 		return
 	}
-
+	var privateKey types.String
+	if state.CertificateResult == nil {
+		resp.Diagnostics.AddWarning(
+			"PrivateKey is controlled by Terraform",
+			"You need to put your private key in the state and set a terraform apply for update the state!",
+		)
+		privateKey = types.StringValue("")
+	} else {
+		privateKey = types.StringValue(state.CertificateResult.PrivateKey.ValueString())
+	}
 	var GetSubjectName []types.String
 	for _, subjectName := range certificateResponse.Results.GetSubjectName() {
 		GetSubjectName = append(GetSubjectName, types.StringValue(subjectName))
@@ -265,16 +274,25 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 			Managed:            types.BoolValue(certificateResponse.Results.GetManaged()),
 			CSR:                types.StringValue(certificateResponse.Results.GetCsr()),
 			CertificateContent: types.StringValue(certificateResponse.Results.GetCertificateContent()),
-			PrivateKey:         types.StringValue(state.CertificateResult.PrivateKey.ValueString()),
+			PrivateKey:         privateKey,
 			AzionInformation:   types.StringValue(certificateResponse.Results.GetAzionInformation()),
 		},
 	}
+
 	certificateState.ID = types.StringValue(strconv.FormatInt(int64(certificateResponse.Results.GetId()), 10))
 
-	diags = resp.State.Set(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	if state.CertificateResult == nil {
+		diags = resp.State.Set(ctx, &certificateState)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		diags = resp.State.Set(ctx, &state)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 }
 
