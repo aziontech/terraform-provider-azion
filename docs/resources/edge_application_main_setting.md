@@ -13,14 +13,14 @@ description: |-
 ## Example Usage
 
 ```terraform
-resource "azion_edge_application" "example" {
+resource "azion_edge_application_main_setting" "example" {
   edge_application = {
     name = "Terraform Example Main Settings"
   }
 }
 
 resource "azion_edge_application_origin" "example" {
-  edge_application_id = azion_edge_application.example.edge_application.application_id
+  edge_application_id = azion_edge_application_main_setting.example.edge_application.application_id
   origin = {
     name = "Terraform Main Settings Example"
     origin_type = "single_origin"
@@ -33,12 +33,12 @@ resource "azion_edge_application_origin" "example" {
     host_header: "$${host}",
   }
   depends_on = [
-    azion_edge_application.example
+    azion_edge_application_main_setting.example
   ]
 }
 
 resource "azion_edge_application_cache_setting" "example" {
-  edge_application_id = azion_edge_application.example.edge_application.application_id
+  edge_application_id = azion_edge_application_main_setting.example.edge_application.application_id
   cache_settings = {
     name = "Terraform Main Settings Example"
     browser_cache_settings = "override"
@@ -51,7 +51,7 @@ resource "azion_edge_application_cache_setting" "example" {
     enable_stale_cache = true
   }
   depends_on = [
-    azion_edge_application.example,
+    azion_edge_application_main_setting.example,
     azion_edge_application_origin.example
   ]
 }
@@ -103,5 +103,5 @@ Read-Only:
 Import is supported using the following syntax:
 
 ```shell
-terraform import azion_edge_application.example edge_application_id
+terraform import azion_edge_application_main_setting.example edge_application_id
 ```
