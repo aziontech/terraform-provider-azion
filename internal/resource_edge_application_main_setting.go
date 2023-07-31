@@ -98,11 +98,13 @@ func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaReq
 					},
 					"http_port": schema.ListAttribute{
 						Optional:    true,
+						Computed:    true,
 						ElementType: types.Float64Type,
 						Description: "The HTTP port(s) for the Edge Application.",
 					},
 					"https_port": schema.ListAttribute{
 						Optional:    true,
+						Computed:    true,
 						ElementType: types.Float64Type,
 						Description: "The HTTPS port(s) for the Edge Application.",
 					},

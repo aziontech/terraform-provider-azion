@@ -77,6 +77,11 @@ Required:
 
 - `name` (String) The name of the Edge Application.
 
+Optional:
+
+- `http_port` (List of Number) The HTTP port(s) for the Edge Application.
+- `https_port` (List of Number) The HTTPS port(s) for the Edge Application.
+
 Read-Only:
 
 - `active` (Boolean) Indicates whether the Edge Application is active.
@@ -89,9 +94,8 @@ Read-Only:
 - `edge_firewall` (Boolean) Indicates whether the Edge Application has an edge firewall enabled.
 - `edge_functions` (Boolean) Indicates whether edge functions are enabled for the Edge Application.
 - `http3` (Boolean) Indicates whether HTTP/3 is enabled for the Edge Application.
-- `http_port` (List of Number) The HTTP port(s) for the Edge Application.
-- `https_port` (List of Number) The HTTPS port(s) for the Edge Application.
 - `image_optimization` (Boolean) Indicates whether image optimization is enabled for the Edge Application.
+- `l2_caching` (Boolean) Indicates whether l2 caching is enabled for the Edge Application.
 - `load_balancer` (Boolean) Indicates whether load balancing is enabled for the Edge Application.
 - `minimum_tls_version` (String) The minimum TLS version supported by the Edge Application.
 - `raw_logs` (Boolean) Indicates whether raw logs are enabled for the Edge Application.
