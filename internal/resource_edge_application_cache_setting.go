@@ -231,6 +231,16 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 		return
 	}
 
+	if plan.CacheSettings.AdaptiveDeliveryAction.ValueString() == "whitelist" {
+		if len(plan.CacheSettings.DeviceGroup) == 0 {
+			resp.Diagnostics.AddError(
+				"DeviceGroup error ",
+				"When you set AdaptiveDeliveryAction with `whitelist` you should remove or set at least one DeviceGroup",
+			)
+			return
+		}
+	}
+
 	if plan.CacheSettings.CacheByCookies.ValueString() == "ignore" || plan.CacheSettings.CacheByCookies.ValueString() == "all" {
 		if len(plan.CacheSettings.CookieNames) > 0 {
 			resp.Diagnostics.AddError(
@@ -505,6 +515,16 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 			"is not null",
 		)
 		return
+	}
+
+	if plan.CacheSettings.AdaptiveDeliveryAction.ValueString() == "whitelist" {
+		if len(plan.CacheSettings.DeviceGroup) == 0 {
+			resp.Diagnostics.AddError(
+				"DeviceGroup error ",
+				"When you set AdaptiveDeliveryAction with `whitelist` you should remove or set at least one DeviceGroup",
+			)
+			return
+		}
 	}
 
 	if plan.CacheSettings.CacheByQueryString.ValueString() == "ignore" || plan.CacheSettings.CacheByQueryString.ValueString() == "all" {
