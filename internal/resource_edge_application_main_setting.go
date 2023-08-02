@@ -94,21 +94,20 @@ func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaReq
 					},
 					"delivery_protocol": schema.StringAttribute{
 						Description: "The delivery protocol of the Edge Application.",
-						Computed:    true,
+						Required:    true,
 					},
 					"http_port": schema.ListAttribute{
-						Optional:    true,
-						Computed:    true,
+						Required:    true,
 						ElementType: types.Float64Type,
 						Description: "The HTTP port(s) for the Edge Application.",
 					},
 					"https_port": schema.ListAttribute{
-						Optional:    true,
-						Computed:    true,
+						Required:    true,
 						ElementType: types.Float64Type,
 						Description: "The HTTPS port(s) for the Edge Application.",
 					},
 					"minimum_tls_version": schema.StringAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "The minimum TLS version supported by the Edge Application.",
 					},
@@ -117,54 +116,66 @@ func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaReq
 						Description: "Indicates whether the Edge Application is active.",
 					},
 					"debug_rules": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether debug rules are enabled for the Edge Application.",
 					},
 					"http3": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether HTTP/3 is enabled for the Edge Application.",
 					},
 					"supported_ciphers": schema.StringAttribute{
-						Computed:    true,
+						Required:    true,
 						Description: "The supported ciphers for the Edge Application.",
 					},
 					"application_acceleration": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether application acceleration is enabled for the Edge Application.",
 					},
 					"caching": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether caching is enabled for the Edge Application.",
 					},
 					"device_detection": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether device detection is enabled for the Edge Application.",
 					},
 					"edge_firewall": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether the Edge Application has an edge firewall enabled.",
 					},
 					"edge_functions": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether edge functions are enabled for the Edge Application.",
 					},
 					"image_optimization": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether image optimization is enabled for the Edge Application.",
 					},
 					"load_balancer": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether load balancing is enabled for the Edge Application.",
 					},
 					"l2_caching": schema.BoolAttribute{
 						Computed:    true,
+						Optional:    true,
 						Description: "Indicates whether l2 caching is enabled for the Edge Application.",
 					},
 					"raw_logs": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether raw logs are enabled for the Edge Application.",
 					},
 					"web_application_firewall": schema.BoolAttribute{
+						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether a web application firewall is enabled for the Edge Application.",
 					},
@@ -185,12 +196,56 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	var plan EdgeApplicationResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
+
+	if plan.EdgeApplication.L2Caching.ValueBool() == true {
+		resp.Diagnostics.AddError(
+			"L2Caching error ",
+			"When you create a Edge Application: L2Caching must be false or remove from request",
+		)
+	}
+
+	if plan.EdgeApplication.LoadBalancer.ValueBool() == true {
+		resp.Diagnostics.AddError(
+			"LoadBalancer error ",
+			"When you create a Edge Application: LoadBalancer must be false or remove from request",
+		)
+	}
+
+	if plan.EdgeApplication.DeviceDetection.ValueBool() == true {
+		resp.Diagnostics.AddError(
+			"DeviceDetection error ",
+			"When you create a Edge Application: DeviceDetection must be false or remove from request",
+		)
+	}
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	sliceHTTPPort, err := utils.ConvertFloat64ToInterface(plan.EdgeApplication.HTTPPort)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			err.Error(),
+			"err",
+		)
+	}
+	sliceHTTPSPort, err := utils.ConvertFloat64ToInterface(plan.EdgeApplication.HTTPSPort)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			err.Error(),
+			"err",
+		)
+	}
+
 	edgeApplication := edgeapplications.CreateApplicationRequest{
-		Name: plan.EdgeApplication.Name.ValueString(),
+		Name:                    plan.EdgeApplication.Name.ValueString(),
+		HttpPort:                sliceHTTPPort,
+		HttpsPort:               sliceHTTPSPort,
+		DebugRules:              edgeapplications.PtrBool(plan.EdgeApplication.DebugRules.ValueBool()),
+		Http3:                   edgeapplications.PtrBool(plan.EdgeApplication.HTTP3.ValueBool()),
+		SupportedCiphers:        edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
+		ApplicationAcceleration: edgeapplications.PtrBool(plan.EdgeApplication.ApplicationAcceleration.ValueBool()),
+		DeliveryProtocol:        edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
 	}
 
 	createEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsPost(ctx).CreateApplicationRequest(edgeApplication).Execute()
@@ -210,16 +265,12 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	sliceHTTPPort := utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpPort)
-
-	sliceHTTPSPort := utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpsPort)
-
 	plan.EdgeApplication = &EdgeApplicationResults{
 		ApplicationID:           types.Int64Value(createEdgeApplication.Results.GetId()),
 		Name:                    types.StringValue(createEdgeApplication.Results.GetName()),
 		DeliveryProtocol:        types.StringValue(createEdgeApplication.Results.GetDeliveryProtocol()),
-		HTTPPort:                sliceHTTPPort,
-		HTTPSPort:               sliceHTTPSPort,
+		HTTPPort:                utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpPort),
+		HTTPSPort:               utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpsPort),
 		MinimumTLSVersion:       types.StringValue(createEdgeApplication.Results.GetMinimumTlsVersion()),
 		Active:                  types.BoolValue(createEdgeApplication.Results.GetActive()),
 		DebugRules:              types.BoolValue(createEdgeApplication.Results.GetDebugRules()),
@@ -232,9 +283,9 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		EdgeFunctions:           types.BoolValue(createEdgeApplication.Results.GetEdgeFunctions()),
 		ImageOptimization:       types.BoolValue(createEdgeApplication.Results.GetImageOptimization()),
 		LoadBalancer:            types.BoolValue(createEdgeApplication.Results.GetLoadBalancer()),
-		//L2Caching:               types.BoolValue(createEdgeApplication.Results.),
-		RawLogs:                types.BoolValue(createEdgeApplication.Results.GetRawLogs()),
-		WebApplicationFirewall: types.BoolValue(createEdgeApplication.Results.GetWebApplicationFirewall()),
+		L2Caching:               types.BoolValue(createEdgeApplication.Results.GetL2Caching()),
+		RawLogs:                 types.BoolValue(createEdgeApplication.Results.GetRawLogs()),
+		WebApplicationFirewall:  types.BoolValue(createEdgeApplication.Results.GetWebApplicationFirewall()),
 	}
 
 	plan.SchemaVersion = types.Int64Value(createEdgeApplication.SchemaVersion)
@@ -332,13 +383,13 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		)
 	}
 	edgeApplication := edgeapplications.ApplicationPutRequest{
-		Name:              plan.EdgeApplication.Name.ValueString(),
-		HttpPort:          sliceHTTPPort,
-		HttpsPort:         sliceHTTPSPort,
-		MinimumTlsVersion: edgeapplications.PtrString(plan.EdgeApplication.MinimumTLSVersion.ValueString()),
-		//DebugRules:              edgeapplications.PtrBool(plan.EdgeApplication.DebugRules.ValueBool()),
-		//Http3:                   edgeapplications.PtrBool(plan.EdgeApplication.HTTP3.ValueBool()),
-		//SupportedCiphers:        edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
+		Name:                    plan.EdgeApplication.Name.ValueString(),
+		HttpPort:                sliceHTTPPort,
+		HttpsPort:               sliceHTTPSPort,
+		MinimumTlsVersion:       edgeapplications.PtrString(plan.EdgeApplication.MinimumTLSVersion.ValueString()),
+		DebugRules:              edgeapplications.PtrBool(plan.EdgeApplication.DebugRules.ValueBool()),
+		Http3:                   edgeapplications.PtrBool(plan.EdgeApplication.HTTP3.ValueBool()),
+		SupportedCiphers:        edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
 		ApplicationAcceleration: edgeapplications.PtrBool(plan.EdgeApplication.ApplicationAcceleration.ValueBool()),
 		Caching:                 edgeapplications.PtrBool(plan.EdgeApplication.Caching.ValueBool()),
 		DeviceDetection:         edgeapplications.PtrBool(plan.EdgeApplication.DeviceDetection.ValueBool()),
@@ -348,8 +399,8 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		LoadBalancer:            edgeapplications.PtrBool(plan.EdgeApplication.LoadBalancer.ValueBool()),
 		RawLogs:                 edgeapplications.PtrBool(plan.EdgeApplication.RawLogs.ValueBool()),
 		WebApplicationFirewall:  edgeapplications.PtrBool(plan.EdgeApplication.WebApplicationFirewall.ValueBool()),
-		//DeliveryProtocol:        edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
-		L2Caching: edgeapplications.PtrBool(plan.EdgeApplication.L2Caching.ValueBool()),
+		DeliveryProtocol:        edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
+		L2Caching:               edgeapplications.PtrBool(plan.EdgeApplication.L2Caching.ValueBool()),
 	}
 
 	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).ApplicationPutRequest(edgeApplication).Execute()
@@ -392,6 +443,7 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		ImageOptimization:       types.BoolValue(updateEdgeApplication.Results.GetImageOptimization()),
 		LoadBalancer:            types.BoolValue(updateEdgeApplication.Results.GetLoadBalancer()),
 		RawLogs:                 types.BoolValue(updateEdgeApplication.Results.GetRawLogs()),
+		L2Caching:               types.BoolValue(updateEdgeApplication.Results.GetL2Caching()),
 		WebApplicationFirewall:  types.BoolValue(updateEdgeApplication.Results.GetWebApplicationFirewall()),
 	}
 

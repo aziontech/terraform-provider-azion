@@ -203,7 +203,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 	for _, behavior := range plan.RulesEngine.Behaviors {
 		behaviors = append(behaviors, edgeapplications.RulesEngineBehavior{
 			Name: behavior.Name.ValueString(),
-			//Target: behavior.Target.ValueString(),
+			//Target: Target,
 		})
 	}
 
