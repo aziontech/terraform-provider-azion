@@ -75,21 +75,17 @@ resource "azion_edge_application_cache_setting" "example" {
 
 Required:
 
+- `delivery_protocol` (String) The delivery protocol of the Edge Application.
+- `http_port` (List of Number) The HTTP port(s) for the Edge Application.
+- `https_port` (List of Number) The HTTPS port(s) for the Edge Application.
 - `name` (String) The name of the Edge Application.
+- `supported_ciphers` (String) The supported ciphers for the Edge Application.
 
 Optional:
 
-- `http_port` (List of Number) The HTTP port(s) for the Edge Application.
-- `https_port` (List of Number) The HTTPS port(s) for the Edge Application.
-
-Read-Only:
-
-- `active` (Boolean) Indicates whether the Edge Application is active.
 - `application_acceleration` (Boolean) Indicates whether application acceleration is enabled for the Edge Application.
-- `application_id` (Number) The Edge Application identifier.
 - `caching` (Boolean) Indicates whether caching is enabled for the Edge Application.
 - `debug_rules` (Boolean) Indicates whether debug rules are enabled for the Edge Application.
-- `delivery_protocol` (String) The delivery protocol of the Edge Application.
 - `device_detection` (Boolean) Indicates whether device detection is enabled for the Edge Application.
 - `edge_firewall` (Boolean) Indicates whether the Edge Application has an edge firewall enabled.
 - `edge_functions` (Boolean) Indicates whether edge functions are enabled for the Edge Application.
@@ -99,8 +95,12 @@ Read-Only:
 - `load_balancer` (Boolean) Indicates whether load balancing is enabled for the Edge Application.
 - `minimum_tls_version` (String) The minimum TLS version supported by the Edge Application.
 - `raw_logs` (Boolean) Indicates whether raw logs are enabled for the Edge Application.
-- `supported_ciphers` (String) The supported ciphers for the Edge Application.
 - `web_application_firewall` (Boolean) Indicates whether a web application firewall is enabled for the Edge Application.
+
+Read-Only:
+
+- `active` (Boolean) Indicates whether the Edge Application is active.
+- `application_id` (Number) The Edge Application identifier.
 
 ## Import
 
