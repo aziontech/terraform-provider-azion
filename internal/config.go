@@ -1,12 +1,13 @@
 package provider
 
 import (
+	"github.com/aziontech/azionapi-go-sdk/idns"
 	"os"
 
+	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
 	"github.com/aziontech/azionapi-go-sdk/domains"
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
 	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
-	"github.com/aziontech/azionapi-go-sdk/idns"
 )
 
 type apiClient struct {
@@ -21,14 +22,18 @@ type apiClient struct {
 
 	edgeApplicationsConfig *edgeapplications.Configuration
 	edgeApplicationsApi    *edgeapplications.APIClient
+
+	digitalCertificatesConfig *digital_certificates.Configuration
+	digitalCertificatesApi    *digital_certificates.APIClient
 }
 
 func Client(APIToken string, userAgent string) *apiClient {
 	client := &apiClient{
-		idnsConfig:             idns.NewConfiguration(),
-		domainsConfig:          domains.NewConfiguration(),
-		edgefunctionsConfig:    edgefunctions.NewConfiguration(),
-		edgeApplicationsConfig: edgeapplications.NewConfiguration(),
+		idnsConfig:                idns.NewConfiguration(),
+		domainsConfig:             domains.NewConfiguration(),
+		edgefunctionsConfig:       edgefunctions.NewConfiguration(),
+		edgeApplicationsConfig:    edgeapplications.NewConfiguration(),
+		digitalCertificatesConfig: digital_certificates.NewConfiguration(),
 	}
 
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
@@ -56,6 +61,11 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.edgeApplicationsConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.edgeApplicationsConfig.UserAgent = userAgent
 	client.edgeApplicationsApi = edgeapplications.NewAPIClient(client.edgeApplicationsConfig)
+
+	client.digitalCertificatesConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.digitalCertificatesConfig.AddDefaultHeader("Accept", "application/json; version=3")
+	client.digitalCertificatesConfig.UserAgent = userAgent
+	client.digitalCertificatesApi = digital_certificates.NewAPIClient(client.digitalCertificatesConfig)
 
 	return client
 }

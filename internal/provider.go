@@ -95,6 +95,8 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionEdgeApplicationOrigin,
 		dataSourceAzionEdgeApplicationRulesEngine,
 		dataSourceAzionEdgeApplicationRuleEngine,
+		dataSourceAzionDigitalCertificates,
+		dataSourceAzionDigitalCertificate,
 		dataSourceAzionEdgeApplicationCacheSetting,
 		dataSourceAzionEdgeApplicationCacheSettings,
 	}
@@ -112,6 +114,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewEdgeApplicationEdgeFunctionsInstanceResource,
 		NewEdgeApplicationRulesEngineResource,
 		NewEdgeApplicationCacheSettingsResource,
+		NewDigitalCertificateResource,
 	}
 }
 

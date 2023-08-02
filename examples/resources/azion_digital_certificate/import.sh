@@ -1,0 +1,1 @@
+terraform import azion_digital_certificate.example certificate_id
