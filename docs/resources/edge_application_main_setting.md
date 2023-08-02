@@ -15,7 +15,25 @@ description: |-
 ```terraform
 resource "azion_edge_application_main_setting" "example" {
   edge_application = {
-    name = "Terraform Example Main Settings"
+    name = "Terraform Examples"
+    supported_ciphers: "all"
+    delivery_protocol: "http,https"
+    http_port: [80,8080]
+    https_port: [443]
+    minimum_tls_version: ""
+    debug_rules: false
+    caching: true
+    edge_firewall: false
+    edge_functions: false
+    image_optimization: false
+    http3: false
+    application_acceleration: false
+    l2_caching: false
+    load_balancer: false
+    raw_logs: true
+    device_detection: false
+    web_application_firewall: false
+    raw_logs: false
   }
 }
 
