@@ -235,9 +235,19 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 		if len(plan.CacheSettings.DeviceGroup) == 0 {
 			resp.Diagnostics.AddError(
 				"DeviceGroup error ",
-				"When you set AdaptiveDeliveryAction with `whitelist` you should remove or set at least one DeviceGroup",
+				"When you set AdaptiveDeliveryAction with `whitelist` you should set at least one DeviceGroup",
 			)
 			return
+		}
+	} else {
+		if plan.CacheSettings.AdaptiveDeliveryAction.ValueString() == "ignore" {
+			if len(plan.CacheSettings.DeviceGroup) == 0 && plan.CacheSettings.DeviceGroup != nil {
+				resp.Diagnostics.AddError(
+					"DeviceGroup error ",
+					"When you set AdaptiveDeliveryAction with `ignore` you should remove DeviceGroup from request or set null",
+				)
+				return
+			}
 		}
 	}
 
@@ -249,15 +259,15 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 			)
 			return
 		}
-	}
-
-	if plan.CacheSettings.CacheByCookies.ValueString() == "whitelist" || plan.CacheSettings.CacheByCookies.ValueString() == "blacklist" {
-		if len(plan.CacheSettings.CookieNames) == 0 && plan.CacheSettings.CookieNames == nil {
-			resp.Diagnostics.AddError(
-				"cookie_names error ",
-				"You should set at least one cookie_names",
-			)
-			return
+	} else {
+		if plan.CacheSettings.CacheByCookies.ValueString() == "whitelist" || plan.CacheSettings.CacheByCookies.ValueString() == "blacklist" {
+			if len(plan.CacheSettings.CookieNames) == 0 && plan.CacheSettings.CookieNames == nil {
+				resp.Diagnostics.AddError(
+					"cookie_names error ",
+					"You should set at least one cookie_names",
+				)
+				return
+			}
 		}
 	}
 
@@ -269,15 +279,15 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 			)
 			return
 		}
-	}
-
-	if plan.CacheSettings.CacheByQueryString.ValueString() == "whitelist" || plan.CacheSettings.CacheByQueryString.ValueString() == "blacklist" {
-		if len(plan.CacheSettings.QueryStringFields) == 0 && plan.CacheSettings.QueryStringFields == nil {
-			resp.Diagnostics.AddError(
-				"query_string_fields error ",
-				"You should set at least one query_string_fields",
-			)
-			return
+	} else {
+		if plan.CacheSettings.CacheByQueryString.ValueString() == "whitelist" || plan.CacheSettings.CacheByQueryString.ValueString() == "blacklist" {
+			if len(plan.CacheSettings.QueryStringFields) == 0 && plan.CacheSettings.QueryStringFields == nil {
+				resp.Diagnostics.AddError(
+					"query_string_fields error ",
+					"You should set at least one query_string_fields",
+				)
+				return
+			}
 		}
 	}
 
@@ -521,29 +531,19 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 		if len(plan.CacheSettings.DeviceGroup) == 0 {
 			resp.Diagnostics.AddError(
 				"DeviceGroup error ",
-				"When you set AdaptiveDeliveryAction with `whitelist` you should remove or set at least one DeviceGroup",
+				"When you set AdaptiveDeliveryAction with `whitelist` you should set at least one DeviceGroup",
 			)
 			return
 		}
-	}
-
-	if plan.CacheSettings.CacheByQueryString.ValueString() == "ignore" || plan.CacheSettings.CacheByQueryString.ValueString() == "all" {
-		if len(plan.CacheSettings.QueryStringFields) > 0 {
-			resp.Diagnostics.AddError(
-				"cache_by_query_string error ",
-				"When you set cache_by_query_string with `ignore` or `all` you should remove query_string_fields from request",
-			)
-			return
-		}
-	}
-
-	if plan.CacheSettings.CacheByQueryString.ValueString() == "whitelist" || plan.CacheSettings.CacheByQueryString.ValueString() == "blacklist" {
-		if len(plan.CacheSettings.QueryStringFields) == 0 && plan.CacheSettings.QueryStringFields == nil {
-			resp.Diagnostics.AddError(
-				"query_string_fields error ",
-				"You should set at least one query_string_fields",
-			)
-			return
+	} else {
+		if plan.CacheSettings.AdaptiveDeliveryAction.ValueString() == "ignore" {
+			if len(plan.CacheSettings.DeviceGroup) == 0 && plan.CacheSettings.DeviceGroup != nil {
+				resp.Diagnostics.AddError(
+					"DeviceGroup error ",
+					"When you set AdaptiveDeliveryAction with `ignore` you should remove DeviceGroup from request or set null",
+				)
+				return
+			}
 		}
 	}
 
@@ -555,15 +555,35 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 			)
 			return
 		}
+	} else {
+		if plan.CacheSettings.CacheByCookies.ValueString() == "whitelist" || plan.CacheSettings.CacheByCookies.ValueString() == "blacklist" {
+			if len(plan.CacheSettings.CookieNames) == 0 && plan.CacheSettings.CookieNames == nil {
+				resp.Diagnostics.AddError(
+					"cookie_names error ",
+					"You should set at least one cookie_names",
+				)
+				return
+			}
+		}
 	}
 
-	if plan.CacheSettings.CacheByCookies.ValueString() == "whitelist" || plan.CacheSettings.CacheByCookies.ValueString() == "blacklist" {
-		if len(plan.CacheSettings.CookieNames) == 0 && plan.CacheSettings.CookieNames == nil {
+	if plan.CacheSettings.CacheByQueryString.ValueString() == "ignore" || plan.CacheSettings.CacheByQueryString.ValueString() == "all" {
+		if len(plan.CacheSettings.QueryStringFields) > 0 {
 			resp.Diagnostics.AddError(
-				"cookie_names error ",
-				"You should set at least one cookie_names",
+				"query_string_fields and cache_by_query_string error ",
+				"When you set cache_by_query_string with `ignore` or `all` you should remove query_string_fields from request",
 			)
 			return
+		}
+	} else {
+		if plan.CacheSettings.CacheByQueryString.ValueString() == "whitelist" || plan.CacheSettings.CacheByQueryString.ValueString() == "blacklist" {
+			if len(plan.CacheSettings.QueryStringFields) == 0 && plan.CacheSettings.QueryStringFields == nil {
+				resp.Diagnostics.AddError(
+					"query_string_fields error ",
+					"You should set at least one query_string_fields",
+				)
+				return
+			}
 		}
 	}
 

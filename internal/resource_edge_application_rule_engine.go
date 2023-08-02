@@ -202,8 +202,8 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 	var behaviors []edgeapplications.RulesEngineBehavior
 	for _, behavior := range plan.RulesEngine.Behaviors {
 		behaviors = append(behaviors, edgeapplications.RulesEngineBehavior{
-			Name:   behavior.Name.ValueString(),
-			Target: edgeapplications.PtrString(behavior.Target.ValueString()),
+			Name: behavior.Name.ValueString(),
+			//Target: behavior.Target.ValueString(),
 		})
 	}
 
@@ -439,8 +439,8 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 	var behaviors []edgeapplications.RulesEngineBehavior
 	for _, behavior := range plan.RulesEngine.Behaviors {
 		behaviors = append(behaviors, edgeapplications.RulesEngineBehavior{
-			Name:   behavior.Name.ValueString(),
-			Target: edgeapplications.PtrString(behavior.Target.ValueString()),
+			Name: behavior.Name.ValueString(),
+			//Target: edgeapplications.PtrString(behavior.Target.ValueString()),
 		})
 	}
 
