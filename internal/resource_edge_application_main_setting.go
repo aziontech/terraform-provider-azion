@@ -213,7 +213,7 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 
 	if plan.EdgeApplication.ApplicationAcceleration.ValueBool() {
 		resp.Diagnostics.AddError(
-			"LoadBalancer error",
+			"ApplicationAcceleration error",
 			"When you create a Edge Application: ApplicationAcceleration must be false or remove from request",
 		)
 	}
