@@ -6,3 +6,4 @@ examples/.terraform.lock.hcl
 terraform.tfstate.backup
 terraform-provider-azion
 /.idea/aws.xml
+/.idea/modules.xml
