@@ -286,26 +286,10 @@ func (r *edgeFunctionsInstanceResource) Update(ctx context.Context, req resource
 		functionsInstancesId = plan.EdgeFunction.ID
 	}
 
-	if functionsInstancesId.String() == "" {
-		resp.Diagnostics.AddError(
-			"Origin Key error ",
-			"is not null",
-		)
-		return
-	}
-
 	if plan.ApplicationID.IsNull() {
 		edgeApplicationID = state.ApplicationID
 	} else {
 		edgeApplicationID = plan.ApplicationID
-	}
-
-	if edgeApplicationID.IsNull() {
-		resp.Diagnostics.AddError(
-			"Edge Application ID error ",
-			"is not null",
-		)
-		return
 	}
 
 	var argsStr string

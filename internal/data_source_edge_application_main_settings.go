@@ -31,25 +31,26 @@ type EdgeApplicationDataSourceModel struct {
 }
 
 type EdgeApplicationResult struct {
-	ApplicationID           types.Int64  `tfsdk:"application_id"`
-	Name                    types.String `tfsdk:"name"`
-	DeliveryProtocol        types.String `tfsdk:"delivery_protocol"`
-	HTTPPort                types.List   `tfsdk:"http_port"`
-	HTTPSPort               types.List   `tfsdk:"https_port"`
-	MinimumTLSVersion       types.String `tfsdk:"minimum_tls_version"`
-	Active                  types.Bool   `tfsdk:"active"`
-	DebugRules              types.Bool   `tfsdk:"debug_rules"`
-	HTTP3                   types.Bool   `tfsdk:"http3"`
-	SupportedCiphers        types.String `tfsdk:"supported_ciphers"`
-	ApplicationAcceleration types.Bool   `tfsdk:"application_acceleration"`
-	Caching                 types.Bool   `tfsdk:"caching"`
-	DeviceDetection         types.Bool   `tfsdk:"device_detection"`
-	EdgeFirewall            types.Bool   `tfsdk:"edge_firewall"`
-	EdgeFunctions           types.Bool   `tfsdk:"edge_functions"`
-	ImageOptimization       types.Bool   `tfsdk:"image_optimization"`
-	LoadBalancer            types.Bool   `tfsdk:"load_balancer"`
-	RawLogs                 types.Bool   `tfsdk:"raw_logs"`
-	WebApplicationFirewall  types.Bool   `tfsdk:"web_application_firewall"`
+	ApplicationID           types.Int64     `tfsdk:"application_id"`
+	Name                    types.String    `tfsdk:"name"`
+	DeliveryProtocol        types.String    `tfsdk:"delivery_protocol"`
+	HTTPPort                []types.Float64 `tfsdk:"http_port"`
+	HTTPSPort               []types.Float64 `tfsdk:"https_port"`
+	MinimumTLSVersion       types.String    `tfsdk:"minimum_tls_version"`
+	Active                  types.Bool      `tfsdk:"active"`
+	DebugRules              types.Bool      `tfsdk:"debug_rules"`
+	HTTP3                   types.Bool      `tfsdk:"http3"`
+	SupportedCiphers        types.String    `tfsdk:"supported_ciphers"`
+	ApplicationAcceleration types.Bool      `tfsdk:"application_acceleration"`
+	Caching                 types.Bool      `tfsdk:"caching"`
+	DeviceDetection         types.Bool      `tfsdk:"device_detection"`
+	EdgeFirewall            types.Bool      `tfsdk:"edge_firewall"`
+	EdgeFunctions           types.Bool      `tfsdk:"edge_functions"`
+	ImageOptimization       types.Bool      `tfsdk:"image_optimization"`
+	LoadBalancer            types.Bool      `tfsdk:"load_balancer"`
+	L2Caching               types.Bool      `tfsdk:"l2_caching"`
+	RawLogs                 types.Bool      `tfsdk:"raw_logs"`
+	WebApplicationFirewall  types.Bool      `tfsdk:"web_application_firewall"`
 }
 
 func (e *EdgeApplicationDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -147,6 +148,10 @@ func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.Schem
 						Computed:    true,
 						Description: "Indicates whether load balancing is enabled for the Edge Application.",
 					},
+					"l2_caching": schema.BoolAttribute{
+						Computed:    true,
+						Description: "Indicates whether l2 caching is enabled for the Edge Application.",
+					},
 					"raw_logs": schema.BoolAttribute{
 						Computed:    true,
 						Description: "Indicates whether raw logs are enabled for the Edge Application.",
@@ -195,29 +200,14 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	sliceHTTPPort, err := utils.SliceIntInterfaceTypeToList(edgeApplicationsResponse.Results.HttpPort)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			err.Error(),
-			"err",
-		)
-	}
-	sliceHTTPSPort, err := utils.SliceIntInterfaceTypeToList(edgeApplicationsResponse.Results.HttpsPort)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			err.Error(),
-			"err",
-		)
-	}
-
 	EdgeApplicationState := EdgeApplicationDataSourceModel{
 		SchemaVersion: types.Int64Value(edgeApplicationsResponse.SchemaVersion),
 		Results: &EdgeApplicationResult{
 			ApplicationID:           types.Int64Value(edgeApplicationsResponse.Results.GetId()),
 			Name:                    types.StringValue(edgeApplicationsResponse.Results.GetName()),
 			DeliveryProtocol:        types.StringValue(edgeApplicationsResponse.Results.GetDeliveryProtocol()),
-			HTTPPort:                sliceHTTPPort,
-			HTTPSPort:               sliceHTTPSPort,
+			HTTPPort:                utils.ConvertInterfaceToFloat64List(edgeApplicationsResponse.Results.HttpPort),
+			HTTPSPort:               utils.ConvertInterfaceToFloat64List(edgeApplicationsResponse.Results.HttpsPort),
 			MinimumTLSVersion:       types.StringValue(edgeApplicationsResponse.Results.GetMinimumTlsVersion()),
 			Active:                  types.BoolValue(edgeApplicationsResponse.Results.GetActive()),
 			DebugRules:              types.BoolValue(edgeApplicationsResponse.Results.GetDebugRules()),
@@ -230,6 +220,7 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 			EdgeFunctions:           types.BoolValue(edgeApplicationsResponse.Results.GetEdgeFunctions()),
 			ImageOptimization:       types.BoolValue(edgeApplicationsResponse.Results.GetImageOptimization()),
 			LoadBalancer:            types.BoolValue(edgeApplicationsResponse.Results.GetLoadBalancer()),
+			L2Caching:               types.BoolValue(edgeApplicationsResponse.Results.GetL2Caching()),
 			RawLogs:                 types.BoolValue(edgeApplicationsResponse.Results.GetRawLogs()),
 			WebApplicationFirewall:  types.BoolValue(edgeApplicationsResponse.Results.GetWebApplicationFirewall()),
 		},

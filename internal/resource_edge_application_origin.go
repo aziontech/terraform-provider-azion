@@ -429,26 +429,10 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 		originKey = plan.Origin.OriginKey
 	}
 
-	if originKey.String() == "" {
-		resp.Diagnostics.AddError(
-			"Origin Key error ",
-			"is not null",
-		)
-		return
-	}
-
 	if plan.ApplicationID.IsNull() {
 		edgeApplicationID = state.ApplicationID
 	} else {
 		edgeApplicationID = plan.ApplicationID
-	}
-
-	if edgeApplicationID.IsNull() {
-		resp.Diagnostics.AddError(
-			"Edge Application ID error ",
-			"is not null",
-		)
-		return
 	}
 
 	var addressesRequest []edgeapplications.CreateOriginsRequestAddresses

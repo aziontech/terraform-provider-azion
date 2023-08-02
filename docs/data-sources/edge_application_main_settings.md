@@ -48,6 +48,7 @@ Read-Only:
 - `http_port` (List of Number) The HTTP port(s) for the Edge Application.
 - `https_port` (List of Number) The HTTPS port(s) for the Edge Application.
 - `image_optimization` (Boolean) Indicates whether image optimization is enabled for the Edge Application.
+- `l2_caching` (Boolean) Indicates whether l2 caching is enabled for the Edge Application.
 - `load_balancer` (Boolean) Indicates whether load balancing is enabled for the Edge Application.
 - `minimum_tls_version` (String) The minimum TLS version supported by the Edge Application.
 - `name` (String) The name of the Edge Application.

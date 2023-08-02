@@ -22,22 +22,6 @@ func SliceStringTypeToList(slice []types.String) types.List {
 	return types.ListValueMust(types.StringType, strs)
 }
 
-func SliceIntInterfaceTypeToList(sliceInt interface{}) (types.List, error) {
-	var integers []attr.Value
-	httpPortSlice, ok := sliceInt.([]interface{})
-	if !ok {
-		return types.ListNull(types.Float64Type), fmt.Errorf("slice Int is not a slice")
-	}
-	for _, v := range httpPortSlice {
-		if _, ok := v.(float64); !ok {
-			return types.List{}, nil
-		}
-		integers = append(integers, types.Float64Value(v.(float64)))
-	}
-
-	return types.ListValueMust(types.Float64Type, integers), nil
-}
-
 func SliceStringTypeToSet(slice []types.String) types.Set {
 	if len(slice) == 0 {
 		return types.SetNull(types.StringType)
@@ -67,6 +51,26 @@ func ConvertInterfaceToString(jsonArgs interface{}) (string, error) {
 	}
 
 	return string(jsonArgsStr), err
+}
+
+func ConvertInterfaceToFloat64List(listInt interface{}) []types.Float64 {
+	iListInt := listInt.([]interface{})
+	var integers []types.Float64
+	for _, v := range iListInt {
+		if _, ok := v.(float64); !ok {
+			return nil
+		}
+		integers = append(integers, types.Float64Value(v.(float64)))
+	}
+	return integers
+}
+
+func ConvertFloat64ToInterface(sliceInt []types.Float64) (interface{}, error) {
+	var integers []float64
+	for _, v := range sliceInt {
+		integers = append(integers, v.ValueFloat64())
+	}
+	return integers, nil
 }
 
 func AtoiNoError(strToConv string, resp *resource.ReadResponse) int32 {
