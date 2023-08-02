@@ -197,21 +197,28 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 
-	if plan.EdgeApplication.L2Caching.ValueBool() == true {
+	if plan.EdgeApplication.L2Caching.ValueBool() {
 		resp.Diagnostics.AddError(
 			"L2Caching error ",
 			"When you create a Edge Application: L2Caching must be false or remove from request",
 		)
 	}
 
-	if plan.EdgeApplication.LoadBalancer.ValueBool() == true {
+	if plan.EdgeApplication.LoadBalancer.ValueBool() {
 		resp.Diagnostics.AddError(
 			"LoadBalancer error ",
 			"When you create a Edge Application: LoadBalancer must be false or remove from request",
 		)
 	}
 
-	if plan.EdgeApplication.DeviceDetection.ValueBool() == true {
+	if plan.EdgeApplication.ApplicationAcceleration.ValueBool() {
+		resp.Diagnostics.AddError(
+			"LoadBalancer error",
+			"When you create a Edge Application: ApplicationAcceleration must be false or remove from request",
+		)
+	}
+
+	if plan.EdgeApplication.DeviceDetection.ValueBool() {
 		resp.Diagnostics.AddError(
 			"DeviceDetection error ",
 			"When you create a Edge Application: DeviceDetection must be false or remove from request",
@@ -238,14 +245,14 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	edgeApplication := edgeapplications.CreateApplicationRequest{
-		Name:                    plan.EdgeApplication.Name.ValueString(),
-		HttpPort:                sliceHTTPPort,
-		HttpsPort:               sliceHTTPSPort,
-		DebugRules:              edgeapplications.PtrBool(plan.EdgeApplication.DebugRules.ValueBool()),
-		Http3:                   edgeapplications.PtrBool(plan.EdgeApplication.HTTP3.ValueBool()),
-		SupportedCiphers:        edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
-		ApplicationAcceleration: edgeapplications.PtrBool(plan.EdgeApplication.ApplicationAcceleration.ValueBool()),
-		DeliveryProtocol:        edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
+		Name:              plan.EdgeApplication.Name.ValueString(),
+		HttpPort:          sliceHTTPPort,
+		HttpsPort:         sliceHTTPSPort,
+		DebugRules:        edgeapplications.PtrBool(plan.EdgeApplication.DebugRules.ValueBool()),
+		Http3:             edgeapplications.PtrBool(plan.EdgeApplication.HTTP3.ValueBool()),
+		SupportedCiphers:  edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
+		MinimumTlsVersion: edgeapplications.PtrString(plan.EdgeApplication.MinimumTLSVersion.ValueString()),
+		DeliveryProtocol:  edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
 	}
 
 	createEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsPost(ctx).CreateApplicationRequest(edgeApplication).Execute()
