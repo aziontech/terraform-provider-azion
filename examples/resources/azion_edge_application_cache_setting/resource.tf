@@ -1,5 +1,5 @@
 resource "azion_edge_application_cache_setting" "example" {
-  edge_application_id = <edge_application_id>
+  edge_application_id = 1234567890
   cache_settings = {
     name = "Terraform New Cache Setting Example"
     browser_cache_settings = "override"

@@ -1,0 +1,95 @@
+name: Check and Lint .tf 
+
+on:
+  push:
+    branches:
+      - ENG-26709
+
+jobs:
+  tflint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+
+      - name: install tflint
+        uses: terraform-linters/setup-tflint@v2
+
+      - run: tflint --init
+
+      - name: tflint
+        run: |
+          exit_code=0
+          for DIR in $(find ./examples -type f -name '*.tf' -exec dirname {} \; | sort -u); do
+            pushd "$DIR"
+            tflint \
+              --enable-rule=terraform_comment_syntax \
+              --enable-rule=terraform_deprecated_index \
+              --enable-rule=terraform_deprecated_interpolation \
+              --disable-rule=terraform_unused_declarations \
+              --disable-rule=terraform_required_version \
+              --disable-rule=terraform_required_providers \
+              --disable-rule=terraform_typed_variables \
+              || exit_code=1
+            popd
+          done
+          exit $exit_code
+  validate-terraform:
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v3
+          with:
+            fetch-depth: 0
+        
+        - uses: actions/setup-go@v3
+          with:
+            go-version-file: 'go.mod'
+
+        - name: build and install provider
+          run: make clean-dev && make install-dev
+
+        - name: override plugin
+          run: |
+            mkdir -p ~/.terraform.d/plugins/github.com/aziontech/azion/0.1.0/"$(go env GOOS)"_"$(go env GOARCH)"/
+            ls -lh ~/.terraform.d/plugins/github.com/aziontech/azion/0.1.0/linux_amd64
+
+        - uses: hashicorp/setup-terraform@v2
+          with:
+           terraform_version: 1.4.6
+           terraform_wrapper: false
+
+        - name: terraform check
+          run: |
+            for DIR in $(find ./examples -type f -name '*.tf' -exec dirname {} \; | sort -u); do
+              pushd "$DIR"
+              cat <<EOF > provider.tf
+            terraform {
+              required_providers {
+                azion = {
+                  source  = "github.com/aziontech/azion"
+                  version = "0.1.0"
+                }
+              }
+            }
+            provider "azion" {
+              api_token = "t0k3nh3r3t0k3nh3r3t0k3nh3r3t0k3nh3r3t0k3nh3r3"
+            }
+            EOF
+              if [ -f terraform.template.tfvars ]; then
+                cp terraform.template.tfvars terraform.tfvars
+              fi
+              echo; echo -e "\e[1;35m===> Initializing Example: $DIR <===\e[0m"; echo
+              terraform init
+              echo; echo -e "\e[1;35m===> Format Checking Example: $DIR <===\e[0m"; echo
+              cat provider.tf
+              terraform fmt -check
+              echo; echo -e "\e[1;35m===> Validating Example: $DIR <===\e[0m"; echo
+              # Catch errors
+              terraform validate
+              popd
+            done
