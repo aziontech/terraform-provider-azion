@@ -8,7 +8,7 @@ resource "local_file" "content_certificate_file" {
   content  = file("${path.module}/certificate.pem")
 }
 
-resource "azion_digital_certificate" "example" {
+resource "azion_digital_certificate" "example1" {
   certificate_result = {
     name                = "New SSL certificate for www.terraformExample.com"
     certificate_content = local_file.content_certificate_file.content
@@ -16,7 +16,7 @@ resource "azion_digital_certificate" "example" {
   }
 }
 
-resource "azion_digital_certificate" "example" {
+resource "azion_digital_certificate" "example2" {
   certificate_result = {
     name                = "New SSL certificate for www.terraformExample.com"
     certificate_content = file("${path.module}/certificate.pem")
