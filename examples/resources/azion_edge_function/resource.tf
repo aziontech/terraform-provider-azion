@@ -3,7 +3,7 @@ resource "local_file" "content_file" {
   content  = file("${path.module}/example.txt")
 }
 
-resource "azion_edge_function" "example" {
+resource "azion_edge_function" "example1" {
   edge_function = {
     name           = "Function Terraform Example"
     code           = local_file.content_file.content
@@ -18,7 +18,7 @@ resource "azion_edge_function" "example" {
 }
 
 
-resource "azion_edge_function" "example" {
+resource "azion_edge_function" "example2" {
   edge_function = {
     name           = "Function Terraform Example"
     code           = file("${path.module}/example.txt")
