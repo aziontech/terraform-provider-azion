@@ -1,11 +1,11 @@
 resource "local_file" "content_private_file" {
-  filename = "${path.module}/private_key.pem"
-  content  = file("${path.module}/private_key.pem")
+  filename = "${path.module}/dummy_private_key.pem"
+  content  = file("${path.module}/dummy_private_key.pem")
 }
 
 resource "local_file" "content_certificate_file" {
-  filename = "${path.module}/certificate.pem"
-  content  = file("${path.module}/certificate.pem")
+  filename = "${path.module}/dummy_certificate.pem"
+  content  = file("${path.module}/dummy_certificate.pem")
 }
 
 resource "azion_digital_certificate" "example1" {
@@ -19,8 +19,8 @@ resource "azion_digital_certificate" "example1" {
 resource "azion_digital_certificate" "example2" {
   certificate_result = {
     name                = "New SSL certificate for www.terraformExample.com"
-    certificate_content = file("${path.module}/certificate.pem")
-    private_key         = file("${path.module}/private_key.pem")
+    certificate_content = file("${path.module}/dummy_certificate.pem")
+    private_key         = file("${path.module}/dummy_private_key.pem")
   }
 }
 
