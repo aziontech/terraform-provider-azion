@@ -28,6 +28,6 @@ resource "azion_edge_function" "example2" {
       { "key" = "Value",
         "key" = "example"
     })
-    active = true / false
+    active = true
   }
 }
