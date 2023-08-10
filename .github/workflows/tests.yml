@@ -1,9 +1,6 @@
-name: Check and Lint .tf 
+name: Tests and Linting
 
-on:
-  push:
-    branches:
-      - ENG-26709
+on: [pull_request]
 
 jobs:
   tflint:
