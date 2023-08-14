@@ -2,6 +2,7 @@ name: Tests and Linting
 
 on: [pull_request]
 
+
 jobs:
   tflint:
     runs-on: ubuntu-latest
@@ -90,3 +91,35 @@ jobs:
               terraform validate
               popd
             done
+  func-tests:
+    name: Terraform Functional Tests
+    timeout-minutes: 60
+    env:
+      AZION_API_TOKEN: ${{ secrets.QA_STAGE_API_TESTS_TOKEN }}
+      AZION_API_ENTRYPOINT: "https://api.azionapi.net"
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v3
+          with:
+            fetch-depth: 0
+        
+        - uses: actions/setup-go@v3
+          with:
+            go-version-file: 'go.mod'
+
+        - name: build and install provider
+          run: make clean-dev && make install-dev
+
+        - name: override plugin
+          run: |
+            mkdir -p ~/.terraform.d/plugins/github.com/aziontech/azion/0.1.0/"$(go env GOOS)"_"$(go env GOARCH)"/
+            ls -lh ~/.terraform.d/plugins/github.com/aziontech/azion/0.1.0/linux_amd64
+
+        - uses: hashicorp/setup-terraform@v2
+          with:
+           terraform_version: 1.4.6
+           terraform_wrapper: false
+        
+        - name: run func tests
+          run: | 
+            make func-init && make func-plan && make func-apply && make func-destroy
