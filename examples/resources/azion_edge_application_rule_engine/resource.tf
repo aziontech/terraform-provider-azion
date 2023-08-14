@@ -1,12 +1,12 @@
 resource "azion_edge_application_rule_engine" "example" {
-  edge_application_id = <edge_application_id>
+  edge_application_id = 1234567890
   results = {
-    name = "Terraform Example"
-    phase = "request"
+    name        = "Terraform Example"
+    phase       = "request"
     description = "My rule engine"
     behaviors = [
       {
-        name = "deliver"
+        name   = "deliver"
         target = ""
       }
     ]
@@ -14,10 +14,10 @@ resource "azion_edge_application_rule_engine" "example" {
       {
         entries = [
           {
-            variable= "$${uri}"
-            operator= "is_equal"
-            conditional= "if"
-            input_value= "/"
+            variable    = "$${uri}"
+            operator    = "is_equal"
+            conditional = "if"
+            input_value = "/"
           }
         ]
       }

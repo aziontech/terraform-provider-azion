@@ -3,31 +3,31 @@ resource "local_file" "content_file" {
   content  = file("${path.module}/example.txt")
 }
 
-resource "azion_edge_function" "example" {
+resource "azion_edge_function" "example1" {
   edge_function = {
     name           = "Function Terraform Example"
-    code =         local_file.content_file.content
+    code           = local_file.content_file.content
     language       = "javascript"
     initiator_type = "edge_application"
-    json_args      = jsonencode(
-      {"key" = "Value",
+    json_args = jsonencode(
+      { "key" = "Value",
         "key" = "example"
-      })
-    active         = true
+    })
+    active = true
   }
 }
 
 
-resource "azion_edge_function" "example" {
+resource "azion_edge_function" "example2" {
   edge_function = {
     name           = "Function Terraform Example"
     code           = file("${path.module}/example.txt")
     language       = "javascript"
     initiator_type = "edge_application"
-    json_args      = jsonencode(
-      {"key" = "Value",
-       "key" = "example"
-      })
-    active         = true/false
+    json_args = jsonencode(
+      { "key" = "Value",
+        "key" = "example"
+    })
+    active = true
   }
 }
