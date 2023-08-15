@@ -5,6 +5,7 @@ on: [pull_request]
 
 jobs:
   tflint:
+    name: Lint .tf examples
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -38,6 +39,7 @@ jobs:
           done
           exit $exit_code
   validate-terraform:
+    name: Check and Validate .tf examples
     runs-on: ubuntu-latest
     steps:
         - uses: actions/checkout@v3
@@ -95,7 +97,7 @@ jobs:
     name: Terraform Functional Tests
     timeout-minutes: 60
     env:
-      AZION_API_TOKEN: ${{ secrets.E2E_TERRAFORM_FUNC_TESTS }}
+      AZION_API_TOKEN: ${{ secrets.E2E_PROD_TERRAFORM_TOKEN }}
       AZION_API_ENTRYPOINT: "https://api.azionapi.net"
     runs-on: ubuntu-latest
     steps:
