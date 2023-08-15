@@ -86,7 +86,6 @@ jobs:
               echo; echo -e "\e[1;35m===> Initializing Example: $DIR <===\e[0m"; echo
               terraform init
               echo; echo -e "\e[1;35m===> Format Checking Example: $DIR <===\e[0m"; echo
-              cat provider.tf
               terraform fmt -check
               echo; echo -e "\e[1;35m===> Validating Example: $DIR <===\e[0m"; echo
               # Catch errors
@@ -122,10 +121,6 @@ jobs:
            terraform_version: 1.4.6
            terraform_wrapper: false
         
-        - name: check secret
-          run: |
-            echo $AZION_API_TOKEN
-
         - name: run func tests
           run: | 
             make func-init && make func-plan && make func-apply && make func-destroy
