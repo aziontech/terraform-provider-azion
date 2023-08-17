@@ -1,13 +1,13 @@
 package provider
 
 import (
-	"github.com/aziontech/azionapi-go-sdk/idns"
-	"os"
-
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
 	"github.com/aziontech/azionapi-go-sdk/domains"
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
 	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
+	"github.com/aziontech/azionapi-go-sdk/idns"
+	"github.com/aziontech/azionapi-go-sdk/networklist"
+	"os"
 )
 
 type apiClient struct {
@@ -25,6 +25,9 @@ type apiClient struct {
 
 	digitalCertificatesConfig *digital_certificates.Configuration
 	digitalCertificatesApi    *digital_certificates.APIClient
+
+	networkListConfig *networklist.Configuration
+	networkListApi    *networklist.APIClient
 }
 
 func Client(APIToken string, userAgent string) *apiClient {
@@ -40,6 +43,10 @@ func Client(APIToken string, userAgent string) *apiClient {
 	if envApiEntrypoint != "" {
 		client.domainsConfig.Servers[0].URL = envApiEntrypoint
 		client.idnsConfig.Servers[0].URL = envApiEntrypoint
+		client.edgefunctionsConfig.Servers[0].URL = envApiEntrypoint
+		client.edgeApplicationsConfig.Servers[0].URL = envApiEntrypoint
+		client.digitalCertificatesConfig.Servers[0].URL = envApiEntrypoint
+		client.networkListConfig.Servers[0].URL = envApiEntrypoint
 	}
 
 	client.domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
@@ -66,6 +73,11 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.digitalCertificatesConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.digitalCertificatesConfig.UserAgent = userAgent
 	client.digitalCertificatesApi = digital_certificates.NewAPIClient(client.digitalCertificatesConfig)
+
+	client.networkListConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.networkListConfig.AddDefaultHeader("Accept", "application/json; version=3")
+	client.networkListConfig.UserAgent = userAgent
+	client.networkListApi = networklist.NewAPIClient(client.networkListConfig)
 
 	return client
 }
