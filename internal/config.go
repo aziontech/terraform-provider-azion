@@ -6,7 +6,7 @@ import (
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
 	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
 	"github.com/aziontech/azionapi-go-sdk/idns"
-	networklist "github.com/aziontech/azionapi-go-sdk/networklist"
+	"github.com/aziontech/azionapi-go-sdk/networklist"
 	"os"
 )
 

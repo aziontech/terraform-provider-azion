@@ -86,5 +86,3 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
-
-replace github.com/aziontech/azionapi-go-sdk => ../azionapi-go-sdk

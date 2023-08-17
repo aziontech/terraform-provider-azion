@@ -2,7 +2,7 @@ package provider
 
 import (
 	"context"
-	networklist "github.com/aziontech/azionapi-go-sdk/networklist"
+	"github.com/aziontech/azionapi-go-sdk/networklist"
 	"io"
 	"strconv"
 	"time"
