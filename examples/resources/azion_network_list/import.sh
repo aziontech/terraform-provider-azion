@@ -1,0 +1,1 @@
+terraform import azion_network_list.example 12345
