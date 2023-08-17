@@ -1,4 +1,4 @@
-resource "azion_network_list" "example" {
+resource "azion_network_list" "exampleOne" {
   results = {
     name  = "New NetworkList for terraform Countries"
     list_type = "countries"
@@ -10,7 +10,7 @@ resource "azion_network_list" "example" {
   }
 }
 
-resource "azion_network_list" "example" {
+resource "azion_network_list" "exampleTwo" {
   results = {
     name  = "New NetworkList for terraform ip_cidr"
     list_type = "ip_cidr"

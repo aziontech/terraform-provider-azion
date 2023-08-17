@@ -171,5 +171,4 @@ func (n *NetworkListDataSource) Read(ctx context.Context, req datasource.ReadReq
 			return
 		}
 	}
-
 }
