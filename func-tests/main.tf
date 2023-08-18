@@ -7,13 +7,13 @@ terraform {
   }
 }
 
-# ---------------------- RESOURCES ----------------------
+# # ---------------------- RESOURCES ----------------------
 
 resource "azion_edge_application_main_setting" "testfunc" {
   edge_application = {
     name : "Terraform Main Settings test-func"
     supported_ciphers : "all"
-    delivery_protocol : "http,https"
+    delivery_protocol : "http"
     http_port : [80, 8080]
     https_port : [443]
     minimum_tls_version : ""
@@ -157,6 +157,7 @@ resource "azion_intelligent_dns_dnssec" "testfunc" {
   dns_sec = {
     is_enabled = true
   }
+  depends_on = [ azion_intelligent_dns_zone.testfunc ]
 }
 
 resource "azion_intelligent_dns_record" "testfunc" {

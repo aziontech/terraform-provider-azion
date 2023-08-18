@@ -2,7 +2,6 @@ name: Tests and Linting
 
 on: [pull_request]
 
-
 jobs:
   tflint:
     name: Lint .tf examples
@@ -120,10 +119,6 @@ jobs:
           with:
            terraform_version: 1.4.6
            terraform_wrapper: false
-        
-        - name: check secret
-          run: | 
-            echo $AZION_API_TOKEN
 
         - name: run func tests
           run: | 
