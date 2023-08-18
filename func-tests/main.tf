@@ -14,7 +14,7 @@ resource "azion_edge_application_main_setting" "testfunc" {
     name : "Terraform Main Settings test-func"
     supported_ciphers : "all"
     delivery_protocol : "http"
-    http_port : [80, 8080]
+    http_port : [80]
     https_port : [443]
     minimum_tls_version : ""
     debug_rules : false
