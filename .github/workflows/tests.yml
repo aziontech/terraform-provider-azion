@@ -125,5 +125,6 @@ jobs:
             make func-init && make func-plan && make func-apply
 
         - name: destroy after run func tests
+          if: ${{ always() }}
           run: | 
             make func-destroy
