@@ -122,4 +122,8 @@ jobs:
 
         - name: run func tests
           run: | 
-            make func-init && make func-plan && make func-apply && make func-destroy
+            make func-init && make func-plan && make func-apply
+
+        - name: destroy after run func tests
+          run: | 
+            make func-destroy
