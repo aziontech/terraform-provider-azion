@@ -95,8 +95,8 @@ jobs:
     name: Terraform Functional Tests
     timeout-minutes: 60
     env:
-      AZION_API_TOKEN: ${{ secrets.E2E_STAGE_TERRAFORM_TOKEN }}
-      AZION_API_ENTRYPOINT: "https://stage-api.azion.net"
+      AZION_API_TOKEN: ${{ secrets.E2E_PROD_TERRAFORM_TOKEN }}
+      AZION_API_ENTRYPOINT: "https://api.azionapi.net"
     runs-on: ubuntu-latest
     steps:
         - uses: actions/checkout@v3
