@@ -1,13 +1,14 @@
 package provider
 
 import (
+	"github.com/aziontech/azionapi-go-sdk/idns"
+	"os"
+
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
 	"github.com/aziontech/azionapi-go-sdk/domains"
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
 	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
-	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/aziontech/azionapi-go-sdk/networklist"
-	"os"
 )
 
 type apiClient struct {
