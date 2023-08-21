@@ -38,7 +38,7 @@ jobs:
           done
           exit $exit_code
   validate-terraform:
-    name: Check and Validate .tf examples
+    name: Check fmt and Validate .tf examples
     runs-on: ubuntu-latest
     steps:
         - uses: actions/checkout@v3
