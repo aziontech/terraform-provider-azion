@@ -44,7 +44,7 @@ type NetworkListResourceResults struct {
 	LastModified   types.String `tfsdk:"last_modified"`
 	ListType       types.String `tfsdk:"list_type"`
 	Name           types.String `tfsdk:"name"`
-	ItemsValuesStr types.List   `tfsdk:"items_values_str"`
+	ItemsValuesStr types.Set    `tfsdk:"items_values_str"`
 	ItemsValuesInt types.List   `tfsdk:"items_values_int"`
 }
 
@@ -91,7 +91,7 @@ func (r *networkListResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Description: "Name of the network list.",
 						Required:    true,
 					},
-					"items_values_str": schema.ListAttribute{
+					"items_values_str": schema.SetAttribute{
 						Required:    true,
 						ElementType: types.StringType,
 						Description: "List of countries in the network list.",
@@ -166,7 +166,7 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		LastModified:   types.StringValue(createNetworkListResponse.Results.GetLastModified()),
 		ListType:       types.StringValue(createNetworkListResponse.Results.GetListType()),
 		Name:           types.StringValue(createNetworkListResponse.Results.GetName()),
-		ItemsValuesStr: utils.SliceStringTypeToList(sliceString),
+		ItemsValuesStr: utils.SliceStringTypeToSet(sliceString),
 		ItemsValuesInt: types.ListNull(types.Int64Type),
 	}
 
@@ -228,7 +228,7 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 				LastModified:   types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetLastModified()),
 				ListType:       types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetListType()),
 				Name:           types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetName()),
-				ItemsValuesStr: utils.SliceStringTypeToList(sliceString),
+				ItemsValuesStr: utils.SliceStringTypeToSet(sliceString),
 				ItemsValuesInt: types.ListNull(types.Int64Type),
 			},
 			ID: types.StringValue(networkListId),
@@ -246,7 +246,7 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 				LastModified:   types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetLastModified()),
 				ListType:       types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetListType()),
 				Name:           types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetName()),
-				ItemsValuesStr: types.ListValueMust(types.StringType, nil),
+				ItemsValuesStr: types.SetValueMust(types.StringType, nil),
 				ItemsValuesInt: utils.SliceIntTypeToList(sliceInt),
 			},
 			ID: types.StringValue(networkListId),
@@ -320,7 +320,7 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		LastModified:   types.StringValue(updateNetworkList.Results.GetLastModified()),
 		ListType:       types.StringValue(updateNetworkList.Results.GetListType()),
 		Name:           types.StringValue(updateNetworkList.Results.GetName()),
-		ItemsValuesStr: utils.SliceStringTypeToList(sliceString),
+		ItemsValuesStr: utils.SliceStringTypeToSet(sliceString),
 		ItemsValuesInt: types.ListNull(types.Int64Type),
 	}
 

@@ -1,6 +1,6 @@
 resource "azion_network_list" "exampleOne" {
   results = {
-    name  = "New NetworkList for terraform Countries"
+    name      = "New NetworkList for terraform Countries"
     list_type = "countries"
     items_values_str = [
       "BR",
@@ -12,7 +12,7 @@ resource "azion_network_list" "exampleOne" {
 
 resource "azion_network_list" "exampleTwo" {
   results = {
-    name  = "New NetworkList for terraform ip_cidr"
+    name      = "New NetworkList for terraform ip_cidr"
     list_type = "ip_cidr"
     items_values_str = [
       "192.168.0.1",
