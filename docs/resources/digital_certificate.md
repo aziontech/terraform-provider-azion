@@ -16,28 +16,28 @@ Parameter `private_key` and `certificate_content` can be specified with local_fi
 
 ```terraform
 resource "local_file" "content_private_file" {
-  filename = "${path.module}/private_key.pem"
-  content  = file("${path.module}/private_key.pem")
+  filename = "${path.module}/dummy_private_key.pem"
+  content  = file("${path.module}/dummy_private_key.pem")
 }
 
 resource "local_file" "content_certificate_file" {
-  filename = "${path.module}/certificate.pem"
-  content  = file("${path.module}/certificate.pem")
+  filename = "${path.module}/dummy_certificate.pem"
+  content  = file("${path.module}/dummy_certificate.pem")
 }
 
-resource "azion_digital_certificate" "example" {
+resource "azion_digital_certificate" "example1" {
   certificate_result = {
-    name  = "New SSL certificate for www.terraformExample.com"
+    name                = "New SSL certificate for www.terraformExample.com"
     certificate_content = local_file.content_certificate_file.content
-    private_key = local_file.content_private_file.content
+    private_key         = local_file.content_private_file.content
   }
 }
 
-resource "azion_digital_certificate" "example" {
+resource "azion_digital_certificate" "example2" {
   certificate_result = {
-    name  = "New SSL certificate for www.terraformExample.com"
-    certificate_content = file("${path.module}/certificate.pem")
-    private_key = file("${path.module}/private_key.pem")
+    name                = "New SSL certificate for www.terraformExample.com"
+    certificate_content = file("${path.module}/dummy_certificate.pem")
+    private_key         = file("${path.module}/dummy_private_key.pem")
   }
 }
 ```

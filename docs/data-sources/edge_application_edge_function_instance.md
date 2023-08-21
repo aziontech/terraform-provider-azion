@@ -14,9 +14,9 @@ description: |-
 
 ```terraform
 data "azion_edge_application_edge_function_instance" "example" {
-  edge_application_id = <edge_application_id>
+  edge_application_id = 1234567890
   results = {
-    id = <edge_functions_instance>
+    id = 123456
   }
 }
 ```
