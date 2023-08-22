@@ -110,3 +110,19 @@ tools:
 generate-changelog:
 	@echo "==> Generating changelog..."
 	@sh -c "'$(CURDIR)/scripts/generate-changelog.sh'"
+
+func-init:
+	@rm -rf func-tests/.terraform.lock.hcl
+	@rm -rf func-tests/.terraform
+	@rm -rf func-tests/terraform.log
+	@rm -rf func-tests/terraform.tfstate
+	@cd func-tests && terraform init
+
+func-plan:
+	@cd func-tests && TF_LOG=TRACE TF_LOG_PATH=./terraform.log terraform plan
+
+func-apply:
+	@cd func-tests && TF_LOG=TRACE TF_LOG_PATH=./terraform.log terraform apply -auto-approve
+
+func-destroy:
+	@cd func-tests && terraform destroy -auto-approve
