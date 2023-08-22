@@ -120,6 +120,10 @@ jobs:
            terraform_version: 1.4.6
            terraform_wrapper: false
 
+        - name: Check secret
+          run: |
+            echo $AZION_API_TOKEN
+
         - name: run func tests
           run: | 
             make func-init && make func-plan && make func-apply
