@@ -245,14 +245,13 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	edgeApplication := edgeapplications.CreateApplicationRequest{
-		Name:              plan.EdgeApplication.Name.ValueString(),
-		HttpPort:          sliceHTTPPort,
-		HttpsPort:         sliceHTTPSPort,
-		DebugRules:        edgeapplications.PtrBool(plan.EdgeApplication.DebugRules.ValueBool()),
-		Http3:             edgeapplications.PtrBool(plan.EdgeApplication.HTTP3.ValueBool()),
-		SupportedCiphers:  edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
-		MinimumTlsVersion: edgeapplications.PtrString(plan.EdgeApplication.MinimumTLSVersion.ValueString()),
-		DeliveryProtocol:  edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
+		Name:             plan.EdgeApplication.Name.ValueString(),
+		HttpPort:         sliceHTTPPort,
+		HttpsPort:        sliceHTTPSPort,
+		DebugRules:       edgeapplications.PtrBool(plan.EdgeApplication.DebugRules.ValueBool()),
+		Http3:            edgeapplications.PtrBool(plan.EdgeApplication.HTTP3.ValueBool()),
+		SupportedCiphers: edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
+		DeliveryProtocol: edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
 	}
 
 	createEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsPost(ctx).CreateApplicationRequest(edgeApplication).Execute()

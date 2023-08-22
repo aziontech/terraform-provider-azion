@@ -14,7 +14,7 @@ description: |-
 
 ```terraform
 data "azion_domain" "example" {
-  id = "<domain_id>"
+  id = "1234567890"
 }
 ```
 

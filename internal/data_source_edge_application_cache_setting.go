@@ -215,7 +215,7 @@ func (c *CacheSettingDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	var CookieNames []types.String
 	for _, cookieName := range cacheSettingResponse.Results.GetCookieNames() {
-		CookieNames = append(CookieNames, types.StringValue(cookieName))
+		CookieNames = append(CookieNames, types.StringValue(*cookieName))
 	}
 	var QueryStringFields []types.String
 	for _, queryStringField := range cacheSettingResponse.Results.GetQueryStringFields() {

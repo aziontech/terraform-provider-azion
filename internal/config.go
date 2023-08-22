@@ -1,12 +1,14 @@
 package provider
 
 import (
+	"github.com/aziontech/azionapi-go-sdk/idns"
+	"os"
+
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
 	"github.com/aziontech/azionapi-go-sdk/domains"
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
 	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
-	"github.com/aziontech/azionapi-go-sdk/idns"
-	"os"
+	"github.com/aziontech/azionapi-go-sdk/networklist"
 )
 
 type apiClient struct {
@@ -24,6 +26,9 @@ type apiClient struct {
 
 	digitalCertificatesConfig *digital_certificates.Configuration
 	digitalCertificatesApi    *digital_certificates.APIClient
+
+	networkListConfig *networklist.Configuration
+	networkListApi    *networklist.APIClient
 }
 
 func Client(APIToken string, userAgent string) *apiClient {
@@ -33,6 +38,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		edgefunctionsConfig:       edgefunctions.NewConfiguration(),
 		edgeApplicationsConfig:    edgeapplications.NewConfiguration(),
 		digitalCertificatesConfig: digital_certificates.NewConfiguration(),
+		networkListConfig:         networklist.NewConfiguration(),
 	}
 
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
@@ -42,6 +48,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		client.edgefunctionsConfig.Servers[0].URL = envApiEntrypoint
 		client.edgeApplicationsConfig.Servers[0].URL = envApiEntrypoint
 		client.digitalCertificatesConfig.Servers[0].URL = envApiEntrypoint
+		client.networkListConfig.Servers[0].URL = envApiEntrypoint
 	}
 
 	client.domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
@@ -68,6 +75,11 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.digitalCertificatesConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.digitalCertificatesConfig.UserAgent = userAgent
 	client.digitalCertificatesApi = digital_certificates.NewAPIClient(client.digitalCertificatesConfig)
+
+	client.networkListConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.networkListConfig.AddDefaultHeader("Accept", "application/json; version=3")
+	client.networkListConfig.UserAgent = userAgent
+	client.networkListApi = networklist.NewAPIClient(client.networkListConfig)
 
 	return client
 }

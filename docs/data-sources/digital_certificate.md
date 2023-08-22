@@ -14,7 +14,7 @@ description: |-
 
 ```terraform
 data "azion_digital_certificate" "example" {
-  certificate_id = <certificate_id>
+  certificate_id = 12345
 }
 ```
 
