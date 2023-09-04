@@ -195,7 +195,7 @@ func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadR
 	for _, results := range EdgeFirewallsResponse.Results {
 		var sliceInt []types.Int64
 		for _, itemsValuesInt := range results.GetDomains() {
-			sliceInt = append(sliceInt, types.Int64Value(int64(itemsValuesInt)))
+			sliceInt = append(sliceInt, types.Int64Value(itemsValuesInt))
 		}
 
 		GetEdgeFirewalls := EdgeFirewallsResults{
