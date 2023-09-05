@@ -7,6 +7,7 @@ import (
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
 	"github.com/aziontech/azionapi-go-sdk/domains"
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
+	"github.com/aziontech/azionapi-go-sdk/edgefirewall"
 	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
 	"github.com/aziontech/azionapi-go-sdk/networklist"
 )
@@ -29,6 +30,9 @@ type apiClient struct {
 
 	networkListConfig *networklist.Configuration
 	networkListApi    *networklist.APIClient
+
+	edgefirewallConfig *edgefirewall.Configuration
+	edgeFirewallApi    *edgefirewall.APIClient
 }
 
 func Client(APIToken string, userAgent string) *apiClient {
@@ -39,6 +43,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		edgeApplicationsConfig:    edgeapplications.NewConfiguration(),
 		digitalCertificatesConfig: digital_certificates.NewConfiguration(),
 		networkListConfig:         networklist.NewConfiguration(),
+		edgefirewallConfig:        edgefirewall.NewConfiguration(),
 	}
 
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
@@ -48,6 +53,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		client.edgefunctionsConfig.Servers[0].URL = envApiEntrypoint
 		client.edgeApplicationsConfig.Servers[0].URL = envApiEntrypoint
 		client.digitalCertificatesConfig.Servers[0].URL = envApiEntrypoint
+		client.edgefirewallConfig.Servers[0].URL = envApiEntrypoint
 		client.networkListConfig.Servers[0].URL = envApiEntrypoint
 	}
 
@@ -80,6 +86,11 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.networkListConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.networkListConfig.UserAgent = userAgent
 	client.networkListApi = networklist.NewAPIClient(client.networkListConfig)
+
+	client.edgefirewallConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.edgefirewallConfig.AddDefaultHeader("Accept", "application/json; version=3")
+	client.edgefirewallConfig.UserAgent = userAgent
+	client.edgeFirewallApi = edgefirewall.NewAPIClient(client.edgefirewallConfig)
 
 	return client
 }

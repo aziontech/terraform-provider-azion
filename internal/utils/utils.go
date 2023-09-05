@@ -24,7 +24,7 @@ func SliceStringTypeToList(slice []types.String) types.List {
 
 func SliceIntTypeToList(slice []types.Int64) types.List {
 	if len(slice) == 0 {
-		return types.ListNull(types.StringType)
+		return types.ListNull(types.Int64Type)
 	}
 	strs := []attr.Value{}
 	for _, value := range slice {
