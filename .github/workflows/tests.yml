@@ -4,7 +4,7 @@ name: Tests and Linting
 on:
   push:
     branches:
-      - test_action
+      - updt_test-func-action
 
 
 jobs:
