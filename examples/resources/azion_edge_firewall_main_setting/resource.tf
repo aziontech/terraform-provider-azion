@@ -1,4 +1,4 @@
-resource "azion_edge_firewall" "example" {
+resource "azion_edge_firewall_main_setting" "example" {
   results = {
     name  = "New EdgeFirewall in terraform"
     is_active = true

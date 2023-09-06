@@ -136,7 +136,7 @@ resource "azion_domain" "testfunc" {
   }
 }
 
-resource "azion_edge_firewall" "testfunc" {
+resource "azion_edge_firewall_main_setting" "testfunc" {
   results = {
     name                       = "EdgeFirewall test-func"
     is_active                  = true
@@ -252,13 +252,13 @@ data "azion_edge_functions" "example" {
 #   }
 # }
 
-data "azion_edge_firewalls" "example" {
+data "azion_edge_firewall_main_settings" "example" {
   page      = 1
   page_size = 2
 }
 
-data "azion_edge_firewall" "example" {
-  edge_firewall_id = azion_edge_firewall.testfunc.results.id
+data "azion_edge_firewall_main_setting" "example" {
+  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
 }
 
 data "azion_digital_certificates" "example" {
