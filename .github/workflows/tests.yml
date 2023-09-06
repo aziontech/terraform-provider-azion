@@ -120,6 +120,10 @@ jobs:
            terraform_version: 1.4.6
            terraform_wrapper: false
 
+        - name: replace test-func string on .tf
+          run: |
+            sed -i 's/test-func/test-func-action/g' func-tests/main.tf
+
         - name: run func tests
           run: | 
             make func-init && make func-plan && make func-apply
