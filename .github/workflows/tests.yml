@@ -1,11 +1,6 @@
 name: Tests and Linting
 
-# on: [pull_request]
-on:
-  push:
-    branches:
-      - updt_test-func-action
-
+on: [pull_request]
 
 jobs:
   tflint:
@@ -127,7 +122,7 @@ jobs:
 
         - name: replace test-func string on .tf
           run: |
-            sed -i 's/test-func/test-func-action/g' func-tests/main.tf && cat func-tests/main.tf | grep 'test-func'
+            sed -i 's/test-func/test-func-action/g' func-tests/main.tf
   
         - name: run func tests
           run: | 
