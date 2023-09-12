@@ -97,19 +97,19 @@ resource "azion_edge_application_cache_setting" "testfunc" {
 #   }
 # }
 
-# resource "azion_edge_function" "testfunc" {
-#   edge_function = {
-#     name           = "Terraform Edge Function test-func"
-#     code           = file("${path.module}/mock_files/dummy_script.txt")
-#     language       = "javascript"
-#     initiator_type = "edge_application"
-#     json_args = jsonencode(
-#       { "key" = "Value",
-#         "key" = "example"
-#     })
-#     active = true
-#   }
-# }
+resource "azion_edge_function" "testfunc" {
+  edge_function = {
+    name           = "Terraform Edge Function test-func"
+    code           = file("${path.module}/mock_files/dummy_script.txt")
+    language       = "javascript"
+    initiator_type = "edge_application"
+    json_args = jsonencode(
+      { "key" = "Value",
+        "key" = "example"
+    })
+    active = true
+  }
+}
 
 # resource "azion_edge_application_edge_functions_instance" "example" {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
@@ -226,9 +226,9 @@ data "azion_edge_application_rules_engine" "example" {
 data "azion_edge_functions" "example" {
 }
 
-# data "azion_edge_function" "example" {
-#   id = "1234567890"
-# }
+data "azion_edge_function" "example" {
+  id = azion_edge_function.testfunc.edge_function.function_id
+}
 
 # data "azion_edge_application_edge_functions_instance" "example" {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
