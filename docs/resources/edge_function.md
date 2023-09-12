@@ -6,7 +6,8 @@ description: |-
   ~> Note about Json_Args
   Parameter json_args must be specified with jsonencode function
   ~> Note about Code
-  Parameter code may be specified with local_file in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file
+  Parameter code: For prevent any inconsistent use the function trimspace() - https://developer.hashicorp.com/terraform/language/functions/trimspace
+   Can be specified with local_file in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file
 ---
 
 # azion_edge_function (Resource)
@@ -15,7 +16,8 @@ description: |-
 Parameter `json_args` must be specified with `jsonencode` function
 
 ~> **Note about Code**
-Parameter `code` may be specified with local_file in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file
+Parameter `code`: For prevent any inconsistent use the function trimspace() - https://developer.hashicorp.com/terraform/language/functions/trimspace
+ Can be specified with local_file in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file
 
 ## Example Usage
 
@@ -28,7 +30,7 @@ resource "local_file" "content_file" {
 resource "azion_edge_function" "example1" {
   edge_function = {
     name           = "Function Terraform Example"
-    code           = local_file.content_file.content
+    code           = trimspace(local_file.content_file.content)
     language       = "javascript"
     initiator_type = "edge_application"
     json_args = jsonencode(
@@ -43,7 +45,7 @@ resource "azion_edge_function" "example1" {
 resource "azion_edge_function" "example2" {
   edge_function = {
     name           = "Function Terraform Example"
-    code           = file("${path.module}/example.txt")
+    code           = trimspace(file("${path.module}/example.txt"))
     language       = "javascript"
     initiator_type = "edge_application"
     json_args = jsonencode(
