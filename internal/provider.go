@@ -119,7 +119,8 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewEdgeApplicationRulesEngineResource,
 		NewEdgeApplicationCacheSettingsResource,
 		NewDigitalCertificateResource,
-		NewNetworkListResource,
+		NetworkListResource,
+		EdgeFirewallResource,
 	}
 }
 

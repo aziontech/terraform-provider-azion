@@ -13,7 +13,7 @@ import (
 
 func SliceStringTypeToList(slice []types.String) types.List {
 	if len(slice) == 0 {
-		return types.ListNull(types.StringType)
+		return types.ListValueMust(types.StringType, nil)
 	}
 	strs := []attr.Value{}
 	for _, value := range slice {
@@ -24,24 +24,24 @@ func SliceStringTypeToList(slice []types.String) types.List {
 
 func SliceIntTypeToList(slice []types.Int64) types.List {
 	if len(slice) == 0 {
-		return types.ListNull(types.Int64Type)
+		return types.ListValueMust(types.Int64Type, nil)
 	}
-	strs := []attr.Value{}
+	integers := []attr.Value{}
 	for _, value := range slice {
-		strs = append(strs, value)
+		integers = append(integers, value)
 	}
-	return types.ListValueMust(types.Int64Type, strs)
+	return types.ListValueMust(types.Int64Type, integers)
 }
 
 func SliceStringTypeToSet(slice []types.String) types.Set {
 	if len(slice) == 0 {
 		return types.SetNull(types.StringType)
 	}
-	strs := []attr.Value{}
+	strings := []attr.Value{}
 	for _, value := range slice {
-		strs = append(strs, value)
+		strings = append(strings, value)
 	}
-	return types.SetValueMust(types.StringType, strs)
+	return types.SetValueMust(types.StringType, strings)
 }
 
 func ConvertStringToInterface(jsonArgs string) (interface{}, error) {

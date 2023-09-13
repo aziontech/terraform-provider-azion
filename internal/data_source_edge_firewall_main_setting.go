@@ -46,7 +46,7 @@ func (e *EdgeFirewallDataSource) Configure(_ context.Context, req datasource.Con
 }
 
 func (e *EdgeFirewallDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_firewall"
+	resp.TypeName = req.ProviderTypeName + "_edge_firewall_main_setting"
 }
 
 func (e *EdgeFirewallDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {

@@ -23,7 +23,7 @@ var (
 	_ resource.ResourceWithImportState = &networkListResource{}
 )
 
-func NewNetworkListResource() resource.Resource {
+func NetworkListResource() resource.Resource {
 	return &networkListResource{}
 }
 

@@ -136,6 +136,17 @@ resource "azion_domain" "testfunc" {
   }
 }
 
+resource "azion_edge_firewall_main_setting" "testfunc" {
+  results = {
+    name                       = "EdgeFirewall test-func"
+    is_active                  = true
+    edge_functions_enabled     = true
+    network_protection_enabled = true
+    waf_enabled                = true
+    domains                    = []
+  }
+}
+
 resource "azion_digital_certificate" "testfunc" {
   certificate_result = {
     name                = "Terraform Digital Certificate test-func"
@@ -240,6 +251,15 @@ data "azion_edge_function" "example" {
 #     id = 123456
 #   }
 # }
+
+data "azion_edge_firewall_main_settings" "example" {
+  page      = 1
+  page_size = 2
+}
+
+data "azion_edge_firewall_main_setting" "example" {
+  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
+}
 
 data "azion_digital_certificates" "example" {
 }
