@@ -243,7 +243,7 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		PageSize = types.Int64Value(10)
 	}
 
-	originsResponse, response, err := o.client.edgeApplicationsApi.EdgeApplicationsOriginsApi.EdgeApplicationsEdgeApplicationIdOriginsGet(ctx, edgeApplicationID.ValueInt64()).Execute()
+	originsResponse, response, err := o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsGet(ctx, edgeApplicationID.ValueInt64()).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {

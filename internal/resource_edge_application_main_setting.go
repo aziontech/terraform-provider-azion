@@ -245,16 +245,17 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	edgeApplication := edgeapplications.CreateApplicationRequest{
-		Name:             plan.EdgeApplication.Name.ValueString(),
-		HttpPort:         sliceHTTPPort,
-		HttpsPort:        sliceHTTPSPort,
-		DebugRules:       edgeapplications.PtrBool(plan.EdgeApplication.DebugRules.ValueBool()),
-		Http3:            edgeapplications.PtrBool(plan.EdgeApplication.HTTP3.ValueBool()),
-		SupportedCiphers: edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
-		DeliveryProtocol: edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
+		Name:              plan.EdgeApplication.Name.ValueString(),
+		HttpPort:          sliceHTTPPort,
+		HttpsPort:         sliceHTTPSPort,
+		MinimumTlsVersion: edgeapplications.PtrString(plan.EdgeApplication.MinimumTLSVersion.ValueString()),
+		DebugRules:        edgeapplications.PtrBool(plan.EdgeApplication.DebugRules.ValueBool()),
+		Http3:             edgeapplications.PtrBool(plan.EdgeApplication.HTTP3.ValueBool()),
+		SupportedCiphers:  edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
+		DeliveryProtocol:  edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
 	}
 
-	createEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsPost(ctx).CreateApplicationRequest(edgeApplication).Execute()
+	createEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsPost(ctx).CreateApplicationRequest(edgeApplication).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -313,7 +314,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	stateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute()
+	stateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -409,7 +410,7 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		L2Caching:               edgeapplications.PtrBool(plan.EdgeApplication.L2Caching.ValueBool()),
 	}
 
-	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).ApplicationPutRequest(edgeApplication).Execute()
+	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).ApplicationPutRequest(edgeApplication).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -472,7 +473,7 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsApi.EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute()
+	response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
