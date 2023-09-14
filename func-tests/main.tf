@@ -18,7 +18,6 @@ resource "azion_edge_application_main_setting" "testfunc" {
     https_port : [443]
     minimum_tls_version : ""
     debug_rules : false
-    caching : true
     edge_firewall : false
     edge_functions : false
     image_optimization : false

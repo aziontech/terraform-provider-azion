@@ -204,6 +204,13 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		)
 	}
 
+	if plan.EdgeApplication.EdgeFunctions.ValueBool() {
+		resp.Diagnostics.AddError(
+			"EdgeFunction error ",
+			"When you create a Edge Application: EdgeFunction must be false or remove from request",
+		)
+	}
+
 	if plan.EdgeApplication.LoadBalancer.ValueBool() {
 		resp.Diagnostics.AddError(
 			"LoadBalancer error ",
@@ -389,6 +396,7 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 			"err",
 		)
 	}
+
 	edgeApplication := edgeapplications.ApplicationPutRequest{
 		Name:                    plan.EdgeApplication.Name.ValueString(),
 		HttpPort:                sliceHTTPPort,
@@ -398,7 +406,6 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		Http3:                   edgeapplications.PtrBool(plan.EdgeApplication.HTTP3.ValueBool()),
 		SupportedCiphers:        edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
 		ApplicationAcceleration: edgeapplications.PtrBool(plan.EdgeApplication.ApplicationAcceleration.ValueBool()),
-		Caching:                 edgeapplications.PtrBool(plan.EdgeApplication.Caching.ValueBool()),
 		DeviceDetection:         edgeapplications.PtrBool(plan.EdgeApplication.DeviceDetection.ValueBool()),
 		EdgeFirewall:            edgeapplications.PtrBool(plan.EdgeApplication.EdgeFirewall.ValueBool()),
 		EdgeFunctions:           edgeapplications.PtrBool(plan.EdgeApplication.EdgeFunctions.ValueBool()),
