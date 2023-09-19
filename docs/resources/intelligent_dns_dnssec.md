@@ -41,36 +41,4 @@ Required:
 
 - `is_enabled` (Boolean) Zone DNSSEC flags for enabled.
 
-Read-Only:
-
-- `delegation_signer` (Attributes) Zone DNSSEC delegation-signer. (see [below for nested schema](#nestedatt--dns_sec--delegation_signer))
-- `status` (String) The status of the Zone DNSSEC.
-
-<a id="nestedatt--dns_sec--delegation_signer"></a>
-### Nested Schema for `dns_sec.delegation_signer`
-
-Read-Only:
-
-- `algorithmtype` (Attributes) Digest algorithm use for Zone DNSSEC. (see [below for nested schema](#nestedatt--dns_sec--delegation_signer--algorithmtype))
-- `digest` (String) Zone DNSSEC digest.
-- `digesttype` (Attributes) Digest Type for Zone DNSSEC. (see [below for nested schema](#nestedatt--dns_sec--delegation_signer--digesttype))
-- `keytag` (Number) Key Tag for the Zone DNSSEC.
-
-<a id="nestedatt--dns_sec--delegation_signer--algorithmtype"></a>
-### Nested Schema for `dns_sec.delegation_signer.algorithmtype`
-
-Read-Only:
-
-- `id` (Number) The ID of this digest.
-- `slug` (String) The Slug of this digest.
-
-
-<a id="nestedatt--dns_sec--delegation_signer--digesttype"></a>
-### Nested Schema for `dns_sec.delegation_signer.digesttype`
-
-Read-Only:
-
-- `id` (Number) The ID of this digest.
-- `slug` (String) The Slug of this digest.
-
 

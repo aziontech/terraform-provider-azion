@@ -63,7 +63,7 @@ func (r *edgeFunctionResource) Schema(_ context.Context, _ resource.SchemaReques
 			"~> **Note about Json_Args**\n" +
 			"Parameter `json_args` must be specified with `jsonencode` function\n\n" +
 			"~> **Note about Code**\n" +
-			"Parameter `code` may be specified with local_file in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file",
+			"Parameter `code`: For prevent any inconsistent use the function trimspace() - https://developer.hashicorp.com/terraform/language/functions/trimspace\n Can be specified with local_file in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
@@ -330,12 +330,24 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	edgeFunctionId := state.EdgeFunction.FunctionID.ValueInt64()
 	updateEdgeFunctionRequest := edgefunctions.PutEdgeFunctionRequest{
 		Name:     edgefunctions.PtrString(plan.EdgeFunction.Name.ValueString()),
 		Code:     edgefunctions.PtrString(plan.EdgeFunction.Code.ValueString()),
 		Active:   edgefunctions.PtrBool(plan.EdgeFunction.IsActive.ValueBool()),
 		JsonArgs: requestJsonArgs,
+	}
+	var edgeFunctionId int64
+	if state.ID.IsNull() {
+		edgeFunctionId = state.EdgeFunction.FunctionID.ValueInt64()
+	} else {
+		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Value Conversion error ",
+				"Could not convert edgeFunctionId to int",
+			)
+			return
+		}
 	}
 
 	updateEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsApi.EdgeFunctionsIdPut(ctx, edgeFunctionId).PutEdgeFunctionRequest(updateEdgeFunctionRequest).Execute()

@@ -38,21 +38,22 @@ type dnssecResourceModel struct {
 }
 
 type dnsSecModel struct {
-	IsEnabled        types.Bool                `tfsdk:"is_enabled"`
-	Status           types.String              `tfsdk:"status"`
-	DelegationSigner *DnsDelegationSignerModel `tfsdk:"delegation_signer"`
-}
-type DnsDelegationSignerModel struct {
-	DigestType    *DnsDelegationSignerDigestType `tfsdk:"digesttype"`
-	AlgorithmType *DnsDelegationSignerDigestType `tfsdk:"algorithmtype"`
-	Digest        types.String                   `tfsdk:"digest"`
-	KeyTag        types.Int64                    `tfsdk:"keytag"`
+	IsEnabled types.Bool `tfsdk:"is_enabled"`
+	//Status           types.String              `tfsdk:"status"`
+	//DelegationSigner *DnsDelegationSignerModel `tfsdk:"delegation_signer"`
 }
 
-type DnsDelegationSignerDigestType struct {
-	Id   types.Int64  `tfsdk:"id"`
-	Slug types.String `tfsdk:"slug"`
-}
+//type DnsDelegationSignerModel struct {
+//	DigestType    *DnsDelegationSignerDigestType `tfsdk:"digesttype"`
+//	AlgorithmType *DnsDelegationSignerDigestType `tfsdk:"algorithmtype"`
+//	Digest        types.String                   `tfsdk:"digest"`
+//	KeyTag        types.Int64                    `tfsdk:"keytag"`
+//}
+//
+//type DnsDelegationSignerDigestType struct {
+//	Id   types.Int64  `tfsdk:"id"`
+//	Slug types.String `tfsdk:"slug"`
+//}
 
 func (r *dnssecResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_intelligent_dns_dnssec"
@@ -83,55 +84,55 @@ func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Required:    true,
 						Description: "Zone DNSSEC flags for enabled.",
 					},
-					"status": schema.StringAttribute{
-						Computed:    true,
-						Description: "The status of the Zone DNSSEC.",
-					},
-					"delegation_signer": schema.SingleNestedAttribute{
-						Description: "Zone DNSSEC delegation-signer.",
-						Computed:    true,
-						Attributes:  DnsDelegationSigner(),
-					},
+					//"status": schema.StringAttribute{
+					//	Computed:    true,
+					//	Description: "The status of the Zone DNSSEC.",
+					//},
+					//"delegation_signer": schema.SingleNestedAttribute{
+					//	Description: "Zone DNSSEC delegation-signer.",
+					//	Computed:    true,
+					//	Attributes:  DnsDelegationSigner(),
+					//},
 				},
 			},
 		},
 	}
 }
 
-func DnsDelegationSigner() map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		"digesttype": schema.SingleNestedAttribute{
-			Computed:    true,
-			Description: "Digest Type for Zone DNSSEC.",
-			Attributes:  DnsDelegationSignerDigestTypeScheme(),
-		},
-		"algorithmtype": schema.SingleNestedAttribute{
-			Computed:    true,
-			Description: "Digest algorithm use for Zone DNSSEC.",
-			Attributes:  DnsDelegationSignerDigestTypeScheme(),
-		},
-		"digest": schema.StringAttribute{
-			Computed:    true,
-			Description: "Zone DNSSEC digest.",
-		},
-		"keytag": schema.Int64Attribute{
-			Computed:    true,
-			Description: "Key Tag for the Zone DNSSEC.",
-		},
-	}
-}
-func DnsDelegationSignerDigestTypeScheme() map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		"id": schema.Int64Attribute{
-			Description: "The ID of this digest.",
-			Computed:    true,
-		},
-		"slug": schema.StringAttribute{
-			Description: "The Slug of this digest.",
-			Computed:    true,
-		},
-	}
-}
+//func DnsDelegationSigner() map[string]schema.Attribute {
+//	return map[string]schema.Attribute{
+//		"digesttype": schema.SingleNestedAttribute{
+//			Computed:    true,
+//			Description: "Digest Type for Zone DNSSEC.",
+//			Attributes:  DnsDelegationSignerDigestTypeScheme(),
+//		},
+//		"algorithmtype": schema.SingleNestedAttribute{
+//			Computed:    true,
+//			Description: "Digest algorithm use for Zone DNSSEC.",
+//			Attributes:  DnsDelegationSignerDigestTypeScheme(),
+//		},
+//		"digest": schema.StringAttribute{
+//			Computed:    true,
+//			Description: "Zone DNSSEC digest.",
+//		},
+//		"keytag": schema.Int64Attribute{
+//			Computed:    true,
+//			Description: "Key Tag for the Zone DNSSEC.",
+//		},
+//	}
+//}
+//func DnsDelegationSignerDigestTypeScheme() map[string]schema.Attribute {
+//	return map[string]schema.Attribute{
+//		"id": schema.Int64Attribute{
+//			Description: "The ID of this digest.",
+//			Computed:    true,
+//		},
+//		"slug": schema.StringAttribute{
+//			Description: "The Slug of this digest.",
+//			Computed:    true,
+//		},
+//	}
+//}
 
 func (r *dnssecResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
@@ -178,29 +179,23 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
-	if enableDnsSec.Results.DelegationSigner != nil {
-		plan.DnsSec = &dnsSecModel{
-			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
-			Status:    types.StringValue(*enableDnsSec.Results.Status),
-			DelegationSigner: &DnsDelegationSignerModel{
-				DigestType: &DnsDelegationSignerDigestType{
-					Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.DigestType.Id)),
-					Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.DigestType.Slug),
-				},
-				AlgorithmType: &DnsDelegationSignerDigestType{
-					Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
-					Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
-				},
-				Digest: types.StringValue(*enableDnsSec.Results.DelegationSigner.Digest),
-				KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
-			},
-		}
-	} else {
-		plan.DnsSec = &dnsSecModel{
-			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
-			Status:    types.StringValue(*enableDnsSec.Results.Status),
-		}
+	plan.DnsSec = &dnsSecModel{
+		IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
+		//Status:    types.StringValue(*enableDnsSec.Results.Status),
+		//DelegationSigner: &DnsDelegationSignerModel{
+		//	DigestType: &DnsDelegationSignerDigestType{
+		//		Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.DigestType.Id)),
+		//		Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.DigestType.Slug),
+		//	},
+		//	AlgorithmType: &DnsDelegationSignerDigestType{
+		//		Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
+		//		Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
+		//	},
+		//	Digest: types.StringValue(*enableDnsSec.Results.DelegationSigner.Digest),
+		//	KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
+		//},
 	}
+
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -241,28 +236,22 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
-	if getDnsSec.Results.DelegationSigner != nil {
-		state.DnsSec = &dnsSecModel{
-			IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
-			Status:    types.StringValue(*getDnsSec.Results.Status),
-			DelegationSigner: &DnsDelegationSignerModel{
-				DigestType: &DnsDelegationSignerDigestType{
-					Id:   types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.DigestType.Id)),
-					Slug: types.StringValue(*getDnsSec.Results.DelegationSigner.DigestType.Slug),
-				},
-				AlgorithmType: &DnsDelegationSignerDigestType{
-					Id:   types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
-					Slug: types.StringValue(*getDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
-				},
-				Digest: types.StringValue(*getDnsSec.Results.DelegationSigner.Digest),
-				KeyTag: types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.KeyTag)),
-			},
-		}
-	} else {
-		state.DnsSec = &dnsSecModel{
-			IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
-			Status:    types.StringValue(*getDnsSec.Results.Status),
-		}
+
+	state.DnsSec = &dnsSecModel{
+		IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
+		//Status:    types.StringValue(*getDnsSec.Results.Status),
+		//DelegationSigner: &DnsDelegationSignerModel{
+		//	DigestType: &DnsDelegationSignerDigestType{
+		//		Id:   types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.DigestType.Id)),
+		//		Slug: types.StringValue(*getDnsSec.Results.DelegationSigner.DigestType.Slug),
+		//	},
+		//	AlgorithmType: &DnsDelegationSignerDigestType{
+		//		Id:   types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
+		//		Slug: types.StringValue(*getDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
+		//	},
+		//	Digest: types.StringValue(*getDnsSec.Results.DelegationSigner.Digest),
+		//	KeyTag: types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.KeyTag)),
+		//},
 	}
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -310,28 +299,22 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
-	if enableDnsSec.Results.DelegationSigner != nil {
-		plan.DnsSec = &dnsSecModel{
-			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
-			Status:    types.StringValue(*enableDnsSec.Results.Status),
-			DelegationSigner: &DnsDelegationSignerModel{
-				DigestType: &DnsDelegationSignerDigestType{
-					Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.DigestType.Id)),
-					Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.DigestType.Slug),
-				},
-				AlgorithmType: &DnsDelegationSignerDigestType{
-					Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
-					Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
-				},
-				Digest: types.StringValue(*enableDnsSec.Results.DelegationSigner.Digest),
-				KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
-			},
-		}
-	} else {
-		plan.DnsSec = &dnsSecModel{
-			IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
-			Status:    types.StringValue(*enableDnsSec.Results.Status),
-		}
+
+	plan.DnsSec = &dnsSecModel{
+		IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
+		//Status:    types.StringValue(*enableDnsSec.Results.Status),
+		//DelegationSigner: &DnsDelegationSignerModel{
+		//	DigestType: &DnsDelegationSignerDigestType{
+		//		Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.DigestType.Id)),
+		//		Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.DigestType.Slug),
+		//	},
+		//	AlgorithmType: &DnsDelegationSignerDigestType{
+		//		Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
+		//		Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
+		//	},
+		//	Digest: types.StringValue(*enableDnsSec.Results.DelegationSigner.Digest),
+		//	KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
+		//},
 	}
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

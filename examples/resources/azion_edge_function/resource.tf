@@ -6,7 +6,7 @@ resource "local_file" "content_file" {
 resource "azion_edge_function" "example1" {
   edge_function = {
     name           = "Function Terraform Example"
-    code           = local_file.content_file.content
+    code           = trimspace(local_file.content_file.content)
     language       = "javascript"
     initiator_type = "edge_application"
     json_args = jsonencode(
@@ -21,7 +21,7 @@ resource "azion_edge_function" "example1" {
 resource "azion_edge_function" "example2" {
   edge_function = {
     name           = "Function Terraform Example"
-    code           = file("${path.module}/example.txt")
+    code           = trimspace(file("${path.module}/example.txt"))
     language       = "javascript"
     initiator_type = "edge_application"
     json_args = jsonencode(
