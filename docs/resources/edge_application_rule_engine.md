@@ -21,12 +21,12 @@ resource "azion_edge_application_rule_engine" "example" {
     description = "My rule engine"
     behaviors = [
       {
-        name   = "deliver"
-        "target_object": {
+        name = "deliver"
+        "target_object" : {
           "target" = ""
-          "regex": "2379",
-          "captured_array": "Terraform",
-          "subject": "$${device_group}"
+          "regex" : "2379",
+          "captured_array" : "Terraform",
+          "subject" : "$${device_group}"
         }
       }
     ]
