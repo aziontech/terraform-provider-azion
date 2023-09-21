@@ -246,7 +246,6 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			}
 			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
 		}
-
 	}
 
 	var criteria [][]edgeapplications.RulesEngineCriteria
@@ -525,7 +524,6 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 			}
 			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
 		}
-
 	}
 
 	var criteria [][]edgeapplications.RulesEngineCriteria
