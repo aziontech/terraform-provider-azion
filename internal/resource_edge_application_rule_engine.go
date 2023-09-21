@@ -52,8 +52,15 @@ type RulesEngineResourceResults struct {
 }
 
 type RulesEngineBehaviorResourceModel struct {
-	Name   types.String `tfsdk:"name"`
-	Target types.String `tfsdk:"target"`
+	Name               types.String          `tfsdk:"name"`
+	TargetCaptureMatch TargetCaptureResource `tfsdk:"target_object"`
+}
+
+type TargetCaptureResource struct {
+	Target        types.String `tfsdk:"target"`
+	CapturedArray types.String `tfsdk:"captured_array"`
+	Subject       types.String `tfsdk:"subject"`
+	Regex         types.String `tfsdk:"regex"`
 }
 
 type CriteriaResourceModel struct {
@@ -114,9 +121,30 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 									Description: "The name of the behavior.",
 									Required:    true,
 								},
-								"target": schema.StringAttribute{
-									Description: "The target of the behavior.",
-									Required:    true,
+								"target_object": schema.SingleNestedAttribute{
+									Required: true,
+									Attributes: map[string]schema.Attribute{
+										"target": schema.StringAttribute{
+											Description: "The target of the behavior.",
+											Computed:    true,
+											Optional:    true,
+										},
+										"captured_array": schema.StringAttribute{
+											Description: "The name of the behavior.",
+											Computed:    true,
+											Optional:    true,
+										},
+										"subject": schema.StringAttribute{
+											Description: "The target of the behavior.",
+											Computed:    true,
+											Optional:    true,
+										},
+										"regex": schema.StringAttribute{
+											Description: "The target of the behavior.",
+											Computed:    true,
+											Optional:    true,
+										},
+									},
 								},
 							},
 						},
@@ -199,12 +227,26 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	var behaviors []edgeapplications.RulesEngineBehavior
+	var behaviors []edgeapplications.RulesEngineBehaviorEntry
 	for _, behavior := range plan.RulesEngine.Behaviors {
-		behaviors = append(behaviors, edgeapplications.RulesEngineBehavior{
-			Name: behavior.Name.ValueString(),
-			//Target: Target,
-		})
+		if behavior.TargetCaptureMatch.Target.IsNull() || behavior.TargetCaptureMatch.Target.IsUnknown() {
+			RulesEngineBehaviorObject := edgeapplications.RulesEngineBehaviorObject{
+				Name: behavior.Name.ValueString(),
+				Target: edgeapplications.RulesEngineBehaviorObjectTarget{
+					CapturedArray: behavior.TargetCaptureMatch.CapturedArray.ValueStringPointer(),
+					Subject:       behavior.TargetCaptureMatch.Subject.ValueStringPointer(),
+					Regex:         behavior.TargetCaptureMatch.Regex.ValueStringPointer(),
+				},
+			}
+			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorObject: &RulesEngineBehaviorObject})
+		} else {
+			RulesEngineBehaviorString := edgeapplications.RulesEngineBehaviorString{
+				Name:   behavior.Name.ValueString(),
+				Target: behavior.TargetCaptureMatch.Target.ValueString(),
+			}
+			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
+		}
+
 	}
 
 	var criteria [][]edgeapplications.RulesEngineCriteria
@@ -245,12 +287,26 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	var behaviorsResult []RulesEngineBehaviorResourceModel
+	var behaviorResponse []RulesEngineBehaviorResourceModel
 	for _, behavior := range rulesEngineResponse.Results.Behaviors {
-		behaviorsResult = append(behaviorsResult, RulesEngineBehaviorResourceModel{
-			Name:   types.StringValue(behavior.GetName()),
-			Target: types.StringValue(behavior.GetTarget()),
-		})
+		if behavior.RulesEngineBehaviorString != nil {
+			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
+				Name: types.StringValue(behavior.RulesEngineBehaviorString.GetName()),
+				TargetCaptureMatch: TargetCaptureResource{
+					Target: types.StringValue(behavior.RulesEngineBehaviorString.GetTarget()),
+				},
+			})
+		} else {
+			target := behavior.RulesEngineBehaviorObject.GetTarget()
+			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
+				Name: types.StringValue(behavior.RulesEngineBehaviorObject.GetName()),
+				TargetCaptureMatch: TargetCaptureResource{
+					CapturedArray: types.StringValue(target.GetCapturedArray()),
+					Subject:       types.StringValue(target.GetSubject()),
+					Regex:         types.StringValue(target.GetRegex()),
+				},
+			})
+		}
 	}
 
 	var criteriaResult []CriteriaResourceModel
@@ -272,7 +328,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		ID:          types.Int64Value(rulesEngineResponse.Results.GetId()),
 		Name:        types.StringValue(rulesEngineResponse.Results.GetName()),
 		Phase:       types.StringValue(rulesEngineResponse.Results.GetPhase()),
-		Behaviors:   behaviorsResult,
+		Behaviors:   behaviorResponse,
 		Criteria:    criteriaResult,
 		IsActive:    types.BoolValue(rulesEngineResponse.Results.GetIsActive()),
 		Order:       types.Int64Value(rulesEngineResponse.Results.GetOrder()),
@@ -352,12 +408,26 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	var behaviors []RulesEngineBehaviorResourceModel
+	var behaviorResponse []RulesEngineBehaviorResourceModel
 	for _, behavior := range ruleEngineResponse.Results.Behaviors {
-		behaviors = append(behaviors, RulesEngineBehaviorResourceModel{
-			Name:   types.StringValue(behavior.GetName()),
-			Target: types.StringValue(behavior.GetTarget()),
-		})
+		if behavior.RulesEngineBehaviorString != nil {
+			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
+				Name: types.StringValue(behavior.RulesEngineBehaviorString.GetName()),
+				TargetCaptureMatch: TargetCaptureResource{
+					Target: types.StringValue(behavior.RulesEngineBehaviorString.GetTarget()),
+				},
+			})
+		} else {
+			target := behavior.RulesEngineBehaviorObject.GetTarget()
+			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
+				Name: types.StringValue(behavior.RulesEngineBehaviorObject.GetName()),
+				TargetCaptureMatch: TargetCaptureResource{
+					CapturedArray: types.StringValue(target.GetCapturedArray()),
+					Subject:       types.StringValue(target.GetSubject()),
+					Regex:         types.StringValue(target.GetRegex()),
+				},
+			})
+		}
 	}
 
 	var criteria []CriteriaResourceModel
@@ -379,7 +449,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		ID:          types.Int64Value(ruleEngineResponse.Results.GetId()),
 		Name:        types.StringValue(ruleEngineResponse.Results.GetName()),
 		Phase:       types.StringValue(ruleEngineResponse.Results.GetPhase()),
-		Behaviors:   behaviors,
+		Behaviors:   behaviorResponse,
 		Criteria:    criteria,
 		IsActive:    types.BoolValue(ruleEngineResponse.Results.GetIsActive()),
 		Order:       types.Int64Value(ruleEngineResponse.Results.GetOrder()),
@@ -436,12 +506,26 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		ruleID = plan.RulesEngine.ID
 	}
 
-	var behaviors []edgeapplications.RulesEngineBehavior
+	var behaviors []edgeapplications.RulesEngineBehaviorEntry
 	for _, behavior := range plan.RulesEngine.Behaviors {
-		behaviors = append(behaviors, edgeapplications.RulesEngineBehavior{
-			Name: behavior.Name.ValueString(),
-			//Target: edgeapplications.PtrString(behavior.Target.ValueString()),
-		})
+		if behavior.TargetCaptureMatch.Target.IsNull() || behavior.TargetCaptureMatch.Target.IsUnknown() {
+			RulesEngineBehaviorObject := edgeapplications.RulesEngineBehaviorObject{
+				Name: behavior.Name.ValueString(),
+				Target: edgeapplications.RulesEngineBehaviorObjectTarget{
+					CapturedArray: behavior.TargetCaptureMatch.CapturedArray.ValueStringPointer(),
+					Subject:       behavior.TargetCaptureMatch.Subject.ValueStringPointer(),
+					Regex:         behavior.TargetCaptureMatch.Regex.ValueStringPointer(),
+				},
+			}
+			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorObject: &RulesEngineBehaviorObject})
+		} else {
+			RulesEngineBehaviorString := edgeapplications.RulesEngineBehaviorString{
+				Name:   behavior.Name.ValueString(),
+				Target: behavior.TargetCaptureMatch.Target.ValueString(),
+			}
+			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
+		}
+
 	}
 
 	var criteria [][]edgeapplications.RulesEngineCriteria
@@ -503,12 +587,26 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	var behaviorsResult []RulesEngineBehaviorResourceModel
+	var behaviorResponse []RulesEngineBehaviorResourceModel
 	for _, behavior := range rulesEngineResponse.Results.Behaviors {
-		behaviorsResult = append(behaviorsResult, RulesEngineBehaviorResourceModel{
-			Name:   types.StringValue(behavior.GetName()),
-			Target: types.StringValue(behavior.GetTarget()),
-		})
+		if behavior.RulesEngineBehaviorString != nil {
+			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
+				Name: types.StringValue(behavior.RulesEngineBehaviorString.GetName()),
+				TargetCaptureMatch: TargetCaptureResource{
+					Target: types.StringValue(behavior.RulesEngineBehaviorString.GetTarget()),
+				},
+			})
+		} else {
+			target := behavior.RulesEngineBehaviorObject.GetTarget()
+			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
+				Name: types.StringValue(behavior.RulesEngineBehaviorObject.GetName()),
+				TargetCaptureMatch: TargetCaptureResource{
+					CapturedArray: types.StringValue(target.GetCapturedArray()),
+					Subject:       types.StringValue(target.GetSubject()),
+					Regex:         types.StringValue(target.GetRegex()),
+				},
+			})
+		}
 	}
 
 	var criteriaResult []CriteriaResourceModel
@@ -530,7 +628,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		ID:          types.Int64Value(rulesEngineResponse.Results.GetId()),
 		Name:        types.StringValue(rulesEngineResponse.Results.GetName()),
 		Phase:       types.StringValue(rulesEngineResponse.Results.GetPhase()),
-		Behaviors:   behaviorsResult,
+		Behaviors:   behaviorResponse,
 		Criteria:    criteriaResult,
 		IsActive:    types.BoolValue(rulesEngineResponse.Results.GetIsActive()),
 		Order:       types.Int64Value(rulesEngineResponse.Results.GetOrder()),
