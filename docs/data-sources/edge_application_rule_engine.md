@@ -55,10 +55,24 @@ Read-Only:
 <a id="nestedatt--results--behaviors"></a>
 ### Nested Schema for `results.behaviors`
 
+Required:
+
+- `target_object` (Attributes) (see [below for nested schema](#nestedatt--results--behaviors--target_object))
+
 Read-Only:
 
 - `name` (String) The name of the behavior.
+
+<a id="nestedatt--results--behaviors--target_object"></a>
+### Nested Schema for `results.behaviors.target_object`
+
+Read-Only:
+
+- `captured_array` (String) The name of the behavior.
+- `regex` (String) The target of the behavior.
+- `subject` (String) The target of the behavior.
 - `target` (String) The target of the behavior.
+
 
 
 <a id="nestedatt--results--criteria"></a>

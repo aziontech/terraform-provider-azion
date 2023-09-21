@@ -7,7 +7,12 @@ resource "azion_edge_application_rule_engine" "example" {
     behaviors = [
       {
         name   = "deliver"
-        target = ""
+        "target_object": {
+          "target" = ""
+          "regex": "2379",
+          "captured_array": "Terraform",
+          "subject": "$${device_group}"
+        }
       }
     ]
     criteria = [
