@@ -52,8 +52,8 @@ type RulesEngineResourceResults struct {
 }
 
 type RulesEngineBehaviorResourceModel struct {
-	Name               types.String          `tfsdk:"name"`
-	TargetCaptureMatch TargetCaptureResource `tfsdk:"target_object"`
+	Name               types.String           `tfsdk:"name"`
+	TargetCaptureMatch *TargetCaptureResource `tfsdk:"target_object"`
 }
 
 type TargetCaptureResource struct {
@@ -291,7 +291,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		if behavior.RulesEngineBehaviorString != nil {
 			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
 				Name: types.StringValue(behavior.RulesEngineBehaviorString.GetName()),
-				TargetCaptureMatch: TargetCaptureResource{
+				TargetCaptureMatch: &TargetCaptureResource{
 					Target: types.StringValue(behavior.RulesEngineBehaviorString.GetTarget()),
 				},
 			})
@@ -299,7 +299,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			target := behavior.RulesEngineBehaviorObject.GetTarget()
 			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
 				Name: types.StringValue(behavior.RulesEngineBehaviorObject.GetName()),
-				TargetCaptureMatch: TargetCaptureResource{
+				TargetCaptureMatch: &TargetCaptureResource{
 					CapturedArray: types.StringValue(target.GetCapturedArray()),
 					Subject:       types.StringValue(target.GetSubject()),
 					Regex:         types.StringValue(target.GetRegex()),
@@ -412,7 +412,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		if behavior.RulesEngineBehaviorString != nil {
 			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
 				Name: types.StringValue(behavior.RulesEngineBehaviorString.GetName()),
-				TargetCaptureMatch: TargetCaptureResource{
+				TargetCaptureMatch: &TargetCaptureResource{
 					Target: types.StringValue(behavior.RulesEngineBehaviorString.GetTarget()),
 				},
 			})
@@ -420,7 +420,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 			target := behavior.RulesEngineBehaviorObject.GetTarget()
 			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
 				Name: types.StringValue(behavior.RulesEngineBehaviorObject.GetName()),
-				TargetCaptureMatch: TargetCaptureResource{
+				TargetCaptureMatch: &TargetCaptureResource{
 					CapturedArray: types.StringValue(target.GetCapturedArray()),
 					Subject:       types.StringValue(target.GetSubject()),
 					Regex:         types.StringValue(target.GetRegex()),
@@ -507,7 +507,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 
 	var behaviors []edgeapplications.RulesEngineBehaviorEntry
 	for _, behavior := range plan.RulesEngine.Behaviors {
-		if behavior.TargetCaptureMatch.Target.IsNull() || behavior.TargetCaptureMatch.Target.IsUnknown() {
+		if behavior.TargetCaptureMatch.Target.IsNull() || behavior.TargetCaptureMatch.Target.IsUnknown() || behavior.TargetCaptureMatch.Target.ValueString() == "" {
 			RulesEngineBehaviorObject := edgeapplications.RulesEngineBehaviorObject{
 				Name: behavior.Name.ValueString(),
 				Target: edgeapplications.RulesEngineBehaviorObjectTarget{
@@ -590,7 +590,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		if behavior.RulesEngineBehaviorString != nil {
 			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
 				Name: types.StringValue(behavior.RulesEngineBehaviorString.GetName()),
-				TargetCaptureMatch: TargetCaptureResource{
+				TargetCaptureMatch: &TargetCaptureResource{
 					Target: types.StringValue(behavior.RulesEngineBehaviorString.GetTarget()),
 				},
 			})
@@ -598,7 +598,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 			target := behavior.RulesEngineBehaviorObject.GetTarget()
 			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
 				Name: types.StringValue(behavior.RulesEngineBehaviorObject.GetName()),
-				TargetCaptureMatch: TargetCaptureResource{
+				TargetCaptureMatch: &TargetCaptureResource{
 					CapturedArray: types.StringValue(target.GetCapturedArray()),
 					Subject:       types.StringValue(target.GetSubject()),
 					Regex:         types.StringValue(target.GetRegex()),
@@ -635,7 +635,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 
 	plan = RulesEngineResourceModel{
 		ApplicationID: edgeApplicationID,
-		ID:            types.StringValue(strconv.FormatInt(rulesEngineResponse.Results.GetId(), 10)),
+		ID:            plan.ID,
 		LastUpdated:   types.StringValue(time.Now().Format(time.RFC850)),
 		SchemaVersion: types.Int64Value(rulesEngineResponse.SchemaVersion),
 		RulesEngine:   rulesEngineResults,
