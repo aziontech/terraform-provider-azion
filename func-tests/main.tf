@@ -69,32 +69,34 @@ resource "azion_edge_application_cache_setting" "testfunc" {
   ]
 }
 
-# resource "azion_edge_application_rule_engine" "testfunc" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-#   results = {
-#     name        = "Terraform Rule Engine test-func"
-#     phase       = "request"
-#     description = "My rule engine"
-#     behaviors = [
-#       {
-#         name   = "deliver"
-#         target = ""
-#       }
-#     ]
-#     criteria = [
-#       {
-#         entries = [
-#           {
-#             variable    = "$${uri}"
-#             operator    = "is_equal"
-#             conditional = "if"
-#             input_value = "/"
-#           }
-#         ]
-#       }
-#     ]
-#   }
-# }
+resource "azion_edge_application_rule_engine" "testfunc" {
+  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+  results = {
+    name        = "Terraform Rule Engine test-func"
+    phase       = "request"
+    description = "My rule engine"
+    behaviors = [
+      {
+        name   = "add_request_header",
+        "target_object" : {
+          "target" = "X-Cache: 100"
+        }
+      }
+    ]
+    criteria = [
+      {
+        entries = [
+          {
+            variable    = "$${uri}"
+            operator    = "is_equal"
+            conditional = "if"
+            input_value = "/"
+          }
+        ]
+      }
+    ]
+  }
+}
 
 resource "azion_edge_function" "testfunc" {
   edge_function = {
@@ -225,13 +227,13 @@ data "azion_edge_application_rules_engine" "example" {
   }]
 }
 
-# data "azion_edge_application_rule_engine" "example" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-#   results = {
-#     phase = "request"
-#     id    = 123456
-#   }
-# }
+data "azion_edge_application_rule_engine" "example" {
+  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+  results = {
+    phase = "request"
+    id    = azion_edge_application_rule_engine.testfunc.results.id
+  }
+}
 
 data "azion_edge_functions" "example" {
 }
