@@ -3,7 +3,7 @@ module github.com/aziontech/terraform-provider-azion
 go 1.21
 
 require (
-	github.com/aziontech/azionapi-go-sdk v0.93.0
+	github.com/aziontech/azionapi-go-sdk v0.95.0
 	github.com/hashicorp/go-changelog v0.0.0-20230630083008-522d403eacf1
 	github.com/hashicorp/terraform-plugin-docs v0.16.0
 	github.com/hashicorp/terraform-plugin-framework v1.4.0
@@ -23,7 +23,6 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20230717121422-5aa5874ade95 // indirect
 	github.com/acomagu/bufpipe v1.0.4 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
-	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
@@ -62,7 +61,6 @@ require (
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mitchellh/cli v1.1.5 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -76,13 +74,12 @@ require (
 	github.com/skeema/knownhosts v1.2.0 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	github.com/vmihailenco/msgpack/v4 v4.3.12 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
-	github.com/vmihailenco/tagparser v0.1.2 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/zclconf/go-cty v1.14.0 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.13.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
@@ -90,7 +87,6 @@ require (
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230526161137-0005af68ea54 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230525234030-28d5490b6b19 // indirect
 	google.golang.org/grpc v1.57.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect

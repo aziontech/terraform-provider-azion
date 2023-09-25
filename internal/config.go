@@ -10,6 +10,7 @@ import (
 	"github.com/aziontech/azionapi-go-sdk/edgefirewall"
 	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
 	"github.com/aziontech/azionapi-go-sdk/networklist"
+	"github.com/aziontech/azionapi-go-sdk/variables"
 )
 
 type apiClient struct {
@@ -33,6 +34,9 @@ type apiClient struct {
 
 	edgefirewallConfig *edgefirewall.Configuration
 	edgeFirewallApi    *edgefirewall.APIClient
+
+	variablesConfig *variables.Configuration
+	variablesApi    *variables.APIClient
 }
 
 func Client(APIToken string, userAgent string) *apiClient {
@@ -44,6 +48,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		digitalCertificatesConfig: digital_certificates.NewConfiguration(),
 		networkListConfig:         networklist.NewConfiguration(),
 		edgefirewallConfig:        edgefirewall.NewConfiguration(),
+		variablesConfig:           variables.NewConfiguration(),
 	}
 
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
@@ -55,6 +60,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		client.digitalCertificatesConfig.Servers[0].URL = envApiEntrypoint
 		client.edgefirewallConfig.Servers[0].URL = envApiEntrypoint
 		client.networkListConfig.Servers[0].URL = envApiEntrypoint
+		client.variablesConfig.Servers[0].URL = envApiEntrypoint
 	}
 
 	client.domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
@@ -91,6 +97,11 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.edgefirewallConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.edgefirewallConfig.UserAgent = userAgent
 	client.edgeFirewallApi = edgefirewall.NewAPIClient(client.edgefirewallConfig)
+
+	client.variablesConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.variablesConfig.AddDefaultHeader("Accept", "application/json; version=3")
+	client.variablesConfig.UserAgent = userAgent
+	client.variablesApi = variables.NewAPIClient(client.variablesConfig)
 
 	return client
 }
