@@ -22,8 +22,17 @@ resource "azion_edge_application_rule_engine" "example" {
     behaviors = [
       {
         name = "deliver"
+        "target_object" : {}
+      },
+      {
+        name = "run_function"
+        target_object : {
+          target = "4305"
+        }
+      },
+      {
+        name = "capture_match_groups"
         "target_object" : {
-          "target" = ""
           "regex" : "2379",
           "captured_array" : "Terraform",
           "subject" : "$${device_group}"
