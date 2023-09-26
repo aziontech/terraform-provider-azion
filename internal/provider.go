@@ -100,6 +100,7 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionEdgeApplicationCacheSetting,
 		dataSourceAzionEdgeApplicationCacheSettings,
 		dataSourceAzionNetworkList,
+		dataSourceAzionNetworkLists,
 		dataSourceAzionEdgeFirewall,
 		dataSourceAzionEdgeFirewalls,
 		dataSourceAzionVariable,
