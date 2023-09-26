@@ -47,8 +47,15 @@ type RulesEngineResultModel struct {
 }
 
 type RulesEngineBehaviorModel struct {
-	Name   types.String `tfsdk:"name"`
-	Target types.String `tfsdk:"target"`
+	Name               types.String `tfsdk:"name"`
+	TargetCaptureMatch TargetObject `tfsdk:"target_object"`
+}
+
+type TargetObject struct {
+	Target        types.String `tfsdk:"target"`
+	CapturedArray types.String `tfsdk:"captured_array"`
+	Subject       types.String `tfsdk:"subject"`
+	Regex         types.String `tfsdk:"regex"`
 }
 
 type CriteriaModel struct {
@@ -139,9 +146,26 @@ func (r *RulesEngineDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 										Description: "The name of the behavior.",
 										Computed:    true,
 									},
-									"target": schema.StringAttribute{
-										Description: "The target of the behavior.",
-										Computed:    true,
+									"target_object": schema.SingleNestedAttribute{
+										Required: true,
+										Attributes: map[string]schema.Attribute{
+											"target": schema.StringAttribute{
+												Description: "The target of the behavior.",
+												Computed:    true,
+											},
+											"captured_array": schema.StringAttribute{
+												Description: "The name of the behavior.",
+												Computed:    true,
+											},
+											"subject": schema.StringAttribute{
+												Description: "The target of the behavior.",
+												Computed:    true,
+											},
+											"regex": schema.StringAttribute{
+												Description: "The target of the behavior.",
+												Computed:    true,
+											},
+										},
 									},
 								},
 							},
@@ -260,10 +284,28 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 	for _, rules := range rulesEngineResponse.Results {
 		var behaviors []RulesEngineBehaviorModel
 		for _, behavior := range rules.Behaviors {
-			behaviors = append(behaviors, RulesEngineBehaviorModel{
-				Name:   types.StringValue(behavior.GetName()),
-				Target: types.StringValue(behavior.GetTarget()),
-			})
+			if behavior.RulesEngineBehaviorString != nil {
+				behaviors = append(behaviors, RulesEngineBehaviorModel{
+					Name: types.StringValue(behavior.RulesEngineBehaviorString.GetName()),
+					TargetCaptureMatch: TargetObject{
+						Target:        types.StringValue(behavior.RulesEngineBehaviorString.GetTarget()),
+						CapturedArray: types.StringValue(""),
+						Subject:       types.StringValue(""),
+						Regex:         types.StringValue(""),
+					},
+				})
+			} else {
+				target := behavior.RulesEngineBehaviorObject.GetTarget()
+				behaviors = append(behaviors, RulesEngineBehaviorModel{
+					Name: types.StringValue(behavior.RulesEngineBehaviorObject.GetName()),
+					TargetCaptureMatch: TargetObject{
+						Target:        types.StringValue(""),
+						CapturedArray: types.StringValue(target.GetCapturedArray()),
+						Subject:       types.StringValue(target.GetSubject()),
+						Regex:         types.StringValue(target.GetRegex()),
+					},
+				})
+			}
 		}
 
 		var criteria []CriteriaModel
