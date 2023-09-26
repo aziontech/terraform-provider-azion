@@ -21,8 +21,22 @@ resource "azion_edge_application_rule_engine" "example" {
     description = "My rule engine"
     behaviors = [
       {
-        name   = "deliver"
-        target = ""
+        name = "deliver"
+        "target_object" : {}
+      },
+      {
+        name = "run_function"
+        target_object : {
+          target = "4305"
+        }
+      },
+      {
+        name = "capture_match_groups"
+        "target_object" : {
+          "regex" : "2379",
+          "captured_array" : "Terraform",
+          "subject" : "$${device_group}"
+        }
       }
     ]
     criteria = [
@@ -81,7 +95,18 @@ Read-Only:
 Required:
 
 - `name` (String) The name of the behavior.
+- `target_object` (Attributes) (see [below for nested schema](#nestedatt--results--behaviors--target_object))
+
+<a id="nestedatt--results--behaviors--target_object"></a>
+### Nested Schema for `results.behaviors.target_object`
+
+Optional:
+
+- `captured_array` (String) The name of the behavior.
+- `regex` (String) The target of the behavior.
+- `subject` (String) The target of the behavior.
 - `target` (String) The target of the behavior.
+
 
 
 <a id="nestedatt--results--criteria"></a>

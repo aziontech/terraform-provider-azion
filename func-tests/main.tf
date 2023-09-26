@@ -77,23 +77,30 @@ resource "azion_edge_application_cache_setting" "testfunc" {
 #     description = "My rule engine"
 #     behaviors = [
 #       {
-#         name   = "deliver"
-#         target = ""
+#         name = "capture_match_groups"
+#         target_object = {
+#           regex = "2378",
+#           captured_array = "Terraform",
+#           subject = "$${device_group}"
+#         }
 #       }
 #     ]
 #     criteria = [
 #       {
 #         entries = [
 #           {
-#             variable    = "$${uri}"
-#             operator    = "is_equal"
-#             conditional = "if"
-#             input_value = "/"
+#             variable= "$${uri}"
+#             operator= "is_equal"
+#             conditional= "if"
+#             input_value= "/"
 #           }
 #         ]
 #       }
 #     ]
 #   }
+#   depends_on = [
+#     azion_edge_application_main_setting.testfunc
+#   ]
 # }
 
 resource "azion_edge_function" "testfunc" {
@@ -133,6 +140,9 @@ resource "azion_domain" "testfunc" {
     edge_application_id    = azion_edge_application_main_setting.testfunc.edge_application.application_id
     is_active              = true
   }
+  depends_on = [
+    azion_edge_application_main_setting.testfunc
+  ]
 }
 
 resource "azion_edge_firewall_main_setting" "testfunc" {
@@ -183,6 +193,7 @@ resource "azion_intelligent_dns_record" "testfunc" {
     description = "This is a description"
     ttl         = 20
   }
+  depends_on = [ azion_intelligent_dns_zone.testfunc ]
 }
 
 # ---------------------- DATA SOURCES ----------------------
@@ -229,7 +240,7 @@ data "azion_edge_application_rules_engine" "example" {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   results = {
 #     phase = "request"
-#     id    = 123456
+#     id    = azion_edge_application_rule_engine.testfunc.results.id
 #   }
 # }
 
