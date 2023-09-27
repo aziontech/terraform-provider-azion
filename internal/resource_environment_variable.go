@@ -116,7 +116,7 @@ func (r *environmentVariableResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	if plan.EnvironmentVariable.Secret.ValueBool() == true {
+	if plan.EnvironmentVariable.Secret.ValueBool() {
 		resp.Diagnostics.AddWarning(
 			"Secret Advice",
 			"If you set secret to true, value its controlled by the terraform provider. You can't change it in the terraform provider.",
@@ -146,7 +146,7 @@ func (r *environmentVariableResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	if environmentVariableResponse.Secret == true {
+	if environmentVariableResponse.Secret {
 		plan.EnvironmentVariable = &EnvironmentVariableResourceResults{
 			Uuid:       types.StringValue(environmentVariableResponse.GetUuid()),
 			Key:        types.StringValue(environmentVariableResponse.GetKey()),
@@ -271,7 +271,7 @@ func (r *environmentVariableResource) Update(ctx context.Context, req resource.U
 		uuid = state.ID.ValueString()
 	}
 
-	if plan.EnvironmentVariable.Secret.ValueBool() == true {
+	if plan.EnvironmentVariable.Secret.ValueBool() {
 		resp.Diagnostics.AddWarning(
 			"Secret Advice",
 			"If you set secret to true, value its controlled by the terraform provider. You can't change it in the terraform provider.",
@@ -301,7 +301,7 @@ func (r *environmentVariableResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	if environmentVariableResponse.Secret == true {
+	if environmentVariableResponse.Secret {
 		plan.EnvironmentVariable = &EnvironmentVariableResourceResults{
 			Uuid:       types.StringValue(environmentVariableResponse.GetUuid()),
 			Key:        types.StringValue(environmentVariableResponse.GetKey()),
