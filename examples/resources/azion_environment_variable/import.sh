@@ -1,0 +1,1 @@
+terraform import azion_environment_variable.example b7da7b35-ba7a-4a08-ae54-a9cc8e455323
