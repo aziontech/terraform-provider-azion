@@ -44,7 +44,7 @@ func (n *VariablesDataSource) Configure(_ context.Context, req datasource.Config
 }
 
 func (n *VariablesDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_variables"
+	resp.TypeName = req.ProviderTypeName + "_environment_variables"
 }
 
 func (n *VariablesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {

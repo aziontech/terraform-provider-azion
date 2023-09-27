@@ -1,2 +1,2 @@
-data "azion_variables" "example" {
+data "azion_environment_variables" "example" {
 }
