@@ -103,6 +103,8 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionNetworkLists,
 		dataSourceAzionEdgeFirewall,
 		dataSourceAzionEdgeFirewalls,
+		dataSourceAzionVariable,
+		dataSourceAzionVariables,
 	}
 }
 
@@ -121,6 +123,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewDigitalCertificateResource,
 		NetworkListResource,
 		EdgeFirewallResource,
+		EnvironmentVariableResource,
 	}
 }
 
