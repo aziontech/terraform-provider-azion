@@ -166,7 +166,7 @@ resource "azion_digital_certificate" "testfunc" {
 
 resource "azion_intelligent_dns_zone" "testfunc" {
   zone = {
-    domain : "terraformtestfunc.qa",
+    domain : "terraformtest-func.qa",
     is_active : true,
     name : "example"
   }
@@ -194,6 +194,38 @@ resource "azion_intelligent_dns_record" "testfunc" {
     ttl         = 20
   }
   depends_on = [ azion_intelligent_dns_zone.testfunc ]
+}
+
+resource "azion_network_list" "exampleOne" {
+  results = {
+    name      = "NetworkList Terraform test-func Countries"
+    list_type = "countries"
+    items_values_str = [
+      "BR",
+      "US",
+      "AG"
+    ]
+  }
+}
+
+resource "azion_network_list" "exampleTwo" {
+  results = {
+    name      = "NetworkList Terraform test-func ip_cidr"
+    list_type = "ip_cidr"
+    items_values_str = [
+      "192.168.0.1",
+      "192.168.0.2",
+      "192.168.0.3"
+    ]
+  }
+}
+
+resource "azion_environment_variable" "testfunc" {
+  result = {
+    key    = "key-test Terraform test-func"
+    value  = "key-test Terraform test-func"
+    secret = false
+  }
 }
 
 # ---------------------- DATA SOURCES ----------------------
@@ -297,4 +329,25 @@ data "azion_intelligent_dns_dnssec" "examples" {
 
 data "azion_intelligent_dns_records" "examples" {
   zone_id = azion_intelligent_dns_zone.testfunc.zone.id
+}
+
+data "azion_network_lists" "example" {
+  page = 1
+}
+
+data "azion_network_list" "exampleOne" {
+  network_list_id = azion_network_list.exampleOne.id
+}
+
+data "azion_network_list" "exampleTwo" {
+  network_list_id = azion_network_list.exampleTwo.id
+}
+
+data "azion_environment_variables" "example" {
+}
+
+data "azion_environment_variable" "example" {
+  result = {
+    uuid = azion_environment_variable.testfunc.result.uuid
+  }
 }
