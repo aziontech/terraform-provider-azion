@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
@@ -28,6 +27,8 @@ type RecordsDataSourceModel struct {
 	ZoneId        types.Int64                `tfsdk:"zone_id"`
 	SchemaVersion types.Int64                `tfsdk:"schema_version"`
 	TotalPages    types.Int64                `tfsdk:"total_pages"`
+	Page          types.Int64                `tfsdk:"page"`
+	PageSize      types.Int64                `tfsdk:"page_size"`
 	Counter       types.Int64                `tfsdk:"counter"`
 	Links         *GetRecordsResponseLinks   `tfsdk:"links"`
 	Results       *GetRecordsResponseResults `tfsdk:"results"`
@@ -79,6 +80,14 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema Version.",
 				Computed:    true,
+			},
+			"page": schema.Int64Attribute{
+				Description: "The page number of Records.",
+				Optional:    true,
+			},
+			"page_size": schema.Int64Attribute{
+				Description: "The page size number of Records.",
+				Optional:    true,
 			},
 			"counter": schema.Int64Attribute{
 				Description: "The total number of records.",
@@ -170,9 +179,29 @@ func (d *RecordsDataSource) errorPrint(resp *datasource.ReadResponse, errCode in
 }
 
 func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	tflog.Debug(ctx, "Reading Records")
-
+	var Page types.Int64
+	var PageSize types.Int64
 	var getZoneId types.Int64
+	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
+	resp.Diagnostics.Append(diagsPage...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("page_size"), &Page)
+	resp.Diagnostics.Append(diagsPageSize...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if Page.ValueInt64() == 0 {
+		Page = types.Int64Value(1)
+	}
+
+	if PageSize.ValueInt64() == 0 {
+		PageSize = types.Int64Value(10)
+	}
+
 	diags := req.Config.GetAttribute(ctx, path.Root("zone_id"), &getZoneId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -180,7 +209,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 	zoneId := int32(getZoneId.ValueInt64())
 
-	recordsResponse, httpResp, err := d.client.idnsApi.RecordsApi.GetZoneRecords(ctx, zoneId).Execute()
+	recordsResponse, httpResp, err := d.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, zoneId).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
 	if err != nil {
 		d.errorPrint(resp, httpResp.StatusCode)
 		return
@@ -199,6 +228,8 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		ZoneId:        getZoneId,
 		SchemaVersion: types.Int64Value(int64(*recordsResponse.SchemaVersion)),
 		TotalPages:    types.Int64Value(int64(*recordsResponse.TotalPages)),
+		Page:          types.Int64Value(Page.ValueInt64()),
+		PageSize:      types.Int64Value(PageSize.ValueInt64()),
 		Counter:       types.Int64Value(int64(*recordsResponse.Count)),
 		Links: &GetRecordsResponseLinks{
 			Previous: types.StringValue(previous),

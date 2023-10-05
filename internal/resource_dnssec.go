@@ -162,7 +162,7 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		IsEnabled: idns.PtrBool(plan.DnsSec.IsEnabled.ValueBool()),
 	}
 
-	enableDnsSec, response, err := r.client.idnsApi.DNSSECApi.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
+	enableDnsSec, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -220,7 +220,7 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
-	getDnsSec, response, err := r.client.idnsApi.DNSSECApi.GetZoneDnsSec(ctx, int32(zoneId)).Execute()
+	getDnsSec, response, err := r.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, int32(zoneId)).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -281,7 +281,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		IsEnabled: idns.PtrBool(plan.DnsSec.IsEnabled.ValueBool()),
 	}
 
-	enableDnsSec, response, err := r.client.idnsApi.DNSSECApi.PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute()
+	enableDnsSec, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -342,7 +342,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		IsEnabled: idns.PtrBool(false),
 	}
 
-	_, response, err := r.client.idnsApi.DNSSECApi.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
+	_, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
