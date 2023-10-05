@@ -122,7 +122,7 @@ func-plan:
 	@cd func-tests && TF_LOG=TRACE TF_LOG_PATH=./terraform.log terraform plan
 
 func-apply:
-	@cd func-tests && TF_LOG=TRACE TF_LOG_PATH=./terraform.log terraform apply -auto-approve
+	@cd func-tests && TF_LOG=TRACE TF_LOG_PATH=./terraform.log terraform apply -auto-approve -lock=false
 
 func-destroy:
 	@cd func-tests && terraform destroy -auto-approve
