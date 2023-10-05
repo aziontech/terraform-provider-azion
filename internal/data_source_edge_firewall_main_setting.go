@@ -122,7 +122,7 @@ func (e *EdgeFirewallDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	edgeFirewallResponse, response, err := e.client.edgeFirewallApi.DefaultApi.EdgeFirewallUuidGet(ctx, getEdgeFirewallID.String()).Execute()
+	edgeFirewallResponse, response, err := e.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, getEdgeFirewallID.String()).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
