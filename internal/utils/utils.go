@@ -44,6 +44,17 @@ func SliceStringTypeToSet(slice []types.String) types.Set {
 	return types.SetValueMust(types.StringType, strings)
 }
 
+func SliceStringTypeToSetOrNull(slice []types.String) types.Set {
+	if len(slice) == 0 {
+		return types.SetValueMust(types.StringType, nil)
+	}
+	strings := []attr.Value{}
+	for _, value := range slice {
+		strings = append(strings, value)
+	}
+	return types.SetValueMust(types.StringType, strings)
+}
+
 func ConvertStringToInterface(jsonArgs string) (interface{}, error) {
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(jsonArgs), &data)
