@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"io"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -26,6 +27,8 @@ type ZonesDataSourceModel struct {
 	SchemaVersion types.Int64            `tfsdk:"schema_version"`
 	Counter       types.Int64            `tfsdk:"counter"`
 	TotalPages    types.Int64            `tfsdk:"total_pages"`
+	Page          types.Int64            `tfsdk:"page"`
+	PageSize      types.Int64            `tfsdk:"page_size"`
 	Links         *GetZonesResponseLinks `tfsdk:"links"`
 	Results       []Zones                `tfsdk:"results"`
 	ID            types.String           `tfsdk:"id"`
@@ -63,6 +66,14 @@ func (d *ZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema Version.",
 				Computed:    true,
+			},
+			"page": schema.Int64Attribute{
+				Description: "The page number of Zones.",
+				Optional:    true,
+			},
+			"page_size": schema.Int64Attribute{
+				Description: "The page size number of Zones.",
+				Optional:    true,
 			},
 			"counter": schema.Int64Attribute{
 				Description: "The total number of zones.",
@@ -111,7 +122,29 @@ func (d *ZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 }
 
 func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	zoneResponse, response, err := d.client.idnsApi.ZonesApi.GetZones(ctx).Execute()
+	var Page types.Int64
+	var PageSize types.Int64
+	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
+	resp.Diagnostics.Append(diagsPage...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("page_size"), &PageSize)
+	resp.Diagnostics.Append(diagsPageSize...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if Page.ValueInt64() == 0 {
+		Page = types.Int64Value(1)
+	}
+
+	if PageSize.ValueInt64() == 0 {
+		PageSize = types.Int64Value(10)
+	}
+
+	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZones(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -127,30 +160,24 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		)
 		return
 	}
-	var previous, next string
-	if zoneResponse.Links != nil {
-		if zoneResponse.Links.Previous.Get() != nil {
-			previous = *zoneResponse.Links.Previous.Get()
-		}
-		if zoneResponse.Links.Next.Get() != nil {
-			next = *zoneResponse.Links.Next.Get()
-		}
-	}
+
 	zoneState := ZonesDataSourceModel{
-		SchemaVersion: types.Int64Value(int64(*zoneResponse.SchemaVersion)),
-		TotalPages:    types.Int64Value(int64(*zoneResponse.TotalPages)),
-		Counter:       types.Int64Value(int64(*zoneResponse.Count)),
+		SchemaVersion: types.Int64Value(int64(zoneResponse.GetSchemaVersion())),
+		TotalPages:    types.Int64Value(int64(zoneResponse.GetTotalPages())),
+		Page:          types.Int64Value(Page.ValueInt64()),
+		PageSize:      types.Int64Value(PageSize.ValueInt64()),
+		Counter:       types.Int64Value(int64(zoneResponse.GetCount())),
 		Links: &GetZonesResponseLinks{
-			Previous: types.StringValue(previous),
-			Next:     types.StringValue(next),
+			Previous: types.StringValue(zoneResponse.Links.GetPrevious()),
+			Next:     types.StringValue(zoneResponse.Links.GetNext()),
 		},
 	}
 	for _, resultZone := range zoneResponse.Results {
 		zoneState.Results = append(zoneState.Results, Zones{
-			ZoneId:   types.Int64Value(int64(*resultZone.Id)),
-			Name:     types.StringValue(*resultZone.Name),
-			Domain:   types.StringValue(*resultZone.Domain),
-			IsActive: types.BoolValue(*resultZone.IsActive),
+			ZoneId:   types.Int64Value(int64(resultZone.GetId())),
+			Name:     types.StringValue(resultZone.GetName()),
+			Domain:   types.StringValue(resultZone.GetDomain()),
+			IsActive: types.BoolValue(resultZone.GetIsActive()),
 		})
 	}
 	zoneState.ID = types.StringValue("Get All Zones")

@@ -7,7 +7,13 @@ terraform {
   }
 }
 
-# # ---------------------- RESOURCES ----------------------
+# ---------------------- VARIABLES ----------------------
+variable "edge_functions_module" {
+  type    = bool
+  default = false
+}
+
+# ---------------------- RESOURCES ----------------------
 
 resource "azion_edge_application_main_setting" "testfunc" {
   edge_application = {
@@ -19,7 +25,7 @@ resource "azion_edge_application_main_setting" "testfunc" {
     minimum_tls_version : ""
     debug_rules : false
     edge_firewall : false
-    edge_functions : false
+    edge_functions : var.edge_functions_module
     image_optimization : false
     http3 : false
     application_acceleration : false
@@ -117,17 +123,27 @@ resource "azion_edge_function" "testfunc" {
   }
 }
 
-# resource "azion_edge_application_edge_functions_instance" "example" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-#   results = {
-#     name = "Terraform Edge Functions Instance test-func"
-#     "edge_function_id" : 12345,
-#     "args" : jsonencode(
-#       { "key"     = "Value",
-#         "Example" = "example"
-#     })
-#   }
-# }
+resource "null_resource" "update_edge_functions" {
+  depends_on = [azion_edge_application_main_setting.testfunc]
+
+  provisioner "local-exec" {
+    command = "sleep 10 && terraform apply -auto-approve -target='azion_edge_application_main_setting.testfunc' -var 'edge_functions_module=true'"
+  }
+}
+
+resource "azion_edge_application_edge_functions_instance" "testfunc" {
+  depends_on = [null_resource.update_edge_functions]
+
+  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+  results = {
+    name = "Terraform Edge Functions Instance test-func"
+    "edge_function_id" : azion_edge_function.testfunc.edge_function.function_id,
+    "args" : jsonencode(
+      { "key"     = "Value",
+        "Example" = "example"
+    })
+  }
+}
 
 resource "azion_domain" "testfunc" {
   domain = {
