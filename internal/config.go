@@ -2,6 +2,7 @@ package provider
 
 import (
 	"github.com/aziontech/azionapi-go-sdk/idns"
+	"github.com/aziontech/azionapi-go-sdk/waf"
 	"os"
 
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
@@ -37,6 +38,9 @@ type apiClient struct {
 
 	variablesConfig *variables.Configuration
 	variablesApi    *variables.APIClient
+
+	wafConfig *waf.Configuration
+	wafApi    *waf.APIClient
 }
 
 func Client(APIToken string, userAgent string) *apiClient {
@@ -49,6 +53,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		networkListConfig:         networklist.NewConfiguration(),
 		edgefirewallConfig:        edgefirewall.NewConfiguration(),
 		variablesConfig:           variables.NewConfiguration(),
+		wafConfig:                 waf.NewConfiguration(),
 	}
 
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
@@ -61,6 +66,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		client.edgefirewallConfig.Servers[0].URL = envApiEntrypoint
 		client.networkListConfig.Servers[0].URL = envApiEntrypoint
 		client.variablesConfig.Servers[0].URL = envApiEntrypoint
+		client.wafConfig.Servers[0].URL = envApiEntrypoint
 	}
 
 	client.domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
@@ -102,6 +108,11 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.variablesConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.variablesConfig.UserAgent = userAgent
 	client.variablesApi = variables.NewAPIClient(client.variablesConfig)
+
+	client.wafConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.wafConfig.AddDefaultHeader("Accept", "application/json; version=3")
+	client.wafConfig.UserAgent = userAgent
+	client.wafApi = waf.NewAPIClient(client.wafConfig)
 
 	return client
 }
