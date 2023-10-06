@@ -25,6 +25,11 @@ data "azion_intelligent_dns_records" "examples" {
 
 - `zone_id` (Number) The zone identifier to target for the resource.
 
+### Optional
+
+- `page` (Number) The page number of Records.
+- `page_size` (Number) The page size number of Records.
+
 ### Read-Only
 
 - `counter` (Number) The total number of records.

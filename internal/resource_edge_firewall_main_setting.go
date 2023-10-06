@@ -157,7 +157,7 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 			return
 		}
 	}
-	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultApi.EdgeFirewallPost(ctx).CreateEdgeFirewallRequest(edgeFirewallRequest).Execute()
+	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallPost(ctx).CreateEdgeFirewallRequest(edgeFirewallRequest).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -215,7 +215,7 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 		edgeFirewallID = state.ID.ValueString()
 	}
 
-	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultApi.EdgeFirewallUuidGet(ctx, edgeFirewallID).Execute()
+	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, edgeFirewallID).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -295,7 +295,7 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultApi.EdgeFirewallUuidPut(ctx, edgeFirewallID).UpdateEdgeFirewallRequest(edgeFirewallRequest).Execute()
+	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidPut(ctx, edgeFirewallID).UpdateEdgeFirewallRequest(edgeFirewallRequest).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -355,7 +355,7 @@ func (r *edgeFirewallResource) Delete(ctx context.Context, req resource.DeleteRe
 		edgeFirewallID = state.ID.ValueString()
 	}
 
-	response, err := r.client.edgeFirewallApi.DefaultApi.EdgeFirewallUuidDelete(ctx, edgeFirewallID).Execute()
+	response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidDelete(ctx, edgeFirewallID).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {

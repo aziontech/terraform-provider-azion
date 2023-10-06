@@ -154,7 +154,7 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 	zoneId := int32(getZoneId.ValueInt64())
 
-	getDnsSec, response, err := d.client.idnsApi.DNSSECApi.GetZoneDnsSec(ctx, zoneId).Execute()
+	getDnsSec, response, err := d.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, zoneId).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
