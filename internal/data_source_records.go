@@ -188,7 +188,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("page_size"), &Page)
+	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("page_size"), &PageSize)
 	resp.Diagnostics.Append(diagsPageSize...)
 	if resp.Diagnostics.HasError() {
 		return
