@@ -58,5 +58,3 @@ Read-Only:
 - `last_modified` (String) Last modified timestamp of the network list.
 - `list_type` (String) Type of the network list.
 - `name` (String) Name of the network list.
-
-

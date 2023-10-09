@@ -48,5 +48,3 @@ Read-Only:
 - `refresh` (Number) The interval at which secondary servers (secondary DNS) are set to refresh the primary zone file from the primary server.
 - `retry` (Number) The rate at which a secondary server will retry to refresh the primary zone file if the initial refresh failed.
 - `soattl` (Number) The interval at which the SOA record itself is refreshed.
-
-

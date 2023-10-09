@@ -40,5 +40,3 @@ resource "azion_intelligent_dns_dnssec" "examples" {
 Required:
 
 - `is_enabled` (Boolean) Zone DNSSEC flags for enabled.
-
-

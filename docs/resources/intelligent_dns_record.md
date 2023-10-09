@@ -61,5 +61,3 @@ Optional:
 Read-Only:
 
 - `id` (Number)
-
-

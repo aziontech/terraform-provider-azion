@@ -91,5 +91,3 @@ Read-Only:
 - `input_value` (String) The input value used in the rule's criteria.
 - `operator` (String) The operator used in the rule's criteria.
 - `variable` (String) The variable used in the rule's criteria.
-
-

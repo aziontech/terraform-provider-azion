@@ -71,5 +71,3 @@ Read-Only:
 - `unwanted_access` (Boolean) Enable protection against unwanted access.
 - `unwanted_access_sensitivity` (String) Sensitivity level for protection against unwanted access.
 - `waf_id` (Number) The WAF identifier.
-
-
