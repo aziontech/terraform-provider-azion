@@ -67,5 +67,3 @@ Read-Only:
 - `name` (String) Name of the cache settings.
 - `query_string_fields` (List of String) Query string fields for cache settings.
 - `slice_configuration_range` (Number) Slice configuration range.
-
-

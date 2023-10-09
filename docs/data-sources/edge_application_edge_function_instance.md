@@ -46,5 +46,3 @@ Read-Only:
 - `args` (String) Code of the function.
 - `edge_function_id` (Number) The function identifier.
 - `name` (String) Name of the function.
-
-

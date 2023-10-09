@@ -61,5 +61,3 @@ Read-Only:
 - `sql_injection_sensitivity` (String) Sensitivity level for SQL injection protection.
 - `unwanted_access` (Boolean) Enable protection against unwanted access.
 - `unwanted_access_sensitivity` (String) Sensitivity level for protection against unwanted access.
-
-

@@ -109,5 +109,3 @@ Read-Only:
 
 - `next` (String)
 - `previous` (String)
-
-

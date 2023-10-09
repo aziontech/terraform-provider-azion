@@ -62,5 +62,3 @@ Read-Only:
 - `name` (String) Name of the edge firewall rule set.
 - `network_protection_enabled` (Boolean) Whether network protection is enabled for the rule set.
 - `waf_enabled` (Boolean) Whether Web Application Firewall (WAF) is enabled for the rule set.
-
-

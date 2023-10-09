@@ -51,5 +51,3 @@ Read-Only:
 - `is_active` (Boolean) Status of the zone.
 - `name` (String) The name of the zone. Must provide only one of zone_id, name.
 - `zone_id` (Number) The zone identifier to target for the resource.
-
-

@@ -46,5 +46,3 @@ Read-Only:
 - `secret` (Boolean) Whether the variable is a secret or not.
 - `updated_at` (String) The last time the variable was updated.
 - `value` (String) Value of the environment variable.
-
-

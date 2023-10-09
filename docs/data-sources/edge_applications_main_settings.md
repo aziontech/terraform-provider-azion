@@ -66,5 +66,3 @@ Read-Only:
 - `name` (String) Name of the origin.
 - `origin_id` (String) Identifier of the origin.
 - `origin_type` (String) Type of the origin.
-
-

@@ -55,5 +55,3 @@ Read-Only:
 - `raw_logs` (Boolean) Indicates whether raw logs are enabled for the Edge Application.
 - `supported_ciphers` (String) The supported ciphers for the Edge Application.
 - `web_application_firewall` (Boolean) Indicates whether a web application firewall is enabled for the Edge Application.
-
-

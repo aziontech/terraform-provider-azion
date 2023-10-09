@@ -52,5 +52,3 @@ Read-Only:
 - `status` (String) Status of the digital certificate.
 - `subject_name` (List of String) Subject name of the digital certificate.
 - `validity` (String) Validity of the digital certificate.
-
-

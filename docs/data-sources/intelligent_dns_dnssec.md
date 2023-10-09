@@ -72,5 +72,3 @@ Read-Only:
 
 - `id` (Number) The ID of this digest.
 - `slug` (String) The Slug of this digest.
-
-

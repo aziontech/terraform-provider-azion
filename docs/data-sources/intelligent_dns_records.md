@@ -72,5 +72,3 @@ Read-Only:
 - `record_id` (Number) The record identifier.
 - `record_type` (String) DNS record type to filter record results on.
 - `ttl` (Number) Time-to-live defines max-time for packets life in seconds.
-
-

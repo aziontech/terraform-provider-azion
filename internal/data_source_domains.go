@@ -8,6 +8,7 @@ import (
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -28,6 +29,8 @@ type DomainsDataSourceModel struct {
 	SchemaVersion types.Int64              `tfsdk:"schema_version"`
 	Counter       types.Int64              `tfsdk:"counter"`
 	TotalPages    types.Int64              `tfsdk:"total_pages"`
+	Page          types.Int64              `tfsdk:"page"`
+	PageSize      types.Int64              `tfsdk:"page_size"`
 	Links         *GetDomainsResponseLinks `tfsdk:"links"`
 	Results       []DomainsResults         `tfsdk:"results"`
 	ID            types.String             `tfsdk:"id"`
@@ -69,6 +72,14 @@ func (d *DomainsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			},
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
+			},
+			"page": schema.Int64Attribute{
+				Description: "The page number of Domains.",
+				Optional:    true,
+			},
+			"page_size": schema.Int64Attribute{
+				Description: "The page size number of Domains.",
+				Optional:    true,
 			},
 			"counter": schema.Int64Attribute{
 				Computed: true,
@@ -135,7 +146,30 @@ func (d *DomainsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 }
 
 func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	domainsResponse, response, err := d.client.domainsApi.DomainsApi.GetDomains(ctx).Execute()
+	var Page types.Int64
+	var PageSize types.Int64
+
+	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
+	resp.Diagnostics.Append(diagsPage...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("page_size"), &PageSize)
+	resp.Diagnostics.Append(diagsPageSize...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if Page.ValueInt64() == 0 {
+		Page = types.Int64Value(1)
+	}
+
+	if PageSize.ValueInt64() == 0 {
+		PageSize = types.Int64Value(10)
+	}
+
+	domainsResponse, response, err := d.client.domainsApi.DomainsApi.GetDomains(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -156,6 +190,8 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		SchemaVersion: types.Int64Value(domainsResponse.SchemaVersion),
 		Counter:       types.Int64Value(domainsResponse.Count),
 		TotalPages:    types.Int64Value(domainsResponse.TotalPages),
+		Page:          types.Int64Value(Page.ValueInt64()),
+		PageSize:      types.Int64Value(PageSize.ValueInt64()),
 		Links: &GetDomainsResponseLinks{
 			Previous: types.StringValue(domainsResponse.Links.GetPrevious()),
 			Next:     types.StringValue(domainsResponse.Links.GetNext()),

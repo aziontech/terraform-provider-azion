@@ -68,5 +68,3 @@ Read-Only:
 - `is_active` (Boolean) Status of the origin.
 - `server_role` (String) Server role of the origin.
 - `weight` (String) Weight of the origin.
-
-

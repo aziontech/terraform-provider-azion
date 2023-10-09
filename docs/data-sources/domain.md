@@ -47,5 +47,3 @@ Read-Only:
 - `environment` (String)
 - `is_active` (Boolean) Status of the domain.
 - `name` (String) Name of this entry.
-
-

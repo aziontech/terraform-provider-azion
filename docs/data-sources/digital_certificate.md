@@ -53,5 +53,3 @@ Optional:
 Read-Only:
 
 - `azion_information` (String) Information of the digital certificate.
-
-

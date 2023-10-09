@@ -57,5 +57,3 @@ Read-Only:
 - `edge_function_id` (Number) Name of the function.
 - `id` (Number) The function identifier.
 - `name` (String) Language of the function.
-
-

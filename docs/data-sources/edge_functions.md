@@ -55,5 +55,3 @@ Read-Only:
 - `name` (String) Name of the function.
 - `reference_count` (Number) The reference count of the function.
 - `version` (String) Version of the function.
-
-
