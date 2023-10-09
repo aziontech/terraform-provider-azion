@@ -229,6 +229,12 @@ func errorPrint(errCode int, err error) (string, string) {
 func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	tflog.Debug(ctx, "Reading Records")
 
+	// Since we must find the target record in a paginated result set from the API,
+	// we must use a large page size so we can retrieve (probably) all records.
+	// It's just a workaround until a GET /record/{record_id} API endpoint is available.
+	// TODO: Change this once a GET /record/{record_id} API endpoint is available.
+	largeRecordsPageSize := int64(1000000)
+
 	var state recordResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -244,7 +250,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 		idRecord = utils.AtoiNoError(valueFromCmd[1], resp)
 	}
 
-	recordsResponse, httpResponse, err := r.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, idZone).Execute()
+	recordsResponse, httpResponse, err := r.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, idZone).PageSize(largeRecordsPageSize).Execute()
 	if err != nil {
 		usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
@@ -272,6 +278,10 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 			state.Record.Weight = types.Int64Value(int64(*resultRecord.Weight))
 			state.Record.Description = types.StringValue(*resultRecord.Description)
 		}
+	}
+	if state.Record == nil {
+		resp.Diagnostics.AddError("Record not found", fmt.Sprintf("RecordID %v not found in zoneID %v", idRecord, idZone))
+		return
 	}
 
 	diags = resp.State.Set(ctx, &state)
