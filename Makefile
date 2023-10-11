@@ -23,17 +23,15 @@ GOFMT_FILES?=$$(find . -name '*.go')
 
 default: build
 
-install: checks
-	go install -ldflags="-X github.com/aziontech/terraform-provider-azion/main.version=$(VERSION)"
+install:
+	go mod tidy
+	go install .
 
-build: checks
-build:
-	$(GO) build -ldflags="-X github.com/aziontech/terraform-provider-azion/main.version=$(VERSION)" -o terraform-provider-azion;
+fmt:
+	go fmt ./...
 
-checks:
-	@go fmt ./...
-	@staticcheck ./...
-	@go vet ./...
+vet:
+	go vet ./...
 
 .PHONY: release
 release: tools
