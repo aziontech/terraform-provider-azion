@@ -40,6 +40,18 @@ jobs:
             echo "::error::'go fmt' found required formatting changes. Run 'make fmt' on your branch."
             exit 1;
           fi
+
+  gosec:
+    name: Run Gosec Security Scanner
+    needs: [ build ]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: securego/gosec@master
+        env:
+          GOROOT: ''
+        with:
+          args: ./...
+
   vet:
     name: go vet
     needs: [build]
