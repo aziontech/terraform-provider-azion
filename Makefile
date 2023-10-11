@@ -97,18 +97,6 @@ get-gosec-deps:
 		https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b $(GOBIN) v2.15.0 ;\
 	fi
 
-docGen: tools
-	chmod u+r+x ./scripts/generate-docs.sh
-	@sh -c "'$(CURDIR)/scripts/generate-docs.sh'"
-
-tools:
-	@echo "==> Installing development tooling..."
-	go generate -tags tools tools/tools.go
-
-generate-changelog:
-	@echo "==> Generating changelog..."
-	@sh -c "'$(CURDIR)/scripts/generate-changelog.sh'"
-
 func-init:
 	@rm -rf func-tests/.terraform.lock.hcl
 	@rm -rf func-tests/.terraform
