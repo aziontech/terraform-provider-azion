@@ -46,6 +46,8 @@ jobs:
     needs: [ build ]
     runs-on: ubuntu-20.04
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
       - uses: securego/gosec@master
         env:
           GOROOT: ''
@@ -65,22 +67,15 @@ jobs:
       - run: go vet ./...
 
   lint:
-    name: golangci-lint
-    runs-on: ubuntu-latest
+    name: golangcli-lint
+    needs: [ build ]
+    runs-on: ubuntu-20.04
     steps:
       - name: Setting GIT
         run: git config --global url."https://${{ secrets.GLOBAL_TOKEN }}:x-oauth-basic@github.com/aziontech".insteadOf "https://github.com/aziontech"
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # needed for `only-new-issues` to compare diffs
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+      - uses: golangci/golangci-lint-action@v3
         with:
           version: latest
           args: "--config .golintci.yml"
