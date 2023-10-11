@@ -21,7 +21,7 @@ GORELEASER ?= $(shell which goreleaser)
 GOFMT ?= $(shell which gofmt)
 GOFMT_FILES?=$$(find . -name '*.go')
 
-default: build
+default: install
 
 install:
 	go mod tidy
@@ -32,6 +32,9 @@ fmt:
 
 vet:
 	go vet ./...
+
+generate:
+	go generate ./...
 
 .PHONY: release
 release: tools
