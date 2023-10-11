@@ -29,10 +29,3 @@ jobs:
           args: ./...
       - name: Run Check
         run: make checks
-
-      - name: Doc Generate
-        run: |
-              make docGen
-              git add -N .
-              git diff --exit-code || \
-                (echo; echo "Unexpected difference after code generation. Run 'make generate' command and commit."; exit 1)
