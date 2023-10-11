@@ -1,4 +1,4 @@
-name: Doc Generate
+name: Code Check and Acceptance Tests
 
 on:  [pull_request]
 
@@ -51,6 +51,27 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
       - run: go vet ./...
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setting GIT
+        run: git config --global url."https://${{ secrets.GLOBAL_TOKEN }}:x-oauth-basic@github.com/aziontech".insteadOf "https://github.com/aziontech"
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # needed for `only-new-issues` to compare diffs
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: "--config .golintci.yml"
+          only-new-issues: true
 
   generate:
     name: go generate

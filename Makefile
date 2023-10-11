@@ -55,10 +55,6 @@ clean-dev:
 		find ./terraformScripts/ -name "*tfstate*" -exec rm {} \; ; \
 	fi
 
-install:
-	go mod tidy
-	go install .
-
 install-dev:
 	@echo "==> Building development version ($(DEV_VERSION))"
 	go build -gcflags="all=-N -l" -o terraform-provider-azion_$(DEV_VERSION)
