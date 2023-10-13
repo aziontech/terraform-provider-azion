@@ -107,6 +107,10 @@ jobs:
           with:
             go-version-file: 'go.mod'
 
+        - name: check secret
+          run: |
+            echo $AZION_API_TOKEN
+
         - name: build and install provider
           run: make clean-dev && make install-dev
 
