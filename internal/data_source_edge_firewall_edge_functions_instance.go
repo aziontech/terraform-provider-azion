@@ -127,8 +127,8 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Schema(_ context.Context, 
 }
 
 func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var Page types.Int64
-	var PageSize types.Int64
+	var page types.Int64
+	var pageSize types.Int64
 	var edgeFirewallID types.Int64
 
 	diagsEdgeApplicationId := req.Config.GetAttribute(ctx, path.Root("edge_firewall_id"), &edgeFirewallID)
@@ -137,26 +137,29 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, 
 		return
 	}
 
-	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
+	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &page)
 	resp.Diagnostics.Append(diagsPage...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("page_size"), &PageSize)
+	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("page_size"), &pageSize)
 	resp.Diagnostics.Append(diagsPageSize...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if Page.ValueInt64() == 0 {
-		Page = types.Int64Value(1)
+	if page.ValueInt64() == 0 {
+		page = types.Int64Value(1)
 	}
-	if PageSize.ValueInt64() == 0 {
-		PageSize = types.Int64Value(10)
+	if pageSize.ValueInt64() == 0 {
+		pageSize = types.Int64Value(10)
 	}
 
-	EdgeFirewallFunctionsInstanceResponse, response, err := e.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.EdgeFirewallEdgeFirewallIdFunctionsInstancesGet(ctx, edgeFirewallID.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	EdgeFirewallFunctionsInstanceResponse, response, err := e.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.EdgeFirewallEdgeFirewallIdFunctionsInstancesGet(ctx, edgeFirewallID.ValueInt64()).
+		Page(page.ValueInt64()).
+		PageSize(pageSize.ValueInt64()).
+		Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -199,8 +202,8 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, 
 		EdgeFirewallID: edgeFirewallID,
 		Counter:        types.Int64Value(EdgeFirewallFunctionsInstanceResponse.GetCount()),
 		TotalPages:     types.Int64Value(EdgeFirewallFunctionsInstanceResponse.GetTotalPages()),
-		Page:           Page,
-		PageSize:       PageSize,
+		Page:           page,
+		PageSize:       pageSize,
 		Links: &EdgeFirewallsResponseLinks{
 			Previous: types.StringValue(EdgeFirewallFunctionsInstanceResponse.Links.GetPrevious()),
 			Next:     types.StringValue(EdgeFirewallFunctionsInstanceResponse.Links.GetNext()),
