@@ -72,6 +72,10 @@ github.com/aziontech/azionapi-go-sdk v0.101.0 h1:RppK6QioX9U1s82rWCTtKvOCL2Lwrm5
 github.com/aziontech/azionapi-go-sdk v0.101.0/go.mod h1:cA5DY/VP4X5Eu11LpQNzNn83ziKjja7QVMIl4J45feA=
 github.com/aziontech/azionapi-go-sdk v0.102.0 h1:puOIQWMN7zRiAuwUVanLFSvVyHRm6U3SS2UQP1P8h18=
 github.com/aziontech/azionapi-go-sdk v0.102.0/go.mod h1:cA5DY/VP4X5Eu11LpQNzNn83ziKjja7QVMIl4J45feA=
+github.com/aziontech/azionapi-go-sdk v0.107.0 h1:Ej8hGgJQ/kBwGntlhtu4/gqxSCgYCf5uy5bl28yvagY=
+github.com/aziontech/azionapi-go-sdk v0.107.0/go.mod h1:cA5DY/VP4X5Eu11LpQNzNn83ziKjja7QVMIl4J45feA=
+github.com/aziontech/azionapi-go-sdk v0.109.0 h1:PxOtgL3kQ6bcvKvd0uP1W8DVSwOgeRGuHVBZ6yvK+rc=
+github.com/aziontech/azionapi-go-sdk v0.109.0/go.mod h1:cA5DY/VP4X5Eu11LpQNzNn83ziKjja7QVMIl4J45feA=
 github.com/bgentry/speakeasy v0.1.0 h1:ByYyxL9InA1OWqxJqqp2A5pYHUrCiAL6K3J+LKSsQkY=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bufbuild/protocompile v0.4.0 h1:LbFKd2XowZvQ/kajzguUp2DC9UEIQhIq77fZZlaQsNA=
