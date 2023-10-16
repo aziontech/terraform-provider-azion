@@ -107,6 +107,8 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionVariables,
 		dataSourceAzionWafRuleSet,
 		dataSourceAzionWafRuleSets,
+		dataSourceAzionEdgeFirewallEdgeFunctionsInstance,
+		dataSourceAzionEdgeFirewallEdgeFunctionInstance,
 		dataSourceAzionWafDomains,
 		dataSourceAzionWafEvents,
 	}

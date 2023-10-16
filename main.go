@@ -12,6 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-mux/tf6muxserver"
 )
 
+// Run "go generate" to format example terraform files and generate the provider docs
+
+// Format examples
+//go:generate terraform fmt -recursive ./examples/
+
+// Run the docs generation tool
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+
 var (
 	version string = "dev"
 )
