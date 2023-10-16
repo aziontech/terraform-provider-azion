@@ -19,7 +19,7 @@ The Azion provider is used to interact with resources supported by Azion. The pr
 terraform {
   required_providers {
     azion = {
-      source = "aziontech/azion"
+      source  = "aziontech/azion"
       version = "~≳ <version>"
     }
   }

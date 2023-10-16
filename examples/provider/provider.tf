@@ -4,7 +4,7 @@
 terraform {
   required_providers {
     azion = {
-      source = "aziontech/azion"
+      source  = "aziontech/azion"
       version = "~≳ <version>"
     }
   }

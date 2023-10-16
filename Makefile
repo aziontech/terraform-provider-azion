@@ -21,19 +21,20 @@ GORELEASER ?= $(shell which goreleaser)
 GOFMT ?= $(shell which gofmt)
 GOFMT_FILES?=$$(find . -name '*.go')
 
-default: build
+default: install
 
-install: checks
-	go install -ldflags="-X github.com/aziontech/terraform-provider-azion/main.version=$(VERSION)"
+install:
+	go mod tidy
+	go install .
 
-build: checks
-build:
-	$(GO) build -ldflags="-X github.com/aziontech/terraform-provider-azion/main.version=$(VERSION)" -o terraform-provider-azion;
+fmt:
+	go fmt ./...
 
-checks:
-	@go fmt ./...
-	@staticcheck ./...
-	@go vet ./...
+vet:
+	go vet ./...
+
+generate:
+	go generate ./...
 
 .PHONY: release
 release: tools
@@ -98,18 +99,6 @@ get-gosec-deps:
 		curl -sfL \
 		https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b $(GOBIN) v2.15.0 ;\
 	fi
-
-docGen: tools
-	chmod u+r+x ./scripts/generate-docs.sh
-	@sh -c "'$(CURDIR)/scripts/generate-docs.sh'"
-
-tools:
-	@echo "==> Installing development tooling..."
-	go generate -tags tools tools/tools.go
-
-generate-changelog:
-	@echo "==> Generating changelog..."
-	@sh -c "'$(CURDIR)/scripts/generate-changelog.sh'"
 
 func-init:
 	@rm -rf func-tests/.terraform.lock.hcl
