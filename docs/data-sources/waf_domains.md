@@ -29,12 +29,12 @@ data "azion_waf_domains" "example" {
 
 ### Optional
 
-- `page` (Number) The page number of Waf.
-- `page_size` (Number) The Page Size number of Waf.
+- `page` (Number) The page number of Waf domains.
+- `page_size` (Number) The Page Size number of Waf domains.
 
 ### Read-Only
 
-- `counter` (Number) The total number of Waf.
+- `counter` (Number) The total number of Waf domains.
 - `id` (String) Identifier of the data source.
 - `links` (Attributes) (see [below for nested schema](#nestedatt--links))
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
