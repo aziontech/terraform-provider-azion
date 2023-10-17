@@ -25,15 +25,15 @@ type WafDomainsDataSource struct {
 }
 
 type WafDomainsDataSourceModel struct {
-	SchemaVersion types.Int64                 `tfsdk:"schema_version"`
-	ID            types.String                `tfsdk:"id"`
-	WafID         types.Int64                 `tfsdk:"waf_id"`
-	Counter       types.Int64                 `tfsdk:"counter"`
-	TotalPages    types.Int64                 `tfsdk:"total_pages"`
-	Page          types.Int64                 `tfsdk:"page"`
-	PageSize      types.Int64                 `tfsdk:"page_size"`
-	Links         *GetWafDomainsResponseLinks `tfsdk:"links"`
-	Results       []WafDomainsResults         `tfsdk:"results"`
+	SchemaVersion types.Int64                `tfsdk:"schema_version"`
+	ID            types.String               `tfsdk:"id"`
+	WafID         types.Int64                `tfsdk:"waf_id"`
+	Counter       types.Int64                `tfsdk:"counter"`
+	TotalPages    types.Int64                `tfsdk:"total_pages"`
+	Page          types.Int64                `tfsdk:"page"`
+	PageSize      types.Int64                `tfsdk:"page_size"`
+	Links         GetWafDomainsResponseLinks `tfsdk:"links"`
+	Results       []WafDomainsResults        `tfsdk:"results"`
 }
 
 type GetWafDomainsResponseLinks struct {
@@ -71,15 +71,15 @@ func (o *WafDomainsDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Required:    true,
 			},
 			"counter": schema.Int64Attribute{
-				Description: "The total number of Waf.",
+				Description: "The total number of Waf domains.",
 				Computed:    true,
 			},
 			"page": schema.Int64Attribute{
-				Description: "The page number of Waf.",
+				Description: "The page number of Waf domains.",
 				Optional:    true,
 			},
 			"page_size": schema.Int64Attribute{
-				Description: "The Page Size number of Waf.",
+				Description: "The Page Size number of Waf domains.",
 				Optional:    true,
 			},
 			"total_pages": schema.Int64Attribute{
@@ -197,14 +197,14 @@ func (o *WafDomainsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	wafRuleSetState := WafDomainsDataSourceModel{
 		SchemaVersion: types.Int64Value(wafDomainsResponse.GetSchemaVersion()),
 		WafID:         wafID,
-		ID:            types.StringValue("Get All Waf Domains"),
+		ID:            types.StringValue("Get All WAF domains"),
 		Results:       WafList,
 		TotalPages:    types.Int64Value(wafDomainsResponse.GetTotalPages()),
 		Page:          page,
 		PageSize:      pageSize,
 		Counter:       types.Int64Value(wafDomainsResponse.GetCount()),
-		Links: &GetWafDomainsResponseLinks{
-			Previous: types.StringPointerValue(wafDomainsResponse.Links.Previous.Get()),
+		Links: GetWafDomainsResponseLinks{
+			Previous: types.StringValue(wafDomainsResponse.Links.GetPrevious()),
 			Next:     types.StringValue(wafDomainsResponse.Links.GetNext()),
 		},
 	}
