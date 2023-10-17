@@ -1,11 +1,9 @@
-resource "azion_edge_application_edge_functions_instance" "example" {
-  edge_application_id = 1234567890
+resource "azion_edge_firewall_edge_functions_instance" "example" {
+  edge_firewall_id = 12464
   results = {
-    name = "Terraform Example"
-    "edge_function_id" : 12345,
+    name = "Terraform Test"
+    "edge_function_id" : 9359
     "args" : jsonencode(
-      { "key"     = "Value",
-        "Example" = "example"
-    })
+    { a = "b" })
   }
 }
