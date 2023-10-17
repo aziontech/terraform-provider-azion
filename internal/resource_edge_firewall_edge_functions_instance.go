@@ -34,13 +34,13 @@ type edgeFirewallFunctionsInstanceResource struct {
 
 type edgeFirewallEdgeFunctionInstanceResourceModel struct {
 	SchemaVersion  types.Int64                                     `tfsdk:"schema_version"`
-	EdgeFunction   *dgeFirewallEdgeFunctionInstanceResourceResults `tfsdk:"results"`
+	EdgeFunction   edgeFirewallEdgeFunctionInstanceResourceResults `tfsdk:"results"`
 	ID             types.String                                    `tfsdk:"id"`
 	EdgeFirewallID types.Int64                                     `tfsdk:"edge_firewall_id"`
 	LastUpdated    types.String                                    `tfsdk:"last_updated"`
 }
 
-type dgeFirewallEdgeFunctionInstanceResourceResults struct {
+type edgeFirewallEdgeFunctionInstanceResourceResults struct {
 	EdgeFunctionId types.Int64  `tfsdk:"edge_function_id"`
 	Name           types.String `tfsdk:"name"`
 	Args           types.String `tfsdk:"args"`
@@ -129,15 +129,12 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 		return
 	}
 
-	var argsStr string
-	if plan.EdgeFunction.Args.IsUnknown() {
-		argsStr = "{}"
-	} else {
-		if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
-			resp.Diagnostics.AddError("Args",
-				"Is not null")
-			return
-		}
+	if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
+		resp.Diagnostics.AddError("Args", "Is not null")
+		return
+	}
+	argsStr := "{}"
+	if !plan.EdgeFunction.Args.IsUnknown() {
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
 
@@ -147,8 +144,6 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 			err.Error(),
 			"err",
 		)
-	}
-	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -189,7 +184,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 		return
 	}
 
-	plan.EdgeFunction = &dgeFirewallEdgeFunctionInstanceResourceResults{
+	plan.EdgeFunction = edgeFirewallEdgeFunctionInstanceResourceResults{
 		EdgeFunctionId: types.Int64Value(edgeFunctionInstancesResponse.Results.GetEdgeFunction()),
 		Name:           types.StringValue(edgeFunctionInstancesResponse.Results.GetName()),
 		Args:           types.StringValue(jsonArgsStr),
@@ -265,7 +260,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 		EdgeFirewallID: types.Int64Value(edgeFirewallID),
 		SchemaVersion:  types.Int64Value(int64(edgeFunctionInstancesResponse.GetSchemaVersion())),
 		ID:             types.StringValue(strconv.FormatInt(edgeFunctionInstancesResponse.Results.GetId(), 10)),
-		EdgeFunction: &dgeFirewallEdgeFunctionInstanceResourceResults{
+		EdgeFunction: edgeFirewallEdgeFunctionInstanceResourceResults{
 			ID:             types.Int64Value(edgeFunctionInstancesResponse.Results.GetId()),
 			LastEditor:     types.StringValue(edgeFunctionInstancesResponse.Results.GetLastEditor()),
 			LastModified:   types.StringValue(edgeFunctionInstancesResponse.Results.GetLastModified()),
@@ -311,15 +306,14 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		edgeFirewallID = plan.EdgeFirewallID
 	}
 
+	if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
+		resp.Diagnostics.AddError("Args", "Is not null")
+		return
+	}
+
 	var argsStr string
-	if plan.EdgeFunction.Args.IsUnknown() {
-		argsStr = "{}"
-	} else {
-		if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
-			resp.Diagnostics.AddError("Args",
-				"Is not null")
-			return
-		}
+	argsStr = "{}"
+	if !plan.EdgeFunction.Args.IsUnknown() {
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
 
@@ -329,6 +323,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 			err.Error(),
 			"err",
 		)
+		return
 	}
 
 	ApplicationPutInstanceRequest := edgefunctionsinstance_edgefirewall.CreateEdgeFunctionsInstancesRequest{
@@ -368,7 +363,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		return
 	}
 
-	plan.EdgeFunction = &dgeFirewallEdgeFunctionInstanceResourceResults{
+	plan.EdgeFunction = edgeFirewallEdgeFunctionInstanceResourceResults{
 		EdgeFunctionId: types.Int64Value(edgeFunctionInstancesUpdateResponse.Results.GetEdgeFunction()),
 		Name:           types.StringValue(edgeFunctionInstancesUpdateResponse.Results.GetName()),
 		LastEditor:     types.StringValue(edgeFunctionInstancesUpdateResponse.Results.GetLastEditor()),
