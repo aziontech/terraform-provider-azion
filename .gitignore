@@ -14,3 +14,4 @@ terraform-provider-azion
 /terraformScripts2/terraform.tfstate.1692629347.backup
 /terraformScripts/dummy_script.txt
 func-tests/terraform.log
+/terraformScripts/openapitools.json
