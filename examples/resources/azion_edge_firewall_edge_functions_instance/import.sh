@@ -1,0 +1,1 @@
+terraform import azion_edge_firewall_edge_functions_instance.example <edge_firewall_id>/<edge_function_instance_id>
