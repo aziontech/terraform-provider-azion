@@ -441,3 +441,9 @@ data "azion_waf_domains" "example" {
   page_size = 10
   waf_id    = azion_waf_rule_set.testfunc.result.waf_id
 }
+
+data "azion_edge_firewall_edge_functions_instance" "example" {
+  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
+  page             = 1
+  page_size        = 10
+}
