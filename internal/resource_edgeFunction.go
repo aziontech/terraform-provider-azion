@@ -162,14 +162,15 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	edgeFunction := edgefunctions.CreateEdgeFunctionRequest{
-		Name:     edgefunctions.PtrString(plan.EdgeFunction.Name.ValueString()),
-		Language: edgefunctions.PtrString(plan.EdgeFunction.Language.ValueString()),
-		Code:     edgefunctions.PtrString(plan.EdgeFunction.Code.ValueString()),
-		Active:   edgefunctions.PtrBool(plan.EdgeFunction.IsActive.ValueBool()),
-		JsonArgs: planJsonArgs,
+		Name:          edgefunctions.PtrString(plan.EdgeFunction.Name.ValueString()),
+		Language:      edgefunctions.PtrString(plan.EdgeFunction.Language.ValueString()),
+		Code:          edgefunctions.PtrString(plan.EdgeFunction.Code.ValueString()),
+		Active:        edgefunctions.PtrBool(plan.EdgeFunction.IsActive.ValueBool()),
+		InitiatorType: edgefunctions.PtrString(plan.EdgeFunction.InitiatorType.ValueString()),
+		JsonArgs:      planJsonArgs,
 	}
 
-	createEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsApi.EdgeFunctionsPost(ctx).CreateEdgeFunctionRequest(edgeFunction).Execute()
+	createEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsPost(ctx).CreateEdgeFunctionRequest(edgeFunction).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -248,7 +249,7 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 		}
 	}
 
-	getEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsApi.EdgeFunctionsIdGet(ctx, edgeFunctionId).Execute()
+	getEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, edgeFunctionId).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -331,10 +332,11 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	updateEdgeFunctionRequest := edgefunctions.PutEdgeFunctionRequest{
-		Name:     edgefunctions.PtrString(plan.EdgeFunction.Name.ValueString()),
-		Code:     edgefunctions.PtrString(plan.EdgeFunction.Code.ValueString()),
-		Active:   edgefunctions.PtrBool(plan.EdgeFunction.IsActive.ValueBool()),
-		JsonArgs: requestJsonArgs,
+		Name:          edgefunctions.PtrString(plan.EdgeFunction.Name.ValueString()),
+		Code:          edgefunctions.PtrString(plan.EdgeFunction.Code.ValueString()),
+		Active:        edgefunctions.PtrBool(plan.EdgeFunction.IsActive.ValueBool()),
+		InitiatorType: edgefunctions.PtrString(plan.EdgeFunction.InitiatorType.ValueString()),
+		JsonArgs:      requestJsonArgs,
 	}
 	var edgeFunctionId int64
 	if state.ID.IsNull() {
@@ -350,7 +352,7 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	updateEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsApi.EdgeFunctionsIdPut(ctx, edgeFunctionId).PutEdgeFunctionRequest(updateEdgeFunctionRequest).Execute()
+	updateEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdPut(ctx, edgeFunctionId).PutEdgeFunctionRequest(updateEdgeFunctionRequest).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
@@ -428,7 +430,7 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 			return
 		}
 	}
-	response, err := r.client.edgefunctionsApi.EdgeFunctionsApi.EdgeFunctionsIdDelete(ctx, edgeFunctionId).Execute()
+	response, err := r.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdDelete(ctx, edgeFunctionId).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {

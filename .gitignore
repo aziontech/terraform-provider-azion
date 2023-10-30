@@ -7,9 +7,9 @@ terraform.tfstate.backup
 terraform-provider-azion
 /.idea/aws.xml
 /.idea/modules.xml
-/terraformScripts2/mock_files/dummy_certificate.pem
-/terraformScripts2/mock_files/dummy_private_key.pem
-/terraformScripts2/mock_files/dummy_script.txt
+/terraformScripts/mock_files/dummy_certificate.pem
+/terraformScripts/mock_files/dummy_private_key.pem
+/terraformScripts/mock_files/dummy_script.txt
 /terraformScripts2/example.tf
 /terraformScripts2/terraform.tfstate.1692629347.backup
 /terraformScripts/dummy_script.txt

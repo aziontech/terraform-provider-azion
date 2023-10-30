@@ -147,7 +147,7 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsApi.EdgeFunctionsIdGet(ctx, int64(edgeFunctionId)).Execute()
+	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, int64(edgeFunctionId)).Execute()
 	if err != nil {
 		usrMsg, errMsg := errPrint(response.StatusCode, err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
