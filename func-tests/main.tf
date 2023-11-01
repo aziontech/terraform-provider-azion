@@ -130,9 +130,9 @@ resource "azion_edge_function" "testfunc" {
 resource "azion_edge_function" "testfunc2firewall" {
   edge_function = {
     name           = "Terraform Edge Function 2 Firewall test-func"
-    code           = file("${path.module}/mock_files/dummy_script2firewall.txt")
+    code           = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
     language       = "javascript"
-    initiator_type = "edge_application"
+    initiator_type = "edge_firewall"
     json_args = jsonencode(
       { "key" = "Value",
         "key" = "example"
@@ -190,19 +190,19 @@ resource "azion_edge_firewall_main_setting" "testfunc" {
   }
 }
 
-# resource "azion_edge_firewall_edge_functions_instance" "example" {
-#   edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
-#   results = {
-#     name = "Terraform Test 1"
-#     "edge_function_id" : azion_edge_function.testfunc2firewall.edge_function.function_id
-#     "args" : jsonencode(
-#     { a = "b" })
-#   }
-#   depends_on = [
-#     azion_edge_firewall_main_setting.testfunc,
-#     azion_edge_function.testfunc2firewall
-#   ]
-# }
+resource "azion_edge_firewall_edge_functions_instance" "testfunc" {
+  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
+  results = {
+    name = "Terraform Test 1"
+    "edge_function_id" : azion_edge_function.testfunc2firewall.edge_function.function_id
+    "args" : jsonencode(
+    { a = "b" })
+  }
+  depends_on = [
+    azion_edge_firewall_main_setting.testfunc,
+    azion_edge_function.testfunc2firewall
+  ]
+}
 
 resource "azion_digital_certificate" "testfunc" {
   certificate_result = {
@@ -447,4 +447,11 @@ data "azion_edge_firewall_edge_functions_instance" "example" {
   edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
   page             = 1
   page_size        = 10
+}
+
+data "azion_edge_firewall_edge_function_instance" "example" {
+  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
+  results = {
+    edge_function_instance_id = azion_edge_firewall_edge_functions_instance.testfunc.results.id
+  }
 }
