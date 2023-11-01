@@ -199,7 +199,8 @@ resource "azion_edge_firewall_main_setting" "testfunc" {
 #     { a = "b" })
 #   }
 #   depends_on = [
-#     azion_edge_firewall_main_setting.testfunc
+#     azion_edge_firewall_main_setting.testfunc,
+#     azion_edge_function.testfunc2firewall
 #   ]
 # }
 
