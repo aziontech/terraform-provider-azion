@@ -166,7 +166,7 @@ resource "azion_edge_application_edge_functions_instance" "testfunc" {
 resource "azion_domain" "testfunc" {
   domain = {
     cnames : [
-      "www.testterraform3x4mpl3.com"
+      "www.terraformtest-func.qa"
     ]
     name                   = "Terraform domain test-func"
     digital_certificate_id = null
@@ -220,13 +220,13 @@ resource "azion_intelligent_dns_zone" "testfunc" {
   }
 }
 
-resource "azion_intelligent_dns_dnssec" "testfunc" {
-  zone_id = azion_intelligent_dns_zone.testfunc.zone.id
-  dns_sec = {
-    is_enabled = true
-  }
-  depends_on = [azion_intelligent_dns_zone.testfunc]
-}
+# resource "azion_intelligent_dns_dnssec" "testfunc" {
+#   zone_id = azion_intelligent_dns_zone.testfunc.zone.id
+#   dns_sec = {
+#     is_enabled = true
+#   }
+#   depends_on = [azion_intelligent_dns_zone.testfunc]
+# }
 
 resource "azion_intelligent_dns_record" "testfunc" {
   zone_id = azion_intelligent_dns_zone.testfunc.zone.id

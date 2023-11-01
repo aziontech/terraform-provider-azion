@@ -124,10 +124,6 @@ jobs:
           run: |
             sed -i 's/test-func/test-func-action/g' func-tests/main.tf
 
-        - name: replace domain cname string on .tf
-          run: |
-            sed -i 's/3x4mpl3/3x4mpl34ct10n/g' func-tests/main.tf
-
         - name: run func tests
           run: | 
             make func-init && make func-plan && make func-apply
