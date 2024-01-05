@@ -1,11 +1,11 @@
 package provider
 
 import (
-	"context"
+	"contxext"
 	"io"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/datxasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -24,7 +24,7 @@ type OriginsDataSource struct {
 }
 
 type OriginsDataSourceModel struct {
-	SchemaVersion types.Int64                             `tfsdk:"schema_version"`
+	SchemaVersion types.Int64           x                  `tfsdk:"schema_version"`
 	ID            types.String                            `tfsdk:"id"`
 	ApplicationID types.Int64                             `tfsdk:"edge_application_id"`
 	Counter       types.Int64                             `tfsdk:"counter"`
@@ -61,7 +61,7 @@ type OriginsResults struct {
 
 type OriginsAddressResults struct {
 	Address    types.String `tfsdk:"address"`
-	Weight     types.String `tfsdk:"weight"`
+	Weight     types.Int64 `tfsdk:"weight"`
 	ServerRole types.String `tfsdk:"server_role"`
 	IsActive   types.Bool   `tfsdk:"is_active"`
 }
@@ -274,7 +274,7 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		for _, addr := range origin.Addresses {
 			addresses = append(addresses, OriginsAddressResults{
 				Address:    types.StringValue(addr.GetAddress()),
-				Weight:     types.StringValue(addr.GetWeight()),
+				Weight:     types.Int64Value(addr.GetWeight()),
 				ServerRole: types.StringValue(addr.GetServerRole()),
 				IsActive:   types.BoolValue(addr.GetIsActive()),
 			})

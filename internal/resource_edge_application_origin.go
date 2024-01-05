@@ -61,7 +61,7 @@ type OriginResourceResults struct {
 
 type OriginAddress struct {
 	Address    types.String `tfsdk:"address"`
-	Weight     types.String `tfsdk:"weight"`
+	Weight     types.Int64 `tfsdk:"weight"`
 	ServerRole types.String `tfsdk:"server_role"`
 	IsActive   types.Bool   `tfsdk:"is_active"`
 }
@@ -121,7 +121,7 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 									Description: "Address of the origin.",
 									Required:    true,
 								},
-								"weight": schema.StringAttribute{
+								"weight": schema.Int64Attribute{
 									Description: "Weight of the origin.",
 									Optional:    true,
 									Computed:    true,
@@ -288,7 +288,7 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	for _, addr := range originResponse.Results.Addresses {
 		addresses = append(addresses, OriginAddress{
 			Address:    types.StringValue(addr.GetAddress()),
-			Weight:     types.StringValue(addr.GetWeight()),
+			Weight:     types.Int64Value(addr.GetWeight()),
 			ServerRole: types.StringValue(addr.GetServerRole()),
 			IsActive:   types.BoolValue(addr.GetIsActive()),
 		})
@@ -371,7 +371,7 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 	for _, addr := range originResponse.Results.Addresses {
 		addresses = append(addresses, OriginAddress{
 			Address:    types.StringValue(addr.GetAddress()),
-			Weight:     types.StringValue(addr.GetWeight()),
+			Weight:     types.Int64Value(addr.GetWeight()),
 			ServerRole: types.StringValue(addr.GetServerRole()),
 			IsActive:   types.BoolValue(addr.GetIsActive()),
 		})
@@ -500,7 +500,7 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 	for _, addr := range originResponse.Results.Addresses {
 		addresses = append(addresses, OriginAddress{
 			Address:    types.StringValue(addr.GetAddress()),
-			Weight:     types.StringValue(addr.GetWeight()),
+			Weight:     types.Int64Value(addr.GetWeight()),
 			ServerRole: types.StringValue(addr.GetServerRole()),
 			IsActive:   types.BoolValue(addr.GetIsActive()),
 		})
