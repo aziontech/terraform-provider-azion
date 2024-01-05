@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"contxext"
+	"context"
 	"io"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
