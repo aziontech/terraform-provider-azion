@@ -24,7 +24,7 @@ type OriginsDataSource struct {
 }
 
 type OriginsDataSourceModel struct {
-	SchemaVersion types.Int64           x                  `tfsdk:"schema_version"`
+	SchemaVersion types.Int64                             `tfsdk:"schema_version"`
 	ID            types.String                            `tfsdk:"id"`
 	ApplicationID types.Int64                             `tfsdk:"edge_application_id"`
 	Counter       types.Int64                             `tfsdk:"counter"`
