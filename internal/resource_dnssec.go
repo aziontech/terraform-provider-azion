@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -222,6 +223,10 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	getDnsSec, response, err := r.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, int32(zoneId)).Execute()
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
 			resp.Diagnostics.AddError(

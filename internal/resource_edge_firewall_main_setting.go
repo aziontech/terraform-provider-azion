@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/aziontech/azionapi-go-sdk/edgefirewall"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -217,6 +218,10 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 
 	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, edgeFirewallID).Execute()
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
 			resp.Diagnostics.AddError(

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/aziontech/azionapi-go-sdk/networklist"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -196,6 +197,10 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 
 	getNetworkList, response, err := r.client.networkListApi.DefaultApi.NetworkListsUuidGet(ctx, networkListId).Execute()
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
 			resp.Diagnostics.AddError(

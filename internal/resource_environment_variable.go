@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/aziontech/azionapi-go-sdk/variables"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -194,6 +195,10 @@ func (r *environmentVariableResource) Read(ctx context.Context, req resource.Rea
 
 	getEnvironmentVariable, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid).Execute()
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
 			resp.Diagnostics.AddError(
