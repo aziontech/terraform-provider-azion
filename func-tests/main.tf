@@ -77,7 +77,7 @@ resource "azion_edge_application_cache_setting" "testfunc" {
 
 
 resource "azion_edge_application_rule_engine" "testfunc" {
-  edge_application_id = azion_edge_application_main_setting.example.edge_application.application_id
+  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
   results = {
     name         = "Default Rule"
     phase        = "request"
