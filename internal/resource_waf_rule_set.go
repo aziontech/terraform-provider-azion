@@ -5,6 +5,7 @@ import (
 	waf "github.com/aziontech/azionapi-go-sdk/waf"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -294,6 +295,10 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	wafResponse, response, err := r.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID).Execute()
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
 			resp.Diagnostics.AddError(
