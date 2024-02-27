@@ -89,12 +89,6 @@ resource "azion_edge_application_rule_engine" "testfunc" {
         }
       },
       {
-        name = "set_cache_policy",
-        target_object = { 
-            target = azion_edge_application_cache_setting.testfunc.id
-        }
-      },
-      {
         name = "capture_match_groups",
         target_object = { 
                 "captured_array": "Terraform",
