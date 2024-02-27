@@ -75,17 +75,16 @@ resource "azion_edge_application_cache_setting" "testfunc" {
   ]
 }
 
-# TODO: uncomment this test after applying fix for "Default rule"
 # resource "azion_edge_application_rule_engine" "testfunc" {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   results = {
-#     name         = "Default Rule"
-#     phase        = "request"
-#     description  = ""
-#     behaviors    = [
+#     name        = "Default Rule"
+#     phase       = "default"
+#     description = ""
+#     behaviors = [
 #       {
-#         name = "set_origin"
-#         target_object : {
+#         name = "set_origin",
+#         target_object = { 
 #             target = azion_edge_application_origin.testfunc.id
 #         }
 #       },
@@ -95,12 +94,6 @@ resource "azion_edge_application_cache_setting" "testfunc" {
 #                 "captured_array": "Terraform",
 #                 "subject": "$${uri}",
 #                 "regex": "1101"
-#         }
-#       },
-#       {
-#         name = "set_cache_policy"
-#         target_object : {
-#             target = azion_edge_application_cache_setting.testfunc.id
 #         }
 #       },
 #     ]
@@ -117,7 +110,7 @@ resource "azion_edge_application_cache_setting" "testfunc" {
 #       }
 #     ]
 #   }
-#     depends_on = [
+#   depends_on = [
 #     azion_edge_application_main_setting.testfunc,
 #     azion_edge_application_origin.testfunc,
 #     azion_edge_application_cache_setting.testfunc

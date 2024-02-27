@@ -647,13 +647,6 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 			Behaviors:   behaviors,
 			Criteria:    criteria,
 		}
-	} else {
-		rulesEngineRequest = edgeapplications.UpdateRulesEngineRequest{
-			Name:        plan.RulesEngine.Name.ValueString(),
-			Description: plan.RulesEngine.Description.ValueStringPointer(),
-			Behaviors:   behaviors,
-			Criteria:    criteria,
-		}
 	}
 
 	if phase.ValueString() == "default" {
