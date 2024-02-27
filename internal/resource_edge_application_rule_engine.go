@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -275,14 +276,79 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		criteria = append(criteria, criterionSet)
 	}
 
-	rulesEngineRequest := edgeapplications.CreateRulesEngineRequest{
-		Name:        plan.RulesEngine.Name.ValueString(),
-		Description: plan.RulesEngine.Description.ValueStringPointer(),
-		Behaviors:   behaviors,
-		Criteria:    criteria,
+	var rulesEngineResponse *edgeapplications.RulesEngineIdResponse
+	var response *http.Response
+	var err error
+	if plan.RulesEngine.Phase.ValueString() == "default" {
+		// the Default Rule is automatically created when the Edge Application is created, we need to fake its creation here
+
+		if plan.RulesEngine.Name.ValueString() != "Default Rule" {
+			resp.Diagnostics.AddError(
+				"Name error",
+				"you need to send a default name - 'Default Rule'",
+			)
+			return
+		}
+
+		// both the default and first rule have the `order = 1`, so we need to get both of them and check the name
+		rulesResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), "request").OrderBy("order").PageSize(2).Page(1).Sort("asc").Execute()
+		if err != nil {
+			bodyBytes, erro := io.ReadAll(response.Body)
+			if erro != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
+			resp.Diagnostics.AddError(
+				err.Error(),
+				bodyString,
+			)
+			return
+		}
+
+		var ruleID int64
+		if rulesResponse.Results[0].Name == "Default Rule" && rulesResponse.Results[0].Phase == "default" {
+			ruleID = rulesResponse.Results[0].Id
+		} else {
+			ruleID = rulesResponse.Results[1].Id
+		}
+
+		rulesEngineRequest := edgeapplications.UpdateRulesEngineRequest{
+			Name:        plan.RulesEngine.Name.ValueString(),
+			Description: plan.RulesEngine.Description.ValueStringPointer(),
+			Behaviors:   behaviors,
+			Criteria:    criteria,
+		}
+
+		rulesEngineResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), "request", ruleID).UpdateRulesEngineRequest(rulesEngineRequest).Execute()
+		if err != nil {
+			bodyBytes, erro := io.ReadAll(response.Body)
+			if erro != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
+			resp.Diagnostics.AddError(
+				err.Error(),
+				bodyString,
+			)
+			return
+		}
+	} else {
+		rulesEngineRequest := edgeapplications.CreateRulesEngineRequest{
+			Name:        plan.RulesEngine.Name.ValueString(),
+			Description: plan.RulesEngine.Description.ValueStringPointer(),
+			Behaviors:   behaviors,
+			Criteria:    criteria,
+		}
+
+		rulesEngineResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesPost(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).CreateRulesEngineRequest(rulesEngineRequest).Execute()
 	}
 
-	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesPost(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).CreateRulesEngineRequest(rulesEngineRequest).Execute()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
