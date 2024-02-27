@@ -31,10 +31,6 @@ resource "azion_edge_application_rule_engine" "example" {
         }
       },
       {
-        name = "enable_gzip"
-        target_object : {}
-      },
-      {
         name = "capture_match_groups"
         "target_object" : {
           "regex" : "2379",
@@ -99,7 +95,7 @@ Read-Only:
 Required:
 
 - `name` (String) The name of the behavior.
-- `target_object` (Attributes) Empty object when no options are required (see [below for nested schema](#nestedatt--results--behaviors--target_object))
+- `target_object` (Attributes) (see [below for nested schema](#nestedatt--results--behaviors--target_object))
 
 <a id="nestedatt--results--behaviors--target_object"></a>
 ### Nested Schema for `results.behaviors.target_object`
