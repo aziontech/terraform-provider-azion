@@ -520,7 +520,14 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 
 	var behaviors []edgeapplications.RulesEngineBehaviorEntry
 	for _, behavior := range plan.RulesEngine.Behaviors {
-		if behavior.TargetCaptureMatch.Target.IsNull() || behavior.TargetCaptureMatch.Target.IsUnknown() || behavior.TargetCaptureMatch.Target.ValueString() == "" {
+		if behavior.Name.ValueString() == "capture_match_groups" && behavior.TargetCaptureMatch.Target.ValueString() != "" {
+			resp.Diagnostics.AddError("capture_match_groups",
+				"Behavior capture_match_groups can not have a target value.")
+			return
+		}
+		switch {
+		case behavior.TargetCaptureMatch == nil:
+		case behavior.Name.ValueString() == "capture_match_groups":
 			RulesEngineBehaviorObject := edgeapplications.RulesEngineBehaviorObject{
 				Name: behavior.Name.ValueString(),
 				Target: edgeapplications.RulesEngineBehaviorObjectTarget{
@@ -530,10 +537,16 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 				},
 			}
 			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorObject: &RulesEngineBehaviorObject})
-		} else {
+		case behavior.TargetCaptureMatch.Target.ValueString() != "":
 			RulesEngineBehaviorString := edgeapplications.RulesEngineBehaviorString{
 				Name:   behavior.Name.ValueString(),
 				Target: behavior.TargetCaptureMatch.Target.ValueString(),
+			}
+			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
+		case behavior.TargetCaptureMatch.CapturedArray.IsUnknown() && behavior.TargetCaptureMatch.Regex.IsUnknown() && behavior.TargetCaptureMatch.Subject.IsUnknown():
+			RulesEngineBehaviorString := edgeapplications.RulesEngineBehaviorString{
+				Name:   behavior.Name.ValueString(),
+				Target: "",
 			}
 			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
 		}
