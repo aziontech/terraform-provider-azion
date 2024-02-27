@@ -102,11 +102,6 @@ resource "azion_edge_application_rule_engine" "testfunc" {
                 "regex": "1101"
         }
       },
-      {
-        name = "enable_gzip"
-        target_object : {}
-      },
-
     ]
     criteria     = [
       {
