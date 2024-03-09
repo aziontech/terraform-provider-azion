@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
@@ -18,9 +19,10 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &edgeApplicationResource{}
-	_ resource.ResourceWithConfigure   = &edgeApplicationResource{}
-	_ resource.ResourceWithImportState = &edgeApplicationResource{}
+	_                                    resource.Resource                = &edgeApplicationResource{}
+	_                                    resource.ResourceWithConfigure   = &edgeApplicationResource{}
+	_                                    resource.ResourceWithImportState = &edgeApplicationResource{}
+	edgeApplicationResourceCreationMutex sync.Mutex
 )
 
 func NewEdgeApplicationMainSettingsResource() resource.Resource {
@@ -262,7 +264,9 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		DeliveryProtocol:  edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
 	}
 
+	edgeApplicationResourceCreationMutex.Lock()
 	createEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsPost(ctx).CreateApplicationRequest(edgeApplication).Execute()
+	edgeApplicationResourceCreationMutex.Unlock()
 	if err != nil {
 		bodyBytes, erro := io.ReadAll(response.Body)
 		if erro != nil {
