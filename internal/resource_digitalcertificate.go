@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -37,18 +38,18 @@ type digitalCertificateResourceModel struct {
 }
 
 type digitalCertificateResourceResults struct {
-	CertificateID      types.Int64    `tfsdk:"certificate_id"`
-	Name               types.String   `tfsdk:"name"`
-	Issuer             types.String   `tfsdk:"issuer"`
-	SubjectName        []types.String `tfsdk:"subject_name"`
-	Validity           types.String   `tfsdk:"validity"`
-	Status             types.String   `tfsdk:"status"`
-	CertificateType    types.String   `tfsdk:"certificate_type"`
-	Managed            types.Bool     `tfsdk:"managed"`
-	CSR                types.String   `tfsdk:"csr"`
-	CertificateContent types.String   `tfsdk:"certificate_content"`
-	PrivateKey         types.String   `tfsdk:"private_key"`
-	AzionInformation   types.String   `tfsdk:"azion_information"`
+	CertificateID      types.Int64  `tfsdk:"certificate_id"`
+	Name               types.String `tfsdk:"name"`
+	Issuer             types.String `tfsdk:"issuer"`
+	SubjectName        types.Set    `tfsdk:"subject_name"`
+	Validity           types.String `tfsdk:"validity"`
+	Status             types.String `tfsdk:"status"`
+	CertificateType    types.String `tfsdk:"certificate_type"`
+	Managed            types.Bool   `tfsdk:"managed"`
+	CSR                types.String `tfsdk:"csr"`
+	CertificateContent types.String `tfsdk:"certificate_content"`
+	PrivateKey         types.String `tfsdk:"private_key"`
+	AzionInformation   types.String `tfsdk:"azion_information"`
 }
 
 func (r *digitalCertificateResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -89,7 +90,7 @@ func (r *digitalCertificateResource) Schema(_ context.Context, _ resource.Schema
 						Description: "Issuer of the certificate.",
 						Computed:    true,
 					},
-					"subject_name": schema.ListAttribute{
+					"subject_name": schema.SetAttribute{
 						Description: "Subject name of the certificate.",
 						Optional:    true,
 						ElementType: types.StringType,
@@ -177,16 +178,21 @@ func (r *digitalCertificateResource) Create(ctx context.Context, req resource.Cr
 		)
 		return
 	}
-	var GetSubjectName []types.String
-	for _, subjectName := range certificateResponse.Results.GetSubjectName() {
-		GetSubjectName = append(GetSubjectName, types.StringValue(subjectName))
+	var GetSubjectName []string
+	for _, subjectNames := range certificateResponse.Results.GetSubjectName() {
+		for _, subjectName := range strings.Split(subjectNames, ",") {
+			GetSubjectName = append(GetSubjectName, subjectName)
+		}
 	}
+
+	subjectNameSet, newDiags := types.SetValueFrom(ctx, types.StringType, GetSubjectName)
+	diags.Append(newDiags...)
 
 	plan.CertificateResult = &digitalCertificateResourceResults{
 		CertificateID:      types.Int64Value(int64(certificateResponse.Results.GetId())),
 		Name:               types.StringValue(certificateResponse.Results.GetName()),
 		Issuer:             types.StringValue(certificateResponse.Results.GetIssuer()),
-		SubjectName:        GetSubjectName,
+		SubjectName:        subjectNameSet,
 		Validity:           types.StringValue(certificateResponse.Results.GetValidity()),
 		Status:             types.StringValue(certificateResponse.Results.GetStatus()),
 		CertificateType:    types.StringValue(certificateResponse.Results.GetCertificateType()),
@@ -257,17 +263,23 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 	} else {
 		privateKey = types.StringValue(state.CertificateResult.PrivateKey.ValueString())
 	}
-	var GetSubjectName []types.String
-	for _, subjectName := range certificateResponse.Results.GetSubjectName() {
-		GetSubjectName = append(GetSubjectName, types.StringValue(subjectName))
+	var GetSubjectName []string
+	for _, subjectNames := range certificateResponse.Results.GetSubjectName() {
+		for _, subjectName := range strings.Split(subjectNames, ",") {
+			GetSubjectName = append(GetSubjectName, subjectName)
+		}
 	}
+
+	subjectNameSet, newDiags := types.SetValueFrom(ctx, types.StringType, GetSubjectName)
+	diags.Append(newDiags...)
+
 	certificateState := &digitalCertificateResourceModel{
 		SchemaVersion: types.Int64Value(int64(*certificateResponse.SchemaVersion)),
 		CertificateResult: &digitalCertificateResourceResults{
 			CertificateID:      types.Int64Value(int64(certificateResponse.Results.GetId())),
 			Name:               types.StringValue(certificateResponse.Results.GetName()),
 			Issuer:             types.StringValue(certificateResponse.Results.GetIssuer()),
-			SubjectName:        GetSubjectName,
+			SubjectName:        subjectNameSet,
 			Validity:           types.StringValue(certificateResponse.Results.GetValidity()),
 			Status:             types.StringValue(certificateResponse.Results.GetStatus()),
 			CertificateType:    types.StringValue(certificateResponse.Results.GetCertificateType()),
@@ -353,16 +365,21 @@ func (r *digitalCertificateResource) Update(ctx context.Context, req resource.Up
 		)
 		return
 	}
-	var GetSubjectName []types.String
-	for _, subjectName := range certificateResponse.Results.GetSubjectName() {
-		GetSubjectName = append(GetSubjectName, types.StringValue(subjectName))
+	var GetSubjectName []string
+	for _, subjectNames := range certificateResponse.Results.GetSubjectName() {
+		for _, subjectName := range strings.Split(subjectNames, ",") {
+			GetSubjectName = append(GetSubjectName, subjectName)
+		}
 	}
+
+	subjectNameSet, newDiags := types.SetValueFrom(ctx, types.StringType, GetSubjectName)
+	diags.Append(newDiags...)
 
 	plan.CertificateResult = &digitalCertificateResourceResults{
 		CertificateID:      types.Int64Value(int64(certificateResponse.Results.GetId())),
 		Name:               types.StringValue(certificateResponse.Results.GetName()),
 		Issuer:             types.StringValue(certificateResponse.Results.GetIssuer()),
-		SubjectName:        GetSubjectName,
+		SubjectName:        subjectNameSet,
 		Validity:           types.StringValue(certificateResponse.Results.GetValidity()),
 		Status:             types.StringValue(certificateResponse.Results.GetStatus()),
 		CertificateType:    types.StringValue(certificateResponse.Results.GetCertificateType()),
