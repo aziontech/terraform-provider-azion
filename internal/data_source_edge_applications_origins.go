@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -31,11 +32,11 @@ type OriginsDataSourceModel struct {
 	TotalPages    types.Int64                             `tfsdk:"total_pages"`
 	Page          types.Int64                             `tfsdk:"page"`
 	PageSize      types.Int64                             `tfsdk:"page_size"`
-	Links         *GetEdgeAplicationsOriginsResponseLinks `tfsdk:"links"`
+	Links         *GetEdgeApplicationsOriginsResponseLinks `tfsdk:"links"`
 	Results       []OriginsResults                        `tfsdk:"results"`
 }
 
-type GetEdgeAplicationsOriginsResponseLinks struct {
+type GetEdgeApplicationsOriginsResponseLinks struct {
 	Previous types.String `tfsdk:"previous"`
 	Next     types.String `tfsdk:"next"`
 }
@@ -61,7 +62,7 @@ type OriginsResults struct {
 
 type OriginsAddressResults struct {
 	Address    types.String `tfsdk:"address"`
-	Weight     types.String `tfsdk:"weight"`
+	Weight     types.Int64  `tfsdk:"weight"`
 	ServerRole types.String `tfsdk:"server_role"`
 	IsActive   types.Bool   `tfsdk:"is_active"`
 }
@@ -147,7 +148,7 @@ func (o *OriginsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 										Description: "Address of the origin.",
 										Computed:    true,
 									},
-									"weight": schema.StringAttribute{
+									"weight": schema.Int64Attribute{
 										Description: "Weight of the origin.",
 										Computed:    true,
 									},
@@ -268,13 +269,15 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		next = *originsResponse.Links.Next.Get()
 	}
 
+	log.Println("HERE 01")
+
 	var origins []OriginsResults
 	for _, origin := range originsResponse.Results {
 		var addresses []OriginsAddressResults
 		for _, addr := range origin.Addresses {
 			addresses = append(addresses, OriginsAddressResults{
 				Address:    types.StringValue(addr.GetAddress()),
-				Weight:     types.StringValue(addr.GetWeight()),
+				Weight:     types.Int64Value(addr.GetWeight()),
 				ServerRole: types.StringValue(addr.GetServerRole()),
 				IsActive:   types.BoolValue(addr.GetIsActive()),
 			})
@@ -305,7 +308,7 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		Results:       origins,
 		TotalPages:    types.Int64Value(originsResponse.TotalPages),
 		Counter:       types.Int64Value(originsResponse.Count),
-		Links: &GetEdgeAplicationsOriginsResponseLinks{
+		Links: &GetEdgeApplicationsOriginsResponseLinks{
 			Previous: types.StringValue(previous),
 			Next:     types.StringValue(next),
 		},

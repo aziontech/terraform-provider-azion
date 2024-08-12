@@ -139,10 +139,10 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	createNetworkListResponse, response, err := r.client.networkListApi.DefaultApi.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute()
+	createNetworkListResponse, response, err := r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -194,10 +194,10 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 		networkListId = state.ID.ValueString()
 	}
 
-	getNetworkList, response, err := r.client.networkListApi.DefaultApi.NetworkListsUuidGet(ctx, networkListId).Execute()
+	getNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, networkListId).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -292,10 +292,10 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	updateNetworkList, response, err := r.client.networkListApi.DefaultApi.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute()
+	updateNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -349,10 +349,10 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 		networkListId = state.ID.ValueString()
 	}
 
-	response, err := r.client.networkListApi.DefaultApi.NetworkListsUuidDelete(ctx, networkListId).Execute()
+	response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidDelete(ctx, networkListId).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",

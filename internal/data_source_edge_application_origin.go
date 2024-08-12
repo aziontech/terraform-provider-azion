@@ -51,7 +51,7 @@ type OriginResults struct {
 
 type OriginAddressResults struct {
 	Address    types.String `tfsdk:"address"`
-	Weight     types.String `tfsdk:"weight"`
+	Weight     types.Int64  `tfsdk:"weight"`
 	ServerRole types.String `tfsdk:"server_role"`
 	IsActive   types.Bool   `tfsdk:"is_active"`
 }
@@ -109,7 +109,7 @@ func (o *OriginDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 									Description: "Address of the origin.",
 									Computed:    true,
 								},
-								"weight": schema.StringAttribute{
+								"weight": schema.Int64Attribute{
 									Description: "Weight of the origin.",
 									Computed:    true,
 								},
@@ -199,8 +199,8 @@ func (o *OriginDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	originResponse, response, err := o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, edgeApplicationID.ValueInt64(), getOriginsKey.ValueString()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -218,7 +218,7 @@ func (o *OriginDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	for _, addr := range originResponse.Results.Addresses {
 		addresses = append(addresses, OriginAddressResults{
 			Address:    types.StringValue(addr.GetAddress()),
-			Weight:     types.StringValue(addr.GetWeight()),
+			Weight:     types.Int64Value(addr.GetWeight()),
 			ServerRole: types.StringValue(addr.GetServerRole()),
 			IsActive:   types.BoolValue(addr.GetIsActive()),
 		})

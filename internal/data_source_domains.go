@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/aziontech/azionapi-go-sdk/domains"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -169,10 +168,10 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		PageSize = types.Int64Value(10)
 	}
 
-	domainsResponse, response, err := d.client.domainsApi.DomainsApi.GetDomains(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	domainsResponse, response, err := d.client.domainsApi.DomainsAPI.GetDomains(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -202,21 +201,22 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		var slice []types.String
 		for _, Cnames := range resultDomain.Cnames {
 			slice = append(slice, types.StringValue(Cnames))
-		}
+		}	
+		
 		var dr = DomainsResults{
-			ID:                types.Int64Value(resultDomain.Id),
-			Name:              types.StringValue(resultDomain.Name),
-			CnameAccessOnly:   types.BoolValue(resultDomain.CnameAccessOnly),
-			IsActive:          types.BoolValue(resultDomain.IsActive),
-			EdgeApplicationId: types.Int64Value(resultDomain.EdgeApplicationId),
-			DomainName:        types.StringValue(resultDomain.DomainName),
+			ID:                types.Int64Value(resultDomain.GetId()),
+			Name:              types.StringValue(resultDomain.GetName()),
+			CnameAccessOnly:   types.BoolValue(resultDomain.GetCnameAccessOnly()),
+			IsActive:          types.BoolValue(resultDomain.GetIsActive()),
+			EdgeApplicationId: types.Int64Value(resultDomain.GetEdgeApplicationId()),
+			DomainName:        types.StringValue(resultDomain.GetDomainName()),
 			Cnames:            utils.SliceStringTypeToList(slice),
 		}
 		if resultDomain.Environment != nil {
 			dr.Environment = types.StringValue(*resultDomain.Environment)
 		}
-		if resultDomain.DigitalCertificateId.Get() != nil {
-			dr.DigitalCertificateId = types.Int64Value(*domains.NullableInt64.Get(resultDomain.DigitalCertificateId))
+		if resultDomain.DigitalCertificateId != nil {
+			dr.DigitalCertificateId = types.Int64Value(resultDomain.GetDigitalCertificateId())
 		}
 		domainState.Results = append(domainState.Results, dr)
 	}

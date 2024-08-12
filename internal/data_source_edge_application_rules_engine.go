@@ -31,7 +31,7 @@ type RulesEngineDataSourceModel struct {
 	TotalPages    types.Int64                             `tfsdk:"total_pages"`
 	Page          types.Int64                             `tfsdk:"page"`
 	PageSize      types.Int64                             `tfsdk:"page_size"`
-	Links         *GetEdgeAplicationsOriginsResponseLinks `tfsdk:"links"`
+	Links         *GetEdgeApplicationsOriginsResponseLinks `tfsdk:"links"`
 	Results       []RulesEngineResultModel                `tfsdk:"results"`
 }
 
@@ -343,7 +343,7 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 		Results:       rulesEngineResults,
 		TotalPages:    types.Int64Value(rulesEngineResponse.TotalPages),
 		Counter:       types.Int64Value(rulesEngineResponse.Count),
-		Links: &GetEdgeAplicationsOriginsResponseLinks{
+		Links: &GetEdgeApplicationsOriginsResponseLinks{
 			Previous: types.StringValue(previous),
 			Next:     types.StringValue(next),
 		},

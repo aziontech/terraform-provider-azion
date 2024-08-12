@@ -123,21 +123,15 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 								},
 								"weight": schema.Int64Attribute{
 									Description: "Weight of the origin.",
-									Required:    false,
 									Optional:    true,
-									Computed:    true,
 								},
 								"server_role": schema.StringAttribute{
 									Description: "Server role of the origin.",
-									Required:    false,
 									Optional:    true,
-									Computed:    true,
 								},
 								"is_active": schema.BoolAttribute{
 									Description: "Status of the origin.",
-									Required:    false,
 									Optional:    true,
-									Computed:    true,
 								},
 							},
 						},
@@ -228,23 +222,12 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	var addressesRequest []edgeapplications.CreateOriginsRequestAddresses
 	for _, addr := range plan.Origin.Addresses {
-		var serverRole *string = addr.ServerRole.ValueStringPointer()	
-		if addr.ServerRole.ValueString() == "" {
-			serverRole = nil
-		}	
-
-		var weight *int64  = addr.Weight.ValueInt64Pointer()
-		if addr.Weight.ValueInt64() == 0 {
-			weight = nil	
-		}
-
-		requestAddresses := edgeapplications.CreateOriginsRequestAddresses{
+		addressesRequest = append(addressesRequest, edgeapplications.CreateOriginsRequestAddresses{
 			Address:    addr.Address.ValueString(),
 			IsActive:   addr.IsActive.ValueBoolPointer(),
-			Weight:     weight,
-			ServerRole: serverRole,
-		}
-		addressesRequest = append(addressesRequest, requestAddresses)
+			Weight:     *edgeapplications.NewNullableInt64(edgeapplications.PtrInt64(addr.Weight.ValueInt64())),
+			ServerRole: addr.ServerRole.ValueStringPointer(),
+		})
 	}
 
 	var originProtocolPolicy string
@@ -273,24 +256,16 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	originRequest := edgeapplications.CreateOriginsRequest{
 		Name:                 plan.Origin.Name.ValueString(),
-		OriginType:           edgeapplications.PtrString(OriginType),
 		Addresses:            addressesRequest,
+		OriginType:           edgeapplications.PtrString(OriginType),
 		OriginProtocolPolicy: edgeapplications.PtrString(originProtocolPolicy),
-		HostHeader:           edgeapplications.PtrString("${host}"),
+		HostHeader:           edgeapplications.PtrString(plan.Origin.HostHeader.String()),
+		OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
+		HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
+		HmacRegionName:       edgeapplications.PtrString(plan.Origin.HMACRegionName.ValueString()),
+		HmacAccessKey:        edgeapplications.PtrString(plan.Origin.HMACAccessKey.ValueString()),
+		HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
 	}
-
-	// originRequest := edgeapplications.CreateOriginsRequest{
-	// 	Name:                 plan.Origin.Name.ValueString(),
-	// 	Addresses:            addressesRequest,
-	// 	OriginType:           edgeapplications.PtrString(OriginType),
-	// 	OriginProtocolPolicy: edgeapplications.PtrString(originProtocolPolicy),
-	// 	HostHeader:           edgeapplications.PtrString(plan.Origin.HostHeader.String()),
-	// 	OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
-	// 	HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
-	// 	HmacRegionName:       edgeapplications.PtrString(plan.Origin.HMACRegionName.ValueString()),
-	// 	HmacAccessKey:        edgeapplications.PtrString(plan.Origin.HMACAccessKey.ValueString()),
-	// 	HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
-	// }
 
 	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute()
 	if err != nil {

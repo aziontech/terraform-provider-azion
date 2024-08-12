@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"time"
 
 	framework "github.com/aziontech/terraform-provider-azion/internal"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -25,6 +26,8 @@ var (
 )
 
 func main() {
+log.Println("Garantindo que isto está rodando agora a partil de agora: ", time.Now().Hour(), " - ", time.Now().Minute())
+
 	var debug bool
 
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")

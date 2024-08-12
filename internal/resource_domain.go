@@ -130,10 +130,13 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	isActive := plan.Domain.IsActive.ValueBool()
+	cnameAccessOnly := plan.Domain.CnameAccessOnly.ValueBool()
+
 	domain := domains.CreateDomainRequest{
 		EdgeApplicationId: plan.Domain.EdgeApplicationId.ValueInt64(),
-		IsActive:          plan.Domain.IsActive.ValueBool(),
-		CnameAccessOnly:   plan.Domain.CnameAccessOnly.ValueBool(),
+		IsActive:          &isActive,
+		CnameAccessOnly:   &cnameAccessOnly,
 		Name:              plan.Domain.Name.ValueString(),
 	}
 
@@ -142,14 +145,14 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if plan.Domain.DigitalCertificateId.ValueInt64() > 0 {
-		domain.DigitalCertificateId = *domains.NewNullableInt64(domains.PtrInt64(plan.Domain.DigitalCertificateId.ValueInt64()))
+	if plan.Domain.DigitalCertificateId.ValueInt64() > 0 {	
+		domain.DigitalCertificateId = domains.PtrString(plan.Domain.DigitalCertificateId.String()) 
 	}
 
-	createDomain, response, err := r.client.domainsApi.DomainsApi.CreateDomain(ctx).CreateDomainRequest(domain).Execute()
+	createDomain, response, err := r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -168,20 +171,20 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		slice = append(slice, types.StringValue(Cnames))
 	}
 	plan.Domain = &DomainResourceResults{
-		ID:                types.Int64Value(createDomain.Results.Id),
-		Name:              types.StringValue(createDomain.Results.Name),
-		CnameAccessOnly:   types.BoolValue(createDomain.Results.CnameAccessOnly),
-		IsActive:          types.BoolValue(createDomain.Results.IsActive),
-		EdgeApplicationId: types.Int64Value(createDomain.Results.EdgeApplicationId),
-		DomainName:        types.StringValue(createDomain.Results.DomainName),
+		ID:                types.Int64Value(createDomain.Results.GetId()),
+		Name:              types.StringValue(createDomain.Results.GetName()),
+		CnameAccessOnly:   types.BoolValue(createDomain.Results.GetCnameAccessOnly()),
+		IsActive:          types.BoolValue(createDomain.Results.GetIsActive()),
+		EdgeApplicationId: types.Int64Value(createDomain.Results.GetEdgeApplicationId()),
+		DomainName:        types.StringValue(createDomain.Results.GetDomainName()),
 		Cnames:            utils.SliceStringTypeToSet(slice),
 	}
 
 	if createDomain.Results.Environment != nil {
 		plan.Domain.Environment = types.StringValue(*createDomain.Results.Environment)
 	}
-	if createDomain.Results.DigitalCertificateId.Get() != nil {
-		plan.Domain.DigitalCertificateId = types.Int64Value(*domains.NullableInt64.Get(createDomain.Results.DigitalCertificateId))
+	if createDomain.Results.DigitalCertificateId != nil {
+		plan.Domain.DigitalCertificateId = types.Int64Value(*createDomain.Results.DigitalCertificateId)
 	}
 
 	plan.ID = types.StringValue("Create Domain")
@@ -208,10 +211,10 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 		domainId = state.ID.ValueString()
 	}
 
-	getDomain, response, err := r.client.domainsApi.DomainsApi.GetDomain(ctx, domainId).Execute()
+	getDomain, response, err := r.client.domainsApi.DomainsAPI.GetDomain(ctx, domainId).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -230,19 +233,19 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 		slice = append(slice, types.StringValue(Cnames))
 	}
 	state.Domain = &DomainResourceResults{
-		ID:                types.Int64Value(getDomain.Results.Id),
-		Name:              types.StringValue(getDomain.Results.Name),
-		CnameAccessOnly:   types.BoolValue(getDomain.Results.CnameAccessOnly),
-		IsActive:          types.BoolValue(getDomain.Results.IsActive),
-		EdgeApplicationId: types.Int64Value(getDomain.Results.EdgeApplicationId),
-		DomainName:        types.StringValue(getDomain.Results.DomainName),
+		ID:                types.Int64Value(getDomain.Results.GetId()),
+		Name:              types.StringValue(getDomain.Results.GetName()),
+		CnameAccessOnly:   types.BoolValue(getDomain.Results.GetCnameAccessOnly()),
+		IsActive:          types.BoolValue(getDomain.Results.GetIsActive()),
+		EdgeApplicationId: types.Int64Value(getDomain.Results.GetEdgeApplicationId()),
+		DomainName:        types.StringValue(getDomain.Results.GetDomainName()),
 		Cnames:            utils.SliceStringTypeToSet(slice),
 	}
 	if getDomain.Results.Environment != nil {
 		state.Domain.Environment = types.StringValue(*getDomain.Results.Environment)
 	}
-	if getDomain.Results.DigitalCertificateId.Get() != nil {
-		state.Domain.DigitalCertificateId = types.Int64Value(*domains.NullableInt64.Get(getDomain.Results.DigitalCertificateId))
+	if getDomain.Results.DigitalCertificateId != nil {
+		state.Domain.DigitalCertificateId = types.Int64Value(*getDomain.Results.DigitalCertificateId)
 	}
 
 	diags = resp.State.Set(ctx, &state)
@@ -275,17 +278,17 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Name:              domains.PtrString(plan.Domain.Name.ValueString()),
 	}
 	if plan.Domain.DigitalCertificateId.ValueInt64() > 0 {
-		updateDomainRequest.DigitalCertificateId = *domains.NewNullableInt64(domains.PtrInt64(plan.Domain.DigitalCertificateId.ValueInt64()))
+		updateDomainRequest.DigitalCertificateId = domains.PtrString(plan.Domain.DigitalCertificateId.String())
 	}
 	requestCnames := plan.Domain.Cnames.ElementsAs(ctx, &updateDomainRequest.Cnames, false)
 	resp.Diagnostics.Append(requestCnames...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	updateDomain, response, err := r.client.domainsApi.DomainsApi.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute()
+	updateDomain, response, err := r.client.domainsApi.DomainsAPI.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -305,20 +308,20 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 		slice = append(slice, types.StringValue(Cnames))
 	}
 	plan.Domain = &DomainResourceResults{
-		ID:                types.Int64Value(updateDomain.Results.Id),
-		Name:              types.StringValue(updateDomain.Results.Name),
-		CnameAccessOnly:   types.BoolValue(updateDomain.Results.CnameAccessOnly),
-		IsActive:          types.BoolValue(updateDomain.Results.IsActive),
-		EdgeApplicationId: types.Int64Value(updateDomain.Results.EdgeApplicationId),
-		DomainName:        types.StringValue(updateDomain.Results.DomainName),
+		ID:                types.Int64Value(updateDomain.Results.GetId()),
+		Name:              types.StringValue(updateDomain.Results.GetName()),
+		CnameAccessOnly:   types.BoolValue(updateDomain.Results.GetCnameAccessOnly()),
+		IsActive:          types.BoolValue(updateDomain.Results.GetIsActive()),
+		EdgeApplicationId: types.Int64Value(updateDomain.Results.GetEdgeApplicationId()),
+		DomainName:        types.StringValue(updateDomain.Results.GetDomainName()),
 		Cnames:            utils.SliceStringTypeToSet(slice),
 	}
 
 	if updateDomain.Results.Environment != nil {
 		plan.Domain.Environment = types.StringValue(*updateDomain.Results.Environment)
 	}
-	if updateDomain.Results.DigitalCertificateId.Get() != nil {
-		plan.Domain.DigitalCertificateId = types.Int64Value(*domains.NullableInt64.Get(updateDomain.Results.DigitalCertificateId))
+	if updateDomain.Results.DigitalCertificateId != nil {
+		plan.Domain.DigitalCertificateId = types.Int64Value(*updateDomain.Results.DigitalCertificateId)
 	}
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -337,10 +340,10 @@ func (r *domainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 	domainId := strconv.Itoa(int(state.Domain.ID.ValueInt64()))
-	response, err := r.client.domainsApi.DomainsApi.DelDomain(ctx, domainId).Execute()
+	response, err := r.client.domainsApi.DomainsAPI.DelDomain(ctx, domainId).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",

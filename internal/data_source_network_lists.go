@@ -146,10 +146,10 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 		Page = types.Int64Value(1)
 	}
 
-	networkListsResponse, response, err := n.client.networkListApi.DefaultApi.NetworkListsGet(ctx).Page(int32(Page.ValueInt64())).Execute()
+	networkListsResponse, response, err := n.client.networkListApi.DefaultAPI.NetworkListsGet(ctx).Page(int32(Page.ValueInt64())).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
