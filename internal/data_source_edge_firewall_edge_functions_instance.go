@@ -156,13 +156,14 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, 
 		pageSize = types.Int64Value(10)
 	}
 
-	EdgeFirewallFunctionsInstanceResponse, response, err := e.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.EdgeFirewallEdgeFirewallIdFunctionsInstancesGet(ctx, edgeFirewallID.ValueInt64()).
+	EdgeFirewallFunctionsInstanceResponse, response, err := e.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
+		EdgeFirewallEdgeFirewallIdFunctionsInstancesGet(ctx, edgeFirewallID.ValueInt64()).
 		Page(page.ValueInt64()).
 		PageSize(pageSize.ValueInt64()).
 		Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -175,6 +176,7 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, 
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var edgeFirewallsResults []EdgeFirewallEdgeFunctionsInstanceResults
 	for _, results := range EdgeFirewallFunctionsInstanceResponse.Results {

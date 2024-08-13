@@ -162,6 +162,7 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var networkLists []NetworkListsResults
 	for _, nl := range networkListsResponse.Results {

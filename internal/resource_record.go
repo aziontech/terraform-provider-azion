@@ -172,6 +172,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 
 		return
 	}
+	defer httpResponse.Body.Close()
 
 	plan.SchemaVersion = types.Int64Value(int64(*createRecord.SchemaVersion))
 
@@ -256,6 +257,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return
 	}
+	defer httpResponse.Body.Close()
 
 	state.SchemaVersion = types.Int64Value(int64(*recordsResponse.SchemaVersion))
 
@@ -335,6 +337,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
 		return
 	}
+	defer httpResponse.Body.Close()
 
 	plan.Record.Id = types.Int64Value(int64(idPlan))
 	plan.SchemaVersion = types.Int64Value(int64(*updateRecord.SchemaVersion))
@@ -383,7 +386,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	_, _, err = r.client.idnsApi.RecordsAPI.DeleteZoneRecord(ctx, int32(idState), int32(state.Record.Id.ValueInt64())).Execute()
+	_, response, err := r.client.idnsApi.RecordsAPI.DeleteZoneRecord(ctx, int32(idState), int32(state.Record.Id.ValueInt64())).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Azion API",
@@ -391,6 +394,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *recordResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

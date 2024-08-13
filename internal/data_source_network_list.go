@@ -124,6 +124,7 @@ func (n *NetworkListDataSource) Read(ctx context.Context, req datasource.ReadReq
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var sliceString []types.String
 	for _, itemsValuesStr := range networkListsResponse.GetResults().NetworkListUuidResponseEntryString.GetItemsValues() {

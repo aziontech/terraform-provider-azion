@@ -96,8 +96,8 @@ func (n *VariablesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 func (n *VariablesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	variablesResponse, response, err := n.client.variablesApi.VariablesAPI.ApiVariablesList(ctx).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -110,6 +110,7 @@ func (n *VariablesDataSource) Read(ctx context.Context, req datasource.ReadReque
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var variablesList []VariablesResults
 	for _, variable := range variablesResponse {

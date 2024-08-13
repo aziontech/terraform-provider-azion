@@ -155,6 +155,8 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		)
 		return
 	}
+	defer response.Body.Close()
+
 	plan.SchemaVersion = types.Int64Value(3)
 	var sliceString []types.String
 	for _, itemsValuesStr := range createNetworkListResponse.Results.GetItemsValues() {
@@ -210,6 +212,7 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var sliceString []types.String
 	for _, itemsValuesStr := range getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetItemsValues() {
@@ -308,6 +311,7 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	plan.SchemaVersion = types.Int64Value(3)
 	var sliceString []types.String
@@ -365,6 +369,7 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *networkListResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

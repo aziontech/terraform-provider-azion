@@ -168,8 +168,8 @@ func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	EdgeFirewallsResponse, response, err := e.client.edgeFirewallApi.DefaultAPI.EdgeFirewallGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -182,6 +182,7 @@ func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadR
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var previous, next string
 	if EdgeFirewallsResponse.Links.Previous.Get() != nil {

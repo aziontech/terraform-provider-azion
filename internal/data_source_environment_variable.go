@@ -103,8 +103,8 @@ func (n *VariableDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	variableResponse, response, err := n.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid.ValueString()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -117,6 +117,7 @@ func (n *VariableDataSource) Read(ctx context.Context, req datasource.ReadReques
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	variablesResult := VariableResult{
 		Uuid:       types.StringValue(variableResponse.GetUuid()),

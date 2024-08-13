@@ -150,8 +150,8 @@ func (r *edgeFunctionsInstanceResource) Create(ctx context.Context, req resource
 
 	edgeFunctionInstancesResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCreateInstanceRequest(edgeFunctionInstanceRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -164,6 +164,7 @@ func (r *edgeFunctionsInstanceResource) Create(ctx context.Context, req resource
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesResponse.Results.GetArgs())
 	if err != nil {
@@ -222,8 +223,8 @@ func (r *edgeFunctionsInstanceResource) Read(ctx context.Context, req resource.R
 
 	edgeFunctionInstancesResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdGet(ctx, ApplicationID, functionsInstancesId).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -236,6 +237,7 @@ func (r *edgeFunctionsInstanceResource) Read(ctx context.Context, req resource.R
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesResponse.Results.GetArgs())
 	if err != nil {
@@ -320,8 +322,8 @@ func (r *edgeFunctionsInstanceResource) Update(ctx context.Context, req resource
 
 	edgeFunctionInstancesUpdateResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdPut(ctx, edgeApplicationID.String(), functionsInstancesId.String()).ApplicationPutInstanceRequest(ApplicationPutInstanceRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -334,6 +336,7 @@ func (r *edgeFunctionsInstanceResource) Update(ctx context.Context, req resource
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesUpdateResponse.Results.GetArgs())
 	if err != nil {
@@ -390,8 +393,8 @@ func (r *edgeFunctionsInstanceResource) Delete(ctx context.Context, req resource
 
 	response, err := r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdDelete(ctx, state.ApplicationID.String(), state.EdgeFunction.ID.String()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -404,6 +407,7 @@ func (r *edgeFunctionsInstanceResource) Delete(ctx context.Context, req resource
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *edgeFunctionsInstanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

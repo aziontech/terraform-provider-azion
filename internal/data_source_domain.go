@@ -133,6 +133,7 @@ func (d *DomainDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var slice []types.String
 	for _, Cnames := range domainResponse.Results.Cnames {

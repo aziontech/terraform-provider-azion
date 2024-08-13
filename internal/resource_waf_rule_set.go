@@ -217,8 +217,8 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 
 	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.CreateNewWAFRuleset(ctx).CreateNewWAFRulesetRequest(wafRulesetRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -231,6 +231,7 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var sliceAddresses []types.String
 	for _, Addresses := range wafRuleSetResponse.BypassAddresses {
@@ -294,8 +295,8 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	wafResponse, response, err := r.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -308,6 +309,7 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var sliceAddresses []types.String
 	for _, Addresses := range wafResponse.Results.GetBypassAddresses() {
@@ -416,8 +418,8 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.UpdateWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).SingleWAF(wafRuleSetRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -430,6 +432,7 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var sliceAddresses []types.String
 	for _, Addresses := range wafRuleSetResponse.GetBypassAddresses() {
@@ -494,8 +497,8 @@ func (r *wafRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	response, err := r.client.wafApi.WAFAPI.DeleteWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -508,6 +511,7 @@ func (r *wafRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequ
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *wafRuleSetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

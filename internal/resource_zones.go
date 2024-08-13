@@ -146,8 +146,8 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	createZone, response, err := r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -160,6 +160,8 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		)
 		return
 	}
+	defer response.Body.Close()
+
 	plan.ID = types.StringValue(strconv.Itoa(int(*createZone.Results[0].Id)))
 	plan.SchemaVersion = types.Int64Value(int64(*createZone.SchemaVersion))
 	for _, resultZone := range createZone.Results {
@@ -207,8 +209,8 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 	order, response, err := r.client.idnsApi.ZonesAPI.GetZone(ctx, int32(idPlan)).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -221,6 +223,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var slice []types.String
 	for _, Nameservers := range order.Results.Nameservers {
@@ -269,8 +272,8 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	updateZone, response, err := r.client.idnsApi.ZonesAPI.PutZone(ctx, int32(idPlan)).Zone(zone).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -283,6 +286,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	plan.ID = types.StringValue(strconv.Itoa(int(*updateZone.Results[0].Id)))
 	plan.SchemaVersion = types.Int64Value(int64(*updateZone.SchemaVersion))
@@ -322,7 +326,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	zoneId := int32(state.Zone.ID.ValueInt64())
-	_, _, err := r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneId).Execute()
+	_, response, err := r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Azion API",
@@ -330,6 +334,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

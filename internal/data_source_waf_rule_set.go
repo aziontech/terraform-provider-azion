@@ -180,8 +180,8 @@ func (o *WafRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	wafResponse, response, err := o.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID.ValueInt64()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -194,6 +194,7 @@ func (o *WafRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var sliceAddresses []types.String
 	for _, Addresses := range wafResponse.Results.GetBypassAddresses() {

@@ -159,8 +159,8 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 	}
 	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallPost(ctx).CreateEdgeFirewallRequest(edgeFirewallRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -173,6 +173,8 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 		)
 		return
 	}
+	defer response.Body.Close()
+
 	plan.SchemaVersion = types.Int64Value(3)
 	var sliceInt []types.Int64
 	for _, itemsValuesInt := range edgeFirewallResponse.Results.GetDomains() {
@@ -217,8 +219,8 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 
 	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, edgeFirewallID).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -231,6 +233,7 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var sliceInt []types.Int64
 	for _, itemsValuesInt := range edgeFirewallResponse.Results.GetDomains() {
@@ -297,8 +300,8 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 
 	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidPut(ctx, edgeFirewallID).UpdateEdgeFirewallRequest(edgeFirewallRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -311,6 +314,7 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	plan.SchemaVersion = types.Int64Value(3)
 	var sliceInt []types.Int64
@@ -357,8 +361,8 @@ func (r *edgeFirewallResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidDelete(ctx, edgeFirewallID).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -371,6 +375,7 @@ func (r *edgeFirewallResource) Delete(ctx context.Context, req resource.DeleteRe
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *edgeFirewallResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

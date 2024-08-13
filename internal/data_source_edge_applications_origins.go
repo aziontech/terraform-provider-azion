@@ -246,8 +246,8 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	originsResponse, response, err := o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsGet(ctx, edgeApplicationID.ValueInt64()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -260,6 +260,7 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var previous, next string
 	if originsResponse.Links.Previous.Get() != nil {

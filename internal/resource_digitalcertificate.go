@@ -163,8 +163,8 @@ func (r *digitalCertificateResource) Create(ctx context.Context, req resource.Cr
 
 	certificateResponse, response, err := r.client.digitalCertificatesApi.CreateDigitalCertificateApi.CreateCertificate(ctx).CreateCertificateRequest(certificateRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -177,6 +177,8 @@ func (r *digitalCertificateResource) Create(ctx context.Context, req resource.Cr
 		)
 		return
 	}
+	defer response.Body.Close()
+
 	var GetSubjectName []types.String
 	for _, subjectName := range certificateResponse.Results.GetSubjectName() {
 		GetSubjectName = append(GetSubjectName, types.StringValue(subjectName))
@@ -233,8 +235,8 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 
 	certificateResponse, response, err := r.client.digitalCertificatesApi.RetrieveDigitalCertificateByIDApi.GetCertificate(ctx, CertificateID).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -247,6 +249,8 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 		)
 		return
 	}
+	defer response.Body.Close()
+
 	var privateKey types.String
 	if state.CertificateResult == nil {
 		resp.Diagnostics.AddWarning(
@@ -339,8 +343,8 @@ func (r *digitalCertificateResource) Update(ctx context.Context, req resource.Up
 	}
 	certificateResponse, response, err := r.client.digitalCertificatesApi.UpdateDigitalCertificateApi.UpdateDigitalCertificate(ctx, int32(CertificateID)).UpdateDigitalCertificateRequest(certificateRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -353,6 +357,8 @@ func (r *digitalCertificateResource) Update(ctx context.Context, req resource.Up
 		)
 		return
 	}
+	defer response.Body.Close()
+
 	var GetSubjectName []types.String
 	for _, subjectName := range certificateResponse.Results.GetSubjectName() {
 		GetSubjectName = append(GetSubjectName, types.StringValue(subjectName))
@@ -408,8 +414,8 @@ func (r *digitalCertificateResource) Delete(ctx context.Context, req resource.De
 	}
 	response, err := r.client.digitalCertificatesApi.DeleteDigitalCertificateApi.RemoveDigitalCertificates(ctx, int32(CertificateID)).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -422,6 +428,7 @@ func (r *digitalCertificateResource) Delete(ctx context.Context, req resource.De
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *digitalCertificateResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

@@ -164,8 +164,8 @@ func (o *WafDomainsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		PageSize(pageSize.ValueInt64()).
 		Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -178,6 +178,7 @@ func (o *WafDomainsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var WafList []WafDomainsResults
 	for _, waf := range wafDomainsResponse.Results {

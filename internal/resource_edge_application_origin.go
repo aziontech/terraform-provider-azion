@@ -273,10 +273,17 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	originRequest := edgeapplications.CreateOriginsRequest{
 		Name:                 plan.Origin.Name.ValueString(),
-		OriginType:           edgeapplications.PtrString(OriginType),
 		Addresses:            addressesRequest,
+		OriginType:           edgeapplications.PtrString(OriginType),
 		OriginProtocolPolicy: edgeapplications.PtrString(originProtocolPolicy),
 		HostHeader:           edgeapplications.PtrString("${host}"),
+
+		// HostHeader:           edgeapplications.PtrString(plan.Origin.HostHeader.String()),
+		// 	OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
+		// 	HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
+		// 	HmacRegionName:       edgeapplications.PtrString(plan.Origin.HMACRegionName.ValueString()),
+		// 	HmacAccessKey:        edgeapplications.PtrString(plan.Origin.HMACAccessKey.ValueString()),
+		// 	HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
 	}
 
 	// originRequest := edgeapplications.CreateOriginsRequest{
@@ -308,6 +315,7 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var addresses []OriginAddress
 	for _, addr := range originResponse.Results.Addresses {
@@ -391,6 +399,7 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var addresses []OriginAddress
 	for _, addr := range originResponse.Results.Addresses {
@@ -520,6 +529,7 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var addresses []OriginAddress
 	for _, addr := range originResponse.Results.Addresses {
@@ -601,6 +611,7 @@ func (r *originResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *originResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

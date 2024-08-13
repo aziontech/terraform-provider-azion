@@ -146,8 +146,8 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZones(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -160,6 +160,7 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	zoneState := ZonesDataSourceModel{
 		SchemaVersion: types.Int64Value(int64(zoneResponse.GetSchemaVersion())),

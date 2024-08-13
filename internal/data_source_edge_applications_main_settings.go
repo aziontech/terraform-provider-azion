@@ -182,10 +182,9 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 	}
 
 	edgeAppResponse, response, err := e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
-
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -198,6 +197,7 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var previous, next string
 	if edgeAppResponse.Links.Previous.Get() != nil {

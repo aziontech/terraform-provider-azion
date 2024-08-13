@@ -131,8 +131,8 @@ func (r *environmentVariableResource) Create(ctx context.Context, req resource.C
 
 	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesCreate(ctx).VariableCreate(environmentVariableRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -145,6 +145,7 @@ func (r *environmentVariableResource) Create(ctx context.Context, req resource.C
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	if environmentVariableResponse.Secret {
 		plan.EnvironmentVariable = &EnvironmentVariableResourceResults{
@@ -194,8 +195,8 @@ func (r *environmentVariableResource) Read(ctx context.Context, req resource.Rea
 
 	getEnvironmentVariable, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -208,6 +209,7 @@ func (r *environmentVariableResource) Read(ctx context.Context, req resource.Rea
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	if state.EnvironmentVariable != nil {
 		EnvironmentVariableState := EnvironmentVariableResourceModel{
@@ -286,8 +288,8 @@ func (r *environmentVariableResource) Update(ctx context.Context, req resource.U
 
 	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesUpdate(ctx, uuid).VariableCreate(environmentVariableRequest).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -300,6 +302,7 @@ func (r *environmentVariableResource) Update(ctx context.Context, req resource.U
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	if environmentVariableResponse.Secret {
 		plan.EnvironmentVariable = &EnvironmentVariableResourceResults{
@@ -350,8 +353,8 @@ func (r *environmentVariableResource) Delete(ctx context.Context, req resource.D
 
 	response, err := r.client.variablesApi.VariablesAPI.ApiVariablesDestroy(ctx, uuid).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -364,6 +367,7 @@ func (r *environmentVariableResource) Delete(ctx context.Context, req resource.D
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *environmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

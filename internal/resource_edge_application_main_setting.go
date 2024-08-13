@@ -264,8 +264,8 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 
 	createEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsPost(ctx).CreateApplicationRequest(edgeApplication).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -278,6 +278,7 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	plan.EdgeApplication = &EdgeApplicationResults{
 		ApplicationID:           types.Int64Value(createEdgeApplication.Results.GetId()),
@@ -323,8 +324,8 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 
 	stateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -337,6 +338,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	sliceHTTPPort := utils.ConvertInterfaceToFloat64List(stateEdgeApplication.Results.HttpPort)
 
@@ -419,8 +421,8 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 
 	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).ApplicationPutRequest(edgeApplication).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -433,6 +435,7 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	sliceHTTPPortResult := utils.ConvertInterfaceToFloat64List(updateEdgeApplication.Results.HttpPort)
 
@@ -482,8 +485,8 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 
 	response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -496,6 +499,7 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *edgeApplicationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

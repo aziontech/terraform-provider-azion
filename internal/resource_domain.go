@@ -165,6 +165,8 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
+	defer response.Body.Close()
+
 	plan.SchemaVersion = types.Int64Value(createDomain.SchemaVersion)
 	var slice []types.String
 	for _, Cnames := range createDomain.Results.Cnames {
@@ -227,6 +229,7 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var slice []types.String
 	for _, Cnames := range getDomain.Results.Cnames {
@@ -301,6 +304,7 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	plan.SchemaVersion = types.Int64Value(updateDomain.SchemaVersion)
 	var slice []types.String
@@ -356,6 +360,7 @@ func (r *domainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
+	defer response.Body.Close()
 }
 
 func (r *domainResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

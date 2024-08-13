@@ -257,8 +257,8 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -271,6 +271,7 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var previous, next string
 	if rulesEngineResponse.Links.Previous.Get() != nil {

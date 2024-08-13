@@ -213,6 +213,7 @@ func (o *OriginDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var addresses []OriginAddressResults
 	for _, addr := range originResponse.Results.Addresses {

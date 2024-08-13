@@ -153,6 +153,7 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return
 	}
+	defer response.Body.Close()
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(functionsResponse.Results.JsonArgs)
 	if err != nil {

@@ -214,6 +214,8 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		d.errorPrint(resp, httpResp.StatusCode)
 		return
 	}
+	defer httpResp.Body.Close()
+
 	var previous, next string
 	if recordsResponse.Links != nil {
 		if recordsResponse.Links.Previous.Get() != nil {

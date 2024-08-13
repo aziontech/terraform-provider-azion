@@ -184,6 +184,7 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	domainState := DomainsDataSourceModel{
 		SchemaVersion: types.Int64Value(domainsResponse.SchemaVersion),

@@ -198,8 +198,8 @@ func (c *CacheSettingDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	cacheSettingResponse, response, err := c.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(ctx, EdgeApplicationId.ValueInt64(), CacheSettingId.ValueInt64()).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -212,6 +212,7 @@ func (c *CacheSettingDataSource) Read(ctx context.Context, req datasource.ReadRe
 		)
 		return
 	}
+	defer response.Body.Close()
 
 	var CookieNames []types.String
 	for _, cookieName := range cacheSettingResponse.Results.GetCookieNames() {

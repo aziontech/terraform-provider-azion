@@ -135,8 +135,8 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZone(ctx, int32(zoneId)).Execute()
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
@@ -149,6 +149,8 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		)
 		return
 	}
+	defer response.Body.Close()
+
 	var slice []types.String
 	for _, Nameservers := range zoneResponse.Results.Nameservers {
 		slice = append(slice, types.StringValue(Nameservers))
