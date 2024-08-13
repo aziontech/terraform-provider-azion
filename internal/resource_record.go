@@ -377,7 +377,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	idState, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 32)
+	idState, err := strconv.ParseInt(state.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
