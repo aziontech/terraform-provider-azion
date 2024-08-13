@@ -26,7 +26,7 @@ var (
 )
 
 func main() {
-log.Println("Garantindo que isto está rodando agora a partil de agora: ", time.Now().Hour(), " - ", time.Now().Minute())
+	log.Println("Garantindo que isto está rodando agora a partil de agora: ", time.Now().Hour(), " - ", time.Now().Minute())
 
 	var debug bool
 

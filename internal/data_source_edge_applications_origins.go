@@ -25,15 +25,15 @@ type OriginsDataSource struct {
 }
 
 type OriginsDataSourceModel struct {
-	SchemaVersion types.Int64                             `tfsdk:"schema_version"`
-	ID            types.String                            `tfsdk:"id"`
-	ApplicationID types.Int64                             `tfsdk:"edge_application_id"`
-	Counter       types.Int64                             `tfsdk:"counter"`
-	TotalPages    types.Int64                             `tfsdk:"total_pages"`
-	Page          types.Int64                             `tfsdk:"page"`
-	PageSize      types.Int64                             `tfsdk:"page_size"`
+	SchemaVersion types.Int64                              `tfsdk:"schema_version"`
+	ID            types.String                             `tfsdk:"id"`
+	ApplicationID types.Int64                              `tfsdk:"edge_application_id"`
+	Counter       types.Int64                              `tfsdk:"counter"`
+	TotalPages    types.Int64                              `tfsdk:"total_pages"`
+	Page          types.Int64                              `tfsdk:"page"`
+	PageSize      types.Int64                              `tfsdk:"page_size"`
 	Links         *GetEdgeApplicationsOriginsResponseLinks `tfsdk:"links"`
-	Results       []OriginsResults                        `tfsdk:"results"`
+	Results       []OriginsResults                         `tfsdk:"results"`
 }
 
 type GetEdgeApplicationsOriginsResponseLinks struct {

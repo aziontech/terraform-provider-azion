@@ -228,14 +228,14 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	var addressesRequest []edgeapplications.CreateOriginsRequestAddresses
 	for _, addr := range plan.Origin.Addresses {
-		var serverRole *string = addr.ServerRole.ValueStringPointer()	
+		var serverRole *string = addr.ServerRole.ValueStringPointer()
 		if addr.ServerRole.ValueString() == "" {
 			serverRole = nil
-		}	
+		}
 
-		var weight *int64  = addr.Weight.ValueInt64Pointer()
+		var weight *int64 = addr.Weight.ValueInt64Pointer()
 		if addr.Weight.ValueInt64() == 0 {
-			weight = nil	
+			weight = nil
 		}
 
 		requestAddresses := edgeapplications.CreateOriginsRequestAddresses{

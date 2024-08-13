@@ -145,8 +145,8 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if plan.Domain.DigitalCertificateId.ValueInt64() > 0 {	
-		domain.DigitalCertificateId = domains.PtrString(plan.Domain.DigitalCertificateId.String()) 
+	if plan.Domain.DigitalCertificateId.ValueInt64() > 0 {
+		domain.DigitalCertificateId = domains.PtrString(plan.Domain.DigitalCertificateId.String())
 	}
 
 	createDomain, response, err := r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute()

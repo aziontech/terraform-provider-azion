@@ -201,8 +201,8 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		var slice []types.String
 		for _, Cnames := range resultDomain.Cnames {
 			slice = append(slice, types.StringValue(Cnames))
-		}	
-		
+		}
+
 		var dr = DomainsResults{
 			ID:                types.Int64Value(resultDomain.GetId()),
 			Name:              types.StringValue(resultDomain.GetName()),
