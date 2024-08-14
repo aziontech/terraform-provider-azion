@@ -135,10 +135,10 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZone(ctx, int32(zoneId)).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

@@ -111,10 +111,10 @@ func (n *NetworkListDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	networkListsResponse, response, err := n.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, uuid.ValueString()).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

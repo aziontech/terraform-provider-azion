@@ -170,10 +170,10 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	domainsResponse, response, err := d.client.domainsApi.DomainsAPI.GetDomains(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

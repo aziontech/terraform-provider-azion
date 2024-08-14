@@ -160,10 +160,10 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 	}
 	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallPost(ctx).CreateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -219,10 +219,10 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 
 	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, edgeFirewallID).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -299,10 +299,10 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 
 	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidPut(ctx, edgeFirewallID).UpdateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -359,10 +359,10 @@ func (r *edgeFirewallResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidDelete(ctx, edgeFirewallID).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

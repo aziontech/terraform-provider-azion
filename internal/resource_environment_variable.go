@@ -132,10 +132,10 @@ func (r *environmentVariableResource) Create(ctx context.Context, req resource.C
 
 	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesCreate(ctx).VariableCreate(environmentVariableRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -195,10 +195,10 @@ func (r *environmentVariableResource) Read(ctx context.Context, req resource.Rea
 
 	getEnvironmentVariable, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -287,10 +287,10 @@ func (r *environmentVariableResource) Update(ctx context.Context, req resource.U
 
 	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesUpdate(ctx, uuid).VariableCreate(environmentVariableRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -351,10 +351,10 @@ func (r *environmentVariableResource) Delete(ctx context.Context, req resource.D
 
 	response, err := r.client.variablesApi.VariablesAPI.ApiVariablesDestroy(ctx, uuid).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

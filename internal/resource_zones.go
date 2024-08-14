@@ -146,10 +146,10 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	createZone, response, err := r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -208,10 +208,10 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 	order, response, err := r.client.idnsApi.ZonesAPI.GetZone(ctx, int32(idPlan)).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -270,10 +270,10 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	updateZone, response, err := r.client.idnsApi.ZonesAPI.PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

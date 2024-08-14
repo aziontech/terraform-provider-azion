@@ -218,10 +218,10 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 
 	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.CreateNewWAFRuleset(ctx).CreateNewWAFRulesetRequest(wafRulesetRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -295,10 +295,10 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	wafResponse, response, err := r.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -417,10 +417,10 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.UpdateWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).SingleWAF(wafRuleSetRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -495,10 +495,10 @@ func (r *wafRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	response, err := r.client.wafApi.WAFAPI.DeleteWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

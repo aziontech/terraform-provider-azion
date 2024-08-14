@@ -30,11 +30,11 @@ type EdgeApplicationsDataSourceModel struct {
 	TotalPages    types.Int64                      `tfsdk:"total_pages"`
 	Page          types.Int64                      `tfsdk:"page"`
 	PageSize      types.Int64                      `tfsdk:"page_size"`
-	Links         *GetEdgeAplicationsResponseLinks `tfsdk:"links"`
+	Links         *GetEdgeApplicationsResponseLinks `tfsdk:"links"`
 	Results       []EdgeApplicationsResult         `tfsdk:"results"`
 	ID            types.String                     `tfsdk:"id"`
 }
-type GetEdgeAplicationsResponseLinks struct {
+type GetEdgeApplicationsResponseLinks struct {
 	Previous types.String `tfsdk:"previous"`
 	Next     types.String `tfsdk:"next"`
 }
@@ -183,10 +183,10 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 
 	edgeAppResponse, response, err := e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

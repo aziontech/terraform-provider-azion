@@ -233,10 +233,10 @@ func (o *WafDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	wafResponse, response, err := o.client.wafApi.WAFAPI.ListAllWAFRulesets(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

@@ -293,10 +293,10 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		// both the default and first rule have the `order = 1`, so we need to get both of them and check the name
 		rulesResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), "request").OrderBy("order").PageSize(2).Page(1).Sort("asc").Execute() //nolint
 		if err != nil {
-			bodyBytes, err := io.ReadAll(response.Body)
-			if err != nil {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
 				resp.Diagnostics.AddError(
-					err.Error(),
+					errReadAll.Error(),
 					"err",
 				)
 			}
@@ -324,10 +324,10 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 
 		rulesEngineResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), "request", ruleID).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
 		if err != nil {
-			bodyBytes, err := io.ReadAll(response.Body)
-			if err != nil {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
 				resp.Diagnostics.AddError(
-					err.Error(),
+					errReadAll.Error(),
 					"err",
 				)
 			}
@@ -352,10 +352,10 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -473,10 +473,10 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 
 	ruleEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(ctx, edgeApplicationID, phase, ruleID).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -657,10 +657,10 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 
 	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -769,10 +769,10 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdDelete(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.Phase.ValueString(), state.RulesEngine.ID.ValueInt64()).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

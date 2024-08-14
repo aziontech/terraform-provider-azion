@@ -198,10 +198,10 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 
 	getNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, networkListId).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -296,10 +296,10 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 
 	updateNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -353,10 +353,10 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidDelete(ctx, networkListId).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

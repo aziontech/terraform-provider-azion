@@ -151,10 +151,10 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	createDomain, response, err := r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -214,10 +214,10 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	getDomain, response, err := r.client.domainsApi.DomainsAPI.GetDomain(ctx, domainId).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -288,10 +288,10 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 	updateDomain, response, err := r.client.domainsApi.DomainsAPI.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -343,10 +343,10 @@ func (r *domainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	domainId := strconv.Itoa(int(state.Domain.ID.ValueInt64()))
 	response, err := r.client.domainsApi.DomainsAPI.DelDomain(ctx, domainId).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

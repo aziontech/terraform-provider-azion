@@ -164,10 +164,10 @@ func (r *digitalCertificateResource) Create(ctx context.Context, req resource.Cr
 
 	certificateResponse, response, err := r.client.digitalCertificatesApi.CreateDigitalCertificateApi.CreateCertificate(ctx).CreateCertificateRequest(certificateRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -235,10 +235,10 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 
 	certificateResponse, response, err := r.client.digitalCertificatesApi.RetrieveDigitalCertificateByIDApi.GetCertificate(ctx, CertificateID).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -342,10 +342,10 @@ func (r *digitalCertificateResource) Update(ctx context.Context, req resource.Up
 	}
 	certificateResponse, response, err := r.client.digitalCertificatesApi.UpdateDigitalCertificateApi.UpdateDigitalCertificate(ctx, int32(CertificateID)).UpdateDigitalCertificateRequest(certificateRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -412,10 +412,10 @@ func (r *digitalCertificateResource) Delete(ctx context.Context, req resource.De
 	}
 	response, err := r.client.digitalCertificatesApi.DeleteDigitalCertificateApi.RemoveDigitalCertificates(ctx, int32(CertificateID)).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

@@ -125,10 +125,10 @@ func (e *EdgeFirewallDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	edgeFirewallResponse, response, err := e.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, getEdgeFirewallID.String()).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
