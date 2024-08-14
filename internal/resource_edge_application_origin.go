@@ -276,28 +276,13 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 		Addresses:            addressesRequest,
 		OriginType:           edgeapplications.PtrString(OriginType),
 		OriginProtocolPolicy: edgeapplications.PtrString(originProtocolPolicy),
-		HostHeader:           edgeapplications.PtrString("${host}"),
-
-		// HostHeader:           edgeapplications.PtrString(plan.Origin.HostHeader.String()),
-		// 	OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
-		// 	HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
-		// 	HmacRegionName:       edgeapplications.PtrString(plan.Origin.HMACRegionName.ValueString()),
-		// 	HmacAccessKey:        edgeapplications.PtrString(plan.Origin.HMACAccessKey.ValueString()),
-		// 	HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
+		HostHeader:           plan.Origin.HostHeader.ValueStringPointer(),
+		OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
+		HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
+		HmacRegionName:       edgeapplications.PtrString(plan.Origin.HMACRegionName.ValueString()),
+		HmacAccessKey:        edgeapplications.PtrString(plan.Origin.HMACAccessKey.ValueString()),
+		HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
 	}
-
-	// originRequest := edgeapplications.CreateOriginsRequest{
-	// 	Name:                 plan.Origin.Name.ValueString(),
-	// 	Addresses:            addressesRequest,
-	// 	OriginType:           edgeapplications.PtrString(OriginType),
-	// 	OriginProtocolPolicy: edgeapplications.PtrString(originProtocolPolicy),
-	// 	HostHeader:           edgeapplications.PtrString(plan.Origin.HostHeader.String()),
-	// 	OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
-	// 	HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
-	// 	HmacRegionName:       edgeapplications.PtrString(plan.Origin.HMACRegionName.ValueString()),
-	// 	HmacAccessKey:        edgeapplications.PtrString(plan.Origin.HMACAccessKey.ValueString()),
-	// 	HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
-	// }
 
 	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute()
 	if err != nil {
