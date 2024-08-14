@@ -122,7 +122,7 @@ jobs:
 
         - name: replace test-func string on .tf
           run: |
-            sed -i 's/test-func/test-func-action-001/g' func-tests/main.tf
+            sed -i 's/test-func/test-func-action-002/g' func-tests/main.tf
 
         - name: run func tests
           run: | 
