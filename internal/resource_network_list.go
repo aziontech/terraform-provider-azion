@@ -142,10 +142,10 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 
 	createNetworkListResponse, response, err := r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
