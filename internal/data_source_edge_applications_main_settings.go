@@ -25,14 +25,14 @@ type EdgeApplicationsDataSource struct {
 }
 
 type EdgeApplicationsDataSourceModel struct {
-	SchemaVersion types.Int64                      `tfsdk:"schema_version"`
-	Counter       types.Int64                      `tfsdk:"counter"`
-	TotalPages    types.Int64                      `tfsdk:"total_pages"`
-	Page          types.Int64                      `tfsdk:"page"`
-	PageSize      types.Int64                      `tfsdk:"page_size"`
+	SchemaVersion types.Int64                       `tfsdk:"schema_version"`
+	Counter       types.Int64                       `tfsdk:"counter"`
+	TotalPages    types.Int64                       `tfsdk:"total_pages"`
+	Page          types.Int64                       `tfsdk:"page"`
+	PageSize      types.Int64                       `tfsdk:"page_size"`
 	Links         *GetEdgeApplicationsResponseLinks `tfsdk:"links"`
-	Results       []EdgeApplicationsResult         `tfsdk:"results"`
-	ID            types.String                     `tfsdk:"id"`
+	Results       []EdgeApplicationsResult          `tfsdk:"results"`
+	ID            types.String                      `tfsdk:"id"`
 }
 type GetEdgeApplicationsResponseLinks struct {
 	Previous types.String `tfsdk:"previous"`
@@ -212,7 +212,7 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 		SchemaVersion: types.Int64Value(edgeAppResponse.SchemaVersion),
 		TotalPages:    types.Int64Value(edgeAppResponse.TotalPages),
 		Counter:       types.Int64Value(edgeAppResponse.Count),
-		Links: &GetEdgeAplicationsResponseLinks{
+		Links: &GetEdgeApplicationsResponseLinks{
 			Previous: types.StringValue(previous),
 			Next:     types.StringValue(next),
 		},
