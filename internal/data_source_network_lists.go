@@ -2,12 +2,13 @@ package provider
 
 import (
 	"context"
+	"io"
+
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"io"
 )
 
 var (
@@ -146,7 +147,7 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 		Page = types.Int64Value(1)
 	}
 
-	networkListsResponse, response, err := n.client.networkListApi.DefaultAPI.NetworkListsGet(ctx).Page(int32(Page.ValueInt64())).Execute()
+	networkListsResponse, response, err := n.client.networkListApi.DefaultAPI.NetworkListsGet(ctx).Page(int32(Page.ValueInt64())).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -162,7 +163,6 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var networkLists []NetworkListsResults
 	for _, nl := range networkListsResponse.Results {

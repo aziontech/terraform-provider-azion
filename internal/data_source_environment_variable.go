@@ -2,11 +2,12 @@ package provider
 
 import (
 	"context"
+	"io"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"io"
 )
 
 var (
@@ -101,7 +102,7 @@ func (n *VariableDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	variableResponse, response, err := n.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid.ValueString()).Execute()
+	variableResponse, response, err := n.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid.ValueString()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -117,7 +118,6 @@ func (n *VariableDataSource) Read(ctx context.Context, req datasource.ReadReques
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	variablesResult := VariableResult{
 		Uuid:       types.StringValue(variableResponse.GetUuid()),

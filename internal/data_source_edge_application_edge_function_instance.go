@@ -109,7 +109,7 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Read(ctx context.Context
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	edgeFunctionInstancesResponse, response, err := d.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdGet(ctx, EdgeApplicationId.ValueInt64(), EdgeFunctionInstanceId.ValueInt64()).Execute()
+	edgeFunctionInstancesResponse, response, err := d.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdGet(ctx, EdgeApplicationId.ValueInt64(), EdgeFunctionInstanceId.ValueInt64()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -125,7 +125,6 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Read(ctx context.Context
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesResponse.Results.GetArgs())
 	if err != nil {

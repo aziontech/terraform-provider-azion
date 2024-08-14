@@ -323,7 +323,7 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 		EnableCachingForOptions:        edgeapplications.PtrBool(plan.CacheSettings.EnableCachingForOptions.ValueBool()),
 		EnableStaleCache:               edgeapplications.PtrBool(plan.CacheSettings.EnableStaleCache.ValueBool()),
 	}
-	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute()
+	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -339,7 +339,6 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var CookieNames []types.String
 	for _, cookieName := range createdCacheSetting.Results.GetCookieNames() {
@@ -416,7 +415,7 @@ func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req res
 		return
 	}
 
-	cacheSettingResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(ctx, EdgeApplicationId, CacheSettingId).Execute()
+	cacheSettingResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(ctx, EdgeApplicationId, CacheSettingId).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -432,7 +431,6 @@ func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req res
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var CookieNames []types.String
 	for _, cookieName := range cacheSettingResponse.Results.GetCookieNames() {
@@ -623,7 +621,7 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 		EnableCachingForOptions:        edgeapplications.PtrBool(plan.CacheSettings.EnableCachingForOptions.ValueBool()),
 		EnableStaleCache:               edgeapplications.PtrBool(plan.CacheSettings.EnableStaleCache.ValueBool()),
 	}
-	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute()
+	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -639,7 +637,6 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var CookieNames []types.String
 	for _, cookieName := range createdCacheSetting.Results.GetCookieNames() {
@@ -714,7 +711,7 @@ func (r *edgeApplicationCacheSettingsResource) Delete(ctx context.Context, req r
 		)
 		return
 	}
-	response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute()
+	response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -730,7 +727,6 @@ func (r *edgeApplicationCacheSettingsResource) Delete(ctx context.Context, req r
 		)
 		return
 	}
-	defer response.Body.Close()
 }
 
 func (r *edgeApplicationCacheSettingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

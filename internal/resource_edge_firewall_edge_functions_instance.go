@@ -156,7 +156,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 	edgeFunctionInstancesResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 		EdgeFirewallEdgeFirewallIdFunctionsInstancesPost(ctx, edgeFirewallId.ValueInt64()).
 		CreateEdgeFunctionsInstancesRequest(edgeFunctionInstanceRequest).
-		Execute()
+		Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -172,7 +172,6 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesResponse.Results.GetJsonArgs())
 	if err != nil {
@@ -233,7 +232,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 
 	edgeFunctionInstancesResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 		EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdGet(ctx, edgeFirewallID, functionsInstancesId).
-		Execute()
+		Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -249,7 +248,6 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesResponse.Results.GetJsonArgs())
 	if err != nil {
@@ -337,7 +335,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 	edgeFunctionInstancesUpdateResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 		EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdPut(ctx, edgeFirewallID.ValueInt64(), functionsInstancesId.ValueInt64()).
 		Body(ApplicationPutInstanceRequest).
-		Execute()
+		Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -353,7 +351,6 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesUpdateResponse.Results.GetJsonArgs())
 	if err != nil {
@@ -412,7 +409,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Delete(ctx context.Context, req 
 
 	response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 		EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdDelete(ctx, state.EdgeFirewallID.ValueInt64(), state.EdgeFunction.ID.ValueInt64()).
-		Execute()
+		Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -428,7 +425,6 @@ func (r *edgeFirewallFunctionsInstanceResource) Delete(ctx context.Context, req 
 		)
 		return
 	}
-	defer response.Body.Close()
 }
 
 func (r *edgeFirewallFunctionsInstanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

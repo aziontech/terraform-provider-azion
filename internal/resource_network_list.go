@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
-	"github.com/aziontech/azionapi-go-sdk/networklist"
 	"io"
 	"strconv"
 	"time"
+
+	"github.com/aziontech/azionapi-go-sdk/networklist"
 
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -139,7 +140,7 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	createNetworkListResponse, response, err := r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute()
+	createNetworkListResponse, response, err := r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -155,7 +156,6 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	plan.SchemaVersion = types.Int64Value(3)
 	var sliceString []types.String
@@ -196,7 +196,7 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 		networkListId = state.ID.ValueString()
 	}
 
-	getNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, networkListId).Execute()
+	getNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, networkListId).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -212,7 +212,6 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var sliceString []types.String
 	for _, itemsValuesStr := range getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetItemsValues() {
@@ -295,7 +294,7 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	updateNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute()
+	updateNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -311,7 +310,6 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	plan.SchemaVersion = types.Int64Value(3)
 	var sliceString []types.String
@@ -353,7 +351,7 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 		networkListId = state.ID.ValueString()
 	}
 
-	response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidDelete(ctx, networkListId).Execute()
+	response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidDelete(ctx, networkListId).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -369,7 +367,6 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 		)
 		return
 	}
-	defer response.Body.Close()
 }
 
 func (r *networkListResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

@@ -284,7 +284,7 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 		HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
 	}
 
-	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute()
+	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
 	if err != nil {
 		bodyBytes, err2 := io.ReadAll(response.Body)
 		if err2 != nil {
@@ -300,7 +300,6 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var addresses []OriginAddress
 	for _, addr := range originResponse.Results.Addresses {
@@ -368,7 +367,7 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, ApplicationID, OriginKey).Execute()
+	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, ApplicationID, OriginKey).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -384,7 +383,6 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var addresses []OriginAddress
 	for _, addr := range originResponse.Results.Addresses {
@@ -498,7 +496,7 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 		HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
 	}
 
-	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute()
+	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -514,7 +512,6 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var addresses []OriginAddress
 	for _, addr := range originResponse.Results.Addresses {
@@ -580,7 +577,7 @@ func (r *originResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
-	response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute()
+	response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -596,7 +593,6 @@ func (r *originResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 }
 
 func (r *originResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

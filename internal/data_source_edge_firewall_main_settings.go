@@ -2,12 +2,13 @@ package provider
 
 import (
 	"context"
+	"io"
+
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"io"
 )
 
 func dataSourceAzionEdgeFirewalls() datasource.DataSource {
@@ -166,7 +167,7 @@ func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadR
 		PageSize = types.Int64Value(10)
 	}
 
-	EdgeFirewallsResponse, response, err := e.client.edgeFirewallApi.DefaultAPI.EdgeFirewallGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	EdgeFirewallsResponse, response, err := e.client.edgeFirewallApi.DefaultAPI.EdgeFirewallGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -182,7 +183,6 @@ func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadR
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var previous, next string
 	if EdgeFirewallsResponse.Links.Previous.Get() != nil {

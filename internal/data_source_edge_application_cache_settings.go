@@ -237,7 +237,7 @@ func (c *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 		PageSize = types.Int64Value(10)
 	}
 
-	cacheSettingsResponse, response, err := c.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	cacheSettingsResponse, response, err := c.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -253,7 +253,6 @@ func (c *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var previous, next string
 	if cacheSettingsResponse.Links.Previous.Get() != nil {

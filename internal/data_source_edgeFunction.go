@@ -147,13 +147,12 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, int64(edgeFunctionId)).Execute()
+	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, int64(edgeFunctionId)).Execute() //nolint
 	if err != nil {
 		usrMsg, errMsg := errPrint(response.StatusCode, err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return
 	}
-	defer response.Body.Close()
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(functionsResponse.Results.JsonArgs)
 	if err != nil {

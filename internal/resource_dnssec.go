@@ -162,7 +162,7 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		IsEnabled: idns.PtrBool(plan.DnsSec.IsEnabled.ValueBool()),
 	}
 
-	enableDnsSec, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
+	enableDnsSec, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -178,7 +178,6 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
 	plan.DnsSec = &dnsSecModel{
@@ -222,7 +221,7 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
-	getDnsSec, response, err := r.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, int32(zoneId)).Execute()
+	getDnsSec, response, err := r.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, int32(zoneId)).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -238,7 +237,6 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	state.DnsSec = &dnsSecModel{
 		IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
@@ -284,7 +282,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		IsEnabled: idns.PtrBool(plan.DnsSec.IsEnabled.ValueBool()),
 	}
 
-	enableDnsSec, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute()
+	enableDnsSec, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -300,7 +298,6 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -347,7 +344,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		IsEnabled: idns.PtrBool(false),
 	}
 
-	_, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute()
+	_, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -363,7 +360,6 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 }
 
 func (r *dnssecResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

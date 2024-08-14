@@ -158,7 +158,7 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Contex
 		PageSize = types.Int64Value(10)
 	}
 
-	edgeFunctionInstancesResponse, response, err := d.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	edgeFunctionInstancesResponse, response, err := d.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -174,7 +174,6 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Contex
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var previous, next string
 	if edgeFunctionInstancesResponse.Links.Previous.Get() != nil {

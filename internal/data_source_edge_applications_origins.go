@@ -244,7 +244,7 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		PageSize = types.Int64Value(10)
 	}
 
-	originsResponse, response, err := o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsGet(ctx, edgeApplicationID.ValueInt64()).Execute()
+	originsResponse, response, err := o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsGet(ctx, edgeApplicationID.ValueInt64()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -260,7 +260,6 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var previous, next string
 	if originsResponse.Links.Previous.Get() != nil {

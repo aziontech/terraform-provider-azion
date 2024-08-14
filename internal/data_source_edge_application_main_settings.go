@@ -182,7 +182,7 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	edgeApplicationsResponse, response, err := e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, getEdgeApplicationId.ValueString()).Execute()
+	edgeApplicationsResponse, response, err := e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, getEdgeApplicationId.ValueString()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -198,7 +198,6 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	EdgeApplicationState := EdgeApplicationDataSourceModel{
 		SchemaVersion: types.Int64Value(edgeApplicationsResponse.SchemaVersion),

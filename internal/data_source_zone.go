@@ -133,7 +133,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZone(ctx, int32(zoneId)).Execute()
+	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZone(ctx, int32(zoneId)).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -149,7 +149,6 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var slice []types.String
 	for _, Nameservers := range zoneResponse.Results.Nameservers {

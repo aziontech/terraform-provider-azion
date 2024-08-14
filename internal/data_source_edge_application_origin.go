@@ -197,7 +197,7 @@ func (o *OriginDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	originResponse, response, err := o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, edgeApplicationID.ValueInt64(), getOriginsKey.ValueString()).Execute()
+	originResponse, response, err := o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, edgeApplicationID.ValueInt64(), getOriginsKey.ValueString()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -213,7 +213,6 @@ func (o *OriginDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var addresses []OriginAddressResults
 	for _, addr := range originResponse.Results.Addresses {

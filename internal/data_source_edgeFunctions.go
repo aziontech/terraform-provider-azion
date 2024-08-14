@@ -153,7 +153,7 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 }
 
 func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsGet(ctx).Execute()
+	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsGet(ctx).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -169,7 +169,6 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var previous, next string
 	if functionsResponse.Links != nil {

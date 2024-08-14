@@ -138,7 +138,7 @@ func (d *DigitalCertificatesDataSource) Schema(_ context.Context, _ datasource.S
 }
 
 func (d *DigitalCertificatesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	digitalCertificatesResponse, response, err := d.client.digitalCertificatesApi.RetrieveDigitalCertificateListApi.ListDigitalCertificates(ctx).Execute()
+	digitalCertificatesResponse, response, err := d.client.digitalCertificatesApi.RetrieveDigitalCertificateListApi.ListDigitalCertificates(ctx).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -154,7 +154,6 @@ func (d *DigitalCertificatesDataSource) Read(ctx context.Context, req datasource
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var previous, next string
 	if digitalCertificatesResponse.Links.Previous.Get() != nil {

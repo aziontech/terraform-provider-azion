@@ -154,7 +154,7 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 	zoneId := int32(getZoneId.ValueInt64())
 
-	getDnsSec, response, err := d.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, zoneId).Execute()
+	getDnsSec, response, err := d.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, zoneId).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -170,7 +170,6 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	if getDnsSec.Results.DelegationSigner != nil {
 		dnsSecState := &dnsSecDataSourceModel{

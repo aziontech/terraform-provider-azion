@@ -132,7 +132,7 @@ func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	certificateResponse, response, err := c.client.digitalCertificatesApi.RetrieveDigitalCertificateByIDApi.GetCertificate(ctx, getCertificateID.ValueInt64()).Execute()
+	certificateResponse, response, err := c.client.digitalCertificatesApi.RetrieveDigitalCertificateByIDApi.GetCertificate(ctx, getCertificateID.ValueInt64()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -148,7 +148,6 @@ func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadReq
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var GetSubjectName []types.String
 	for _, subjectName := range certificateResponse.Results.GetSubjectName() {

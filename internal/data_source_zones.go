@@ -2,8 +2,9 @@ package provider
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"io"
+
+	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -144,7 +145,7 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		PageSize = types.Int64Value(10)
 	}
 
-	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZones(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZones(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -160,7 +161,6 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	zoneState := ZonesDataSourceModel{
 		SchemaVersion: types.Int64Value(int64(zoneResponse.GetSchemaVersion())),

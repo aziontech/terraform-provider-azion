@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
+	"io"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"io"
 )
 
 var (
@@ -94,7 +95,7 @@ func (n *VariablesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 }
 
 func (n *VariablesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	variablesResponse, response, err := n.client.variablesApi.VariablesAPI.ApiVariablesList(ctx).Execute()
+	variablesResponse, response, err := n.client.variablesApi.VariablesAPI.ApiVariablesList(ctx).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -110,7 +111,6 @@ func (n *VariablesDataSource) Read(ctx context.Context, req datasource.ReadReque
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var variablesList []VariablesResults
 	for _, variable := range variablesResponse {

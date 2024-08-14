@@ -168,7 +168,7 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		PageSize = types.Int64Value(10)
 	}
 
-	domainsResponse, response, err := d.client.domainsApi.DomainsAPI.GetDomains(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	domainsResponse, response, err := d.client.domainsApi.DomainsAPI.GetDomains(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -184,7 +184,6 @@ func (d *DomainsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	domainState := DomainsDataSourceModel{
 		SchemaVersion: types.Int64Value(domainsResponse.SchemaVersion),

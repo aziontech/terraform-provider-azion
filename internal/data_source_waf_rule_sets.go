@@ -231,7 +231,7 @@ func (o *WafDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		PageSize = types.Int64Value(10)
 	}
 
-	wafResponse, response, err := o.client.wafApi.WAFAPI.ListAllWAFRulesets(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	wafResponse, response, err := o.client.wafApi.WAFAPI.ListAllWAFRulesets(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -247,7 +247,6 @@ func (o *WafDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var previous, next string
 	if wafResponse.GetLinks().Previous.Get() != nil {

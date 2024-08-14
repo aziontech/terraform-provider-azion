@@ -149,7 +149,7 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		domain.DigitalCertificateId = domains.PtrString(plan.Domain.DigitalCertificateId.String())
 	}
 
-	createDomain, response, err := r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute()
+	createDomain, response, err := r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -165,7 +165,6 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	plan.SchemaVersion = types.Int64Value(createDomain.SchemaVersion)
 	var slice []types.String
@@ -213,7 +212,7 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 		domainId = state.ID.ValueString()
 	}
 
-	getDomain, response, err := r.client.domainsApi.DomainsAPI.GetDomain(ctx, domainId).Execute()
+	getDomain, response, err := r.client.domainsApi.DomainsAPI.GetDomain(ctx, domainId).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -229,7 +228,6 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var slice []types.String
 	for _, Cnames := range getDomain.Results.Cnames {
@@ -288,7 +286,7 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	updateDomain, response, err := r.client.domainsApi.DomainsAPI.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute()
+	updateDomain, response, err := r.client.domainsApi.DomainsAPI.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -304,7 +302,6 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	plan.SchemaVersion = types.Int64Value(updateDomain.SchemaVersion)
 	var slice []types.String
@@ -344,7 +341,7 @@ func (r *domainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 	domainId := strconv.Itoa(int(state.Domain.ID.ValueInt64()))
-	response, err := r.client.domainsApi.DomainsAPI.DelDomain(ctx, domainId).Execute()
+	response, err := r.client.domainsApi.DomainsAPI.DelDomain(ctx, domainId).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -360,7 +357,6 @@ func (r *domainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 }
 
 func (r *domainResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

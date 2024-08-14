@@ -2,8 +2,9 @@ package provider
 
 import (
 	"context"
-	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"io"
+
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -162,7 +163,7 @@ func (o *WafDomainsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	wafDomainsResponse, response, err := o.client.wafApi.WAFAPI.GetWAFDomains(ctx, wafID.ValueInt64()).
 		Page(page.ValueInt64()).
 		PageSize(pageSize.ValueInt64()).
-		Execute()
+		Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -178,7 +179,6 @@ func (o *WafDomainsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var WafList []WafDomainsResults
 	for _, waf := range wafDomainsResponse.Results {

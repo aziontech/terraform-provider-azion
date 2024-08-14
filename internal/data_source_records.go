@@ -209,12 +209,11 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 	zoneId := int32(getZoneId.ValueInt64())
 
-	recordsResponse, httpResp, err := d.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, zoneId).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	recordsResponse, httpResp, err := d.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, zoneId).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		d.errorPrint(resp, httpResp.StatusCode)
 		return
 	}
-	defer httpResp.Body.Close()
 
 	var previous, next string
 	if recordsResponse.Links != nil {

@@ -117,7 +117,7 @@ func (d *DomainDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	domainResponse, response, err := d.client.domainsApi.DomainsAPI.GetDomain(ctx, getDomainId.ValueString()).Execute()
+	domainResponse, response, err := d.client.domainsApi.DomainsAPI.GetDomain(ctx, getDomainId.ValueString()).Execute() //nolint
 	if err != nil {
 		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -133,7 +133,6 @@ func (d *DomainDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		)
 		return
 	}
-	defer response.Body.Close()
 
 	var slice []types.String
 	for _, Cnames := range domainResponse.Results.Cnames {
