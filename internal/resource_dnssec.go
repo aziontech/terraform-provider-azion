@@ -150,7 +150,7 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	zoneId, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 32)
+	zoneId, err := strconv.ParseInt(plan.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",

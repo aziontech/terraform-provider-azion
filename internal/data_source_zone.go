@@ -124,7 +124,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId, err := strconv.ParseUint(getZoneId.ValueString(), 10, 32)
+	zoneId, err := strconv.ParseInt(getZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",

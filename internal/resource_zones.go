@@ -198,7 +198,8 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	idPlan, err := strconv.ParseUint(state.ID.ValueString(), 10, 32)
+
+	idPlan, err := strconv.ParseInt(state.ID.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -206,6 +207,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		)
 		return
 	}
+
 	order, response, err := r.client.idnsApi.ZonesAPI.GetZone(ctx, int32(idPlan)).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)

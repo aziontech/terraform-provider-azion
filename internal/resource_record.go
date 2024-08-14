@@ -156,7 +156,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		record.AnswersList = append(record.AnswersList, answerList.ValueString())
 	}
 
-	zoneId, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 32)
+	zoneId, err := strconv.ParseInt(plan.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -164,6 +164,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
+
 	createRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
 		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
@@ -306,7 +307,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	idPlan, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 32)
+	idPlan, err := strconv.ParseInt(plan.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
