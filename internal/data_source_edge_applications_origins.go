@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"io"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -268,8 +267,6 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if originsResponse.Links.Next.Get() != nil {
 		next = *originsResponse.Links.Next.Get()
 	}
-
-	log.Println("HERE 01")
 
 	var origins []OriginsResults
 	for _, origin := range originsResponse.Results {
