@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"log"
-	"time"
 
 	framework "github.com/aziontech/terraform-provider-azion/internal"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -39,7 +38,7 @@ func main() {
 	muxServer, err := tf6muxserver.NewMuxServer(ctx, providers...)
 
 	if err != nil {
-		.Fatal(err)
+		log.Fatal(err)
 	}
 
 	var serveOpts []tf6server.ServeOpt
