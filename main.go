@@ -26,8 +26,6 @@ var (
 )
 
 func main() {
-	log.Println("Garantindo que isto está rodando agora a partil de agora: ", time.Now().Hour(), " - ", time.Now().Minute())
-
 	var debug bool
 
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
@@ -41,7 +39,7 @@ func main() {
 	muxServer, err := tf6muxserver.NewMuxServer(ctx, providers...)
 
 	if err != nil {
-		log.Fatal(err)
+		.Fatal(err)
 	}
 
 	var serveOpts []tf6server.ServeOpt
