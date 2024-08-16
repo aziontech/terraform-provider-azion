@@ -24,15 +24,15 @@ type RulesEngineDataSource struct {
 }
 
 type RulesEngineDataSourceModel struct {
-	SchemaVersion types.Int64                             `tfsdk:"schema_version"`
-	ID            types.String                            `tfsdk:"id"`
-	ApplicationID types.Int64                             `tfsdk:"edge_application_id"`
-	Counter       types.Int64                             `tfsdk:"counter"`
-	TotalPages    types.Int64                             `tfsdk:"total_pages"`
-	Page          types.Int64                             `tfsdk:"page"`
-	PageSize      types.Int64                             `tfsdk:"page_size"`
-	Links         *GetEdgeAplicationsOriginsResponseLinks `tfsdk:"links"`
-	Results       []RulesEngineResultModel                `tfsdk:"results"`
+	SchemaVersion types.Int64                              `tfsdk:"schema_version"`
+	ID            types.String                             `tfsdk:"id"`
+	ApplicationID types.Int64                              `tfsdk:"edge_application_id"`
+	Counter       types.Int64                              `tfsdk:"counter"`
+	TotalPages    types.Int64                              `tfsdk:"total_pages"`
+	Page          types.Int64                              `tfsdk:"page"`
+	PageSize      types.Int64                              `tfsdk:"page_size"`
+	Links         *GetEdgeApplicationsOriginsResponseLinks `tfsdk:"links"`
+	Results       []RulesEngineResultModel                 `tfsdk:"results"`
 }
 
 type RulesEngineResultModel struct {
@@ -255,12 +255,12 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 		PageSize = types.Int64Value(10)
 	}
 
-	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute()
+	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -343,7 +343,7 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 		Results:       rulesEngineResults,
 		TotalPages:    types.Int64Value(rulesEngineResponse.TotalPages),
 		Counter:       types.Int64Value(rulesEngineResponse.Count),
-		Links: &GetEdgeAplicationsOriginsResponseLinks{
+		Links: &GetEdgeApplicationsOriginsResponseLinks{
 			Previous: types.StringValue(previous),
 			Next:     types.StringValue(next),
 		},

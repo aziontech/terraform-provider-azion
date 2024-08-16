@@ -156,12 +156,12 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 	edgeFunctionInstancesResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 		EdgeFirewallEdgeFirewallIdFunctionsInstancesPost(ctx, edgeFirewallId.ValueInt64()).
 		CreateEdgeFunctionsInstancesRequest(edgeFunctionInstanceRequest).
-		Execute()
+		Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -232,12 +232,12 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 
 	edgeFunctionInstancesResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 		EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdGet(ctx, edgeFirewallID, functionsInstancesId).
-		Execute()
+		Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -335,12 +335,12 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 	edgeFunctionInstancesUpdateResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 		EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdPut(ctx, edgeFirewallID.ValueInt64(), functionsInstancesId.ValueInt64()).
 		Body(ApplicationPutInstanceRequest).
-		Execute()
+		Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -409,12 +409,12 @@ func (r *edgeFirewallFunctionsInstanceResource) Delete(ctx context.Context, req 
 
 	response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 		EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdDelete(ctx, state.EdgeFirewallID.ValueInt64(), state.EdgeFunction.ID.ValueInt64()).
-		Execute()
+		Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

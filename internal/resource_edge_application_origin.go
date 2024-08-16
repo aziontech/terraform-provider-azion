@@ -61,7 +61,7 @@ type OriginResourceResults struct {
 
 type OriginAddress struct {
 	Address    types.String `tfsdk:"address"`
-	Weight     types.String `tfsdk:"weight"`
+	Weight     types.Int64  `tfsdk:"weight"`
 	ServerRole types.String `tfsdk:"server_role"`
 	IsActive   types.Bool   `tfsdk:"is_active"`
 }
@@ -121,18 +121,21 @@ func (r *originResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 									Description: "Address of the origin.",
 									Required:    true,
 								},
-								"weight": schema.StringAttribute{
+								"weight": schema.Int64Attribute{
 									Description: "Weight of the origin.",
+									Required:    false,
 									Optional:    true,
 									Computed:    true,
 								},
 								"server_role": schema.StringAttribute{
 									Description: "Server role of the origin.",
+									Required:    false,
 									Optional:    true,
 									Computed:    true,
 								},
 								"is_active": schema.BoolAttribute{
 									Description: "Status of the origin.",
+									Required:    false,
 									Optional:    true,
 									Computed:    true,
 								},
@@ -225,9 +228,23 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	var addressesRequest []edgeapplications.CreateOriginsRequestAddresses
 	for _, addr := range plan.Origin.Addresses {
-		addressesRequest = append(addressesRequest, edgeapplications.CreateOriginsRequestAddresses{
-			Address: addr.Address.ValueString(),
-		})
+		var serverRole *string = addr.ServerRole.ValueStringPointer()
+		if addr.ServerRole.ValueString() == "" {
+			serverRole = nil
+		}
+
+		var weight *int64 = addr.Weight.ValueInt64Pointer()
+		if addr.Weight.ValueInt64() == 0 {
+			weight = nil
+		}
+
+		requestAddresses := edgeapplications.CreateOriginsRequestAddresses{
+			Address:    addr.Address.ValueString(),
+			IsActive:   addr.IsActive.ValueBoolPointer(),
+			Weight:     weight,
+			ServerRole: serverRole,
+		}
+		addressesRequest = append(addressesRequest, requestAddresses)
 	}
 
 	var originProtocolPolicy string
@@ -259,7 +276,7 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 		Addresses:            addressesRequest,
 		OriginType:           edgeapplications.PtrString(OriginType),
 		OriginProtocolPolicy: edgeapplications.PtrString(originProtocolPolicy),
-		HostHeader:           plan.Origin.HostHeader.ValueString(),
+		HostHeader:           plan.Origin.HostHeader.ValueStringPointer(),
 		OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
 		HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
 		HmacRegionName:       edgeapplications.PtrString(plan.Origin.HMACRegionName.ValueString()),
@@ -267,12 +284,12 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 		HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
 	}
 
-	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute()
+	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -288,7 +305,7 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	for _, addr := range originResponse.Results.Addresses {
 		addresses = append(addresses, OriginAddress{
 			Address:    types.StringValue(addr.GetAddress()),
-			Weight:     types.StringValue(addr.GetWeight()),
+			Weight:     types.Int64Value(addr.GetWeight()),
 			ServerRole: types.StringValue(addr.GetServerRole()),
 			IsActive:   types.BoolValue(addr.GetIsActive()),
 		})
@@ -314,7 +331,7 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	plan.SchemaVersion = types.Int64Value(originResponse.SchemaVersion)
-	plan.ID = types.StringValue(strconv.FormatInt(originResponse.Results.OriginId, 10))
+	plan.ID = types.StringValue(strconv.FormatInt(*originResponse.Results.OriginId, 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, &plan)
@@ -350,12 +367,12 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, ApplicationID, OriginKey).Execute()
+	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, ApplicationID, OriginKey).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -371,7 +388,7 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 	for _, addr := range originResponse.Results.Addresses {
 		addresses = append(addresses, OriginAddress{
 			Address:    types.StringValue(addr.GetAddress()),
-			Weight:     types.StringValue(addr.GetWeight()),
+			Weight:     types.Int64Value(addr.GetWeight()),
 			ServerRole: types.StringValue(addr.GetServerRole()),
 			IsActive:   types.BoolValue(addr.GetIsActive()),
 		})
@@ -395,7 +412,7 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 		HMACAccessKey:              types.StringValue(originResponse.Results.GetHmacAccessKey()),
 		HMACSecretKey:              types.StringValue(originResponse.Results.GetHmacSecretKey()),
 	}
-	state.ID = types.StringValue(strconv.FormatInt(originResponse.Results.OriginId, 10))
+	state.ID = types.StringValue(strconv.FormatInt(*originResponse.Results.OriginId, 10))
 	state.ApplicationID = types.Int64Value(ApplicationID)
 	state.SchemaVersion = types.Int64Value(originResponse.SchemaVersion)
 
@@ -471,7 +488,7 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Addresses:            addressesRequest,
 		OriginType:           edgeapplications.PtrString(OriginType),
 		OriginProtocolPolicy: edgeapplications.PtrString(originProtocolPolicy),
-		HostHeader:           plan.Origin.HostHeader.ValueString(),
+		HostHeader:           edgeapplications.PtrString(plan.Origin.HostHeader.ValueString()),
 		OriginPath:           edgeapplications.PtrString(plan.Origin.OriginPath.ValueString()),
 		HmacAuthentication:   edgeapplications.PtrBool(plan.Origin.HMACAuthentication.ValueBool()),
 		HmacRegionName:       edgeapplications.PtrString(plan.Origin.HMACRegionName.ValueString()),
@@ -479,12 +496,12 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 		HmacSecretKey:        edgeapplications.PtrString(plan.Origin.HMACSecretKey.ValueString()),
 	}
 
-	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute()
+	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -500,7 +517,7 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 	for _, addr := range originResponse.Results.Addresses {
 		addresses = append(addresses, OriginAddress{
 			Address:    types.StringValue(addr.GetAddress()),
-			Weight:     types.StringValue(addr.GetWeight()),
+			Weight:     types.Int64Value(addr.GetWeight()),
 			ServerRole: types.StringValue(addr.GetServerRole()),
 			IsActive:   types.BoolValue(addr.GetIsActive()),
 		})
@@ -526,7 +543,7 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	plan.SchemaVersion = types.Int64Value(originResponse.SchemaVersion)
-	plan.ID = types.StringValue(strconv.FormatInt(originResponse.Results.OriginId, 10))
+	plan.ID = types.StringValue(strconv.FormatInt(*originResponse.Results.OriginId, 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, &plan)
@@ -560,12 +577,12 @@ func (r *originResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
-	response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute()
+	response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

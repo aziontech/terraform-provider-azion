@@ -115,3 +115,10 @@ func-apply:
 
 func-destroy:
 	@cd func-tests && terraform destroy -auto-approve
+
+debug: 
+	@go build -o terraform-provider-azion
+	@dlv exec terraform-provider-azion -- -debug
+
+dev: 
+	@go run main.go -debug

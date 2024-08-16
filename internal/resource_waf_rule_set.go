@@ -2,11 +2,12 @@ package provider
 
 import (
 	"context"
-	waf "github.com/aziontech/azionapi-go-sdk/waf"
-	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"io"
 	"strconv"
 	"time"
+
+	waf "github.com/aziontech/azionapi-go-sdk/waf"
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -215,12 +216,12 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.CreateNewWAFRuleset(ctx).CreateNewWAFRulesetRequest(wafRulesetRequest).Execute()
+	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.CreateNewWAFRuleset(ctx).CreateNewWAFRulesetRequest(wafRulesetRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -292,12 +293,12 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 		}
 	}
 
-	wafResponse, response, err := r.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID).Execute()
+	wafResponse, response, err := r.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -414,12 +415,12 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.UpdateWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).SingleWAF(wafRuleSetRequest).Execute()
+	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.UpdateWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).SingleWAF(wafRuleSetRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -492,12 +493,12 @@ func (r *wafRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequ
 		}
 	}
 
-	response, err := r.client.wafApi.WAFAPI.DeleteWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).Execute()
+	response, err := r.client.wafApi.WAFAPI.DeleteWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

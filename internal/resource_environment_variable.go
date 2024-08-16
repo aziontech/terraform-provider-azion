@@ -2,9 +2,10 @@ package provider
 
 import (
 	"context"
-	"github.com/aziontech/azionapi-go-sdk/variables"
 	"io"
 	"time"
+
+	"github.com/aziontech/azionapi-go-sdk/variables"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -129,12 +130,12 @@ func (r *environmentVariableResource) Create(ctx context.Context, req resource.C
 		Secret: plan.EnvironmentVariable.Secret.ValueBoolPointer(),
 	}
 
-	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesCreate(ctx).VariableCreate(environmentVariableRequest).Execute()
+	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesCreate(ctx).VariableCreate(environmentVariableRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -192,12 +193,12 @@ func (r *environmentVariableResource) Read(ctx context.Context, req resource.Rea
 		uuid = state.ID.ValueString()
 	}
 
-	getEnvironmentVariable, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid).Execute()
+	getEnvironmentVariable, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -284,12 +285,12 @@ func (r *environmentVariableResource) Update(ctx context.Context, req resource.U
 		Secret: plan.EnvironmentVariable.Secret.ValueBoolPointer(),
 	}
 
-	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesUpdate(ctx, uuid).VariableCreate(environmentVariableRequest).Execute()
+	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesUpdate(ctx, uuid).VariableCreate(environmentVariableRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -348,12 +349,12 @@ func (r *environmentVariableResource) Delete(ctx context.Context, req resource.D
 		uuid = state.ID.ValueString()
 	}
 
-	response, err := r.client.variablesApi.VariablesAPI.ApiVariablesDestroy(ctx, uuid).Execute()
+	response, err := r.client.variablesApi.VariablesAPI.ApiVariablesDestroy(ctx, uuid).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

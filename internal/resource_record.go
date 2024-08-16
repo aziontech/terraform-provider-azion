@@ -156,7 +156,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		record.AnswersList = append(record.AnswersList, answerList.ValueString())
 	}
 
-	zoneId, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 32)
+	zoneId, err := strconv.ParseInt(plan.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -164,7 +164,8 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		)
 		return
 	}
-	createRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute()
+
+	createRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
 		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
 		bodyBytes, _ := io.ReadAll(httpResponse.Body)
@@ -250,7 +251,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 		idRecord = utils.AtoiNoError(valueFromCmd[1], resp)
 	}
 
-	recordsResponse, httpResponse, err := r.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, idZone).PageSize(largeRecordsPageSize).Execute()
+	recordsResponse, httpResponse, err := r.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, idZone).PageSize(largeRecordsPageSize).Execute() //nolint
 	if err != nil {
 		usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
@@ -306,7 +307,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	idPlan, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 32)
+	idPlan, err := strconv.ParseInt(plan.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -328,7 +329,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		record.AnswersList = append(record.AnswersList, planAnswerList.ValueString())
 	}
 
-	updateRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.PutZoneRecord(ctx, int32(idPlan), int32(state.Record.Id.ValueInt64())).RecordPostOrPut(record).Execute()
+	updateRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.PutZoneRecord(ctx, int32(idPlan), int32(state.Record.Id.ValueInt64())).RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
 		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
 		bodyBytes, _ := io.ReadAll(httpResponse.Body)
@@ -374,7 +375,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	idState, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 32)
+	idState, err := strconv.ParseInt(state.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -383,7 +384,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	_, _, err = r.client.idnsApi.RecordsAPI.DeleteZoneRecord(ctx, int32(idState), int32(state.Record.Id.ValueInt64())).Execute()
+	_, _, err = r.client.idnsApi.RecordsAPI.DeleteZoneRecord(ctx, int32(idState), int32(state.Record.Id.ValueInt64())).Execute() //nolint
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Azion API",

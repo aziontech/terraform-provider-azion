@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
-	"github.com/aziontech/azionapi-go-sdk/edgefirewall"
 	"io"
 	"strconv"
 	"time"
+
+	"github.com/aziontech/azionapi-go-sdk/edgefirewall"
 
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -157,12 +158,12 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 			return
 		}
 	}
-	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallPost(ctx).CreateEdgeFirewallRequest(edgeFirewallRequest).Execute()
+	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallPost(ctx).CreateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -173,6 +174,7 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 		)
 		return
 	}
+
 	plan.SchemaVersion = types.Int64Value(3)
 	var sliceInt []types.Int64
 	for _, itemsValuesInt := range edgeFirewallResponse.Results.GetDomains() {
@@ -215,12 +217,12 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 		edgeFirewallID = state.ID.ValueString()
 	}
 
-	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, edgeFirewallID).Execute()
+	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, edgeFirewallID).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -295,12 +297,12 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidPut(ctx, edgeFirewallID).UpdateEdgeFirewallRequest(edgeFirewallRequest).Execute()
+	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidPut(ctx, edgeFirewallID).UpdateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -355,12 +357,12 @@ func (r *edgeFirewallResource) Delete(ctx context.Context, req resource.DeleteRe
 		edgeFirewallID = state.ID.ValueString()
 	}
 
-	response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidDelete(ctx, edgeFirewallID).Execute()
+	response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidDelete(ctx, edgeFirewallID).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

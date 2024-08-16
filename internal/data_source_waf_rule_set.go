@@ -178,12 +178,12 @@ func (o *WafRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	wafResponse, response, err := o.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID.ValueInt64()).Execute()
+	wafResponse, response, err := o.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID.ValueInt64()).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}

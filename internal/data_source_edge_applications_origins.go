@@ -24,18 +24,18 @@ type OriginsDataSource struct {
 }
 
 type OriginsDataSourceModel struct {
-	SchemaVersion types.Int64                             `tfsdk:"schema_version"`
-	ID            types.String                            `tfsdk:"id"`
-	ApplicationID types.Int64                             `tfsdk:"edge_application_id"`
-	Counter       types.Int64                             `tfsdk:"counter"`
-	TotalPages    types.Int64                             `tfsdk:"total_pages"`
-	Page          types.Int64                             `tfsdk:"page"`
-	PageSize      types.Int64                             `tfsdk:"page_size"`
-	Links         *GetEdgeAplicationsOriginsResponseLinks `tfsdk:"links"`
-	Results       []OriginsResults                        `tfsdk:"results"`
+	SchemaVersion types.Int64                              `tfsdk:"schema_version"`
+	ID            types.String                             `tfsdk:"id"`
+	ApplicationID types.Int64                              `tfsdk:"edge_application_id"`
+	Counter       types.Int64                              `tfsdk:"counter"`
+	TotalPages    types.Int64                              `tfsdk:"total_pages"`
+	Page          types.Int64                              `tfsdk:"page"`
+	PageSize      types.Int64                              `tfsdk:"page_size"`
+	Links         *GetEdgeApplicationsOriginsResponseLinks `tfsdk:"links"`
+	Results       []OriginsResults                         `tfsdk:"results"`
 }
 
-type GetEdgeAplicationsOriginsResponseLinks struct {
+type GetEdgeApplicationsOriginsResponseLinks struct {
 	Previous types.String `tfsdk:"previous"`
 	Next     types.String `tfsdk:"next"`
 }
@@ -61,7 +61,7 @@ type OriginsResults struct {
 
 type OriginsAddressResults struct {
 	Address    types.String `tfsdk:"address"`
-	Weight     types.String `tfsdk:"weight"`
+	Weight     types.Int64  `tfsdk:"weight"`
 	ServerRole types.String `tfsdk:"server_role"`
 	IsActive   types.Bool   `tfsdk:"is_active"`
 }
@@ -147,7 +147,7 @@ func (o *OriginsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 										Description: "Address of the origin.",
 										Computed:    true,
 									},
-									"weight": schema.StringAttribute{
+									"weight": schema.Int64Attribute{
 										Description: "Weight of the origin.",
 										Computed:    true,
 									},
@@ -243,12 +243,12 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		PageSize = types.Int64Value(10)
 	}
 
-	originsResponse, response, err := o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsGet(ctx, edgeApplicationID.ValueInt64()).Execute()
+	originsResponse, response, err := o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsGet(ctx, edgeApplicationID.ValueInt64()).Execute() //nolint
 	if err != nil {
-		bodyBytes, erro := io.ReadAll(response.Body)
-		if erro != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
+				errReadAll.Error(),
 				"err",
 			)
 		}
@@ -274,7 +274,7 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		for _, addr := range origin.Addresses {
 			addresses = append(addresses, OriginsAddressResults{
 				Address:    types.StringValue(addr.GetAddress()),
-				Weight:     types.StringValue(addr.GetWeight()),
+				Weight:     types.Int64Value(addr.GetWeight()),
 				ServerRole: types.StringValue(addr.GetServerRole()),
 				IsActive:   types.BoolValue(addr.GetIsActive()),
 			})
@@ -305,7 +305,7 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		Results:       origins,
 		TotalPages:    types.Int64Value(originsResponse.TotalPages),
 		Counter:       types.Int64Value(originsResponse.Count),
-		Links: &GetEdgeAplicationsOriginsResponseLinks{
+		Links: &GetEdgeApplicationsOriginsResponseLinks{
 			Previous: types.StringValue(previous),
 			Next:     types.StringValue(next),
 		},
