@@ -9,11 +9,8 @@ resource "azion_edge_function" "example1" {
     code           = trimspace(local_file.content_file.content)
     language       = "javascript"
     initiator_type = "edge_application"
-    json_args = jsonencode(
-      { "key" = "Value",
-        "key" = "example"
-    })
-    active = true
+    json_args      = jsonencode({ "key" = "Value" })
+    active         = true
   }
 }
 
@@ -24,10 +21,8 @@ resource "azion_edge_function" "example2" {
     code           = trimspace(file("${path.module}/example.txt"))
     language       = "javascript"
     initiator_type = "edge_application"
-    json_args = jsonencode(
-      { "key" = "Value",
-        "key" = "example"
-    })
-    active = true
+    json_args      = jsonencode({ "key" = "Value" })
+    active         = true
   }
 }
+
