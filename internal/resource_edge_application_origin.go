@@ -453,9 +453,22 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	var addressesRequest []edgeapplications.CreateOriginsRequestAddresses
-	for _, addr := range plan.Origin.Addresses {
+	for _, addr := range plan.Origin.Addresses {	
+		var serverRole *string = addr.ServerRole.ValueStringPointer()
+		if addr.ServerRole.ValueString() == "" {
+			serverRole = nil
+		}
+
+		var weight *int64 = addr.Weight.ValueInt64Pointer()
+		if addr.Weight.ValueInt64() == 0 {
+			weight = nil
+		}
+
 		addressesRequest = append(addressesRequest, edgeapplications.CreateOriginsRequestAddresses{
 			Address: addr.Address.ValueString(),
+			IsActive: addr.IsActive.ValueBoolPointer(),
+			Weight: weight,
+			ServerRole: serverRole,
 		})
 	}
 
