@@ -18,7 +18,6 @@ resource "azion_edge_application_main_setting" "example" {
     raw_logs                 = true
     device_detection         = false
     web_application_firewall = false
-    raw_logs                 = false
   }
 }
 
