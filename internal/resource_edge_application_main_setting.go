@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
@@ -192,10 +193,15 @@ func (r *edgeApplicationResource) Configure(_ context.Context, req resource.Conf
 	r.client = req.ProviderData.(*apiClient)
 }
 
+var mutex sync.Mutex
+
 func (r *edgeApplicationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan EdgeApplicationResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
+
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	if plan.EdgeApplication.L2Caching.ValueBool() {
 		resp.Diagnostics.AddError(
