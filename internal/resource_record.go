@@ -131,16 +131,34 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	recordTlg32, err := utils.CheckInt64toInt32Security(plan.Record.Ttl.ValueInt64())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", plan.Record.Ttl.ValueInt64()),
+		)
+		return
+	}
+
 	record := idns.RecordPostOrPut{
 		RecordType: idns.PtrString(plan.Record.RecordType.ValueString()),
 		Entry:      idns.PtrString(plan.Record.Entry.ValueString()),
-		Ttl:        idns.PtrInt32(int32(plan.Record.Ttl.ValueInt64())),
+		Ttl:        idns.PtrInt32(recordTlg32),
 		Policy:     idns.PtrString(plan.Record.Policy.ValueString()),
 	}
 
+	recordWeigh32, err := utils.CheckInt64toInt32Security(plan.Record.Weight.ValueInt64())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", plan.Record.Weight.ValueInt64()),
+		)
+		return
+	}
+
 	if plan.Record.Policy.ValueString() == "weighted" {
-		if idns.PtrInt32(int32(plan.Record.Weight.ValueInt64())) != nil {
-			record.Weight = idns.PtrInt32(int32(plan.Record.Weight.ValueInt64()))
+		if idns.PtrInt32(recordWeigh32) != nil {
+			record.Weight = idns.PtrInt32(recordWeigh32)
 		}
 		if idns.PtrString(plan.Record.Description.ValueString()) != nil {
 			record.Description = idns.PtrString(plan.Record.Description.ValueString())
@@ -316,12 +334,30 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	recordTlg32, err := utils.CheckInt64toInt32Security(plan.Record.Ttl.ValueInt64())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", plan.Record.Ttl.ValueInt64()),
+		)
+		return
+	}
+
+	recordWeight32, err := utils.CheckInt64toInt32Security(plan.Record.Weight.ValueInt64())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", plan.Record.Weight.ValueInt64()),
+		)
+		return
+	}
+
 	record := idns.RecordPostOrPut{
 		Entry:       idns.PtrString(plan.Record.Entry.ValueString()),
 		Policy:      idns.PtrString(plan.Record.Policy.ValueString()),
 		RecordType:  idns.PtrString(plan.Record.RecordType.ValueString()),
-		Ttl:         idns.PtrInt32(int32(plan.Record.Ttl.ValueInt64())),
-		Weight:      idns.PtrInt32(int32(plan.Record.Weight.ValueInt64())),
+		Ttl:         idns.PtrInt32(recordTlg32),
+		Weight:      idns.PtrInt32(recordWeight32),
 		Description: idns.PtrString(plan.Record.Description.ValueString()),
 	}
 
@@ -329,7 +365,27 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		record.AnswersList = append(record.AnswersList, planAnswerList.ValueString())
 	}
 
-	updateRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.PutZoneRecord(ctx, int32(idPlan), int32(state.Record.Id.ValueInt64())).RecordPostOrPut(record).Execute() //nolint
+	planID32, err := utils.CheckInt64toInt32Security(idPlan)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", idPlan),
+		)
+		return
+	}
+
+	recordID32, err := utils.CheckInt64toInt32Security(state.Record.Id.ValueInt64())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", recordID32),
+		)
+		return
+	}
+
+	updateRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.
+		PutZoneRecord(ctx, planID32, recordID32).
+		RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
 		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
 		bodyBytes, _ := io.ReadAll(httpResponse.Body)
@@ -375,7 +431,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	idState, err := strconv.ParseInt(state.ZoneId.ValueString(), 10, 32)
+	stateID, err := strconv.ParseInt(state.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -384,7 +440,26 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	_, _, err = r.client.idnsApi.RecordsAPI.DeleteZoneRecord(ctx, int32(idState), int32(state.Record.Id.ValueInt64())).Execute() //nolint
+	stateID32, err := utils.CheckInt64toInt32Security(stateID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", stateID),
+		)
+		return
+	}
+
+	recordID32, err := utils.CheckInt64toInt32Security(state.Record.Id.ValueInt64())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", recordID32),
+		)
+		return
+	}
+
+	_, _, err = r.client.idnsApi.RecordsAPI.
+		DeleteZoneRecord(ctx, stateID32, recordID32).Execute() //nolint
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Azion API",

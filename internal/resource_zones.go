@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strconv"
 	"time"
@@ -256,7 +257,8 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	idPlan, err := strconv.ParseUint(plan.ID.ValueString(), 10, 16)
+
+	idPlan, err := strconv.ParseInt(plan.ID.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -270,7 +272,8 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		IsActive: idns.PtrBool(plan.Zone.IsActive.ValueBool()),
 	}
 
-	updateZone, response, err := r.client.idnsApi.ZonesAPI.PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
+	updateZone, response, err := r.client.idnsApi.ZonesAPI.
+		PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
@@ -324,8 +327,16 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	zoneId := int32(state.Zone.ID.ValueInt64())
-	_, _, err := r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneId).Execute() //nolint
+	zoneID, err := utils.CheckInt64toInt32Security(state.Zone.ID.ValueInt64())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", zoneID),
+		)
+		return
+	}
+
+	_, _, err = r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneID).Execute() //nolint
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Azion API",

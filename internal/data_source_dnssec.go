@@ -2,8 +2,10 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"io"
 
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -152,9 +154,18 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId := int32(getZoneId.ValueInt64())
 
-	getDnsSec, response, err := d.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, zoneId).Execute() //nolint
+	zoneID32, err := utils.CheckInt64toInt32Security(getZoneId.ValueInt64())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", getZoneId.ValueInt64()),
+		)
+		return
+	}
+
+	getDnsSec, response, err := d.client.idnsApi.DNSSECAPI.
+		GetZoneDnsSec(ctx, zoneID32).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {

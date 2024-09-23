@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -207,9 +208,19 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId := int32(getZoneId.ValueInt64())
 
-	recordsResponse, httpResp, err := d.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, zoneId).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+	zoneID32, err := utils.CheckInt64toInt32Security(getZoneId.ValueInt64())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error before Overflow",
+			fmt.Sprintf("n32 %d exceeds int32 limits", getZoneId.ValueInt64()),
+		)
+		return
+	}
+
+	recordsResponse, httpResp, err := d.client.idnsApi.RecordsAPI.
+		GetZoneRecords(ctx, zoneID32).Page(Page.ValueInt64()).
+		PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		d.errorPrint(resp, httpResp.StatusCode)
 		return

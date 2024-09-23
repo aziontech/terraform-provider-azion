@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -112,4 +113,13 @@ func AtoiNoError(strToConv string, resp *resource.ReadResponse) int32 {
 		return 0
 	}
 	return int32(intReturn)
+}
+
+// CheckInt64toInt32Security parse int64 to int32
+func CheckInt64toInt32Security(n int64) (int32, error) {
+	if n < math.MinInt32 || n > math.MaxInt32 {
+		return 0, errors.New("Overflow")
+	}
+
+	return int32(n), nil
 }
