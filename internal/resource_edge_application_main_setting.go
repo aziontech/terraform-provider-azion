@@ -254,7 +254,7 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 
 	requestUpdate := edgeapplications.ApplicationUpdateRequest{}
 	if plan.EdgeApplication.L2Caching.ValueBool() {
-		requestUpdate.L2Caching = plan.EdgeApplication.Active.ValueBoolPointer()
+		requestUpdate.L2Caching = plan.EdgeApplication.L2Caching.ValueBoolPointer()
 	}
 
 	if plan.EdgeApplication.EdgeFunctions.ValueBool() {
