@@ -277,7 +277,7 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.
 		EdgeApplicationsMainSettingsAPI.
 		EdgeApplicationsIdPatch(ctx, ID).
-		ApplicationUpdateRequest(requestUpdate).Execute()
+		ApplicationUpdateRequest(requestUpdate).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
@@ -363,7 +363,9 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	stateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
+	stateEdgeApplication, response, err := r.client.edgeApplicationsApi.
+		EdgeApplicationsMainSettingsAPI.
+		EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
@@ -459,7 +461,10 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		L2Caching:               edgeapplications.PtrBool(plan.EdgeApplication.L2Caching.ValueBool()),
 	}
 
-	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).ApplicationPutRequest(edgeApplication).Execute() //nolint
+	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.
+		EdgeApplicationsMainSettingsAPI.
+		EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).
+		ApplicationPutRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
@@ -522,7 +527,8 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
+	response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.
+		EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
