@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strconv"
 	"time"
@@ -345,10 +344,7 @@ func (r *digitalCertificateResource) Update(ctx context.Context, req resource.Up
 
 	certificateID32, err := utils.CheckInt64toInt32Security(certificateID)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", certificateID),
-		)
+		utils.ExceedsValidRange(resp, certificateID)
 		return
 	}
 
@@ -427,10 +423,7 @@ func (r *digitalCertificateResource) Delete(ctx context.Context, req resource.De
 
 	certificateID32, err := utils.CheckInt64toInt32Security(certificateID)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", certificateID),
-		)
+		utils.ExceedsValidRange(resp, certificateID)
 		return
 	}
 

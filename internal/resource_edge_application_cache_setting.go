@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -301,10 +300,7 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 	for _, DeviceGroup := range plan.CacheSettings.DeviceGroup {
 		deviceGroup32, err := utils.CheckInt64toInt32Security(DeviceGroup.ValueInt64())
 		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error before Overflow",
-				fmt.Sprintf("n32 %d exceeds int32 limits", DeviceGroup.ValueInt64()),
-			)
+			utils.ExceedsValidRange(resp, DeviceGroup.ValueInt64())
 			return
 		}
 		DeviceGroupsRequest = append(DeviceGroupsRequest, deviceGroup32)
@@ -608,10 +604,7 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 	for _, DeviceGroup := range plan.CacheSettings.DeviceGroup {
 		deviceGroup32, err := utils.CheckInt64toInt32Security(DeviceGroup.ValueInt64())
 		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error before Overflow",
-				fmt.Sprintf("n32 %d exceeds int32 limits", DeviceGroup.ValueInt64()),
-			)
+			utils.ExceedsValidRange(resp, DeviceGroup.ValueInt64())
 			return
 		}
 		DeviceGroupsRequest = append(DeviceGroupsRequest, deviceGroup32)

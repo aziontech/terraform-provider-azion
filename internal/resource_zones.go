@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strconv"
 	"time"
@@ -329,10 +328,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	zoneID, err := utils.CheckInt64toInt32Security(state.Zone.ID.ValueInt64())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", zoneID),
-		)
+		utils.ExceedsValidRange(resp, zoneID)
 		return
 	}
 

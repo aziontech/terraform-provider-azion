@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -150,10 +149,7 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	page32, err := utils.CheckInt64toInt32Security(Page.ValueInt64())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", Page.ValueInt64()),
-		)
+		utils.ExceedsValidRange(resp, Page.ValueInt64())
 		return
 	}
 

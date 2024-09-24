@@ -122,3 +122,37 @@ func CheckInt64toInt32Security(n int64) (int32, error) {
 	}
 	return int32(n), nil
 }
+
+func ExceedsValidRange(resp any, vl any) {
+	summary := "Error: value exceeds the valid range"
+	detail := "n32 exceeds int32 limits"
+	if vl != nil {
+		detail = fmt.Sprintf("n32 %v exceeds int32 limits", vl)
+	}
+	switch v := resp.(type) {
+	case *resource.DeleteResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.CreateResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.SchemaResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.UpdateResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.ConfigureResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.ModifyPlanResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.ImportStateResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.UpgradeStateResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	}
+}

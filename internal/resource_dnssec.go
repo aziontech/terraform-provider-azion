@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strconv"
 	"time"
@@ -226,10 +225,7 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	zoneID32, err := utils.CheckInt64toInt32Security(zoneID)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", zoneID),
-		)
+		utils.ExceedsValidRange(resp, zoneID)
 		return
 	}
 

@@ -133,10 +133,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	recordTlg32, err := utils.CheckInt64toInt32Security(plan.Record.Ttl.ValueInt64())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", plan.Record.Ttl.ValueInt64()),
-		)
+		utils.ExceedsValidRange(resp, plan.Record.Ttl.ValueInt64())
 		return
 	}
 
@@ -149,10 +146,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	recordWeigh32, err := utils.CheckInt64toInt32Security(plan.Record.Weight.ValueInt64())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", plan.Record.Weight.ValueInt64()),
-		)
+		utils.ExceedsValidRange(resp, plan.Record.Weight.ValueInt64())
 		return
 	}
 
@@ -336,19 +330,13 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	recordTlg32, err := utils.CheckInt64toInt32Security(plan.Record.Ttl.ValueInt64())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", plan.Record.Ttl.ValueInt64()),
-		)
+		utils.ExceedsValidRange(resp, plan.Record.Ttl.ValueInt64())
 		return
 	}
 
 	recordWeight32, err := utils.CheckInt64toInt32Security(plan.Record.Weight.ValueInt64())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", plan.Record.Weight.ValueInt64()),
-		)
+		utils.ExceedsValidRange(resp, plan.Record.Weight.ValueInt64())
 		return
 	}
 
@@ -367,19 +355,13 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	planID32, err := utils.CheckInt64toInt32Security(idPlan)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", idPlan),
-		)
+		utils.ExceedsValidRange(resp, idPlan)
 		return
 	}
 
 	recordID32, err := utils.CheckInt64toInt32Security(state.Record.Id.ValueInt64())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", recordID32),
-		)
+		utils.ExceedsValidRange(resp, state.Record.Id.ValueInt64())
 		return
 	}
 
@@ -442,19 +424,13 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	stateID32, err := utils.CheckInt64toInt32Security(stateID)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", stateID),
-		)
+		utils.ExceedsValidRange(resp, stateID)
 		return
 	}
 
 	recordID32, err := utils.CheckInt64toInt32Security(state.Record.Id.ValueInt64())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error before Overflow",
-			fmt.Sprintf("n32 %d exceeds int32 limits", recordID32),
-		)
+		utils.ExceedsValidRange(resp, state.Record.Id.ValueInt64())
 		return
 	}
 
