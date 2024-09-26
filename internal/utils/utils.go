@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -112,4 +113,46 @@ func AtoiNoError(strToConv string, resp *resource.ReadResponse) int32 {
 		return 0
 	}
 	return int32(intReturn)
+}
+
+// CheckInt64toInt32Security check parse direct int64 to int32.
+func CheckInt64toInt32Security(n int64) (int32, error) {
+	if n < math.MinInt32 || n > math.MaxInt32 {
+		return 0, errors.New("Overflow")
+	}
+	return int32(n), nil
+}
+
+func ExceedsValidRange(resp any, vl any) {
+	summary := "Error: value exceeds the valid range"
+	detail := "n32 exceeds int32 limits"
+	if vl != nil {
+		detail = fmt.Sprintf("n32 %v exceeds int32 limits", vl)
+	}
+	switch v := resp.(type) {
+	case *resource.DeleteResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.CreateResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.SchemaResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.UpdateResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.ConfigureResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.ModifyPlanResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.ImportStateResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	case *resource.UpgradeStateResponse:
+		v.Diagnostics.AddError(summary, detail)
+		return
+	}
 }

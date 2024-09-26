@@ -298,7 +298,12 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 	}
 	var DeviceGroupsRequest []int32
 	for _, DeviceGroup := range plan.CacheSettings.DeviceGroup {
-		DeviceGroupsRequest = append(DeviceGroupsRequest, int32(DeviceGroup.ValueInt64()))
+		deviceGroup32, err := utils.CheckInt64toInt32Security(DeviceGroup.ValueInt64())
+		if err != nil {
+			utils.ExceedsValidRange(resp, DeviceGroup.ValueInt64())
+			return
+		}
+		DeviceGroupsRequest = append(DeviceGroupsRequest, deviceGroup32)
 	}
 
 	cacheSettings := edgeapplications.ApplicationCacheCreateRequest{
@@ -594,9 +599,15 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 	for _, queryStringField := range plan.CacheSettings.QueryStringFields {
 		QueryStringFieldsRequest = append(QueryStringFieldsRequest, queryStringField.ValueString())
 	}
+
 	var DeviceGroupsRequest []int32
 	for _, DeviceGroup := range plan.CacheSettings.DeviceGroup {
-		DeviceGroupsRequest = append(DeviceGroupsRequest, int32(DeviceGroup.ValueInt64()))
+		deviceGroup32, err := utils.CheckInt64toInt32Security(DeviceGroup.ValueInt64())
+		if err != nil {
+			utils.ExceedsValidRange(resp, DeviceGroup.ValueInt64())
+			return
+		}
+		DeviceGroupsRequest = append(DeviceGroupsRequest, deviceGroup32)
 	}
 
 	cacheSettings := edgeapplications.ApplicationCachePutRequest{

@@ -138,7 +138,7 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	edgeFunctionId, err := strconv.ParseUint(getEdgeFunctionId.ValueString(), 10, 32)
+	edgeFunctionID, err := strconv.ParseInt(getEdgeFunctionId.ValueString(), 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -147,7 +147,8 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, int64(edgeFunctionId)).Execute() //nolint
+	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.
+		EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
 	if err != nil {
 		usrMsg, errMsg := errPrint(response.StatusCode, err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)

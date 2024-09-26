@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -314,12 +315,12 @@ func (r *digitalCertificateResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	var CertificateID int64
+	var certificateID int64
 	var err error
 	if state.CertificateResult.CertificateID.ValueInt64() != 0 {
-		CertificateID = state.CertificateResult.CertificateID.ValueInt64()
+		certificateID = state.CertificateResult.CertificateID.ValueInt64()
 	} else {
-		CertificateID, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
+		certificateID, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
@@ -340,7 +341,16 @@ func (r *digitalCertificateResource) Update(ctx context.Context, req resource.Up
 		Certificate: digital_certificates.PtrString(certificateContent.ValueString()),
 		PrivateKey:  digital_certificates.PtrString(privateKey.ValueString()),
 	}
-	certificateResponse, response, err := r.client.digitalCertificatesApi.UpdateDigitalCertificateApi.UpdateDigitalCertificate(ctx, int32(CertificateID)).UpdateDigitalCertificateRequest(certificateRequest).Execute() //nolint
+
+	certificateID32, err := utils.CheckInt64toInt32Security(certificateID)
+	if err != nil {
+		utils.ExceedsValidRange(resp, certificateID)
+		return
+	}
+
+	certificateResponse, response, err := r.client.digitalCertificatesApi.
+		UpdateDigitalCertificateApi.UpdateDigitalCertificate(ctx, certificateID32).
+		UpdateDigitalCertificateRequest(certificateRequest).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
@@ -396,12 +406,12 @@ func (r *digitalCertificateResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	var CertificateID int64
+	var certificateID int64
 	var err error
 	if state.CertificateResult.CertificateID.ValueInt64() != 0 {
-		CertificateID = state.CertificateResult.CertificateID.ValueInt64()
+		certificateID = state.CertificateResult.CertificateID.ValueInt64()
 	} else {
-		CertificateID, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
+		certificateID, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
@@ -410,7 +420,15 @@ func (r *digitalCertificateResource) Delete(ctx context.Context, req resource.De
 			return
 		}
 	}
-	response, err := r.client.digitalCertificatesApi.DeleteDigitalCertificateApi.RemoveDigitalCertificates(ctx, int32(CertificateID)).Execute() //nolint
+
+	certificateID32, err := utils.CheckInt64toInt32Security(certificateID)
+	if err != nil {
+		utils.ExceedsValidRange(resp, certificateID)
+		return
+	}
+
+	response, err := r.client.digitalCertificatesApi.DeleteDigitalCertificateApi.
+		RemoveDigitalCertificates(ctx, certificateID32).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {

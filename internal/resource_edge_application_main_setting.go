@@ -203,41 +203,6 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if plan.EdgeApplication.L2Caching.ValueBool() {
-		resp.Diagnostics.AddError(
-			"L2Caching error ",
-			"When you create a Edge Application: L2Caching must be false or remove from request",
-		)
-	}
-
-	if plan.EdgeApplication.EdgeFunctions.ValueBool() {
-		resp.Diagnostics.AddError(
-			"EdgeFunction error ",
-			"When you create a Edge Application: EdgeFunction must be false or remove from request",
-		)
-	}
-
-	if plan.EdgeApplication.LoadBalancer.ValueBool() {
-		resp.Diagnostics.AddError(
-			"LoadBalancer error ",
-			"When you create a Edge Application: LoadBalancer must be false or remove from request",
-		)
-	}
-
-	if plan.EdgeApplication.ApplicationAcceleration.ValueBool() {
-		resp.Diagnostics.AddError(
-			"ApplicationAcceleration error",
-			"When you create a Edge Application: ApplicationAcceleration must be false or remove from request",
-		)
-	}
-
-	if plan.EdgeApplication.DeviceDetection.ValueBool() {
-		resp.Diagnostics.AddError(
-			"DeviceDetection error ",
-			"When you create a Edge Application: DeviceDetection must be false or remove from request",
-		)
-	}
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -268,7 +233,9 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		DeliveryProtocol:  edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
 	}
 
-	createEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsPost(ctx).CreateApplicationRequest(edgeApplication).Execute() //nolint
+	createEdgeApplication, response, err := r.client.edgeApplicationsApi.
+		EdgeApplicationsMainSettingsAPI.EdgeApplicationsPost(ctx).
+		CreateApplicationRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
@@ -285,29 +252,98 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	plan.EdgeApplication = &EdgeApplicationResults{
-		ApplicationID:           types.Int64Value(createEdgeApplication.Results.GetId()),
-		Name:                    types.StringValue(createEdgeApplication.Results.GetName()),
-		DeliveryProtocol:        types.StringValue(createEdgeApplication.Results.GetDeliveryProtocol()),
-		HTTPPort:                utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpPort),
-		HTTPSPort:               utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpsPort),
-		MinimumTLSVersion:       types.StringValue(createEdgeApplication.Results.GetMinimumTlsVersion()),
-		Active:                  types.BoolValue(createEdgeApplication.Results.GetActive()),
-		DebugRules:              types.BoolValue(createEdgeApplication.Results.GetDebugRules()),
-		HTTP3:                   types.BoolValue(createEdgeApplication.Results.GetHttp3()),
-		SupportedCiphers:        types.StringValue(createEdgeApplication.Results.GetSupportedCiphers()),
-		ApplicationAcceleration: types.BoolValue(createEdgeApplication.Results.GetApplicationAcceleration()),
-		Caching:                 types.BoolValue(createEdgeApplication.Results.GetCaching()),
-		DeviceDetection:         types.BoolValue(createEdgeApplication.Results.GetDeviceDetection()),
-		EdgeFirewall:            types.BoolValue(createEdgeApplication.Results.GetEdgeFirewall()),
-		EdgeFunctions:           types.BoolValue(createEdgeApplication.Results.GetEdgeFunctions()),
-		ImageOptimization:       types.BoolValue(createEdgeApplication.Results.GetImageOptimization()),
-		LoadBalancer:            types.BoolValue(createEdgeApplication.Results.GetLoadBalancer()),
-		L2Caching:               types.BoolValue(createEdgeApplication.Results.GetL2Caching()),
-		RawLogs:                 types.BoolValue(createEdgeApplication.Results.GetRawLogs()),
-		WebApplicationFirewall:  types.BoolValue(createEdgeApplication.Results.GetWebApplicationFirewall()),
+	requestUpdate := edgeapplications.ApplicationUpdateRequest{}
+	if plan.EdgeApplication.L2Caching.ValueBool() {
+		requestUpdate.L2Caching = plan.EdgeApplication.L2Caching.ValueBoolPointer()
 	}
 
+	if plan.EdgeApplication.EdgeFunctions.ValueBool() {
+		requestUpdate.EdgeFunctions = plan.EdgeApplication.EdgeFunctions.ValueBoolPointer()
+	}
+
+	if plan.EdgeApplication.LoadBalancer.ValueBool() {
+		requestUpdate.LoadBalancer = plan.EdgeApplication.LoadBalancer.ValueBoolPointer()
+	}
+
+	if plan.EdgeApplication.ApplicationAcceleration.ValueBool() {
+		requestUpdate.ApplicationAcceleration = plan.EdgeApplication.ApplicationAcceleration.ValueBoolPointer()
+	}
+
+	if plan.EdgeApplication.DeviceDetection.ValueBool() {
+		requestUpdate.DeviceDetection = plan.EdgeApplication.DeviceDetection.ValueBoolPointer()
+	}
+
+	ID := strconv.Itoa(int(createEdgeApplication.Results.GetId()))
+	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.
+		EdgeApplicationsMainSettingsAPI.
+		EdgeApplicationsIdPatch(ctx, ID).
+		ApplicationUpdateRequest(requestUpdate).Execute() //nolint
+	if err != nil {
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
+			resp.Diagnostics.AddError(
+				errReadAll.Error(),
+				"err",
+			)
+		}
+		bodyString := string(bodyBytes)
+		resp.Diagnostics.AddError(
+			err.Error(),
+			bodyString,
+		)
+		return
+	}
+
+	edgeAppResults := &EdgeApplicationResults{
+		ApplicationID:          types.Int64Value(createEdgeApplication.Results.GetId()),
+		Name:                   types.StringValue(createEdgeApplication.Results.GetName()),
+		DeliveryProtocol:       types.StringValue(createEdgeApplication.Results.GetDeliveryProtocol()),
+		HTTPPort:               utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpPort),
+		HTTPSPort:              utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpsPort),
+		MinimumTLSVersion:      types.StringValue(createEdgeApplication.Results.GetMinimumTlsVersion()),
+		Active:                 types.BoolValue(createEdgeApplication.Results.GetActive()),
+		DebugRules:             types.BoolValue(createEdgeApplication.Results.GetDebugRules()),
+		HTTP3:                  types.BoolValue(createEdgeApplication.Results.GetHttp3()),
+		SupportedCiphers:       types.StringValue(createEdgeApplication.Results.GetSupportedCiphers()),
+		Caching:                types.BoolValue(createEdgeApplication.Results.GetCaching()),
+		DeviceDetection:        types.BoolValue(createEdgeApplication.Results.GetDeviceDetection()),
+		EdgeFirewall:           types.BoolValue(createEdgeApplication.Results.GetEdgeFirewall()),
+		ImageOptimization:      types.BoolValue(createEdgeApplication.Results.GetImageOptimization()),
+		RawLogs:                types.BoolValue(createEdgeApplication.Results.GetRawLogs()),
+		WebApplicationFirewall: types.BoolValue(createEdgeApplication.Results.GetWebApplicationFirewall()),
+	}
+
+	if requestUpdate.L2Caching == nil {
+		edgeAppResults.L2Caching = types.BoolValue(createEdgeApplication.Results.GetL2Caching())
+	} else {
+		edgeAppResults.L2Caching = types.BoolValue(updateEdgeApplication.Results.GetL2Caching())
+	}
+
+	if requestUpdate.EdgeFunctions == nil {
+		edgeAppResults.EdgeFunctions = types.BoolValue(createEdgeApplication.Results.GetEdgeFunctions())
+	} else {
+		edgeAppResults.EdgeFunctions = types.BoolValue(updateEdgeApplication.Results.GetEdgeFunctions())
+	}
+
+	if requestUpdate.LoadBalancer == nil {
+		edgeAppResults.LoadBalancer = types.BoolValue(createEdgeApplication.Results.GetLoadBalancer())
+	} else {
+		edgeAppResults.LoadBalancer = types.BoolValue(updateEdgeApplication.Results.GetLoadBalancer())
+	}
+
+	if requestUpdate.ApplicationAcceleration == nil {
+		edgeAppResults.ApplicationAcceleration = types.BoolValue(createEdgeApplication.Results.GetApplicationAcceleration())
+	} else {
+		edgeAppResults.ApplicationAcceleration = types.BoolValue(updateEdgeApplication.Results.GetApplicationAcceleration())
+	}
+
+	if requestUpdate.DeviceDetection == nil {
+		edgeAppResults.DeviceDetection = types.BoolValue(createEdgeApplication.Results.GetDeviceDetection())
+	} else {
+		edgeAppResults.DeviceDetection = types.BoolValue(updateEdgeApplication.Results.GetDeviceDetection())
+	}
+
+	plan.EdgeApplication = edgeAppResults
 	plan.SchemaVersion = types.Int64Value(createEdgeApplication.SchemaVersion)
 	plan.ID = types.StringValue(strconv.FormatInt(createEdgeApplication.Results.Id, 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -327,7 +363,9 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	stateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
+	stateEdgeApplication, response, err := r.client.edgeApplicationsApi.
+		EdgeApplicationsMainSettingsAPI.
+		EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
@@ -423,7 +461,10 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		L2Caching:               edgeapplications.PtrBool(plan.EdgeApplication.L2Caching.ValueBool()),
 	}
 
-	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).ApplicationPutRequest(edgeApplication).Execute() //nolint
+	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.
+		EdgeApplicationsMainSettingsAPI.
+		EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).
+		ApplicationPutRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
@@ -486,7 +527,8 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
+	response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.
+		EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {

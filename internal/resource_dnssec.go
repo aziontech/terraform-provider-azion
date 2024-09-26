@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aziontech/azionapi-go-sdk/idns"
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -213,7 +214,7 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 16)
+	zoneID, err := strconv.ParseInt(state.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -221,7 +222,15 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 		)
 		return
 	}
-	getDnsSec, response, err := r.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, int32(zoneId)).Execute() //nolint
+
+	zoneID32, err := utils.CheckInt64toInt32Security(zoneID)
+	if err != nil {
+		utils.ExceedsValidRange(resp, zoneID)
+		return
+	}
+
+	getDnsSec, response, err := r.client.idnsApi.DNSSECAPI.
+		GetZoneDnsSec(ctx, zoneID32).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
@@ -269,7 +278,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	idPlan, err := strconv.ParseUint(plan.ZoneId.ValueString(), 10, 16)
+	idPlan, err := strconv.ParseInt(plan.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -282,7 +291,8 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		IsEnabled: idns.PtrBool(plan.DnsSec.IsEnabled.ValueBool()),
 	}
 
-	enableDnsSec, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute() //nolint
+	enableDnsSec, response, err := r.client.idnsApi.DNSSECAPI.
+		PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
@@ -332,7 +342,8 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zoneId, err := strconv.ParseUint(state.ZoneId.ValueString(), 10, 16)
+
+	zoneId, err := strconv.ParseInt(state.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -344,7 +355,8 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		IsEnabled: idns.PtrBool(false),
 	}
 
-	_, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute() //nolint
+	_, response, err := r.client.idnsApi.DNSSECAPI.
+		PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute() //nolint
 	if err != nil {
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
