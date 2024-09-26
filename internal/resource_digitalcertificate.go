@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -234,8 +235,13 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 		}
 	}
 
-	certificateResponse, response, err := r.client.digitalCertificatesApi.RetrieveDigitalCertificateByIDApi.GetCertificate(ctx, CertificateID).Execute() //nolint
+	certificateResponse, response, err := r.client.digitalCertificatesApi.
+		RetrieveDigitalCertificateByIDApi.GetCertificate(ctx, CertificateID).Execute() //nolint
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
 			resp.Diagnostics.AddError(

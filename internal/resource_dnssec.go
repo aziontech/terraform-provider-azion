@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -207,7 +208,8 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 }
 
-func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *dnssecResource) Read(
+	ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state dnssecResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -232,6 +234,10 @@ func (r *dnssecResource) Read(ctx context.Context, req resource.ReadRequest, res
 	getDnsSec, response, err := r.client.idnsApi.DNSSECAPI.
 		GetZoneDnsSec(ctx, zoneID32).Execute() //nolint
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
 			resp.Diagnostics.AddError(

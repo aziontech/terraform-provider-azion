@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -249,8 +250,13 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 		}
 	}
 
-	getEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, edgeFunctionId).Execute() //nolint
+	getEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsAPI.
+		EdgeFunctionsIdGet(ctx, edgeFunctionId).Execute() //nolint
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
 			resp.Diagnostics.AddError(

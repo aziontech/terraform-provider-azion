@@ -471,8 +471,15 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		phase = "request"
 	}
 
-	ruleEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(ctx, edgeApplicationID, phase, ruleID).Execute() //nolint
+	ruleEngineResponse, response, err := r.client.edgeApplicationsApi.
+		EdgeApplicationsRulesEngineAPI.
+		EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(
+			ctx, edgeApplicationID, phase, ruleID).Execute() //nolint
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
 			resp.Diagnostics.AddError(
