@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -420,8 +421,15 @@ func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req res
 		return
 	}
 
-	cacheSettingResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(ctx, EdgeApplicationId, CacheSettingId).Execute() //nolint
+	cacheSettingResponse, response, err := r.client.edgeApplicationsApi.
+		EdgeApplicationsCacheSettingsAPI.
+		EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(
+			ctx, EdgeApplicationId, CacheSettingId).Execute() //nolint
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
 			resp.Diagnostics.AddError(

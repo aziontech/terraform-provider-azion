@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -212,8 +213,13 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 		domainId = state.ID.ValueString()
 	}
 
-	getDomain, response, err := r.client.domainsApi.DomainsAPI.GetDomain(ctx, domainId).Execute() //nolint
+	getDomain, response, err := r.client.domainsApi.DomainsAPI.
+		GetDomain(ctx, domainId).Execute() //nolint
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
 			resp.Diagnostics.AddError(

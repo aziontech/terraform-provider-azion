@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/aziontech/azionapi-go-sdk/variables"
@@ -193,8 +194,13 @@ func (r *environmentVariableResource) Read(ctx context.Context, req resource.Rea
 		uuid = state.ID.ValueString()
 	}
 
-	getEnvironmentVariable, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid).Execute() //nolint
+	getEnvironmentVariable, response, err := r.client.variablesApi.VariablesAPI.
+		ApiVariablesRetrieve(ctx, uuid).Execute() //nolint
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
 			resp.Diagnostics.AddError(

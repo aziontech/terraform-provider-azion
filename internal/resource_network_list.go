@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -196,8 +197,13 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 		networkListId = state.ID.ValueString()
 	}
 
-	getNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, networkListId).Execute() //nolint
+	getNetworkList, response, err := r.client.networkListApi.DefaultAPI.
+		NetworkListsUuidGet(ctx, networkListId).Execute() //nolint
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
 			resp.Diagnostics.AddError(

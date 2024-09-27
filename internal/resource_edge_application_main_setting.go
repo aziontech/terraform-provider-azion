@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -367,6 +368,10 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 		EdgeApplicationsMainSettingsAPI.
 		EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
 			resp.Diagnostics.AddError(

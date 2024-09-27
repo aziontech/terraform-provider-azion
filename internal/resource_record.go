@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -263,8 +264,13 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 		idRecord = utils.AtoiNoError(valueFromCmd[1], resp)
 	}
 
-	recordsResponse, httpResponse, err := r.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, idZone).PageSize(largeRecordsPageSize).Execute() //nolint
+	recordsResponse, httpResponse, err := r.client.idnsApi.RecordsAPI.
+		GetZoneRecords(ctx, idZone).PageSize(largeRecordsPageSize).Execute() //nolint
 	if err != nil {
+		if httpResponse.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return

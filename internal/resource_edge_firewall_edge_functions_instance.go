@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -230,10 +231,15 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 		return
 	}
 
-	edgeFunctionInstancesResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
-		EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdGet(ctx, edgeFirewallID, functionsInstancesId).
-		Execute() //nolint
+	edgeFunctionInstancesResponse, response, err := r.client.
+		edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
+		EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdGet(
+			ctx, edgeFirewallID, functionsInstancesId).Execute() //nolint
 	if err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		bodyBytes, errReadAll := io.ReadAll(response.Body)
 		if errReadAll != nil {
 			resp.Diagnostics.AddError(
