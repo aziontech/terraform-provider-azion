@@ -312,9 +312,7 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		HTTP3:                  types.BoolValue(createEdgeApplication.Results.GetHttp3()),
 		SupportedCiphers:       types.StringValue(createEdgeApplication.Results.GetSupportedCiphers()),
 		Caching:                types.BoolValue(createEdgeApplication.Results.GetCaching()),
-		DeviceDetection:        types.BoolValue(createEdgeApplication.Results.GetDeviceDetection()),
 		EdgeFirewall:           types.BoolValue(createEdgeApplication.Results.GetEdgeFirewall()),
-		ImageOptimization:      types.BoolValue(createEdgeApplication.Results.GetImageOptimization()),
 		RawLogs:                types.BoolValue(createEdgeApplication.Results.GetRawLogs()),
 		WebApplicationFirewall: types.BoolValue(createEdgeApplication.Results.GetWebApplicationFirewall()),
 	}
@@ -347,6 +345,12 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		edgeAppResults.DeviceDetection = types.BoolValue(createEdgeApplication.Results.GetDeviceDetection())
 	} else {
 		edgeAppResults.DeviceDetection = types.BoolValue(updateEdgeApplication.Results.GetDeviceDetection())
+	}
+
+	if requestUpdate.ImageOptimization == nil {
+		edgeAppResults.ImageOptimization = types.BoolValue(createEdgeApplication.Results.GetImageOptimization())
+	} else {
+		edgeAppResults.ImageOptimization = types.BoolValue(updateEdgeApplication.Results.GetImageOptimization())
 	}
 
 	plan.EdgeApplication = edgeAppResults
