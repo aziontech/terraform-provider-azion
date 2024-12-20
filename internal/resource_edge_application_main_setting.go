@@ -274,7 +274,12 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		requestUpdate.DeviceDetection = plan.EdgeApplication.DeviceDetection.ValueBoolPointer()
 	}
 
+	if plan.EdgeApplication.ImageOptimization.ValueBool() {
+		requestUpdate.ImageOptimization = plan.EdgeApplication.ImageOptimization.ValueBoolPointer()
+	}
+
 	ID := strconv.Itoa(int(createEdgeApplication.Results.GetId()))
+
 	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.
 		EdgeApplicationsMainSettingsAPI.
 		EdgeApplicationsIdPatch(ctx, ID).
