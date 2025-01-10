@@ -286,6 +286,10 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		requestUpdate.EdgeFirewall = plan.EdgeApplication.EdgeFirewall.ValueBoolPointer()
 	}
 
+	if plan.EdgeApplication.WebApplicationFirewall.ValueBool() {
+		requestUpdate.WebApplicationFirewall = plan.EdgeApplication.WebApplicationFirewall.ValueBoolPointer()
+	}
+
 	ID := strconv.Itoa(int(createEdgeApplication.Results.GetId()))
 
 	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.
@@ -309,18 +313,17 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	edgeAppResults := &EdgeApplicationResults{
-		ApplicationID:          types.Int64Value(createEdgeApplication.Results.GetId()),
-		Name:                   types.StringValue(createEdgeApplication.Results.GetName()),
-		DeliveryProtocol:       types.StringValue(createEdgeApplication.Results.GetDeliveryProtocol()),
-		HTTPPort:               utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpPort),
-		HTTPSPort:              utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpsPort),
-		MinimumTLSVersion:      types.StringValue(createEdgeApplication.Results.GetMinimumTlsVersion()),
-		Active:                 types.BoolValue(createEdgeApplication.Results.GetActive()),
-		DebugRules:             types.BoolValue(createEdgeApplication.Results.GetDebugRules()),
-		HTTP3:                  types.BoolValue(createEdgeApplication.Results.GetHttp3()),
-		SupportedCiphers:       types.StringValue(createEdgeApplication.Results.GetSupportedCiphers()),
-		Caching:                types.BoolValue(createEdgeApplication.Results.GetCaching()),
-		WebApplicationFirewall: types.BoolValue(createEdgeApplication.Results.GetWebApplicationFirewall()),
+		ApplicationID:     types.Int64Value(createEdgeApplication.Results.GetId()),
+		Name:              types.StringValue(createEdgeApplication.Results.GetName()),
+		DeliveryProtocol:  types.StringValue(createEdgeApplication.Results.GetDeliveryProtocol()),
+		HTTPPort:          utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpPort),
+		HTTPSPort:         utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpsPort),
+		MinimumTLSVersion: types.StringValue(createEdgeApplication.Results.GetMinimumTlsVersion()),
+		Active:            types.BoolValue(createEdgeApplication.Results.GetActive()),
+		DebugRules:        types.BoolValue(createEdgeApplication.Results.GetDebugRules()),
+		HTTP3:             types.BoolValue(createEdgeApplication.Results.GetHttp3()),
+		SupportedCiphers:  types.StringValue(createEdgeApplication.Results.GetSupportedCiphers()),
+		Caching:           types.BoolValue(createEdgeApplication.Results.GetCaching()),
 	}
 
 	if requestUpdate.L2Caching == nil {
@@ -357,6 +360,24 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		edgeAppResults.ImageOptimization = types.BoolValue(createEdgeApplication.Results.GetImageOptimization())
 	} else {
 		edgeAppResults.ImageOptimization = types.BoolValue(updateEdgeApplication.Results.GetImageOptimization())
+	}
+
+	if requestUpdate.RawLogs == nil {
+		edgeAppResults.RawLogs = types.BoolValue(createEdgeApplication.Results.GetRawLogs())
+	} else {
+		edgeAppResults.RawLogs = types.BoolValue(updateEdgeApplication.Results.GetRawLogs())
+	}
+
+	if requestUpdate.EdgeFirewall == nil {
+		edgeAppResults.EdgeFirewall = types.BoolValue(createEdgeApplication.Results.GetEdgeFirewall())
+	} else {
+		edgeAppResults.EdgeFirewall = types.BoolValue(updateEdgeApplication.Results.GetEdgeFirewall())
+	}
+
+	if requestUpdate.WebApplicationFirewall == nil {
+		edgeAppResults.WebApplicationFirewall = types.BoolValue(createEdgeApplication.Results.GetWebApplicationFirewall())
+	} else {
+		edgeAppResults.WebApplicationFirewall = types.BoolValue(updateEdgeApplication.Results.GetWebApplicationFirewall())
 	}
 
 	plan.EdgeApplication = edgeAppResults
