@@ -278,6 +278,14 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		requestUpdate.ImageOptimization = plan.EdgeApplication.ImageOptimization.ValueBoolPointer()
 	}
 
+	if plan.EdgeApplication.RawLogs.ValueBool() {
+		requestUpdate.RawLogs = plan.EdgeApplication.RawLogs.ValueBoolPointer()
+	}
+
+	if plan.EdgeApplication.EdgeFirewall.ValueBool() {
+		requestUpdate.EdgeFirewall = plan.EdgeApplication.EdgeFirewall.ValueBoolPointer()
+	}
+
 	ID := strconv.Itoa(int(createEdgeApplication.Results.GetId()))
 
 	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.
@@ -312,8 +320,6 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		HTTP3:                  types.BoolValue(createEdgeApplication.Results.GetHttp3()),
 		SupportedCiphers:       types.StringValue(createEdgeApplication.Results.GetSupportedCiphers()),
 		Caching:                types.BoolValue(createEdgeApplication.Results.GetCaching()),
-		EdgeFirewall:           types.BoolValue(createEdgeApplication.Results.GetEdgeFirewall()),
-		RawLogs:                types.BoolValue(createEdgeApplication.Results.GetRawLogs()),
 		WebApplicationFirewall: types.BoolValue(createEdgeApplication.Results.GetWebApplicationFirewall()),
 	}
 
