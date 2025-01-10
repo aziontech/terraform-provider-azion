@@ -127,7 +127,7 @@ jobs:
         - name: destroy before run func tests
           if: ${{ always() }}
           run: | 
-            make func-destroy
+            make func-init && make func-destroy
 
         - name: run func tests
           run: | 
