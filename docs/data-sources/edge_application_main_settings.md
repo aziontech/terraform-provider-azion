@@ -42,7 +42,6 @@ Read-Only:
 - `debug_rules` (Boolean) Indicates whether debug rules are enabled for the Edge Application.
 - `delivery_protocol` (String) The delivery protocol of the Edge Application.
 - `device_detection` (Boolean) Indicates whether device detection is enabled for the Edge Application.
-- `edge_firewall` (Boolean) Indicates whether the Edge Application has an edge firewall enabled.
 - `edge_functions` (Boolean) Indicates whether edge functions are enabled for the Edge Application.
 - `http3` (Boolean) Indicates whether HTTP/3 is enabled for the Edge Application.
 - `http_port` (List of Number) The HTTP port(s) for the Edge Application.
@@ -54,4 +53,3 @@ Read-Only:
 - `name` (String) The name of the Edge Application.
 - `raw_logs` (Boolean) Indicates whether raw logs are enabled for the Edge Application.
 - `supported_ciphers` (String) The supported ciphers for the Edge Application.
-- `web_application_firewall` (Boolean) Indicates whether a web application firewall is enabled for the Edge Application.
