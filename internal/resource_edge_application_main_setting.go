@@ -54,13 +54,11 @@ type EdgeApplicationResults struct {
 	ApplicationAcceleration types.Bool      `tfsdk:"application_acceleration"`
 	Caching                 types.Bool      `tfsdk:"caching"`
 	DeviceDetection         types.Bool      `tfsdk:"device_detection"`
-	EdgeFirewall            types.Bool      `tfsdk:"edge_firewall"`
 	EdgeFunctions           types.Bool      `tfsdk:"edge_functions"`
 	ImageOptimization       types.Bool      `tfsdk:"image_optimization"`
 	LoadBalancer            types.Bool      `tfsdk:"load_balancer"`
 	L2Caching               types.Bool      `tfsdk:"l2_caching"`
 	RawLogs                 types.Bool      `tfsdk:"raw_logs"`
-	WebApplicationFirewall  types.Bool      `tfsdk:"web_application_firewall"`
 }
 
 func (r *edgeApplicationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -146,11 +144,6 @@ func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaReq
 						Computed:    true,
 						Description: "Indicates whether device detection is enabled for the Edge Application.",
 					},
-					"edge_firewall": schema.BoolAttribute{
-						Optional:    true,
-						Computed:    true,
-						Description: "Indicates whether the Edge Application has an edge firewall enabled.",
-					},
 					"edge_functions": schema.BoolAttribute{
 						Optional:    true,
 						Computed:    true,
@@ -175,11 +168,6 @@ func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Description: "Indicates whether raw logs are enabled for the Edge Application.",
-					},
-					"web_application_firewall": schema.BoolAttribute{
-						Optional:    true,
-						Computed:    true,
-						Description: "Indicates whether a web application firewall is enabled for the Edge Application.",
 					},
 				},
 			},
@@ -278,6 +266,10 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		requestUpdate.ImageOptimization = plan.EdgeApplication.ImageOptimization.ValueBoolPointer()
 	}
 
+	if plan.EdgeApplication.RawLogs.ValueBool() {
+		requestUpdate.RawLogs = plan.EdgeApplication.RawLogs.ValueBoolPointer()
+	}
+
 	ID := strconv.Itoa(int(createEdgeApplication.Results.GetId()))
 
 	updateEdgeApplication, response, err := r.client.edgeApplicationsApi.
@@ -301,20 +293,17 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	edgeAppResults := &EdgeApplicationResults{
-		ApplicationID:          types.Int64Value(createEdgeApplication.Results.GetId()),
-		Name:                   types.StringValue(createEdgeApplication.Results.GetName()),
-		DeliveryProtocol:       types.StringValue(createEdgeApplication.Results.GetDeliveryProtocol()),
-		HTTPPort:               utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpPort),
-		HTTPSPort:              utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpsPort),
-		MinimumTLSVersion:      types.StringValue(createEdgeApplication.Results.GetMinimumTlsVersion()),
-		Active:                 types.BoolValue(createEdgeApplication.Results.GetActive()),
-		DebugRules:             types.BoolValue(createEdgeApplication.Results.GetDebugRules()),
-		HTTP3:                  types.BoolValue(createEdgeApplication.Results.GetHttp3()),
-		SupportedCiphers:       types.StringValue(createEdgeApplication.Results.GetSupportedCiphers()),
-		Caching:                types.BoolValue(createEdgeApplication.Results.GetCaching()),
-		EdgeFirewall:           types.BoolValue(createEdgeApplication.Results.GetEdgeFirewall()),
-		RawLogs:                types.BoolValue(createEdgeApplication.Results.GetRawLogs()),
-		WebApplicationFirewall: types.BoolValue(createEdgeApplication.Results.GetWebApplicationFirewall()),
+		ApplicationID:     types.Int64Value(createEdgeApplication.Results.GetId()),
+		Name:              types.StringValue(createEdgeApplication.Results.GetName()),
+		DeliveryProtocol:  types.StringValue(createEdgeApplication.Results.GetDeliveryProtocol()),
+		HTTPPort:          utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpPort),
+		HTTPSPort:         utils.ConvertInterfaceToFloat64List(createEdgeApplication.Results.HttpsPort),
+		MinimumTLSVersion: types.StringValue(createEdgeApplication.Results.GetMinimumTlsVersion()),
+		Active:            types.BoolValue(createEdgeApplication.Results.GetActive()),
+		DebugRules:        types.BoolValue(createEdgeApplication.Results.GetDebugRules()),
+		HTTP3:             types.BoolValue(createEdgeApplication.Results.GetHttp3()),
+		SupportedCiphers:  types.StringValue(createEdgeApplication.Results.GetSupportedCiphers()),
+		Caching:           types.BoolValue(createEdgeApplication.Results.GetCaching()),
 	}
 
 	if requestUpdate.L2Caching == nil {
@@ -351,6 +340,12 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		edgeAppResults.ImageOptimization = types.BoolValue(createEdgeApplication.Results.GetImageOptimization())
 	} else {
 		edgeAppResults.ImageOptimization = types.BoolValue(updateEdgeApplication.Results.GetImageOptimization())
+	}
+
+	if requestUpdate.RawLogs == nil {
+		edgeAppResults.RawLogs = types.BoolValue(createEdgeApplication.Results.GetRawLogs())
+	} else {
+		edgeAppResults.RawLogs = types.BoolValue(updateEdgeApplication.Results.GetRawLogs())
 	}
 
 	plan.EdgeApplication = edgeAppResults
@@ -414,13 +409,11 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 		ApplicationAcceleration: types.BoolValue(stateEdgeApplication.Results.GetApplicationAcceleration()),
 		Caching:                 types.BoolValue(stateEdgeApplication.Results.GetCaching()),
 		DeviceDetection:         types.BoolValue(stateEdgeApplication.Results.GetDeviceDetection()),
-		EdgeFirewall:            types.BoolValue(stateEdgeApplication.Results.GetEdgeFirewall()),
 		EdgeFunctions:           types.BoolValue(stateEdgeApplication.Results.GetEdgeFunctions()),
 		ImageOptimization:       types.BoolValue(stateEdgeApplication.Results.GetImageOptimization()),
 		LoadBalancer:            types.BoolValue(stateEdgeApplication.Results.GetLoadBalancer()),
 		RawLogs:                 types.BoolValue(stateEdgeApplication.Results.GetRawLogs()),
 		L2Caching:               types.BoolValue(stateEdgeApplication.Results.GetL2Caching()),
-		WebApplicationFirewall:  types.BoolValue(stateEdgeApplication.Results.GetWebApplicationFirewall()),
 	}
 	state.ID = types.StringValue(strconv.FormatInt(stateEdgeApplication.Results.GetId(), 10))
 	state.SchemaVersion = types.Int64Value(stateEdgeApplication.SchemaVersion)
@@ -465,12 +458,10 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		SupportedCiphers:        edgeapplications.PtrString(plan.EdgeApplication.SupportedCiphers.ValueString()),
 		ApplicationAcceleration: edgeapplications.PtrBool(plan.EdgeApplication.ApplicationAcceleration.ValueBool()),
 		DeviceDetection:         edgeapplications.PtrBool(plan.EdgeApplication.DeviceDetection.ValueBool()),
-		EdgeFirewall:            edgeapplications.PtrBool(plan.EdgeApplication.EdgeFirewall.ValueBool()),
 		EdgeFunctions:           edgeapplications.PtrBool(plan.EdgeApplication.EdgeFunctions.ValueBool()),
 		ImageOptimization:       edgeapplications.PtrBool(plan.EdgeApplication.ImageOptimization.ValueBool()),
 		LoadBalancer:            edgeapplications.PtrBool(plan.EdgeApplication.LoadBalancer.ValueBool()),
 		RawLogs:                 edgeapplications.PtrBool(plan.EdgeApplication.RawLogs.ValueBool()),
-		WebApplicationFirewall:  edgeapplications.PtrBool(plan.EdgeApplication.WebApplicationFirewall.ValueBool()),
 		DeliveryProtocol:        edgeapplications.PtrString(plan.EdgeApplication.DeliveryProtocol.ValueString()),
 		L2Caching:               edgeapplications.PtrBool(plan.EdgeApplication.L2Caching.ValueBool()),
 	}
@@ -513,13 +504,11 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		ApplicationAcceleration: types.BoolValue(updateEdgeApplication.Results.GetApplicationAcceleration()),
 		Caching:                 types.BoolValue(updateEdgeApplication.Results.GetCaching()),
 		DeviceDetection:         types.BoolValue(updateEdgeApplication.Results.GetDeviceDetection()),
-		EdgeFirewall:            types.BoolValue(updateEdgeApplication.Results.GetEdgeFirewall()),
 		EdgeFunctions:           types.BoolValue(updateEdgeApplication.Results.GetEdgeFunctions()),
 		ImageOptimization:       types.BoolValue(updateEdgeApplication.Results.GetImageOptimization()),
 		LoadBalancer:            types.BoolValue(updateEdgeApplication.Results.GetLoadBalancer()),
 		RawLogs:                 types.BoolValue(updateEdgeApplication.Results.GetRawLogs()),
 		L2Caching:               types.BoolValue(updateEdgeApplication.Results.GetL2Caching()),
-		WebApplicationFirewall:  types.BoolValue(updateEdgeApplication.Results.GetWebApplicationFirewall()),
 	}
 
 	plan.SchemaVersion = types.Int64Value(updateEdgeApplication.SchemaVersion)

@@ -44,13 +44,11 @@ type EdgeApplicationResult struct {
 	ApplicationAcceleration types.Bool      `tfsdk:"application_acceleration"`
 	Caching                 types.Bool      `tfsdk:"caching"`
 	DeviceDetection         types.Bool      `tfsdk:"device_detection"`
-	EdgeFirewall            types.Bool      `tfsdk:"edge_firewall"`
 	EdgeFunctions           types.Bool      `tfsdk:"edge_functions"`
 	ImageOptimization       types.Bool      `tfsdk:"image_optimization"`
 	LoadBalancer            types.Bool      `tfsdk:"load_balancer"`
 	L2Caching               types.Bool      `tfsdk:"l2_caching"`
 	RawLogs                 types.Bool      `tfsdk:"raw_logs"`
-	WebApplicationFirewall  types.Bool      `tfsdk:"web_application_firewall"`
 }
 
 func (e *EdgeApplicationDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -132,10 +130,6 @@ func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.Schem
 						Computed:    true,
 						Description: "Indicates whether device detection is enabled for the Edge Application.",
 					},
-					"edge_firewall": schema.BoolAttribute{
-						Computed:    true,
-						Description: "Indicates whether the Edge Application has an edge firewall enabled.",
-					},
 					"edge_functions": schema.BoolAttribute{
 						Computed:    true,
 						Description: "Indicates whether edge functions are enabled for the Edge Application.",
@@ -155,10 +149,6 @@ func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.Schem
 					"raw_logs": schema.BoolAttribute{
 						Computed:    true,
 						Description: "Indicates whether raw logs are enabled for the Edge Application.",
-					},
-					"web_application_firewall": schema.BoolAttribute{
-						Computed:    true,
-						Description: "Indicates whether a web application firewall is enabled for the Edge Application.",
 					},
 				},
 			},
@@ -215,13 +205,11 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 			ApplicationAcceleration: types.BoolValue(edgeApplicationsResponse.Results.GetApplicationAcceleration()),
 			Caching:                 types.BoolValue(edgeApplicationsResponse.Results.GetCaching()),
 			DeviceDetection:         types.BoolValue(edgeApplicationsResponse.Results.GetDeviceDetection()),
-			EdgeFirewall:            types.BoolValue(edgeApplicationsResponse.Results.GetEdgeFirewall()),
 			EdgeFunctions:           types.BoolValue(edgeApplicationsResponse.Results.GetEdgeFunctions()),
 			ImageOptimization:       types.BoolValue(edgeApplicationsResponse.Results.GetImageOptimization()),
 			LoadBalancer:            types.BoolValue(edgeApplicationsResponse.Results.GetLoadBalancer()),
 			L2Caching:               types.BoolValue(edgeApplicationsResponse.Results.GetL2Caching()),
 			RawLogs:                 types.BoolValue(edgeApplicationsResponse.Results.GetRawLogs()),
-			WebApplicationFirewall:  types.BoolValue(edgeApplicationsResponse.Results.GetWebApplicationFirewall()),
 		},
 	}
 

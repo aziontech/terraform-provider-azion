@@ -168,7 +168,7 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	plan.SchemaVersion = types.Int64Value(createDomain.SchemaVersion)
-	var slice []types.String
+	var slice []types.String = []types.String{}
 	for _, Cnames := range createDomain.Results.Cnames {
 		slice = append(slice, types.StringValue(Cnames))
 	}
@@ -179,7 +179,7 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		IsActive:          types.BoolValue(createDomain.Results.GetIsActive()),
 		EdgeApplicationId: types.Int64Value(createDomain.Results.GetEdgeApplicationId()),
 		DomainName:        types.StringValue(createDomain.Results.GetDomainName()),
-		Cnames:            utils.SliceStringTypeToSet(slice),
+		Cnames:            utils.SliceStringTypeToSetOrNull(slice),
 	}
 
 	if createDomain.Results.Environment != nil {
@@ -310,7 +310,7 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	plan.SchemaVersion = types.Int64Value(updateDomain.SchemaVersion)
-	var slice []types.String
+	var slice []types.String = []types.String{}
 	for _, Cnames := range updateDomain.Results.Cnames {
 		slice = append(slice, types.StringValue(Cnames))
 	}
@@ -321,7 +321,7 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 		IsActive:          types.BoolValue(updateDomain.Results.GetIsActive()),
 		EdgeApplicationId: types.Int64Value(updateDomain.Results.GetEdgeApplicationId()),
 		DomainName:        types.StringValue(updateDomain.Results.GetDomainName()),
-		Cnames:            utils.SliceStringTypeToSet(slice),
+		Cnames:            utils.SliceStringTypeToSetOrNull(slice),
 	}
 
 	if updateDomain.Results.Environment != nil {

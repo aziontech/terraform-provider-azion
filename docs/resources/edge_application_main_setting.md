@@ -23,7 +23,6 @@ resource "azion_edge_application_main_setting" "example" {
     minimum_tls_version      = ""
     debug_rules              = false
     caching                  = true
-    edge_firewall            = false
     edge_functions           = false
     image_optimization       = false
     http3                    = false
@@ -32,7 +31,6 @@ resource "azion_edge_application_main_setting" "example" {
     load_balancer            = false
     raw_logs                 = true
     device_detection         = false
-    web_application_firewall = false
   }
 }
 
@@ -104,7 +102,6 @@ Optional:
 - `caching` (Boolean) Indicates whether caching is enabled for the Edge Application.
 - `debug_rules` (Boolean) Indicates whether debug rules are enabled for the Edge Application.
 - `device_detection` (Boolean) Indicates whether device detection is enabled for the Edge Application.
-- `edge_firewall` (Boolean) Indicates whether the Edge Application has an edge firewall enabled.
 - `edge_functions` (Boolean) Indicates whether edge functions are enabled for the Edge Application.
 - `http3` (Boolean) Indicates whether HTTP/3 is enabled for the Edge Application.
 - `image_optimization` (Boolean) Indicates whether image optimization is enabled for the Edge Application.
@@ -112,7 +109,6 @@ Optional:
 - `load_balancer` (Boolean) Indicates whether load balancing is enabled for the Edge Application.
 - `minimum_tls_version` (String) The minimum TLS version supported by the Edge Application.
 - `raw_logs` (Boolean) Indicates whether raw logs are enabled for the Edge Application.
-- `web_application_firewall` (Boolean) Indicates whether a web application firewall is enabled for the Edge Application.
 
 Read-Only:
 

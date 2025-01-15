@@ -124,6 +124,11 @@ jobs:
           run: |
             sed -i 's/test-func/test-func-action-003/g' func-tests/main.tf
 
+        - name: destroy before run func tests
+          if: ${{ always() }}
+          run: | 
+            make func-init && make func-destroy
+
         - name: run func tests
           run: | 
             make func-init && make func-plan && make func-apply

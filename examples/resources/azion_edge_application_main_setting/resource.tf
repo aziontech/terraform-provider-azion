@@ -8,7 +8,6 @@ resource "azion_edge_application_main_setting" "example" {
     minimum_tls_version      = ""
     debug_rules              = false
     caching                  = true
-    edge_firewall            = false
     edge_functions           = false
     image_optimization       = false
     http3                    = false
@@ -17,7 +16,6 @@ resource "azion_edge_application_main_setting" "example" {
     load_balancer            = false
     raw_logs                 = true
     device_detection         = false
-    web_application_firewall = false
   }
 }
 

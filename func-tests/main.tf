@@ -24,7 +24,6 @@ resource "azion_edge_application_main_setting" "testfunc" {
     https_port : [443]
     minimum_tls_version : ""
     debug_rules : false
-    edge_firewall : false
     edge_functions : var.edge_functions_module
     image_optimization : false
     http3 : false
@@ -33,7 +32,6 @@ resource "azion_edge_application_main_setting" "testfunc" {
     load_balancer : false
     raw_logs : true
     device_detection : false
-    web_application_firewall : false
     raw_logs : false
   }
 }
