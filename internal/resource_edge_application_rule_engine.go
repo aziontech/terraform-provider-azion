@@ -774,22 +774,56 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdDelete(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.Phase.ValueString(), state.RulesEngine.ID.ValueInt64()).Execute() //nolint
-	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
+	// Default Rule cannot be deleted, so we just set its behavior to no_content and return
+	if state.RulesEngine.Name == types.StringValue("Default Rule") {
+		var behaviors []edgeapplications.RulesEngineBehaviorEntry
+		RulesEngineBehaviorString := edgeapplications.RulesEngineBehaviorString{
+			Name:   "no_content",
+			Target: "",
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
+		behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
+		var rulesEngineRequest edgeapplications.PatchRulesEngineRequest
+		rulesEngineRequest.Behaviors = behaviors
+
+		_, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPatch(ctx, state.ApplicationID.ValueInt64(), "request", state.RulesEngine.ID.ValueInt64()).PatchRulesEngineRequest(rulesEngineRequest).Execute() //nolint
+		if err != nil {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
+			resp.Diagnostics.AddError(
+				err.Error(),
+				bodyString,
+			)
+			return
+		}
+		resp.Diagnostics.AddWarning(
+			"Default Rule",
+			"Default Rule cannot be deleted. Behaviors were set to default values instead.",
 		)
-		return
+	} else {
+		response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdDelete(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.Phase.ValueString(), state.RulesEngine.ID.ValueInt64()).Execute() //nolint
+		if err != nil {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
+			resp.Diagnostics.AddError(
+				err.Error(),
+				bodyString,
+			)
+			return
+		}
 	}
+
 }
 
 func (r *rulesEngineResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
