@@ -1,9 +1,10 @@
 package provider
 
 import (
+	"os"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/aziontech/azionapi-go-sdk/waf"
-	"os"
 
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
 	"github.com/aziontech/azionapi-go-sdk/domains"
@@ -13,6 +14,7 @@ import (
 	"github.com/aziontech/azionapi-go-sdk/edgefunctionsinstance_edgefirewall"
 	"github.com/aziontech/azionapi-go-sdk/networklist"
 	"github.com/aziontech/azionapi-go-sdk/variables"
+	"github.com/aziontech/azionapi-v4-go-sdk/edge"
 )
 
 type apiClient struct {
@@ -45,6 +47,10 @@ type apiClient struct {
 
 	wafConfig *waf.Configuration
 	wafApi    *waf.APIClient
+
+	//V4 APIs
+	edgeApi    *edge.APIClient
+	edgeConfig *edge.Configuration
 }
 
 func Client(APIToken string, userAgent string) *apiClient {
