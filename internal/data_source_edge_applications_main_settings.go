@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -183,19 +184,38 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 
 	edgeAppResponse, response, err := e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			edgeAppResponse, _, err = e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	var previous, next string

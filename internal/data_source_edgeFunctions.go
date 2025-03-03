@@ -155,19 +155,38 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsGet(ctx).Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			functionsResponse, _, err = d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsGet(ctx).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	var previous, next string

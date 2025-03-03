@@ -180,11 +180,30 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	createRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
-		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
-		bodyBytes, _ := io.ReadAll(httpResponse.Body)
-		resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
+		if httpResponse.StatusCode == 429 {
+			err := utils.SleepAfter429(httpResponse)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			createRecord, _, err = r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
+			bodyBytes, _ := io.ReadAll(httpResponse.Body)
+			resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
 
-		return
+			return
+		}
 	}
 
 	plan.SchemaVersion = types.Int64Value(int64(*createRecord.SchemaVersion))
@@ -271,9 +290,28 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
-		resp.Diagnostics.AddError(usrMsg, errMsg)
-		return
+		if httpResponse.StatusCode == 429 {
+			err := utils.SleepAfter429(httpResponse)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			recordsResponse, _, err = r.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, idZone).PageSize(largeRecordsPageSize).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
+			resp.Diagnostics.AddError(usrMsg, errMsg)
+			return
+		}
 	}
 
 	state.SchemaVersion = types.Int64Value(int64(*recordsResponse.SchemaVersion))
@@ -375,10 +413,29 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		PutZoneRecord(ctx, planID32, recordID32).
 		RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
-		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
-		bodyBytes, _ := io.ReadAll(httpResponse.Body)
-		resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
-		return
+		if httpResponse.StatusCode == 429 {
+			err := utils.SleepAfter429(httpResponse)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			updateRecord, _, err = r.client.idnsApi.RecordsAPI.PutZoneRecord(ctx, planID32, recordID32).RecordPostOrPut(record).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
+			bodyBytes, _ := io.ReadAll(httpResponse.Body)
+			resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
+			return
+		}
 	}
 
 	plan.Record.Id = types.Int64Value(int64(idPlan))
@@ -440,14 +497,33 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	_, _, err = r.client.idnsApi.RecordsAPI.
+	_, httpResponse, err := r.client.idnsApi.RecordsAPI.
 		DeleteZoneRecord(ctx, stateID32, recordID32).Execute() //nolint
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading Azion API",
-			"Could not read azion API "+err.Error(),
-		)
-		return
+		if httpResponse.StatusCode == 429 {
+			err := utils.SleepAfter429(httpResponse)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			_, _, err = r.client.idnsApi.RecordsAPI.DeleteZoneRecord(ctx, stateID32, recordID32).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			resp.Diagnostics.AddError(
+				"Error Reading Azion API",
+				"Could not read azion API "+err.Error(),
+			)
+			return
+		}
 	}
 }
 

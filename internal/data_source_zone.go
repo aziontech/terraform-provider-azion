@@ -135,19 +135,38 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZone(ctx, int32(zoneId)).Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			zoneResponse, _, err = d.client.idnsApi.ZonesAPI.GetZone(ctx, int32(zoneId)).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	var slice []types.String

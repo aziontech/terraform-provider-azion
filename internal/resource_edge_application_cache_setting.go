@@ -331,19 +331,38 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 	}
 	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			createdCacheSetting, _, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	var CookieNames []types.String
@@ -430,19 +449,41 @@ func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req res
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			cacheSettingResponse, _, err = r.client.edgeApplicationsApi.
+				EdgeApplicationsCacheSettingsAPI.
+				EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(
+					ctx, EdgeApplicationId, CacheSettingId).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	var CookieNames []types.String
@@ -642,19 +683,38 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 	}
 	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			createdCacheSetting, _, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	var CookieNames []types.String
@@ -732,19 +792,38 @@ func (r *edgeApplicationCacheSettingsResource) Delete(ctx context.Context, req r
 	}
 	response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			_, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 }
 

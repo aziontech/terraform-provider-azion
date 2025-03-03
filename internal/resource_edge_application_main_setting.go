@@ -226,19 +226,40 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		EdgeApplicationsMainSettingsAPI.EdgeApplicationsPost(ctx).
 		CreateApplicationRequest(edgeApplication).Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			createEdgeApplication, _, err = r.client.edgeApplicationsApi.
+				EdgeApplicationsMainSettingsAPI.EdgeApplicationsPost(ctx).
+				CreateApplicationRequest(edgeApplication).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	requestUpdate := edgeapplications.ApplicationUpdateRequest{}
@@ -376,19 +397,40 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			stateEdgeApplication, _, err = r.client.edgeApplicationsApi.
+				EdgeApplicationsMainSettingsAPI.
+				EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	sliceHTTPPort := utils.ConvertInterfaceToFloat64List(stateEdgeApplication.Results.HttpPort)
@@ -471,19 +513,41 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).
 		ApplicationPutRequest(edgeApplication).Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			updateEdgeApplication, _, err = r.client.edgeApplicationsApi.
+				EdgeApplicationsMainSettingsAPI.
+				EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).
+				ApplicationPutRequest(edgeApplication).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	sliceHTTPPortResult := utils.ConvertInterfaceToFloat64List(updateEdgeApplication.Results.HttpPort)
@@ -533,19 +597,39 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 	response, err := r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.
 		EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			_, err = r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.
+				EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 }
 

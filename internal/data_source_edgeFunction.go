@@ -150,9 +150,28 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.
 		EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
 	if err != nil {
-		usrMsg, errMsg := errPrint(response.StatusCode, err)
-		resp.Diagnostics.AddError(usrMsg, errMsg)
-		return
+		if response.StatusCode == 429 {
+			err := utils.SleepAfter429(response)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			functionsResponse, _, err = d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			usrMsg, errMsg := errPrint(response.StatusCode, err)
+			resp.Diagnostics.AddError(usrMsg, errMsg)
+			return
+		}
 	}
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(functionsResponse.Results.JsonArgs)

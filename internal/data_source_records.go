@@ -219,8 +219,29 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		GetZoneRecords(ctx, zoneID32).Page(Page.ValueInt64()).
 		PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
-		d.errorPrint(resp, httpResp.StatusCode)
-		return
+		if httpResp.StatusCode == 429 {
+			err := utils.SleepAfter429(httpResp)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+			recordsResponse, _, err = d.client.idnsApi.RecordsAPI.
+				GetZoneRecords(ctx, zoneID32).Page(Page.ValueInt64()).
+				PageSize(PageSize.ValueInt64()).Execute() //nolint
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"err",
+				)
+				return
+			}
+		} else {
+			d.errorPrint(resp, httpResp.StatusCode)
+			return
+		}
 	}
 
 	var previous, next string

@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -155,4 +157,14 @@ func ExceedsValidRange(resp any, vl any) {
 		v.Diagnostics.AddError(summary, detail)
 		return
 	}
+}
+
+func SleepAfter429(response *http.Response) error {
+	timeToSleep := response.Header.Get("retry-after")
+	num, err := strconv.Atoi(timeToSleep)
+	if err != nil {
+		return err
+	}
+	time.Sleep((time.Duration(num) + 1) * time.Second)
+	return nil
 }
