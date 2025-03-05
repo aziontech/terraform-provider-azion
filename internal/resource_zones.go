@@ -156,7 +156,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 				)
 				return
 			}
-			createZone, _, err = r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute()
+			createZone, _, err = r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute() //nolint
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
