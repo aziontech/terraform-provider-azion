@@ -250,7 +250,7 @@ func (c *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 					)
 					return
 				}
-				cacheSettingsResponse, _, err = c.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+				cacheSettingsResponse, response, err = c.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(
 						err.Error(),

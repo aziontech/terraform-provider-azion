@@ -297,7 +297,7 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 					)
 					return
 				}
-				originResponse, _, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
+				originResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(
 						err.Error(),
@@ -407,7 +407,7 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 					)
 					return
 				}
-				originResponse, _, err = r.client.edgeApplicationsApi.
+				originResponse, response, err = r.client.edgeApplicationsApi.
 					EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(
 					ctx, ApplicationID, OriginKey).Execute() //nolint
 				if err != nil {
@@ -572,7 +572,7 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 					)
 					return
 				}
-				originResponse, _, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
+				originResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(
 						err.Error(),
@@ -674,7 +674,7 @@ func (r *originResource) Delete(ctx context.Context, req resource.DeleteRequest,
 					)
 					return
 				}
-				_, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
+				response, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(
 						err.Error(),

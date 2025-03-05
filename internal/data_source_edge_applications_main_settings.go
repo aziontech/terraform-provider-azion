@@ -194,7 +194,7 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 					)
 					return
 				}
-				edgeAppResponse, _, err = e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+				edgeAppResponse, response, err = e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(
 						err.Error(),

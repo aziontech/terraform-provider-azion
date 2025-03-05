@@ -210,7 +210,7 @@ func (o *OriginDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 					)
 					return
 				}
-				originResponse, _, err = o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, edgeApplicationID.ValueInt64(), getOriginsKey.ValueString()).Execute() //nolint
+				originResponse, response, err = o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, edgeApplicationID.ValueInt64(), getOriginsKey.ValueString()).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(
 						err.Error(),

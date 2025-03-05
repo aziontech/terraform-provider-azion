@@ -409,7 +409,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 					)
 					return
 				}
-				stateEdgeApplication, _, err = r.client.edgeApplicationsApi.
+				stateEdgeApplication, response, err = r.client.edgeApplicationsApi.
 					EdgeApplicationsMainSettingsAPI.
 					EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
 				if err != nil {
@@ -527,7 +527,7 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 					)
 					return
 				}
-				updateEdgeApplication, _, err = r.client.edgeApplicationsApi.
+				updateEdgeApplication, response, err = r.client.edgeApplicationsApi.
 					EdgeApplicationsMainSettingsAPI.
 					EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).
 					ApplicationPutRequest(edgeApplication).Execute() //nolint
@@ -613,7 +613,7 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 					)
 					return
 				}
-				_, err = r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.
+				response, err = r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.
 					EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(

@@ -341,7 +341,7 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 					)
 					return
 				}
-				createdCacheSetting, _, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
+				createdCacheSetting, response, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(
 						err.Error(),
@@ -461,7 +461,7 @@ func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req res
 					)
 					return
 				}
-				cacheSettingResponse, _, err = r.client.edgeApplicationsApi.
+				cacheSettingResponse, response, err = r.client.edgeApplicationsApi.
 					EdgeApplicationsCacheSettingsAPI.
 					EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(
 						ctx, EdgeApplicationId, CacheSettingId).Execute() //nolint
@@ -697,7 +697,7 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 					)
 					return
 				}
-				createdCacheSetting, _, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
+				createdCacheSetting, response, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(
 						err.Error(),
@@ -808,7 +808,7 @@ func (r *edgeApplicationCacheSettingsResource) Delete(ctx context.Context, req r
 					)
 					return
 				}
-				_, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute() //nolint
+				response, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(
 						err.Error(),

@@ -256,7 +256,7 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 					)
 					return
 				}
-				originsResponse, _, err = o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsGet(ctx, edgeApplicationID.ValueInt64()).Execute() //nolint
+				originsResponse, response, err = o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsGet(ctx, edgeApplicationID.ValueInt64()).Execute() //nolint
 				if err != nil {
 					resp.Diagnostics.AddError(
 						err.Error(),
