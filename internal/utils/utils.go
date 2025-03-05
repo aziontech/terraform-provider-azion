@@ -179,11 +179,6 @@ func RetryOn429[T any](apiCall func() (T, *http.Response, error), maxRetries int
 		// Call the API function
 		result, response, err = apiCall()
 
-		// If response is not nil, ensure the body is closed before retrying
-		if response != nil {
-			defer response.Body.Close()
-		}
-
 		// If no error and not a 429, return successfully
 		if err == nil && response.StatusCode != http.StatusTooManyRequests {
 			return result, response, nil
