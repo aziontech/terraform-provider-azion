@@ -148,6 +148,10 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	createZone, response, err := r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -235,6 +239,10 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 			return
 		}
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -318,6 +326,10 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -397,6 +409,10 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	_, response, err := r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(

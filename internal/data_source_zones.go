@@ -149,6 +149,10 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZones(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(

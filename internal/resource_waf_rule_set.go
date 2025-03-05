@@ -220,6 +220,10 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.CreateNewWAFRuleset(ctx).CreateNewWAFRulesetRequest(wafRulesetRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -320,6 +324,10 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 			return
 		}
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -461,6 +469,10 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.UpdateWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).SingleWAF(wafRuleSetRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -558,6 +570,10 @@ func (r *wafRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequ
 	response, err := r.client.wafApi.WAFAPI.DeleteWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(

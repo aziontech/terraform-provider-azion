@@ -162,6 +162,10 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallPost(ctx).CreateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -245,6 +249,10 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 			return
 		}
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -344,6 +352,10 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidPut(ctx, edgeFirewallID).UpdateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -423,6 +435,10 @@ func (r *edgeFirewallResource) Delete(ctx context.Context, req resource.DeleteRe
 	response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidDelete(ctx, edgeFirewallID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
 				resp.Diagnostics.AddError(

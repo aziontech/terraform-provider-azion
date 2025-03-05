@@ -181,6 +181,10 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	createRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
 		if httpResponse.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(httpResponse)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -291,6 +295,10 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 			return
 		}
 		if httpResponse.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(httpResponse)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -414,6 +422,10 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
 		if httpResponse.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(httpResponse)
 			if err != nil {
 				resp.Diagnostics.AddError(
@@ -501,6 +513,10 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		DeleteZoneRecord(ctx, stateID32, recordID32).Execute() //nolint
 	if err != nil {
 		if httpResponse.StatusCode == 429 {
+			resp.Diagnostics.AddWarning(
+				"Too many requests",
+				"Terraform provider will wait some time before atempting this request again. Please wait.",
+			)
 			err := utils.SleepAfter429(httpResponse)
 			if err != nil {
 				resp.Diagnostics.AddError(
