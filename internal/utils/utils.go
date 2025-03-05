@@ -169,7 +169,7 @@ func SleepAfter429(response *http.Response) error {
 	return nil
 }
 
-// RetryOn429 retries an API call if the response status is 429 (Too Many Requests).
+// RetryOn429 retries an API call if the response status is 429.
 func RetryOn429[T any](apiCall func() (T, *http.Response, error), maxRetries int) (T, *http.Response, error) {
 	var result T
 	var response *http.Response
@@ -179,7 +179,12 @@ func RetryOn429[T any](apiCall func() (T, *http.Response, error), maxRetries int
 		// Call the API function
 		result, response, err = apiCall()
 
-		// If there's no error and it's not a 429, return successfully
+		// If response is not nil, ensure the body is closed before retrying
+		if response != nil {
+			defer response.Body.Close()
+		}
+
+		// If no error and not a 429, return successfully
 		if err == nil && response.StatusCode != http.StatusTooManyRequests {
 			return result, response, nil
 		}
@@ -195,5 +200,5 @@ func RetryOn429[T any](apiCall func() (T, *http.Response, error), maxRetries int
 		}
 	}
 
-	return result, response, errors.New("maximum amount of retries (3) exceeded for API request")
+	return result, response, errors.New("max retries exceeded for API request")
 }
