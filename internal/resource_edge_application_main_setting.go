@@ -227,27 +227,29 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		CreateApplicationRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
+			for response.StatusCode == 429 {
+				resp.Diagnostics.AddWarning(
+					"Too many requests",
+					"Terraform provider will wait some time before attempting this request again. Please wait.",
 				)
-				return
-			}
-			createEdgeApplication, _, err = r.client.edgeApplicationsApi.
-				EdgeApplicationsMainSettingsAPI.EdgeApplicationsPost(ctx).
-				CreateApplicationRequest(edgeApplication).Execute() //nolint
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+				err := utils.SleepAfter429(response)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
+				createEdgeApplication, response, err = r.client.edgeApplicationsApi.
+					EdgeApplicationsMainSettingsAPI.EdgeApplicationsPost(ctx).
+					CreateApplicationRequest(edgeApplication).Execute() //nolint
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
