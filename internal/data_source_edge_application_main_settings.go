@@ -185,7 +185,7 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 					return
 				}
 				edgeApplicationsResponse, response, err = e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, getEdgeApplicationId.ValueString()).Execute() //nolint
-				if err != nil {
+				if err != nil && response.StatusCode != 429 {
 					resp.Diagnostics.AddError(
 						err.Error(),
 						"err",
