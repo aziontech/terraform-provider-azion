@@ -181,6 +181,10 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 				return e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, getEdgeApplicationId.ValueString()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),

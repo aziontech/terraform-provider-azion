@@ -233,6 +233,10 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 					CreateApplicationRequest(edgeApplication).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -399,6 +403,10 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 					EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -510,6 +518,10 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 					EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).
 					ApplicationPutRequest(edgeApplication).Execute() //nolint
 			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
 
 			if err != nil {
 				resp.Diagnostics.AddError(
