@@ -175,25 +175,23 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 	edgeApplicationsResponse, response, err := e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, getEdgeApplicationId.ValueString()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
-			}
-			edgeApplicationsResponse, _, err = e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, getEdgeApplicationId.ValueString()).Execute() //nolint
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			for response.StatusCode == 429 {
+				err := utils.SleepAfter429(response)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
+				edgeApplicationsResponse, _, err = e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, getEdgeApplicationId.ValueString()).Execute() //nolint
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)

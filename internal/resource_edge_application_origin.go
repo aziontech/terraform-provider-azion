@@ -288,25 +288,23 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
-			}
-			originResponse, _, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			for response.StatusCode == 429 {
+				err := utils.SleepAfter429(response)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
+				originResponse, _, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -400,27 +398,25 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 			return
 		}
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
-			}
-			originResponse, _, err = r.client.edgeApplicationsApi.
-				EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(
-				ctx, ApplicationID, OriginKey).Execute() //nolint
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			for response.StatusCode == 429 {
+				err := utils.SleepAfter429(response)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
+				originResponse, _, err = r.client.edgeApplicationsApi.
+					EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(
+					ctx, ApplicationID, OriginKey).Execute() //nolint
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -567,25 +563,23 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
-			}
-			originResponse, _, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			for response.StatusCode == 429 {
+				err := utils.SleepAfter429(response)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
+				originResponse, _, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -671,25 +665,23 @@ func (r *originResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
-			}
-			_, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			for response.StatusCode == 429 {
+				err := utils.SleepAfter429(response)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
+				_, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)

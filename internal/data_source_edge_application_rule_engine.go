@@ -212,25 +212,23 @@ func (r *RuleEngineDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ruleEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
-			}
-			ruleEngineResponse, _, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).Execute() //nolint
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			for response.StatusCode == 429 {
+				err := utils.SleepAfter429(response)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
+				ruleEngineResponse, _, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).Execute() //nolint
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)

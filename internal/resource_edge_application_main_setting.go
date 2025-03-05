@@ -228,10 +228,6 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	if err != nil {
 		if response.StatusCode == 429 {
 			for response.StatusCode == 429 {
-				resp.Diagnostics.AddWarning(
-					"Too many requests",
-					"Terraform provider will wait some time before attempting this request again. Please wait.",
-				)
 				err := utils.SleepAfter429(response)
 				if err != nil {
 					resp.Diagnostics.AddError(
@@ -404,27 +400,25 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 			return
 		}
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
-			}
-			stateEdgeApplication, _, err = r.client.edgeApplicationsApi.
-				EdgeApplicationsMainSettingsAPI.
-				EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			for response.StatusCode == 429 {
+				err := utils.SleepAfter429(response)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
+				stateEdgeApplication, _, err = r.client.edgeApplicationsApi.
+					EdgeApplicationsMainSettingsAPI.
+					EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -524,28 +518,26 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		ApplicationPutRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
-			}
-			updateEdgeApplication, _, err = r.client.edgeApplicationsApi.
-				EdgeApplicationsMainSettingsAPI.
-				EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).
-				ApplicationPutRequest(edgeApplication).Execute() //nolint
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			for response.StatusCode == 429 {
+				err := utils.SleepAfter429(response)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
+				updateEdgeApplication, _, err = r.client.edgeApplicationsApi.
+					EdgeApplicationsMainSettingsAPI.
+					EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).
+					ApplicationPutRequest(edgeApplication).Execute() //nolint
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -612,26 +604,24 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 		EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
-			}
-			_, err = r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.
-				EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			for response.StatusCode == 429 {
+				err := utils.SleepAfter429(response)
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
+				_, err = r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.
+					EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"err",
+					)
+					return
+				}
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
