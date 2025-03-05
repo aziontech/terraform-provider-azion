@@ -203,7 +203,7 @@ func (o *OriginDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {

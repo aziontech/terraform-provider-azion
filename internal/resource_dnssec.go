@@ -157,7 +157,7 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
@@ -252,7 +252,7 @@ func (r *dnssecResource) Read(
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
@@ -337,7 +337,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
@@ -424,7 +424,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {

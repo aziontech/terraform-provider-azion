@@ -296,7 +296,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			if response.StatusCode == 429 {
 				resp.Diagnostics.AddWarning(
 					"Too many requests",
-					"Terraform provider will wait some time before atempting this request again. Please wait.",
+					"Terraform provider will wait some time before attempting this request again. Please wait.",
 				)
 				err := utils.SleepAfter429(response)
 				if err != nil {
@@ -506,7 +506,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
@@ -716,7 +716,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
@@ -862,7 +862,7 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 			if response.StatusCode == 429 {
 				resp.Diagnostics.AddWarning(
 					"Too many requests",
-					"Terraform provider will wait some time before atempting this request again. Please wait.",
+					"Terraform provider will wait some time before attempting this request again. Please wait.",
 				)
 				err := utils.SleepAfter429(response)
 				if err != nil {
@@ -906,7 +906,7 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 			if response.StatusCode == 429 {
 				resp.Diagnostics.AddWarning(
 					"Too many requests",
-					"Terraform provider will wait some time before atempting this request again. Please wait.",
+					"Terraform provider will wait some time before attempting this request again. Please wait.",
 				)
 				err := utils.SleepAfter429(response)
 				if err != nil {

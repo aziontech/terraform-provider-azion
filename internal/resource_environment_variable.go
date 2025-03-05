@@ -137,7 +137,7 @@ func (r *environmentVariableResource) Create(ctx context.Context, req resource.C
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
@@ -228,7 +228,7 @@ func (r *environmentVariableResource) Read(ctx context.Context, req resource.Rea
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
@@ -343,7 +343,7 @@ func (r *environmentVariableResource) Update(ctx context.Context, req resource.U
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {
@@ -430,7 +430,7 @@ func (r *environmentVariableResource) Delete(ctx context.Context, req resource.D
 		if response.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(response)
 			if err != nil {

@@ -183,7 +183,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		if httpResponse.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(httpResponse)
 			if err != nil {
@@ -297,7 +297,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 		if httpResponse.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(httpResponse)
 			if err != nil {
@@ -424,7 +424,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		if httpResponse.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(httpResponse)
 			if err != nil {
@@ -515,7 +515,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if httpResponse.StatusCode == 429 {
 			resp.Diagnostics.AddWarning(
 				"Too many requests",
-				"Terraform provider will wait some time before atempting this request again. Please wait.",
+				"Terraform provider will wait some time before attempting this request again. Please wait.",
 			)
 			err := utils.SleepAfter429(httpResponse)
 			if err != nil {
