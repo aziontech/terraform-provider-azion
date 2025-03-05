@@ -227,7 +227,7 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		CreateApplicationRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			createEdgeApplication, _, err = utils.RetryOn429(func() (*edgeapplications.CreateApplicationResult, *http.Response, error) {
+			createEdgeApplication, response, err = utils.RetryOn429(func() (*edgeapplications.CreateApplicationResult, *http.Response, error) {
 				return r.client.edgeApplicationsApi.
 					EdgeApplicationsMainSettingsAPI.EdgeApplicationsPost(ctx).
 					CreateApplicationRequest(edgeApplication).Execute() //nolint
@@ -397,7 +397,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 			return
 		}
 		if response.StatusCode == 429 {
-			stateEdgeApplication, _, err = utils.RetryOn429(func() (*edgeapplications.GetApplicationResponse, *http.Response, error) {
+			stateEdgeApplication, response, err = utils.RetryOn429(func() (*edgeapplications.GetApplicationResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.
 					EdgeApplicationsMainSettingsAPI.
 					EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
@@ -512,7 +512,7 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		ApplicationPutRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			updateEdgeApplication, _, err = utils.RetryOn429(func() (*edgeapplications.ApplicationPutResult, *http.Response, error) {
+			updateEdgeApplication, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationPutResult, *http.Response, error) {
 				return r.client.edgeApplicationsApi.
 					EdgeApplicationsMainSettingsAPI.
 					EdgeApplicationsIdPut(ctx, plan.ID.ValueString()).
