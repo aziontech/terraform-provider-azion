@@ -1,0 +1,3 @@
+  gosec:
+    excludes:
+      - G115
