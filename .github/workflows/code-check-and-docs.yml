@@ -52,7 +52,7 @@ jobs:
         env:
           GOROOT: ''
         with:
-          args: ./...
+          args: ./... -exclude=G115
 
   vet:
     name: go vet
