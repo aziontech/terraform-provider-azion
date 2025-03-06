@@ -298,14 +298,15 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	idPlan, err := strconv.ParseInt(plan.ID.ValueString(), 10, 32)
+	idPlan, err := strconv.Atoi(plan.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Value Conversion error ",
-			"Could not conversion ID",
+			"Value Conversion error",
+			"Could not convert ID",
 		)
 		return
 	}
+
 	zone := idns.Zone{
 		Name:     idns.PtrString(plan.Zone.Name.ValueString()),
 		Domain:   idns.PtrString(plan.Zone.Domain.ValueString()),
