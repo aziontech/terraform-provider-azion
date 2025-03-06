@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 
+	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -259,23 +261,20 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				rulesEngineResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+			_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineResponse, *http.Response, error) {
+				return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)

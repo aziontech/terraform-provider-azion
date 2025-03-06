@@ -220,23 +220,18 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.CreateNewWAFRuleset(ctx).CreateNewWAFRulesetRequest(wafRulesetRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			wafRuleSetResponse, response, err = utils.RetryOn429(func() (*waf.SingleWAF, *http.Response, error) {
+				return r.client.wafApi.WAFAPI.CreateNewWAFRuleset(ctx).CreateNewWAFRulesetRequest(wafRulesetRequest).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			wafRuleSetResponse, _, err = r.client.wafApi.WAFAPI.CreateNewWAFRuleset(ctx).CreateNewWAFRulesetRequest(wafRulesetRequest).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -324,23 +319,18 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 			return
 		}
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			wafResponse, response, err = utils.RetryOn429(func() (*waf.WAFSingle200, *http.Response, error) {
+				return r.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			wafResponse, _, err = r.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -469,23 +459,18 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 	wafRuleSetResponse, response, err := r.client.wafApi.WAFAPI.UpdateWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).SingleWAF(wafRuleSetRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			wafRuleSetResponse, response, err = utils.RetryOn429(func() (*waf.SingleWAF, *http.Response, error) {
+				return r.client.wafApi.WAFAPI.UpdateWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).SingleWAF(wafRuleSetRequest).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			wafRuleSetResponse, _, err = r.client.wafApi.WAFAPI.UpdateWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).SingleWAF(wafRuleSetRequest).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -570,23 +555,18 @@ func (r *wafRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequ
 	response, err := r.client.wafApi.WAFAPI.DeleteWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
+				return r.client.wafApi.WAFAPI.DeleteWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			_, err = r.client.wafApi.WAFAPI.DeleteWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}

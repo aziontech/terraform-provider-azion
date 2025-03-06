@@ -135,23 +135,18 @@ func (r *environmentVariableResource) Create(ctx context.Context, req resource.C
 	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesCreate(ctx).VariableCreate(environmentVariableRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			_, response, err = utils.RetryOn429(func() (*variables.VariableGet, *http.Response, error) {
+				return r.client.variablesApi.VariablesAPI.ApiVariablesCreate(ctx).VariableCreate(environmentVariableRequest).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			environmentVariableResponse, _, err = r.client.variablesApi.VariablesAPI.ApiVariablesCreate(ctx).VariableCreate(environmentVariableRequest).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -226,23 +221,18 @@ func (r *environmentVariableResource) Read(ctx context.Context, req resource.Rea
 			return
 		}
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			_, response, err = utils.RetryOn429(func() (*variables.Variable, *http.Response, error) {
+				return r.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			getEnvironmentVariable, _, err = r.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -341,23 +331,18 @@ func (r *environmentVariableResource) Update(ctx context.Context, req resource.U
 	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesUpdate(ctx, uuid).VariableCreate(environmentVariableRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			_, response, err = utils.RetryOn429(func() (*variables.VariableGet, *http.Response, error) {
+				return r.client.variablesApi.VariablesAPI.ApiVariablesUpdate(ctx, uuid).VariableCreate(environmentVariableRequest).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			environmentVariableResponse, _, err = r.client.variablesApi.VariablesAPI.ApiVariablesUpdate(ctx, uuid).VariableCreate(environmentVariableRequest).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -428,23 +413,18 @@ func (r *environmentVariableResource) Delete(ctx context.Context, req resource.D
 	response, err := r.client.variablesApi.VariablesAPI.ApiVariablesDestroy(ctx, uuid).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
+				return r.client.variablesApi.VariablesAPI.ApiVariablesDestroy(ctx, uuid).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			_, err = r.client.variablesApi.VariablesAPI.ApiVariablesDestroy(ctx, uuid).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}

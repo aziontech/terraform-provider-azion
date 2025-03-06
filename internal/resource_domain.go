@@ -153,23 +153,18 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 	createDomain, response, err := r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			_, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
+				return r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			createDomain, _, err = r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -244,23 +239,18 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 			return
 		}
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			_, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
+				return r.client.domainsApi.DomainsAPI.GetDomain(ctx, domainId).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			getDomain, _, err = r.client.domainsApi.DomainsAPI.GetDomain(ctx, domainId).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -341,23 +331,18 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	updateDomain, response, err := r.client.domainsApi.DomainsAPI.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			_, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
+				return r.client.domainsApi.DomainsAPI.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			updateDomain, _, err = r.client.domainsApi.DomainsAPI.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -419,23 +404,18 @@ func (r *domainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	response, err := r.client.domainsApi.DomainsAPI.DelDomain(ctx, domainId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
+				return r.client.domainsApi.DomainsAPI.DelDomain(ctx, domainId).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			_, err = r.client.domainsApi.DomainsAPI.DelDomain(ctx, domainId).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}

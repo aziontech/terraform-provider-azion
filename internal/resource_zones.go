@@ -148,23 +148,18 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	createZone, response, err := r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			createZone, response, err = utils.RetryOn429(func() (*idns.PostOrPutZoneResponse, *http.Response, error) {
+				return r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			createZone, _, err = r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -239,23 +234,18 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 			return
 		}
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			order, response, err = utils.RetryOn429(func() (*idns.GetZoneResponse, *http.Response, error) {
+				return r.client.idnsApi.ZonesAPI.GetZone(ctx, int32(idPlan)).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			order, _, err = r.client.idnsApi.ZonesAPI.GetZone(ctx, int32(idPlan)).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -326,23 +316,18 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			_, response, err = utils.RetryOn429(func() (*idns.PostOrPutZoneResponse, *http.Response, error) {
+				return r.client.idnsApi.ZonesAPI.PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			updateZone, _, err = r.client.idnsApi.ZonesAPI.PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}
@@ -409,23 +394,18 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	_, response, err := r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			_, response, err = utils.RetryOn429(func() (string, *http.Response, error) {
+				return r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneID).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			_, _, err = r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneID).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}

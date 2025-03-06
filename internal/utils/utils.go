@@ -197,3 +197,31 @@ func RetryOn429[T any](apiCall func() (T, *http.Response, error), maxRetries int
 
 	return result, response, errors.New("max retries exceeded for API request")
 }
+
+// RetryOn429 retries an API call if the response status is 429.
+func RetryOn429Delete(apiCall func() (*http.Response, error), maxRetries int) (*http.Response, error) {
+	var response *http.Response
+	var err error
+
+	for i := 0; i < maxRetries; i++ {
+		// Call the API function
+		response, err = apiCall()
+
+		// If no error and not a 429, return successfully
+		if err == nil && response.StatusCode != http.StatusTooManyRequests {
+			return response, nil
+		}
+
+		// If error is not 429, return immediately
+		if response.StatusCode != http.StatusTooManyRequests {
+			return response, err
+		}
+
+		// Sleep before retrying
+		if sleepErr := SleepAfter429(response); sleepErr != nil {
+			return response, sleepErr
+		}
+	}
+
+	return response, errors.New("max retries exceeded for API request")
+}

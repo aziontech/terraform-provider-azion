@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 	"io"
+	"net/http"
 
+	"github.com/aziontech/azionapi-go-sdk/variables"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -99,23 +101,18 @@ func (n *VariablesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	variablesResponse, response, err := n.client.variablesApi.VariablesAPI.ApiVariablesList(ctx).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			resp.Diagnostics.AddWarning(
-				"Too many requests",
-				"Terraform provider will wait some time before attempting this request again. Please wait.",
-			)
-			err := utils.SleepAfter429(response)
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"err",
-				)
-				return
+			_, response, err = utils.RetryOn429(func() ([]variables.Variable, *http.Response, error) {
+				return n.client.variablesApi.VariablesAPI.ApiVariablesList(ctx).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
 			}
-			variablesResponse, _, err = n.client.variablesApi.VariablesAPI.ApiVariablesList(ctx).Execute() //nolint
+
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
-					"err",
+					"API request failed after too many retries",
 				)
 				return
 			}

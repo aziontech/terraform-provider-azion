@@ -294,23 +294,20 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		rulesResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), "request").OrderBy("order").PageSize(2).Page(1).Sort("asc").Execute() //nolint
 		if err != nil {
 			if response.StatusCode == 429 {
-				for response.StatusCode == 429 {
-					err := utils.SleepAfter429(response)
-					if err != nil {
-						resp.Diagnostics.AddError(
-							err.Error(),
-							"err",
-						)
-						return
-					}
-					rulesResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), "request").OrderBy("order").PageSize(2).Page(1).Sort("asc").Execute() //nolint
-					if err != nil {
-						resp.Diagnostics.AddError(
-							err.Error(),
-							"err",
-						)
-						return
-					}
+				_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineResponse, *http.Response, error) {
+					return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), "request").OrderBy("order").PageSize(2).Page(1).Sort("asc").Execute() //nolint
+				}, 5) // Maximum 5 retries
+
+				if response != nil {
+					defer response.Body.Close() // <-- Close the body here
+				}
+
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"API request failed after too many retries",
+					)
+					return
 				}
 			} else {
 				bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -502,26 +499,22 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 			return
 		}
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				ruleEngineResponse, response, err = r.client.edgeApplicationsApi.
+			_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
+				return r.client.edgeApplicationsApi.
 					EdgeApplicationsRulesEngineAPI.
-					EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(
-						ctx, edgeApplicationID, phase, ruleID).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+					EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(ctx, edgeApplicationID, phase, ruleID).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -710,23 +703,20 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				rulesEngineResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+			_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
+				return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -854,23 +844,20 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 		_, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPatch(ctx, state.ApplicationID.ValueInt64(), "request", state.RulesEngine.ID.ValueInt64()).PatchRulesEngineRequest(rulesEngineRequest).Execute() //nolint
 		if err != nil {
 			if response.StatusCode == 429 {
-				for response.StatusCode == 429 {
-					err := utils.SleepAfter429(response)
-					if err != nil {
-						resp.Diagnostics.AddError(
-							err.Error(),
-							"err",
-						)
-						return
-					}
-					_, response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPatch(ctx, state.ApplicationID.ValueInt64(), "request", state.RulesEngine.ID.ValueInt64()).PatchRulesEngineRequest(rulesEngineRequest).Execute() //nolint
-					if err != nil {
-						resp.Diagnostics.AddError(
-							err.Error(),
-							"err",
-						)
-						return
-					}
+				_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
+					return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPatch(ctx, state.ApplicationID.ValueInt64(), "request", state.RulesEngine.ID.ValueInt64()).PatchRulesEngineRequest(rulesEngineRequest).Execute() //nolint
+				}, 5) // Maximum 5 retries
+
+				if response != nil {
+					defer response.Body.Close() // <-- Close the body here
+				}
+
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"API request failed after too many retries",
+					)
+					return
 				}
 			} else {
 				bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -896,23 +883,20 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 		response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdDelete(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.Phase.ValueString(), state.RulesEngine.ID.ValueInt64()).Execute() //nolint
 		if err != nil {
 			if response.StatusCode == 429 {
-				for response.StatusCode == 429 {
-					err := utils.SleepAfter429(response)
-					if err != nil {
-						resp.Diagnostics.AddError(
-							err.Error(),
-							"err",
-						)
-						return
-					}
-					response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdDelete(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.Phase.ValueString(), state.RulesEngine.ID.ValueInt64()).Execute() //nolint
-					if err != nil {
-						resp.Diagnostics.AddError(
-							err.Error(),
-							"err",
-						)
-						return
-					}
+				response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
+					return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdDelete(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.Phase.ValueString(), state.RulesEngine.ID.ValueInt64()).Execute() //nolint
+				}, 5) // Maximum 5 retries
+
+				if response != nil {
+					defer response.Body.Close() // <-- Close the body here
+				}
+
+				if err != nil {
+					resp.Diagnostics.AddError(
+						err.Error(),
+						"API request failed after too many retries",
+					)
+					return
 				}
 			} else {
 				bodyBytes, errReadAll := io.ReadAll(response.Body)

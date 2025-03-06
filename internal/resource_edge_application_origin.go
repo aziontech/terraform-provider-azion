@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -288,23 +289,20 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				originResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+			_, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
+				return r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -324,13 +322,17 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	var addresses []OriginAddress
-	for _, addr := range originResponse.Results.Addresses {
-		addresses = append(addresses, OriginAddress{
-			Address:    types.StringValue(addr.GetAddress()),
-			Weight:     types.Int64Value(addr.GetWeight()),
-			ServerRole: types.StringValue(addr.GetServerRole()),
-			IsActive:   types.BoolValue(addr.GetIsActive()),
-		})
+	if len(originResponse.Results.Addresses) > 0 { // Check if Addresses is not empty
+		for _, addr := range originResponse.Results.Addresses {
+			addresses = append(addresses, OriginAddress{
+				Address:    types.StringValue(addr.GetAddress()),
+				Weight:     types.Int64Value(addr.GetWeight()),
+				ServerRole: types.StringValue(addr.GetServerRole()),
+				IsActive:   types.BoolValue(addr.GetIsActive()),
+			})
+		}
+	} else {
+		fmt.Println("Warning: originResponse.Results.Addresses is empty or nil")
 	}
 
 	plan.Origin = &OriginResourceResults{
@@ -398,25 +400,21 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 			return
 		}
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				originResponse, response, err = r.client.edgeApplicationsApi.
-					EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(
-					ctx, ApplicationID, OriginKey).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+			_, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
+				return r.client.edgeApplicationsApi.
+					EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, ApplicationID, OriginKey).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -563,23 +561,20 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				originResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+			_, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
+				return r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -665,23 +660,20 @@ func (r *originResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				response, err = r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
+				return r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)

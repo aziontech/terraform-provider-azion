@@ -332,23 +332,20 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				createdCacheSetting, response, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+			_, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCacheCreateResponse, *http.Response, error) {
+				return r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -452,26 +449,22 @@ func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req res
 			return
 		}
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				cacheSettingResponse, response, err = r.client.edgeApplicationsApi.
+			_, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCacheGetOneResponse, *http.Response, error) {
+				return r.client.edgeApplicationsApi.
 					EdgeApplicationsCacheSettingsAPI.
-					EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(
-						ctx, EdgeApplicationId, CacheSettingId).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+					EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(ctx, EdgeApplicationId, CacheSettingId).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -688,23 +681,20 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				createdCacheSetting, response, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+			_, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCachePutResponse, *http.Response, error) {
+				return r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
@@ -799,23 +789,20 @@ func (r *edgeApplicationCacheSettingsResource) Delete(ctx context.Context, req r
 	response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				response, err = r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute() //nolint
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
+				return r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)

@@ -398,9 +398,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 		}
 		if response.StatusCode == 429 {
 			stateEdgeApplication, response, err = utils.RetryOn429(func() (*edgeapplications.GetApplicationResponse, *http.Response, error) {
-				return r.client.edgeApplicationsApi.
-					EdgeApplicationsMainSettingsAPI.
-					EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
+				return r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, state.ID.ValueString()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -595,24 +593,20 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 		EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			for response.StatusCode == 429 {
-				err := utils.SleepAfter429(response)
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
-				response, err = r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.
-					EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
-				if err != nil && response.StatusCode != 429 {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"err",
-					)
-					return
-				}
+			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
+				return r.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdDelete(ctx, state.ID.ValueString()).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
