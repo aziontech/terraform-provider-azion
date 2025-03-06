@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"io"
-	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -313,20 +312,12 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		IsActive: idns.PtrBool(plan.Zone.IsActive.ValueBool()),
 	}
 
-	if idPlan > math.MaxInt32 {
-		resp.Diagnostics.AddError(
-			"Value error",
-			"id value exceeds int32 limits",
-		)
-		return
-	}
-
 	updateZone, response, err := r.client.idnsApi.ZonesAPI.
-		PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
+		PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint #nosec G701
 	if err != nil {
 		if response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*idns.PostOrPutZoneResponse, *http.Response, error) {
-				return r.client.idnsApi.ZonesAPI.PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
+				return r.client.idnsApi.ZonesAPI.PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint #nosec G701
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
