@@ -3,7 +3,7 @@ module github.com/aziontech/terraform-provider-azion
 go 1.21
 
 require (
-	github.com/aziontech/azionapi-go-sdk v0.135.0
+	github.com/aziontech/azionapi-go-sdk v0.138.0
 	github.com/hashicorp/go-changelog v0.0.0-20230630083008-522d403eacf1
 	github.com/hashicorp/terraform-plugin-docs v0.16.0
 	github.com/hashicorp/terraform-plugin-framework v1.4.2
@@ -90,5 +90,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231030173426-d783a09b4405 // indirect
 	google.golang.org/grpc v1.59.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
+	gopkg.in/validator.v2 v2.0.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )

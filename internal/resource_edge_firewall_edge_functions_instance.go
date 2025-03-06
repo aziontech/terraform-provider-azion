@@ -139,7 +139,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
 
-	planJsonArgs, err := utils.ConvertStringToInterface(argsStr)
+	planJsonArgs, err := utils.UnmarshallJsonArgsFirewall(argsStr)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -151,7 +151,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 	edgeFunctionInstanceRequest := edgefunctionsinstance_edgefirewall.CreateEdgeFunctionsInstancesRequest{
 		Name:         plan.EdgeFunction.Name.ValueStringPointer(),
 		EdgeFunction: plan.EdgeFunction.EdgeFunctionId.ValueInt64Pointer(),
-		JsonArgs:     planJsonArgs,
+		JsonArgs:     &planJsonArgs,
 	}
 
 	edgeFunctionInstancesResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
@@ -364,7 +364,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
 
-	requestJsonArgsStr, err := utils.ConvertStringToInterface(argsStr)
+	requestJsonArgsStr, err := utils.UnmarshallJsonArgsFirewall(argsStr)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -376,7 +376,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 	ApplicationPutInstanceRequest := edgefunctionsinstance_edgefirewall.CreateEdgeFunctionsInstancesRequest{
 		Name:         plan.EdgeFunction.Name.ValueStringPointer(),
 		EdgeFunction: plan.EdgeFunction.EdgeFunctionId.ValueInt64Pointer(),
-		JsonArgs:     requestJsonArgsStr,
+		JsonArgs:     &requestJsonArgsStr,
 	}
 
 	edgeFunctionInstancesUpdateResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.

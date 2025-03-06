@@ -132,7 +132,7 @@ func (r *edgeFunctionsInstanceResource) Create(ctx context.Context, req resource
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
 
-	planJsonArgs, err := utils.ConvertStringToInterface(argsStr)
+	planJsonArgs, err := utils.UnmarshallJsonArgs(argsStr)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -350,11 +350,11 @@ func (r *edgeFunctionsInstanceResource) Update(ctx context.Context, req resource
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
 
-	requestJsonArgsStr, err := utils.ConvertStringToInterface(argsStr)
+	requestJsonArgsStr, err := utils.UnmarshallJsonArgs(argsStr)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
-			"err",
+			"error while unmarshalling json args",
 		)
 	}
 
@@ -387,7 +387,7 @@ func (r *edgeFunctionsInstanceResource) Update(ctx context.Context, req resource
 			if errReadAll != nil {
 				resp.Diagnostics.AddError(
 					errReadAll.Error(),
-					"err",
+					"error while reading response body",
 				)
 			}
 			bodyString := string(bodyBytes)
@@ -403,7 +403,7 @@ func (r *edgeFunctionsInstanceResource) Update(ctx context.Context, req resource
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
-			"err",
+			"error while reading json args from response",
 		)
 	}
 	if resp.Diagnostics.HasError() {

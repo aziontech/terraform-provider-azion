@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
+	"github.com/aziontech/azionapi-go-sdk/edgefunctionsinstance_edgefirewall"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -64,6 +66,30 @@ func ConvertStringToInterface(jsonArgs string) (interface{}, error) {
 	if err != nil {
 		fmt.Println("Error:", err)
 		return nil, err
+	}
+	return data, err
+}
+
+func UnmarshallJsonArgs(jsonArgs string) (edgeapplications.ApplicationInstancesResultsArgs, error) {
+	var data edgeapplications.ApplicationInstancesResultsArgs
+	args := make(map[string]interface{})
+	err := json.Unmarshal([]byte(jsonArgs), &data)
+	if err != nil {
+		fmt.Println("Error:", err)
+		data.MapmapOfStringAny = &args
+		return data, nil
+	}
+	return data, err
+}
+
+func UnmarshallJsonArgsFirewall(jsonArgs string) (edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceJsonArgs, error) {
+	var data edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceJsonArgs
+	args := make(map[string]interface{})
+	err := json.Unmarshal([]byte(jsonArgs), &data)
+	if err != nil {
+		fmt.Println("Error:", err)
+		data.MapmapOfStringAny = &args
+		return data, nil
 	}
 	return data, err
 }
