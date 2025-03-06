@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
-      - uses: securego/gosec@master
+      - uses: securego/gosec@v2.22.1
         env:
           GOROOT: ''
         with:
