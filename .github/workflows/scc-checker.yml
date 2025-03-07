@@ -13,3 +13,4 @@ jobs:
           fetch-depth: 0
       
       - uses: aziontech/scc_check@main
+      
