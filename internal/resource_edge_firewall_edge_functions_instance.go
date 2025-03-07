@@ -130,12 +130,15 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 		return
 	}
 
-	if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
-		resp.Diagnostics.AddError("Args", "Is not null")
-		return
-	}
-	argsStr := "{}"
-	if !plan.EdgeFunction.Args.IsUnknown() {
+	var argsStr string
+	if plan.EdgeFunction.Args.IsUnknown() {
+		argsStr = "{}"
+	} else {
+		if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
+			resp.Diagnostics.AddError("Args",
+				"Is not null")
+			return
+		}
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
 
@@ -353,16 +356,27 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		edgeFirewallID = plan.EdgeFirewallID
 	}
 
-	if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
-		resp.Diagnostics.AddError("Args", "Is not null")
-		return
-	}
-
 	var argsStr string
-	argsStr = "{}"
-	if !plan.EdgeFunction.Args.IsUnknown() {
+	if plan.EdgeFunction.Args.IsUnknown() {
+		argsStr = "{}"
+	} else {
+		if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
+			resp.Diagnostics.AddError("Args",
+				"Is not null")
+			return
+		}
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
+	// if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
+	// 	resp.Diagnostics.AddError("Args", "Is not null")
+	// 	return
+	// }
+
+	// var argsStr string
+	// argsStr = "{}"
+	// if !plan.EdgeFunction.Args.IsUnknown() {
+	// 	argsStr = plan.EdgeFunction.Args.ValueString()
+	// }
 
 	requestJsonArgsStr, err := utils.UnmarshallJsonArgsFirewall(argsStr)
 	if err != nil {
