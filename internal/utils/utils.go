@@ -5,8 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
+	"github.com/aziontech/azionapi-go-sdk/edgefunctionsinstance_edgefirewall"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -66,11 +70,35 @@ func ConvertStringToInterface(jsonArgs string) (interface{}, error) {
 	return data, err
 }
 
+func UnmarshallJsonArgs(jsonArgs string) (edgeapplications.ApplicationCreateInstanceRequestArgs, error) {
+	var data edgeapplications.ApplicationCreateInstanceRequestArgs
+	args := make(map[string]interface{})
+	err := json.Unmarshal([]byte(jsonArgs), &data)
+	if err != nil {
+		fmt.Println("Error:", err)
+		data.MapmapOfStringAny = &args
+		return data, nil
+	}
+	return data, nil
+}
+
+func UnmarshallJsonArgsFirewall(jsonArgs string) (edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceJsonArgs, error) {
+	var data edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceJsonArgs
+	args := make(map[string]interface{})
+	err := json.Unmarshal([]byte(jsonArgs), &data)
+	if err != nil {
+		fmt.Println("Error:", err)
+		data.MapmapOfStringAny = &args
+		return data, nil
+	}
+	return data, nil
+}
+
 func ConvertInterfaceToString(jsonArgs interface{}) (string, error) {
 	jsonArgsStr, err := json.Marshal(jsonArgs)
 	if err != nil {
 		fmt.Println("Error:", err)
-		return "", err
+		return "{}", nil
 	}
 
 	return string(jsonArgsStr), err
@@ -155,4 +183,71 @@ func ExceedsValidRange(resp any, vl any) {
 		v.Diagnostics.AddError(summary, detail)
 		return
 	}
+}
+
+func SleepAfter429(response *http.Response) error {
+	timeToSleep := response.Header.Get("retry-after")
+	num, err := strconv.Atoi(timeToSleep)
+	if err != nil {
+		return err
+	}
+	time.Sleep((time.Duration(num) + 1) * time.Second)
+	return nil
+}
+
+// RetryOn429 retries an API call if the response status is 429.
+func RetryOn429[T any](apiCall func() (T, *http.Response, error), maxRetries int) (T, *http.Response, error) {
+	var result T
+	var response *http.Response
+	var err error
+
+	for i := 0; i < maxRetries; i++ {
+		// Call the API function
+		result, response, err = apiCall()
+
+		// If no error and not a 429, return successfully
+		if err == nil && response.StatusCode != http.StatusTooManyRequests {
+			return result, response, nil
+		}
+
+		// If error is not 429, return immediately
+		if response.StatusCode != http.StatusTooManyRequests {
+			return result, response, err
+		}
+
+		// Sleep before retrying
+		if sleepErr := SleepAfter429(response); sleepErr != nil {
+			return result, response, sleepErr
+		}
+	}
+
+	return result, response, errors.New("max retries exceeded for API request")
+}
+
+// RetryOn429 retries an API call if the response status is 429.
+func RetryOn429Delete(apiCall func() (*http.Response, error), maxRetries int) (*http.Response, error) {
+	var response *http.Response
+	var err error
+
+	for i := 0; i < maxRetries; i++ {
+		// Call the API function
+		response, err = apiCall()
+
+		// If no error and not a 429, return successfully
+		if err == nil && response.StatusCode != http.StatusTooManyRequests {
+			return response, nil
+		}
+
+		// If error is not 429, return immediately
+		if response.StatusCode != http.StatusTooManyRequests {
+			return response, err
+		}
+
+		// Sleep before retrying
+		if sleepErr := SleepAfter429(response); sleepErr != nil {
+			return response, sleepErr
+		}
+	}
+
+	return response, errors.New("max retries exceeded for API request")
 }

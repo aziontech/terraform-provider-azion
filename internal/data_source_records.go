@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 
+	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -219,8 +221,27 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		GetZoneRecords(ctx, zoneID32).Page(Page.ValueInt64()).
 		PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
-		d.errorPrint(resp, httpResp.StatusCode)
-		return
+		if httpResp.StatusCode == 429 {
+			_, httpResp, err = utils.RetryOn429(func() (*idns.GetRecordsResponse, *http.Response, error) {
+				return d.client.idnsApi.RecordsAPI.
+					GetZoneRecords(ctx, zoneID32).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if httpResp != nil {
+				defer httpResp.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
+			}
+		} else {
+			d.errorPrint(resp, httpResp.StatusCode)
+			return
+		}
 	}
 
 	var previous, next string

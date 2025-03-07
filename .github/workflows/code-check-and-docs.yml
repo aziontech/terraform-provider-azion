@@ -42,17 +42,15 @@ jobs:
           fi
 
   gosec:
-    name: Run Gosec Security Scanner
+    name: Run Gosec 
     needs: [ build ]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
-      - uses: securego/gosec@master
-        env:
-          GOROOT: ''
-        with:
-          args: ./...
+      - run: |
+          echo "Checking Security"
+          make sec
 
   vet:
     name: go vet

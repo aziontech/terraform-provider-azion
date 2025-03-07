@@ -3,8 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 
+	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -150,9 +152,27 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.
 		EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
 	if err != nil {
-		usrMsg, errMsg := errPrint(response.StatusCode, err)
-		resp.Diagnostics.AddError(usrMsg, errMsg)
-		return
+		if response.StatusCode == 429 {
+			_, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
+				return d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
+			}
+		} else {
+			usrMsg, errMsg := errPrint(response.StatusCode, err)
+			resp.Diagnostics.AddError(usrMsg, errMsg)
+			return
+		}
 	}
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(functionsResponse.Results.JsonArgs)

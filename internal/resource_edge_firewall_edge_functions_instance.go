@@ -130,28 +130,35 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 		return
 	}
 
-	if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
-		resp.Diagnostics.AddError("Args", "Is not null")
-		return
-	}
-	argsStr := "{}"
-	if !plan.EdgeFunction.Args.IsUnknown() {
+	var argsStr string
+	if plan.EdgeFunction.Args.IsUnknown() {
+		argsStr = "{}"
+	} else {
+		if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
+			resp.Diagnostics.AddError("Args",
+				"Is not null")
+			return
+		}
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
 
-	planJsonArgs, err := utils.ConvertStringToInterface(argsStr)
+	planJsonArgs, err := utils.UnmarshallJsonArgsFirewall(argsStr)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
-			"err",
+			"failed to unmarshal json args from plan",
 		)
+		return
+	}
+
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	edgeFunctionInstanceRequest := edgefunctionsinstance_edgefirewall.CreateEdgeFunctionsInstancesRequest{
 		Name:         plan.EdgeFunction.Name.ValueStringPointer(),
 		EdgeFunction: plan.EdgeFunction.EdgeFunctionId.ValueInt64Pointer(),
-		JsonArgs:     planJsonArgs,
+		JsonArgs:     &planJsonArgs,
 	}
 
 	edgeFunctionInstancesResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
@@ -159,19 +166,40 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 		CreateEdgeFunctionsInstancesRequest(edgeFunctionInstanceRequest).
 		Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			_, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceResponse, *http.Response, error) {
+				return r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
+					EdgeFirewallEdgeFirewallIdFunctionsInstancesPost(ctx, edgeFirewallId.ValueInt64()).
+					CreateEdgeFunctionsInstancesRequest(edgeFunctionInstanceRequest).
+					Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesResponse.Results.GetJsonArgs())
@@ -240,19 +268,39 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			_, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceResponse, *http.Response, error) {
+				return r.client.
+					edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
+					EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdGet(ctx, edgeFirewallID, functionsInstancesId).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesResponse.Results.GetJsonArgs())
@@ -312,30 +360,35 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		edgeFirewallID = plan.EdgeFirewallID
 	}
 
-	if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
-		resp.Diagnostics.AddError("Args", "Is not null")
-		return
-	}
-
 	var argsStr string
-	argsStr = "{}"
-	if !plan.EdgeFunction.Args.IsUnknown() {
+	if plan.EdgeFunction.Args.IsUnknown() {
+		argsStr = "{}"
+	} else {
+		if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
+			resp.Diagnostics.AddError("Args",
+				"Is not null")
+			return
+		}
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
 
-	requestJsonArgsStr, err := utils.ConvertStringToInterface(argsStr)
+	requestJsonArgsStr, err := utils.UnmarshallJsonArgsFirewall(argsStr)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
-			"err",
+			"failed to unmarshal json args from plan",
 		)
+		return
+	}
+
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ApplicationPutInstanceRequest := edgefunctionsinstance_edgefirewall.CreateEdgeFunctionsInstancesRequest{
 		Name:         plan.EdgeFunction.Name.ValueStringPointer(),
 		EdgeFunction: plan.EdgeFunction.EdgeFunctionId.ValueInt64Pointer(),
-		JsonArgs:     requestJsonArgsStr,
+		JsonArgs:     &requestJsonArgsStr,
 	}
 
 	edgeFunctionInstancesUpdateResponse, response, err := r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
@@ -343,19 +396,39 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		Body(ApplicationPutInstanceRequest).
 		Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			_, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceResponse, *http.Response, error) {
+				return r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
+					EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdPut(ctx, edgeFirewallID.ValueInt64(), functionsInstancesId.ValueInt64()).
+					Body(ApplicationPutInstanceRequest).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 
 	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesUpdateResponse.Results.GetJsonArgs())
@@ -417,19 +490,39 @@ func (r *edgeFirewallFunctionsInstanceResource) Delete(ctx context.Context, req 
 		EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdDelete(ctx, state.EdgeFirewallID.ValueInt64(), state.EdgeFunction.ID.ValueInt64()).
 		Execute() //nolint
 	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
+		if response.StatusCode == 429 {
+			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
+				return r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
+					EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdDelete(ctx, state.EdgeFirewallID.ValueInt64(), state.EdgeFunction.ID.ValueInt64()).
+					Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if response != nil {
+				defer response.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
+			}
+		} else {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"err",
+				)
+			}
+			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
+				err.Error(),
+				bodyString,
 			)
+			return
 		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
-		return
 	}
 }
 

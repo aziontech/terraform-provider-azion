@@ -180,11 +180,29 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	createRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
-		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
-		bodyBytes, _ := io.ReadAll(httpResponse.Body)
-		resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
+		if httpResponse.StatusCode == 429 {
+			_, httpResponse, err = utils.RetryOn429(func() (*idns.PostOrPutRecordResponse, *http.Response, error) {
+				return r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute() //nolint
+			}, 5) // Maximum 5 retries
 
-		return
+			if httpResponse != nil {
+				defer httpResponse.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
+			}
+		} else {
+			usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
+			bodyBytes, _ := io.ReadAll(httpResponse.Body)
+			resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
+
+			return
+		}
 	}
 
 	plan.SchemaVersion = types.Int64Value(int64(*createRecord.SchemaVersion))
@@ -271,9 +289,27 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
-		resp.Diagnostics.AddError(usrMsg, errMsg)
-		return
+		if httpResponse.StatusCode == 429 {
+			_, httpResponse, err = utils.RetryOn429(func() (*idns.GetRecordsResponse, *http.Response, error) {
+				return r.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, idZone).PageSize(largeRecordsPageSize).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if httpResponse != nil {
+				defer httpResponse.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
+			}
+		} else {
+			usrMsg, errMsg := errorPrint(httpResponse.StatusCode, err)
+			resp.Diagnostics.AddError(usrMsg, errMsg)
+			return
+		}
 	}
 
 	state.SchemaVersion = types.Int64Value(int64(*recordsResponse.SchemaVersion))
@@ -375,10 +411,28 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		PutZoneRecord(ctx, planID32, recordID32).
 		RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
-		usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
-		bodyBytes, _ := io.ReadAll(httpResponse.Body)
-		resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
-		return
+		if httpResponse.StatusCode == 429 {
+			_, httpResponse, err = utils.RetryOn429(func() (*idns.PostOrPutRecordResponse, *http.Response, error) {
+				return r.client.idnsApi.RecordsAPI.PutZoneRecord(ctx, planID32, recordID32).RecordPostOrPut(record).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if httpResponse != nil {
+				defer httpResponse.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
+			}
+		} else {
+			usrMsg, _ := errorPrint(httpResponse.StatusCode, err)
+			bodyBytes, _ := io.ReadAll(httpResponse.Body)
+			resp.Diagnostics.AddError(usrMsg, string(bodyBytes))
+			return
+		}
 	}
 
 	plan.Record.Id = types.Int64Value(int64(idPlan))
@@ -440,14 +494,31 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	_, _, err = r.client.idnsApi.RecordsAPI.
-		DeleteZoneRecord(ctx, stateID32, recordID32).Execute() //nolint
+	_, httpResponse, err := r.client.idnsApi.RecordsAPI.DeleteZoneRecord(ctx, stateID32, recordID32).Execute() //nolint
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Reading Azion API",
-			"Could not read azion API "+err.Error(),
-		)
-		return
+		if httpResponse.StatusCode == 429 {
+			_, httpResponse, err = utils.RetryOn429(func() (string, *http.Response, error) {
+				return r.client.idnsApi.RecordsAPI.DeleteZoneRecord(ctx, stateID32, recordID32).Execute() //nolint
+			}, 5) // Maximum 5 retries
+
+			if httpResponse != nil {
+				defer httpResponse.Body.Close() // <-- Close the body here
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed after too many retries",
+				)
+				return
+			}
+		} else {
+			resp.Diagnostics.AddError(
+				"Error Reading Azion API",
+				"Could not read azion API "+err.Error(),
+			)
+			return
+		}
 	}
 }
 
