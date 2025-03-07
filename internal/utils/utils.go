@@ -70,8 +70,8 @@ func ConvertStringToInterface(jsonArgs string) (interface{}, error) {
 	return data, err
 }
 
-func UnmarshallJsonArgs(jsonArgs string) (edgeapplications.ApplicationInstancesResultsArgs, error) {
-	var data edgeapplications.ApplicationInstancesResultsArgs
+func UnmarshallJsonArgs(jsonArgs string) (edgeapplications.ApplicationCreateInstanceRequestArgs, error) {
+	var data edgeapplications.ApplicationCreateInstanceRequestArgs
 	args := make(map[string]interface{})
 	err := json.Unmarshal([]byte(jsonArgs), &data)
 	if err != nil {
@@ -79,7 +79,7 @@ func UnmarshallJsonArgs(jsonArgs string) (edgeapplications.ApplicationInstancesR
 		data.MapmapOfStringAny = &args
 		return data, nil
 	}
-	return data, err
+	return data, nil
 }
 
 func UnmarshallJsonArgsFirewall(jsonArgs string) (edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceJsonArgs, error) {
@@ -91,14 +91,14 @@ func UnmarshallJsonArgsFirewall(jsonArgs string) (edgefunctionsinstance_edgefire
 		data.MapmapOfStringAny = &args
 		return data, nil
 	}
-	return data, err
+	return data, nil
 }
 
 func ConvertInterfaceToString(jsonArgs interface{}) (string, error) {
 	jsonArgsStr, err := json.Marshal(jsonArgs)
 	if err != nil {
 		fmt.Println("Error:", err)
-		return "", err
+		return "{}", nil
 	}
 
 	return string(jsonArgsStr), err

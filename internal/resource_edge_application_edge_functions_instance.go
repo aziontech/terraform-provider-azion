@@ -250,8 +250,7 @@ func (r *edgeFunctionsInstanceResource) Read(ctx context.Context, req resource.R
 		}
 		if response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstancesGetOneResponse, *http.Response, error) {
-				return r.client.edgeApplicationsApi.
-					EdgeApplicationsEdgeFunctionsInstancesAPI.
+				return r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.
 					EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdGet(ctx, ApplicationID, functionsInstancesId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -343,7 +342,8 @@ func (r *edgeFunctionsInstanceResource) Update(ctx context.Context, req resource
 		argsStr = "{}"
 	} else {
 		if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
-			resp.Diagnostics.AddError("Args",
+			resp.Diagnostics.AddError(
+				"Args",
 				"Is not null")
 			return
 		}

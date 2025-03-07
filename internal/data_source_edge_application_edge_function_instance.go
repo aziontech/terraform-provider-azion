@@ -134,7 +134,7 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Read(ctx context.Context
 			if errReadAll != nil {
 				resp.Diagnostics.AddError(
 					errReadAll.Error(),
-					"err",
+					"error reading response from api",
 				)
 			}
 			bodyString := string(bodyBytes)
@@ -150,7 +150,7 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Read(ctx context.Context
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
-			"err",
+			"error reading args from response",
 		)
 	}
 	edgeApplicationsEdgeFunctionsInstanceState := EdgeFunctionInstanceDataSourceModel{
