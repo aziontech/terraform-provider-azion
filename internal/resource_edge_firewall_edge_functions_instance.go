@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
@@ -146,10 +147,28 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
-			"err",
+			"failed to unmarshal json args from plan",
 		)
 		return
 	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Convert to JSON
+	jsonBytes, err := json.MarshalIndent(planJsonArgs, "", "  ")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			err.Error(),
+			"failed to unmarshal json args from plan",
+		)
+	}
+
+	resp.Diagnostics.AddWarning(
+		"Let's view this json args, ay?",
+		string(jsonBytes),
+	)
 
 	edgeFunctionInstanceRequest := edgefunctionsinstance_edgefirewall.CreateEdgeFunctionsInstancesRequest{
 		Name:         plan.EdgeFunction.Name.ValueStringPointer(),
@@ -382,10 +401,28 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
-			"err",
+			"failed to unmarshal json args from plan",
 		)
 		return
 	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Convert to JSON
+	jsonBytes, err := json.MarshalIndent(requestJsonArgsStr, "", "  ")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			err.Error(),
+			"failed to unmarshal json args from plan",
+		)
+	}
+
+	resp.Diagnostics.AddWarning(
+		"Let's view this json args, ay?",
+		string(jsonBytes),
+	)
 
 	ApplicationPutInstanceRequest := edgefunctionsinstance_edgefirewall.CreateEdgeFunctionsInstancesRequest{
 		Name:         plan.EdgeFunction.Name.ValueStringPointer(),
