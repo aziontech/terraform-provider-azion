@@ -371,16 +371,6 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		}
 		argsStr = plan.EdgeFunction.Args.ValueString()
 	}
-	// if plan.EdgeFunction.Args.ValueString() == "" || plan.EdgeFunction.Args.IsNull() {
-	// 	resp.Diagnostics.AddError("Args", "Is not null")
-	// 	return
-	// }
-
-	// var argsStr string
-	// argsStr = "{}"
-	// if !plan.EdgeFunction.Args.IsUnknown() {
-	// 	argsStr = plan.EdgeFunction.Args.ValueString()
-	// }
 
 	requestJsonArgsStr, err := utils.UnmarshallJsonArgsFirewall(argsStr)
 	if err != nil {
