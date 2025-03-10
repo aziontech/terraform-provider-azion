@@ -137,7 +137,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZone(ctx, int32(zoneId)).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*idns.GetZoneResponse, *http.Response, error) {
+			zoneResponse, response, err = utils.RetryOn429(func() (*idns.GetZoneResponse, *http.Response, error) {
 				return d.client.idnsApi.ZonesAPI.GetZone(ctx, int32(zoneId)).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

@@ -184,7 +184,7 @@ func (o *WafRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	wafResponse, response, err := o.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*waf.WAFSingle200, *http.Response, error) {
+			wafResponse, response, err = utils.RetryOn429(func() (*waf.WAFSingle200, *http.Response, error) {
 				return o.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

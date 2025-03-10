@@ -332,7 +332,7 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCacheCreateResponse, *http.Response, error) {
+			createdCacheSetting, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCacheCreateResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -449,7 +449,7 @@ func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req res
 			return
 		}
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCacheGetOneResponse, *http.Response, error) {
+			cacheSettingResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCacheGetOneResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.
 					EdgeApplicationsCacheSettingsAPI.
 					EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(ctx, EdgeApplicationId, CacheSettingId).Execute() //nolint
@@ -681,7 +681,7 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 	createdCacheSetting, response, err := r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCachePutResponse, *http.Response, error) {
+			createdCacheSetting, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCachePutResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

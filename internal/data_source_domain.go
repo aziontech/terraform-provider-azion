@@ -122,7 +122,7 @@ func (d *DomainDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	domainResponse, response, err := d.client.domainsApi.DomainsAPI.GetDomain(ctx, getDomainId.ValueString()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
+			domainResponse, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
 				return d.client.domainsApi.DomainsAPI.GetDomain(ctx, getDomainId.ValueString()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

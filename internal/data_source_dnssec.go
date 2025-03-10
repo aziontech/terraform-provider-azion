@@ -165,7 +165,7 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	getDnsSec, response, err := d.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, zoneID32).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
+			getDnsSec, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
 				return d.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, zoneID32).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

@@ -261,7 +261,7 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineResponse, *http.Response, error) {
+			rulesEngineResponse, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

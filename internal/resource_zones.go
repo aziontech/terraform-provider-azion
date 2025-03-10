@@ -316,7 +316,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*idns.PostOrPutZoneResponse, *http.Response, error) {
+			updateZone, response, err = utils.RetryOn429(func() (*idns.PostOrPutZoneResponse, *http.Response, error) {
 				return r.client.idnsApi.ZonesAPI.PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

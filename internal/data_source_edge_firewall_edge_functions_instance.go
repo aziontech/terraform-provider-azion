@@ -166,7 +166,7 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, 
 		Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.ListEdgeFunctionsInstancesResponse, *http.Response, error) {
+			EdgeFirewallFunctionsInstanceResponse, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.ListEdgeFunctionsInstancesResponse, *http.Response, error) {
 				return e.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 					EdgeFirewallEdgeFirewallIdFunctionsInstancesGet(ctx, edgeFirewallID.ValueInt64()).Page(page.ValueInt64()).
 					PageSize(pageSize.ValueInt64()).Execute() //nolint

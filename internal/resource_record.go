@@ -181,7 +181,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	createRecord, httpResponse, err := r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
 		if httpResponse.StatusCode == 429 {
-			_, httpResponse, err = utils.RetryOn429(func() (*idns.PostOrPutRecordResponse, *http.Response, error) {
+			createRecord, httpResponse, err = utils.RetryOn429(func() (*idns.PostOrPutRecordResponse, *http.Response, error) {
 				return r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -290,7 +290,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 			return
 		}
 		if httpResponse.StatusCode == 429 {
-			_, httpResponse, err = utils.RetryOn429(func() (*idns.GetRecordsResponse, *http.Response, error) {
+			recordsResponse, httpResponse, err = utils.RetryOn429(func() (*idns.GetRecordsResponse, *http.Response, error) {
 				return r.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, idZone).PageSize(largeRecordsPageSize).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -412,7 +412,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		RecordPostOrPut(record).Execute() //nolint
 	if err != nil {
 		if httpResponse.StatusCode == 429 {
-			_, httpResponse, err = utils.RetryOn429(func() (*idns.PostOrPutRecordResponse, *http.Response, error) {
+			updateRecord, httpResponse, err = utils.RetryOn429(func() (*idns.PostOrPutRecordResponse, *http.Response, error) {
 				return r.client.idnsApi.RecordsAPI.PutZoneRecord(ctx, planID32, recordID32).RecordPostOrPut(record).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

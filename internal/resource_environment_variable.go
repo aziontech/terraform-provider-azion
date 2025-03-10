@@ -135,7 +135,7 @@ func (r *environmentVariableResource) Create(ctx context.Context, req resource.C
 	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesCreate(ctx).VariableCreate(environmentVariableRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*variables.VariableGet, *http.Response, error) {
+			environmentVariableResponse, response, err = utils.RetryOn429(func() (*variables.VariableGet, *http.Response, error) {
 				return r.client.variablesApi.VariablesAPI.ApiVariablesCreate(ctx).VariableCreate(environmentVariableRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -221,7 +221,7 @@ func (r *environmentVariableResource) Read(ctx context.Context, req resource.Rea
 			return
 		}
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*variables.Variable, *http.Response, error) {
+			getEnvironmentVariable, response, err = utils.RetryOn429(func() (*variables.Variable, *http.Response, error) {
 				return r.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -331,7 +331,7 @@ func (r *environmentVariableResource) Update(ctx context.Context, req resource.U
 	environmentVariableResponse, response, err := r.client.variablesApi.VariablesAPI.ApiVariablesUpdate(ctx, uuid).VariableCreate(environmentVariableRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*variables.VariableGet, *http.Response, error) {
+			environmentVariableResponse, response, err = utils.RetryOn429(func() (*variables.VariableGet, *http.Response, error) {
 				return r.client.variablesApi.VariablesAPI.ApiVariablesUpdate(ctx, uuid).VariableCreate(environmentVariableRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

@@ -101,7 +101,7 @@ func (n *VariablesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	variablesResponse, response, err := n.client.variablesApi.VariablesAPI.ApiVariablesList(ctx).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() ([]variables.Variable, *http.Response, error) {
+			variablesResponse, response, err = utils.RetryOn429(func() ([]variables.Variable, *http.Response, error) {
 				return n.client.variablesApi.VariablesAPI.ApiVariablesList(ctx).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

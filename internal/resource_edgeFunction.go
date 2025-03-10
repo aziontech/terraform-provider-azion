@@ -174,7 +174,7 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 	createEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsPost(ctx).CreateEdgeFunctionRequest(edgeFunction).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
+			createEdgeFunction, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
 				return r.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsPost(ctx).CreateEdgeFunctionRequest(edgeFunction).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -275,7 +275,7 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 			return
 		}
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
+			getEdgeFunction, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
 				return r.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, edgeFunctionId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -396,7 +396,7 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 	updateEdgeFunction, response, err := r.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdPut(ctx, edgeFunctionId).PutEdgeFunctionRequest(updateEdgeFunctionRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
+			updateEdgeFunction, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
 				return r.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdPut(ctx, edgeFunctionId).PutEdgeFunctionRequest(updateEdgeFunctionRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

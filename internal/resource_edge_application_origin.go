@@ -289,7 +289,7 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
+			originResponse, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -400,7 +400,7 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 			return
 		}
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
+			originResponse, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.
 					EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, ApplicationID, OriginKey).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -561,7 +561,7 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 	originResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
+			originResponse, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

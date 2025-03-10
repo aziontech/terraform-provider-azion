@@ -167,7 +167,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 		Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceResponse, *http.Response, error) {
+			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceResponse, *http.Response, error) {
 				return r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 					EdgeFirewallEdgeFirewallIdFunctionsInstancesPost(ctx, edgeFirewallId.ValueInt64()).
 					CreateEdgeFunctionsInstancesRequest(edgeFunctionInstanceRequest).
@@ -269,7 +269,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 			return
 		}
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceResponse, *http.Response, error) {
+			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceResponse, *http.Response, error) {
 				return r.client.
 					edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 					EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdGet(ctx, edgeFirewallID, functionsInstancesId).Execute() //nolint
@@ -397,7 +397,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceResponse, *http.Response, error) {
+			edgeFunctionInstancesUpdateResponse, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.EdgeFunctionsInstanceResponse, *http.Response, error) {
 				return r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 					EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdPut(ctx, edgeFirewallID.ValueInt64(), functionsInstancesId.ValueInt64()).
 					Body(ApplicationPutInstanceRequest).Execute() //nolint

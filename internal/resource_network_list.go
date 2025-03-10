@@ -144,7 +144,7 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 	createNetworkListResponse, response, err := r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*networklist.NetworkListsResponse, *http.Response, error) {
+			createNetworkListResponse, response, err = utils.RetryOn429(func() (*networklist.NetworkListsResponse, *http.Response, error) {
 				return r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -223,7 +223,7 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 			return
 		}
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*networklist.NetworkListUuidResponse, *http.Response, error) {
+			getNetworkList, response, err = utils.RetryOn429(func() (*networklist.NetworkListUuidResponse, *http.Response, error) {
 				return r.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, networkListId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -339,7 +339,7 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 	updateNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*networklist.NetworkListsResponse, *http.Response, error) {
+			updateNetworkList, response, err = utils.RetryOn429(func() (*networklist.NetworkListsResponse, *http.Response, error) {
 				return r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
