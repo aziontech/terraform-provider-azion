@@ -151,7 +151,7 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZones(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*idns.GetZonesResponse, *http.Response, error) {
+			zoneResponse, response, err = utils.RetryOn429(func() (*idns.GetZonesResponse, *http.Response, error) {
 				return d.client.idnsApi.ZonesAPI.GetZones(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

@@ -153,7 +153,7 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 	createDomain, response, err := r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
+			createDomain, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
 				return r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -239,7 +239,7 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 			return
 		}
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
+			getDomain, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
 				return r.client.domainsApi.DomainsAPI.GetDomain(ctx, domainId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -331,7 +331,7 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	updateDomain, response, err := r.client.domainsApi.DomainsAPI.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
+			updateDomain, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
 				return r.client.domainsApi.DomainsAPI.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

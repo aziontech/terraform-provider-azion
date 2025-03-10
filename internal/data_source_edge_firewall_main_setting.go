@@ -128,7 +128,7 @@ func (e *EdgeFirewallDataSource) Read(ctx context.Context, req datasource.ReadRe
 	edgeFirewallResponse, response, err := e.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, getEdgeFirewallID.String()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgefirewall.EdgeFirewallResponse, *http.Response, error) {
+			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*edgefirewall.EdgeFirewallResponse, *http.Response, error) {
 				return e.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, getEdgeFirewallID.String()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

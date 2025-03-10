@@ -167,7 +167,7 @@ func (r *digitalCertificateResource) Create(ctx context.Context, req resource.Cr
 	certificateResponse, response, err := r.client.digitalCertificatesApi.CreateDigitalCertificateApi.CreateCertificate(ctx).CreateCertificateRequest(certificateRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*digital_certificates.DC200, *http.Response, error) {
+			certificateResponse, response, err = utils.RetryOn429(func() (*digital_certificates.DC200, *http.Response, error) {
 				return r.client.digitalCertificatesApi.CreateDigitalCertificateApi.CreateCertificate(ctx).CreateCertificateRequest(certificateRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -261,7 +261,7 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 			return
 		}
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*digital_certificates.DC200, *http.Response, error) {
+			certificateResponse, response, err = utils.RetryOn429(func() (*digital_certificates.DC200, *http.Response, error) {
 				return r.client.digitalCertificatesApi.RetrieveDigitalCertificateByIDApi.GetCertificate(ctx, CertificateID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -395,7 +395,7 @@ func (r *digitalCertificateResource) Update(ctx context.Context, req resource.Up
 		UpdateDigitalCertificateRequest(certificateRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*digital_certificates.DC200, *http.Response, error) {
+			certificateResponse, response, err = utils.RetryOn429(func() (*digital_certificates.DC200, *http.Response, error) {
 				return r.client.digitalCertificatesApi.UpdateDigitalCertificateApi.UpdateDigitalCertificate(ctx, certificateID32).
 					UpdateDigitalCertificateRequest(certificateRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries

@@ -294,7 +294,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		rulesResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), "request").OrderBy("order").PageSize(2).Page(1).Sort("asc").Execute() //nolint
 		if err != nil {
 			if response.StatusCode == 429 {
-				_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineResponse, *http.Response, error) {
+				rulesResponse, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineResponse, *http.Response, error) {
 					return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), "request").OrderBy("order").PageSize(2).Page(1).Sort("asc").Execute() //nolint
 				}, 5) // Maximum 5 retries
 
@@ -499,7 +499,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 			return
 		}
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
+			ruleEngineResponse, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.
 					EdgeApplicationsRulesEngineAPI.
 					EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(ctx, edgeApplicationID, phase, ruleID).Execute() //nolint
@@ -703,7 +703,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
+			rulesEngineResponse, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

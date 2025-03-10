@@ -153,7 +153,7 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
+			functionsResponse, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
 				return d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

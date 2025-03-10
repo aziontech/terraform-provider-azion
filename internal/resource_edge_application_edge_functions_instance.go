@@ -152,7 +152,7 @@ func (r *edgeFunctionsInstanceResource) Create(ctx context.Context, req resource
 	edgeFunctionInstancesResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCreateInstanceRequest(edgeFunctionInstanceRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstanceResults, *http.Response, error) {
+			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstanceResults, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCreateInstanceRequest(edgeFunctionInstanceRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -249,7 +249,7 @@ func (r *edgeFunctionsInstanceResource) Read(ctx context.Context, req resource.R
 			return
 		}
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstancesGetOneResponse, *http.Response, error) {
+			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstancesGetOneResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.
 					EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdGet(ctx, ApplicationID, functionsInstancesId).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -367,7 +367,7 @@ func (r *edgeFunctionsInstanceResource) Update(ctx context.Context, req resource
 	edgeFunctionInstancesUpdateResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdPut(ctx, edgeApplicationID.String(), functionsInstancesId.String()).ApplicationPutInstanceRequest(ApplicationPutInstanceRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstanceResults, *http.Response, error) {
+			edgeFunctionInstancesUpdateResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstanceResults, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdPut(ctx, edgeApplicationID.String(), functionsInstancesId.String()).ApplicationPutInstanceRequest(ApplicationPutInstanceRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

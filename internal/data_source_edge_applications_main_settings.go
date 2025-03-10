@@ -186,7 +186,7 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 	edgeAppResponse, response, err := e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapplications.GetApplicationsResponse, *http.Response, error) {
+			edgeAppResponse, response, err = utils.RetryOn429(func() (*edgeapplications.GetApplicationsResponse, *http.Response, error) {
 				return e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
