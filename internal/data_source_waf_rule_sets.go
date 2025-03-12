@@ -239,7 +239,7 @@ func (o *WafDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		if response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*waf.WAFList200, *http.Response, error) {
 				return o.client.wafApi.WAFAPI.ListAllWAFRulesets(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

@@ -154,7 +154,7 @@ func (r *edgeFunctionsInstanceResource) Create(ctx context.Context, req resource
 		if response.StatusCode == 429 {
 			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstanceResults, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCreateInstanceRequest(edgeFunctionInstanceRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -252,7 +252,7 @@ func (r *edgeFunctionsInstanceResource) Read(ctx context.Context, req resource.R
 			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstancesGetOneResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.
 					EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdGet(ctx, ApplicationID, functionsInstancesId).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -369,7 +369,7 @@ func (r *edgeFunctionsInstanceResource) Update(ctx context.Context, req resource
 		if response.StatusCode == 429 {
 			edgeFunctionInstancesUpdateResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstanceResults, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdPut(ctx, edgeApplicationID.String(), functionsInstancesId.String()).ApplicationPutInstanceRequest(ApplicationPutInstanceRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -457,7 +457,7 @@ func (r *edgeFunctionsInstanceResource) Delete(ctx context.Context, req resource
 		if response.StatusCode == 429 {
 			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdDelete(ctx, state.ApplicationID.String(), state.EdgeFunction.ID.String()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

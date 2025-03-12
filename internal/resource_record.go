@@ -183,7 +183,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		if httpResponse.StatusCode == 429 {
 			createRecord, httpResponse, err = utils.RetryOn429(func() (*idns.PostOrPutRecordResponse, *http.Response, error) {
 				return r.client.idnsApi.RecordsAPI.PostZoneRecord(ctx, int32(zoneId)).RecordPostOrPut(record).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if httpResponse != nil {
 				defer httpResponse.Body.Close() // <-- Close the body here
@@ -292,7 +292,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 		if httpResponse.StatusCode == 429 {
 			recordsResponse, httpResponse, err = utils.RetryOn429(func() (*idns.GetRecordsResponse, *http.Response, error) {
 				return r.client.idnsApi.RecordsAPI.GetZoneRecords(ctx, idZone).PageSize(largeRecordsPageSize).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if httpResponse != nil {
 				defer httpResponse.Body.Close() // <-- Close the body here
@@ -414,7 +414,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		if httpResponse.StatusCode == 429 {
 			updateRecord, httpResponse, err = utils.RetryOn429(func() (*idns.PostOrPutRecordResponse, *http.Response, error) {
 				return r.client.idnsApi.RecordsAPI.PutZoneRecord(ctx, planID32, recordID32).RecordPostOrPut(record).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if httpResponse != nil {
 				defer httpResponse.Body.Close() // <-- Close the body here
@@ -499,7 +499,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if httpResponse.StatusCode == 429 {
 			_, httpResponse, err = utils.RetryOn429(func() (string, *http.Response, error) {
 				return r.client.idnsApi.RecordsAPI.DeleteZoneRecord(ctx, stateID32, recordID32).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if httpResponse != nil {
 				defer httpResponse.Body.Close() // <-- Close the body here

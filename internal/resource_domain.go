@@ -155,7 +155,7 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		if response.StatusCode == 429 {
 			createDomain, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
 				return r.client.domainsApi.DomainsAPI.CreateDomain(ctx).CreateDomainRequest(domain).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -241,7 +241,7 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 		if response.StatusCode == 429 {
 			getDomain, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
 				return r.client.domainsApi.DomainsAPI.GetDomain(ctx, domainId).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -333,7 +333,7 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 		if response.StatusCode == 429 {
 			updateDomain, response, err = utils.RetryOn429(func() (*domains.DomainResponseWithResult, *http.Response, error) {
 				return r.client.domainsApi.DomainsAPI.UpdateDomain(ctx, domainId).UpdateDomainRequest(updateDomainRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -406,7 +406,7 @@ func (r *domainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if response.StatusCode == 429 {
 			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
 				return r.client.domainsApi.DomainsAPI.DelDomain(ctx, domainId).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

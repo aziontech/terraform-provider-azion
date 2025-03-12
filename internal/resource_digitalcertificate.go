@@ -169,7 +169,7 @@ func (r *digitalCertificateResource) Create(ctx context.Context, req resource.Cr
 		if response.StatusCode == 429 {
 			certificateResponse, response, err = utils.RetryOn429(func() (*digital_certificates.DC200, *http.Response, error) {
 				return r.client.digitalCertificatesApi.CreateDigitalCertificateApi.CreateCertificate(ctx).CreateCertificateRequest(certificateRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -263,7 +263,7 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 		if response.StatusCode == 429 {
 			certificateResponse, response, err = utils.RetryOn429(func() (*digital_certificates.DC200, *http.Response, error) {
 				return r.client.digitalCertificatesApi.RetrieveDigitalCertificateByIDApi.GetCertificate(ctx, CertificateID).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -398,7 +398,7 @@ func (r *digitalCertificateResource) Update(ctx context.Context, req resource.Up
 			certificateResponse, response, err = utils.RetryOn429(func() (*digital_certificates.DC200, *http.Response, error) {
 				return r.client.digitalCertificatesApi.UpdateDigitalCertificateApi.UpdateDigitalCertificate(ctx, certificateID32).
 					UpdateDigitalCertificateRequest(certificateRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -494,7 +494,7 @@ func (r *digitalCertificateResource) Delete(ctx context.Context, req resource.De
 		if response.StatusCode == 429 {
 			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
 				return r.client.digitalCertificatesApi.DeleteDigitalCertificateApi.RemoveDigitalCertificates(ctx, certificateID32).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

@@ -225,7 +225,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			recordsResponse, httpResp, err = utils.RetryOn429(func() (*idns.GetRecordsResponse, *http.Response, error) {
 				return d.client.idnsApi.RecordsAPI.
 					GetZoneRecords(ctx, zoneID32).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if httpResp != nil {
 				defer httpResp.Body.Close() // <-- Close the body here

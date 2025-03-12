@@ -334,7 +334,7 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 		if response.StatusCode == 429 {
 			createdCacheSetting, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCacheCreateResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsPost(ctx, edgeApplicationID.ValueInt64()).ApplicationCacheCreateRequest(cacheSettings).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -453,7 +453,7 @@ func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req res
 				return r.client.edgeApplicationsApi.
 					EdgeApplicationsCacheSettingsAPI.
 					EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdGet(ctx, EdgeApplicationId, CacheSettingId).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -683,7 +683,7 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 		if response.StatusCode == 429 {
 			createdCacheSetting, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCachePutResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdPut(ctx, edgeApplicationID.ValueInt64(), CacheSettingId.ValueInt64()).ApplicationCachePutRequest(cacheSettings).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -791,7 +791,7 @@ func (r *edgeApplicationCacheSettingsResource) Delete(ctx context.Context, req r
 		if response.StatusCode == 429 {
 			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsCacheSettingsIdDelete(ctx, edgeApplicationID, state.CacheSettings.CacheSettingID.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
