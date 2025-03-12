@@ -150,7 +150,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		if response.StatusCode == 429 {
 			createZone, response, err = utils.RetryOn429(func() (*idns.PostOrPutZoneResponse, *http.Response, error) {
 				return r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -236,7 +236,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		if response.StatusCode == 429 {
 			order, response, err = utils.RetryOn429(func() (*idns.GetZoneResponse, *http.Response, error) {
 				return r.client.idnsApi.ZonesAPI.GetZone(ctx, int32(idPlan)).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -318,7 +318,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		if response.StatusCode == 429 {
 			updateZone, response, err = utils.RetryOn429(func() (*idns.PostOrPutZoneResponse, *http.Response, error) {
 				return r.client.idnsApi.ZonesAPI.PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -396,7 +396,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		if response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (string, *http.Response, error) {
 				return r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneID).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
