@@ -55,11 +55,11 @@ Required:
 Optional:
 
 - `digital_certificate_id` (Number) Digital Certificate associated ID.
+- `environment` (String) Accepted values: production | preview
 
 Read-Only:
 
 - `domain_name` (String) Domain name attributed by Azion to this configuration.
-- `environment` (String)
 - `id` (Number) Identification of this entry.
 
 ## Import
