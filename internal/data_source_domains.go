@@ -137,7 +137,8 @@ func (d *DomainsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							Description: "Domain name attributed by Azion to this configuration.",
 						},
 						"environment": schema.StringAttribute{
-							Computed: true,
+							Optional:    true,
+							Description: "Accepted values: production | preview",
 						},
 					},
 				},

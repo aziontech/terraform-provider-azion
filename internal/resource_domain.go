@@ -108,7 +108,8 @@ func (r *domainResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Description: "Domain name attributed by Azion to this configuration.",
 					},
 					"environment": schema.StringAttribute{
-						Computed: true,
+						Optional:    true,
+						Description: "Accepted values: production | preview",
 					},
 				},
 			},
@@ -139,6 +140,11 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		IsActive:          &isActive,
 		CnameAccessOnly:   &cnameAccessOnly,
 		Name:              plan.Domain.Name.ValueString(),
+	}
+
+	environmentValue := plan.Domain.Environment.ValueString()
+	if environmentValue != "" {
+		domain.Environment = &environmentValue
 	}
 
 	requestCnames := plan.Domain.Cnames.ElementsAs(ctx, &domain.Cnames, false)
@@ -200,9 +206,10 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 		Cnames:            utils.SliceStringTypeToSetOrNull(slice),
 	}
 
-	if createDomain.Results.Environment != nil {
+	if environmentValue != "" {
 		plan.Domain.Environment = types.StringValue(*createDomain.Results.Environment)
 	}
+
 	if createDomain.Results.DigitalCertificateId != nil {
 		plan.Domain.DigitalCertificateId = types.Int64Value(*createDomain.Results.DigitalCertificateId)
 	}
@@ -378,9 +385,11 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Cnames:            utils.SliceStringTypeToSetOrNull(slice),
 	}
 
-	if updateDomain.Results.Environment != nil {
+	environmentValue := plan.Domain.Environment.ValueString()
+	if environmentValue != "" {
 		plan.Domain.Environment = types.StringValue(*updateDomain.Results.Environment)
 	}
+
 	if updateDomain.Results.DigitalCertificateId != nil {
 		plan.Domain.DigitalCertificateId = types.Int64Value(*updateDomain.Results.DigitalCertificateId)
 	}
