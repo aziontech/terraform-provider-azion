@@ -291,7 +291,7 @@ func (r *originResource) Create(ctx context.Context, req resource.CreateRequest,
 		if response.StatusCode == 429 {
 			originResponse, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsPost(ctx, edgeApplicationID.ValueInt64()).CreateOriginsRequest(originRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -403,7 +403,7 @@ func (r *originResource) Read(ctx context.Context, req resource.ReadRequest, res
 			originResponse, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.
 					EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyGet(ctx, ApplicationID, OriginKey).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -563,7 +563,7 @@ func (r *originResource) Update(ctx context.Context, req resource.UpdateRequest,
 		if response.StatusCode == 429 {
 			originResponse, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsIdResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyPut(ctx, edgeApplicationID.ValueInt64(), originKey.ValueString()).UpdateOriginsRequest(originRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -662,7 +662,7 @@ func (r *originResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if response.StatusCode == 429 {
 			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsOriginKeyDelete(ctx, edgeApplicationID, state.Origin.OriginKey.ValueString()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

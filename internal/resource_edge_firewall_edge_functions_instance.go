@@ -172,7 +172,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 					EdgeFirewallEdgeFirewallIdFunctionsInstancesPost(ctx, edgeFirewallId.ValueInt64()).
 					CreateEdgeFunctionsInstancesRequest(edgeFunctionInstanceRequest).
 					Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -273,7 +273,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 				return r.client.
 					edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 					EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdGet(ctx, edgeFirewallID, functionsInstancesId).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -401,7 +401,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 				return r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 					EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdPut(ctx, edgeFirewallID.ValueInt64(), functionsInstancesId.ValueInt64()).
 					Body(ApplicationPutInstanceRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -495,7 +495,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Delete(ctx context.Context, req 
 				return r.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
 					EdgeFirewallEdgeFirewallIdFunctionsInstancesEdgeFunctionInstanceIdDelete(ctx, state.EdgeFirewallID.ValueInt64(), state.EdgeFunction.ID.ValueInt64()).
 					Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

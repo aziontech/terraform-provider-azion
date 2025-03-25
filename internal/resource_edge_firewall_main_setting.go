@@ -164,7 +164,7 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 		if response.StatusCode == 429 {
 			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*edgefirewall.EdgeFirewallResponse, *http.Response, error) {
 				return r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallPost(ctx).CreateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -246,7 +246,7 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 		if response.StatusCode == 429 {
 			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*edgefirewall.EdgeFirewallResponse, *http.Response, error) {
 				return r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, edgeFirewallID).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -344,7 +344,7 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 		if response.StatusCode == 429 {
 			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*edgefirewall.EdgeFirewallResponse, *http.Response, error) {
 				return r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidPut(ctx, edgeFirewallID).UpdateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -422,7 +422,7 @@ func (r *edgeFirewallResource) Delete(ctx context.Context, req resource.DeleteRe
 		if response.StatusCode == 429 {
 			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
 				return r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidDelete(ctx, edgeFirewallID).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

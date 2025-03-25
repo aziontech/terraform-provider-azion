@@ -174,7 +174,7 @@ func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadR
 		if response.StatusCode == 429 {
 			EdgeFirewallsResponse, response, err = utils.RetryOn429(func() (*edgefirewall.ListEdgeFirewallResponse, *http.Response, error) {
 				return e.client.edgeFirewallApi.DefaultAPI.EdgeFirewallGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

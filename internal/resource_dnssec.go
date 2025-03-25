@@ -157,7 +157,7 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		if response.StatusCode == 429 {
 			enableDnsSec, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
 				return r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -247,7 +247,7 @@ func (r *dnssecResource) Read(
 		if response.StatusCode == 429 {
 			getDnsSec, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
 				return r.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, zoneID32).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -327,7 +327,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		if response.StatusCode == 429 {
 			enableDnsSec, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
 				return r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -409,7 +409,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
 				return r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
