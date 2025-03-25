@@ -37,6 +37,10 @@ Required:
 
 - `domain_id` (Number) The domain identifier to target for the resource.
 
+Optional:
+
+- `environment` (String) Accepted values: production | preview
+
 Read-Only:
 
 - `cname_access_only` (Boolean) Allow access to your URL only via provided CNAMEs.
@@ -44,6 +48,5 @@ Read-Only:
 - `digital_certificate_id` (Number) Digital Certificate associated ID.
 - `domain_name` (String) Domain name attributed by Azion to this configuration.
 - `edge_application_id` (Number) Edge Application associated ID.
-- `environment` (String)
 - `is_active` (Boolean) Status of the domain.
 - `name` (String) Name of this entry.
