@@ -131,6 +131,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		EnvironmentVariableResource,
 		WafRuleSetResource,
 		NewEdgeFirewallEdgeFunctionsInstanceResource,
+		NewWorkloadResource,
 	}
 }
 

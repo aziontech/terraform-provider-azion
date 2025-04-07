@@ -68,6 +68,8 @@ github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPd
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/aziontech/azionapi-go-sdk v0.139.0 h1:qMB6ujiVk5dw4+L9YlyppejPpTGnsloAaen/tKGTCVs=
 github.com/aziontech/azionapi-go-sdk v0.139.0/go.mod h1:cA5DY/VP4X5Eu11LpQNzNn83ziKjja7QVMIl4J45feA=
+github.com/aziontech/azionapi-v4-go-sdk v0.20.0 h1:LnpdrkWxRXKjea+Zg1ElD/XEGTLIvhz1mGy6AuLjlaY=
+github.com/aziontech/azionapi-v4-go-sdk v0.20.0/go.mod h1:wRNNOr3z+wBcveXNFUcy6uoE8h9lQUNKTg9B+6dMR4Q=
 github.com/bgentry/speakeasy v0.1.0 h1:ByYyxL9InA1OWqxJqqp2A5pYHUrCiAL6K3J+LKSsQkY=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bufbuild/protocompile v0.4.0 h1:LbFKd2XowZvQ/kajzguUp2DC9UEIQhIq77fZZlaQsNA=

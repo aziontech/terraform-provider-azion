@@ -1,6 +1,6 @@
 module github.com/aziontech/terraform-provider-azion
 
-go 1.21
+go 1.24.0
 
 require (
 	github.com/aziontech/azionapi-go-sdk v0.139.0
@@ -25,6 +25,7 @@ require (
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
+	github.com/aziontech/azionapi-v4-go-sdk v0.20.0 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
