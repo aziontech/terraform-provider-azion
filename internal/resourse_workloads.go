@@ -48,7 +48,7 @@ type WorkloadData struct {
 	NetworkMap       types.String `tfsdk:"network_map"`
 	LastEditor       types.String `tfsdk:"last_editor"`
 	LastModified     types.String `tfsdk:"last_modified"`
-	TLS              *TLSConfig   `tfsdk:"tls" json:"tls"`
+	TLS              *TLSConfig   `tfsdk:"tls"`
 	Protocols        *Protocols   `tfsdk:"protocols"`
 	MTLS             *MTLSConfig  `tfsdk:"mtls"`
 	ProductVersion   types.String `tfsdk:"product_version"`
@@ -61,7 +61,7 @@ type TLSConfig struct {
 }
 
 type Protocols struct {
-	HTTP HTTPProtocols `tfsdk:"http"`
+	HTTP *HTTPProtocols `tfsdk:"http"`
 }
 
 type HTTPProtocols struct {
@@ -251,51 +251,65 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	workload.SetTls(edge.TLSRequest(tlsObject))
 
+	mtlsObject := edge.MTLSRequest{}
 	if plan.Workload.MTLS != nil {
-		crl := plan.Workload.MTLS.CRL.ElementsAs(ctx, workload.Mtls.Crl, false)
+		crl := plan.Workload.MTLS.CRL.ElementsAs(ctx, &mtlsObject.Crl, false)
 		resp.Diagnostics.Append(crl...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 		if plan.Workload.MTLS.Verification.ValueString() != "" {
-			workload.Mtls.SetVerification(plan.Workload.MTLS.Verification.ValueString())
+			mtlsObject.SetVerification(plan.Workload.MTLS.Verification.ValueString())
 		}
 		if plan.Workload.MTLS.Certificate.ValueInt64() > 0 {
-			workload.Mtls.SetCertificate(plan.Workload.MTLS.Certificate.ValueInt64())
+			mtlsObject.SetCertificate(plan.Workload.MTLS.Certificate.ValueInt64())
 		}
 	}
+
+	workload.SetMtls(mtlsObject)
 
 	if plan.Workload.EdgeFirewall.ValueInt64() > 0 {
 		workload.EdgeFirewall.Set(plan.Workload.EdgeFirewall.ValueInt64Pointer())
 	}
 
-	httpProtocols := edge.ProtocolsRequest{}
+	httpObject := &edge.HttpProtocolRequest{
+		Versions:   []string{},
+		HttpPorts:  []int64{},
+		HttpsPorts: []int64{},
+		QuicPorts:  []int64{},
+	}
+	httpProtocols := edge.ProtocolsRequest{
+		Http: httpObject,
+	}
 	if plan.Workload.Protocols != nil {
-		versions := plan.Workload.Protocols.HTTP.Versions.ElementsAs(ctx, &httpProtocols.Http.Versions, false)
-		resp.Diagnostics.Append(versions...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+		if plan.Workload.Protocols != nil {
 
-		httpPorts := plan.Workload.Protocols.HTTP.HTTPPorts.ElementsAs(ctx, &httpProtocols.Http.HttpPorts, false)
-		resp.Diagnostics.Append(httpPorts...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+			versions := plan.Workload.Protocols.HTTP.Versions.ElementsAs(ctx, &httpProtocols.Http.Versions, false)
+			resp.Diagnostics.Append(versions...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
 
-		httpsPorts := plan.Workload.Protocols.HTTP.HTTPSPorts.ElementsAs(ctx, &httpProtocols.Http.HttpsPorts, false)
-		resp.Diagnostics.Append(httpsPorts...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+			httpPorts := plan.Workload.Protocols.HTTP.HTTPPorts.ElementsAs(ctx, &httpProtocols.Http.HttpPorts, false)
+			resp.Diagnostics.Append(httpPorts...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
 
-		quicPorts := plan.Workload.Protocols.HTTP.QuicPorts.ElementsAs(ctx, &httpProtocols.Http.QuicPorts, false)
-		resp.Diagnostics.Append(quicPorts...)
-		if resp.Diagnostics.HasError() {
-			return
+			httpsPorts := plan.Workload.Protocols.HTTP.HTTPSPorts.ElementsAs(ctx, &httpProtocols.Http.HttpsPorts, false)
+			resp.Diagnostics.Append(httpsPorts...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			quicPorts := plan.Workload.Protocols.HTTP.QuicPorts.ElementsAs(ctx, &httpProtocols.Http.QuicPorts, false)
+			resp.Diagnostics.Append(quicPorts...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			workload.SetProtocols(httpProtocols)
 		}
 	}
-	workload.SetProtocols(httpProtocols)
 
 	createWorkload, response, err := r.client.workloadsApi.WorkloadsAPI.CreateWorkload(ctx).WorkloadRequest(workload).Execute() //nolint
 	if err != nil {
@@ -359,6 +373,10 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	if plan.Workload.MTLS != nil {
 		dataObject.MTLS = plan.Workload.MTLS
+	}
+
+	if plan.Workload.Protocols != nil {
+		dataObject.Protocols = plan.Workload.Protocols
 	}
 
 	plan.Workload = &dataObject
@@ -485,65 +503,79 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	tlsObject := edge.TLS{}
-	if plan.Workload.TLS.Certificate.ValueInt64() > 0 {
-		tlsObject.SetCertificate(plan.Workload.TLS.Certificate.ValueInt64())
-	}
-	if plan.Workload.TLS.Ciphers.ValueString() != "" {
-		cipher := edge.TLSCiphers{
-			String: plan.Workload.TLS.Ciphers.ValueStringPointer(),
+	if plan.Workload.TLS != nil {
+		if plan.Workload.TLS.Certificate.ValueInt64() > 0 {
+			tlsObject.SetCertificate(plan.Workload.TLS.Certificate.ValueInt64())
 		}
-		tlsObject.SetCiphers(cipher)
-	}
-	if plan.Workload.TLS.MinVersion.ValueString() != "" {
-		minVer := edge.TLSMinimumVersion{
-			String: plan.Workload.TLS.MinVersion.ValueStringPointer(),
+		if plan.Workload.TLS.Ciphers.ValueString() != "" {
+			cipher := edge.TLSCiphers{
+				String: plan.Workload.TLS.Ciphers.ValueStringPointer(),
+			}
+			tlsObject.SetCiphers(cipher)
 		}
-		tlsObject.SetMinimumVersion(minVer)
+		if plan.Workload.TLS.MinVersion.ValueString() != "" {
+			minVer := edge.TLSMinimumVersion{
+				String: plan.Workload.TLS.MinVersion.ValueStringPointer(),
+			}
+			tlsObject.SetMinimumVersion(minVer)
+		}
 	}
 	updateWorkloadRequest.SetTls(edge.TLSRequest(tlsObject))
 
+	mtlsObject := edge.MTLSRequest{}
+
 	if plan.Workload.MTLS != nil {
-		crl := plan.Workload.MTLS.CRL.ElementsAs(ctx, updateWorkloadRequest.Mtls.Crl, false)
+		crl := plan.Workload.MTLS.CRL.ElementsAs(ctx, &mtlsObject.Crl, false)
 		resp.Diagnostics.Append(crl...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 		if plan.Workload.MTLS.Verification.ValueString() != "" {
-			updateWorkloadRequest.Mtls.SetVerification(plan.Workload.MTLS.Verification.ValueString())
+			mtlsObject.SetVerification(plan.Workload.MTLS.Verification.ValueString())
 		}
 		if plan.Workload.MTLS.Certificate.ValueInt64() > 0 {
-			updateWorkloadRequest.Mtls.SetCertificate(plan.Workload.MTLS.Certificate.ValueInt64())
+			mtlsObject.SetCertificate(plan.Workload.MTLS.Certificate.ValueInt64())
 		}
 	}
+	updateWorkloadRequest.SetMtls(mtlsObject)
 
-	httpProtocols := edge.ProtocolsRequest{}
+	httpObject := &edge.HttpProtocolRequest{
+		Versions:   []string{},
+		HttpPorts:  []int64{},
+		HttpsPorts: []int64{},
+		QuicPorts:  []int64{},
+	}
+	httpProtocols := edge.ProtocolsRequest{
+		Http: httpObject,
+	}
 	if plan.Workload.Protocols != nil {
-		versions := plan.Workload.Protocols.HTTP.Versions.ElementsAs(ctx, &httpProtocols.Http.Versions, false)
-		resp.Diagnostics.Append(versions...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+		if plan.Workload.Protocols != nil {
+			versions := plan.Workload.Protocols.HTTP.Versions.ElementsAs(ctx, &httpProtocols.Http.Versions, false)
+			resp.Diagnostics.Append(versions...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
 
-		httpPorts := plan.Workload.Protocols.HTTP.HTTPPorts.ElementsAs(ctx, &httpProtocols.Http.HttpPorts, false)
-		resp.Diagnostics.Append(httpPorts...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+			httpPorts := plan.Workload.Protocols.HTTP.HTTPPorts.ElementsAs(ctx, &httpProtocols.Http.HttpPorts, false)
+			resp.Diagnostics.Append(httpPorts...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
 
-		httpsPorts := plan.Workload.Protocols.HTTP.HTTPSPorts.ElementsAs(ctx, &httpProtocols.Http.HttpsPorts, false)
-		resp.Diagnostics.Append(httpsPorts...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+			httpsPorts := plan.Workload.Protocols.HTTP.HTTPSPorts.ElementsAs(ctx, &httpProtocols.Http.HttpsPorts, false)
+			resp.Diagnostics.Append(httpsPorts...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
 
-		quicPorts := plan.Workload.Protocols.HTTP.QuicPorts.ElementsAs(ctx, &httpProtocols.Http.QuicPorts, false)
-		resp.Diagnostics.Append(quicPorts...)
-		if resp.Diagnostics.HasError() {
-			return
+			quicPorts := plan.Workload.Protocols.HTTP.QuicPorts.ElementsAs(ctx, &httpProtocols.Http.QuicPorts, false)
+			resp.Diagnostics.Append(quicPorts...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			updateWorkloadRequest.SetProtocols(httpProtocols)
 		}
 	}
-
-	updateWorkloadRequest.SetProtocols(httpProtocols)
 
 	updateWorkload, response, err := r.client.workloadsApi.WorkloadsAPI.PartialUpdateWorkload(ctx, workloadId).PatchedWorkloadRequest(updateWorkloadRequest).Execute() //nolint
 	if err != nil {
@@ -605,6 +637,9 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	if plan.Workload.MTLS != nil {
 		dataObject.MTLS = plan.Workload.MTLS
+	}
+	if plan.Workload.Protocols != nil {
+		dataObject.Protocols = plan.Workload.Protocols
 	}
 
 	plan.Workload = &dataObject

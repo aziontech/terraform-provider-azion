@@ -28,17 +28,17 @@ type WorkloadDataSourceModel struct {
 }
 
 type WorkloadResults struct {
-	ID               types.Int64  `tfsdk:"id" json:"id"`
-	Name             types.String `tfsdk:"name" json:"name"`
-	AlternateDomains types.Set    `tfsdk:"alternate_domains" json:"alternate_domains"`
-	IsActive         types.Bool   `tfsdk:"is_active" json:"active"`
-	NetworkMap       types.String `tfsdk:"network_map" json:"network_map"`
-	LastEditor       types.String `tfsdk:"last_editor" json:"last_editor"`
-	LastModified     types.String `tfsdk:"last_modified" json:"last_modified"`
-	TLS              *TLSConfig   `tfsdk:"tls" json:"tls"`
-	Protocols        *Protocols   `tfsdk:"protocols" json:"protocols"`
-	MTLS             *MTLSConfig  `tfsdk:"mtls" json:"mtls"`
-	ProductVersion   types.String `tfsdk:"product_version" json:"product_version"`
+	ID               types.Int64  `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	AlternateDomains types.Set    `tfsdk:"alternate_domains"`
+	IsActive         types.Bool   `tfsdk:"is_active"`
+	NetworkMap       types.String `tfsdk:"network_map"`
+	LastEditor       types.String `tfsdk:"last_editor"`
+	LastModified     types.String `tfsdk:"last_modified"`
+	TLS              *TLSConfig   `tfsdk:"tls"`
+	Protocols        *Protocols   `tfsdk:"protocols"`
+	MTLS             *MTLSConfig  `tfsdk:"mtls"`
+	ProductVersion   types.String `tfsdk:"product_version"`
 }
 
 func (d *WorkloadDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
