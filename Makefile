@@ -58,7 +58,7 @@ clean-dev:
 
 install-dev:
 	@echo "==> Building development version ($(DEV_VERSION))"
-	go build -gcflags="all=-N -l" -o terraform-provider-azion_$(DEV_VERSION)
+	go build -gcflags="all=-N -l" -buildvcs=false -o terraform-provider-azion_$(DEV_VERSION)
 	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}
 	mv terraform-provider-azion_$(DEV_VERSION) ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}
 
@@ -117,7 +117,7 @@ func-destroy:
 	@cd func-tests && terraform destroy -auto-approve
 
 debug: 
-	@go build -o terraform-provider-azion
+	@go build -buildvcs=false -o terraform-provider-azion
 	@dlv exec terraform-provider-azion -- -debug
 
 dev: 
