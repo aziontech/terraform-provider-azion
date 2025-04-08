@@ -18,7 +18,7 @@ import (
 //go:generate terraform fmt -recursive ./examples/
 
 // Run the docs generation tool
-//go:generate env GOFLAGS=-buildvcs=false go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 
 var (
 	version string = "dev"
