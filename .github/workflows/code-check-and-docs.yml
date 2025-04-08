@@ -107,6 +107,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+
+      - name: Set GOBUILDFLAGS globally
+        run: echo 'GOBUILDFLAGS=-buildvcs=false' >> $GITHUB_ENV
         
       # Use git add -N . to ensure that new files are listed in the git diff check
       - run: |
