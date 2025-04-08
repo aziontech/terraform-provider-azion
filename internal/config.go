@@ -79,7 +79,6 @@ func Client(APIToken string, userAgent string) *apiClient {
 		client.networkListConfig.Servers[0].URL = envApiEntrypoint
 		client.variablesConfig.Servers[0].URL = envApiEntrypoint
 		client.wafConfig.Servers[0].URL = envApiEntrypoint
-
 	}
 
 	client.domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)

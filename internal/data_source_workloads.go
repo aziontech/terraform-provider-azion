@@ -278,7 +278,6 @@ func (d *WorkloadsDataSource) Read(ctx context.Context, req datasource.ReadReque
 			dataObject.MTLS.CRL = utils.SliceIntTypeToSet(slice)
 			dataObject.MTLS.Certificate = types.Int64Value(resultWorkload.Mtls.GetCertificate())
 			dataObject.MTLS.Verification = types.StringValue(*resultWorkload.Mtls.Verification)
-
 		}
 
 		workloadState.Results = append(workloadState.Results, dataObject)

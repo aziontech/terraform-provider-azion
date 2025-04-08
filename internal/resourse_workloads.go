@@ -283,7 +283,6 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	if plan.Workload.Protocols != nil {
 		if plan.Workload.Protocols != nil {
-
 			versions := plan.Workload.Protocols.HTTP.Versions.ElementsAs(ctx, &httpProtocols.Http.Versions, false)
 			resp.Diagnostics.Append(versions...)
 			if resp.Diagnostics.HasError() {
