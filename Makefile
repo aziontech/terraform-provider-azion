@@ -86,7 +86,7 @@ lint: get-lint-deps ## running GoLint
 get-lint-deps:
 	@if [ ! -x $(GOBIN)/golangci-lint ]; then\
 		curl -sfL \
-		https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.57.2 ;\
+		https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.64.3 ;\
 	fi
 
 .PHONY: sec
