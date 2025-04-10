@@ -1,6 +1,6 @@
 module github.com/aziontech/terraform-provider-azion
 
-go 1.24.0
+go 1.24.2
 
 require (
 	github.com/aziontech/azionapi-go-sdk v0.139.0
