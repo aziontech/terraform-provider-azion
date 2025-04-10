@@ -367,6 +367,10 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 		ProductVersion:   types.StringValue(createWorkload.Data.ProductVersion),
 	}
 
+	if plan.Workload.EdgeFirewall.ValueInt64() > 0 {
+		dataObject.EdgeFirewall = plan.Workload.EdgeFirewall
+	}
+
 	if plan.Workload.TLS != nil {
 		dataObject.TLS = plan.Workload.TLS
 	}
