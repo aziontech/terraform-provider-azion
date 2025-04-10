@@ -114,7 +114,7 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: "Name of this workload.",
 					},
 					"alternate_domains": schema.SetAttribute{
-						Optional:    true,
+						Required:    true,
 						ElementType: types.StringType,
 						Description: "List of alternate domains.",
 					},
