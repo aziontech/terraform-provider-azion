@@ -15,12 +15,12 @@
 
 ## Requirements
 -	[Terraform](https://www.terraform.io/downloads.html) 1.4.x or higher
--	[Go](https://golang.org/doc/install) 1.19+ (to build the provider plugin)
+-	[Go](https://golang.org/doc/install) 1.24+ (to build the provider plugin)
 
 
 ## Building
 To build or extends the Azion Terraform Provider, you'll first need [Go](http://www.golang.org)
-installed on your machine (version 1.19+ is _required_). You'll also need to
+installed on your machine (version 1.24+ is _required_). You'll also need to
 correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well
 as adding `$GOPATH/bin` to your `$PATH`.
 

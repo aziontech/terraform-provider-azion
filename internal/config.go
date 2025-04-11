@@ -1,9 +1,10 @@
 package provider
 
 import (
+	"os"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/aziontech/azionapi-go-sdk/waf"
-	"os"
 
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
 	"github.com/aziontech/azionapi-go-sdk/domains"
@@ -13,6 +14,7 @@ import (
 	"github.com/aziontech/azionapi-go-sdk/edgefunctionsinstance_edgefirewall"
 	"github.com/aziontech/azionapi-go-sdk/networklist"
 	"github.com/aziontech/azionapi-go-sdk/variables"
+	"github.com/aziontech/azionapi-v4-go-sdk/edge"
 )
 
 type apiClient struct {
@@ -45,6 +47,9 @@ type apiClient struct {
 
 	wafConfig *waf.Configuration
 	wafApi    *waf.APIClient
+
+	workloadConfig *edge.Configuration
+	workloadsApi   *edge.APIClient
 }
 
 func Client(APIToken string, userAgent string) *apiClient {
@@ -59,6 +64,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		edgefunctionsinstanceEdgefirewallConfig: edgefunctionsinstance_edgefirewall.NewConfiguration(),
 		variablesConfig:                         variables.NewConfiguration(),
 		wafConfig:                               waf.NewConfiguration(),
+		workloadConfig:                          edge.NewConfiguration(),
 	}
 
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
@@ -124,6 +130,17 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.wafConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.wafConfig.UserAgent = userAgent
 	client.wafApi = waf.NewAPIClient(client.wafConfig)
+
+	client.workloadConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.workloadConfig.AddDefaultHeader("Accept", "application/json")
+	client.workloadConfig.UserAgent = userAgent
+	client.workloadConfig.Servers[0].URL = "https://api.azion.com/v4"
+	client.workloadsApi = edge.NewAPIClient(client.workloadConfig)
+
+	envApiV4Entrypoint := os.Getenv("AZION_API_V4_ENTRYPOINT")
+	if envApiV4Entrypoint != "" {
+		client.workloadConfig.Servers[0].URL = envApiV4Entrypoint
+	}
 
 	return client
 }

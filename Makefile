@@ -58,7 +58,7 @@ clean-dev:
 
 install-dev:
 	@echo "==> Building development version ($(DEV_VERSION))"
-	go build -gcflags="all=-N -l" -o terraform-provider-azion_$(DEV_VERSION)
+	go build -gcflags="all=-N -l" -buildvcs=false -o terraform-provider-azion_$(DEV_VERSION)
 	mkdir -p ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}
 	mv terraform-provider-azion_$(DEV_VERSION) ~/.terraform.d/plugins/${HOSTNAME}/${NAMESPACE}/${NAME}/${DEV_VERSION}/${OS_ARCH}
 
@@ -86,7 +86,7 @@ lint: get-lint-deps ## running GoLint
 get-lint-deps:
 	@if [ ! -x $(GOBIN)/golangci-lint ]; then\
 		curl -sfL \
-		https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.52.2 ;\
+		https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.64.3 ;\
 	fi
 
 .PHONY: sec
@@ -117,7 +117,7 @@ func-destroy:
 	@cd func-tests && terraform destroy -auto-approve
 
 debug: 
-	@go build -o terraform-provider-azion
+	@go build -buildvcs=false -o terraform-provider-azion
 	@dlv exec terraform-provider-azion -- -debug
 
 dev: 

@@ -38,6 +38,17 @@ func SliceIntTypeToList(slice []types.Int64) types.List {
 	return types.ListValueMust(types.Int64Type, integers)
 }
 
+func SliceIntTypeToSet(slice []types.Int64) types.Set {
+	if len(slice) == 0 {
+		return types.SetValueMust(types.Int64Type, nil)
+	}
+	integers := []attr.Value{}
+	for _, value := range slice {
+		integers = append(integers, value)
+	}
+	return types.SetValueMust(types.Int64Type, integers)
+}
+
 func SliceStringTypeToSet(slice []types.String) types.Set {
 	if len(slice) == 0 {
 		return types.SetNull(types.StringType)
@@ -250,4 +261,11 @@ func RetryOn429Delete(apiCall func() (*http.Response, error), maxRetries int) (*
 	}
 
 	return response, errors.New("max retries exceeded for API request")
+}
+
+func PtrToInt64(ptr *int64) int64 {
+	if ptr == nil {
+		return 0 // or any default value you prefer
+	}
+	return *ptr
 }

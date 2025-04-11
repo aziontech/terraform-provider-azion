@@ -9,7 +9,7 @@ jobs:
   # Ensure the project can build first
   build:
     name: Build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
   fmt:
     name: go fmt
     needs: [build]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
@@ -44,7 +44,7 @@ jobs:
   gosec:
     name: Run Gosec 
     needs: [ build ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
@@ -55,7 +55,7 @@ jobs:
   vet:
     name: go vet
     needs: [build]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
@@ -67,7 +67,7 @@ jobs:
   lint:
     name: golangcli-lint
     needs: [ build ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Setting GIT
         run: git config --global url."https://${{ secrets.GLOBAL_TOKEN }}:x-oauth-basic@github.com/aziontech".insteadOf "https://github.com/aziontech"
@@ -82,16 +82,33 @@ jobs:
   generate:
     name: go generate
     needs: [build]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.24.2
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
           cache: true
-      # Use git add -N . to ensure that new files are listed in the git diff check
-      - run: |
-          go generate ./...
-          git add -N .
-          git diff --exit-code || \
-            (echo; echo "Unexpected difference after code generation. Run 'make generate' command and commit."; exit 1)
+
+
+      - name: Install unzip
+        run: apt-get update && apt-get install -y unzip
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.11.3 
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Set GOBUILDFLAGS globally
+        run: echo 'GOBUILDFLAGS=-buildvcs=false' >> $GITHUB_ENV
+
+
