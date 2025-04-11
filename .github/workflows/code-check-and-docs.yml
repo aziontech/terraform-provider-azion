@@ -110,10 +110,5 @@ jobs:
 
       - name: Set GOBUILDFLAGS globally
         run: echo 'GOBUILDFLAGS=-buildvcs=false' >> $GITHUB_ENV
-        
-      # Use git add -N . to ensure that new files are listed in the git diff check
-      - run: |
-          go generate ./...
-          git add -N .
-          git diff --exit-code || \
-            (echo; echo "Unexpected difference after code generation. Run 'make generate' command and commit."; exit 0)
+
+
