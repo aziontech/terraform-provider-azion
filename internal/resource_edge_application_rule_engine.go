@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
@@ -186,7 +187,7 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 					},
 					"order": schema.Int64Attribute{
 						Description: "The order of the rule in the rules engine.",
-						Computed:    true,
+						Optional:    true,
 					},
 					"description": schema.StringAttribute{
 						Description: "The description of the rules engine rule.",
@@ -209,6 +210,7 @@ func (r *rulesEngineResource) Configure(_ context.Context, req resource.Configur
 func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan RulesEngineResourceModel
 	var edgeApplicationID types.Int64
+	var order types.Int64
 	var phase types.String
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -218,6 +220,12 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 
 	diagsEdgeApplicationID := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &edgeApplicationID)
 	resp.Diagnostics.Append(diagsEdgeApplicationID...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diagsOrder := req.Config.GetAttribute(ctx, path.Root("results").AtName("order"), &order)
+	resp.Diagnostics.Append(diagsOrder...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -364,6 +372,10 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			Criteria:    criteria,
 		}
 
+		if !plan.RulesEngine.Order.IsNull() {
+			rulesEngineRequest.SetOrder(plan.RulesEngine.Order.ValueInt64())
+		}
+
 		rulesEngineResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.
 			EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesPost(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).
 			CreateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
@@ -429,8 +441,11 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		Behaviors:   behaviorResponse,
 		Criteria:    criteriaResult,
 		IsActive:    types.BoolValue(rulesEngineResponse.Results.GetIsActive()),
-		Order:       types.Int64Value(rulesEngineResponse.Results.GetOrder()),
 		Description: types.StringValue(rulesEngineResponse.Results.GetDescription()),
+	}
+
+	if !plan.RulesEngine.Order.IsNull() {
+		rulesEngineResults.Order = types.Int64Value(rulesEngineResponse.Results.GetOrder())
 	}
 
 	plan = RulesEngineResourceModel{
@@ -694,6 +709,18 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 			Behaviors:   behaviors,
 			Criteria:    criteria,
 		}
+		if plan.RulesEngine.Order.ValueInt64() > 0 {
+			rulesEngineRequest.SetOrder(plan.RulesEngine.Order.ValueInt64())
+		}
+
+		jsonBody, err := json.MarshalIndent(rulesEngineRequest, "", "  ")
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Failed to marshal rulesEngineRequest",
+				string(jsonBody),
+			)
+			return
+		}
 	}
 
 	if phase.ValueString() == "default" {
@@ -779,8 +806,11 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		Behaviors:   behaviorResponse,
 		Criteria:    criteriaResult,
 		IsActive:    types.BoolValue(rulesEngineResponse.Results.GetIsActive()),
-		Order:       types.Int64Value(rulesEngineResponse.Results.GetOrder()),
 		Description: types.StringValue(rulesEngineResponse.Results.GetDescription()),
+	}
+
+	if !plan.RulesEngine.Order.IsNull() {
+		rulesEngineResults.Order = types.Int64Value(rulesEngineResponse.Results.GetOrder())
 	}
 
 	plan = RulesEngineResourceModel{
