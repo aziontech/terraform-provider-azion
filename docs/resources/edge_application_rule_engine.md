@@ -82,12 +82,12 @@ Required:
 Optional:
 
 - `description` (String) The description of the rules engine rule.
+- `order` (Number) The order of the rule in the rules engine.
 
 Read-Only:
 
 - `id` (Number) The ID of the rules engine rule.
 - `is_active` (Boolean) The status of the rules engine rule.
-- `order` (Number) The order of the rule in the rules engine.
 
 <a id="nestedatt--results--behaviors"></a>
 ### Nested Schema for `results.behaviors`
