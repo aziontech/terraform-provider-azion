@@ -146,7 +146,7 @@ func (d *DigitalCertificatesDataSource) Read(ctx context.Context, req datasource
 		if response.StatusCode == 429 {
 			digitalCertificatesResponse, response, err = utils.RetryOn429(func() (*digital_certificates.DC200List, *http.Response, error) {
 				return d.client.digitalCertificatesApi.RetrieveDigitalCertificateListApi.ListDigitalCertificates(ctx).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

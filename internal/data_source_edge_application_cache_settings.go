@@ -245,7 +245,7 @@ func (c *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 		if response.StatusCode == 429 {
 			cacheSettingsResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCacheGetResponse, *http.Response, error) {
 				return c.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

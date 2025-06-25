@@ -303,7 +303,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			if response.StatusCode == 429 {
 				rulesResponse, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineResponse, *http.Response, error) {
 					return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), "request").OrderBy("order").PageSize(2).Page(1).Sort("asc").Execute() //nolint
-				}, 5) // Maximum 5 retries
+				}, 15) // Maximum 15 retries
 
 				if response != nil {
 					defer response.Body.Close() // <-- Close the body here
@@ -517,7 +517,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 				return r.client.edgeApplicationsApi.
 					EdgeApplicationsRulesEngineAPI.
 					EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(ctx, edgeApplicationID, phase, ruleID).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -722,7 +722,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		if response.StatusCode == 429 {
 			rulesEngineResponse, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
 				return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -866,7 +866,7 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 			if response.StatusCode == 429 {
 				_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
 					return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPatch(ctx, state.ApplicationID.ValueInt64(), "request", state.RulesEngine.ID.ValueInt64()).PatchRulesEngineRequest(rulesEngineRequest).Execute() //nolint
-				}, 5) // Maximum 5 retries
+				}, 15) // Maximum 15 retries
 
 				if response != nil {
 					defer response.Body.Close() // <-- Close the body here
@@ -905,7 +905,7 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 			if response.StatusCode == 429 {
 				response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
 					return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdDelete(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.Phase.ValueString(), state.RulesEngine.ID.ValueInt64()).Execute() //nolint
-				}, 5) // Maximum 5 retries
+				}, 15) // Maximum 15 retries
 
 				if response != nil {
 					defer response.Body.Close() // <-- Close the body here
