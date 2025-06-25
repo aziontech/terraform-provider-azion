@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
@@ -711,15 +710,6 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 		if plan.RulesEngine.Order.ValueInt64() > 0 {
 			rulesEngineRequest.SetOrder(plan.RulesEngine.Order.ValueInt64())
-		}
-
-		jsonBody, err := json.MarshalIndent(rulesEngineRequest, "", "  ")
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Failed to marshal rulesEngineRequest",
-				string(jsonBody),
-			)
-			return
 		}
 	}
 
