@@ -702,16 +702,18 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 			)
 			return
 		}
-		rulesEngineRequest = edgeapplications.UpdateRulesEngineRequest{
-			Name:        plan.RulesEngine.Name.ValueString(),
-			Description: plan.RulesEngine.Description.ValueStringPointer(),
-			Behaviors:   behaviors,
-			Criteria:    criteria,
-		}
-		if plan.RulesEngine.Order.ValueInt64() > 0 {
-			rulesEngineRequest.SetOrder(plan.RulesEngine.Order.ValueInt64())
-		}
 	}
+
+	rulesEngineRequest = edgeapplications.UpdateRulesEngineRequest{
+		Name:        plan.RulesEngine.Name.ValueString(),
+		Description: plan.RulesEngine.Description.ValueStringPointer(),
+		Behaviors:   behaviors,
+		Criteria:    criteria,
+	}
+
+	// if !plan.RulesEngine.Order.IsNull() {
+	// 	rulesEngineRequest.SetOrder(plan.RulesEngine.Order.ValueInt64())
+	// }
 
 	if phase.ValueString() == "default" {
 		phase = types.StringValue("request")
@@ -800,7 +802,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	if !plan.RulesEngine.Order.IsNull() {
-		rulesEngineResults.Order = types.Int64Value(rulesEngineResponse.Results.GetOrder())
+		rulesEngineResults.Order = types.Int64Value(plan.RulesEngine.Order.ValueInt64())
 	}
 
 	plan = RulesEngineResourceModel{
