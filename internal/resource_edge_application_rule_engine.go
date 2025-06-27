@@ -711,10 +711,6 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		Criteria:    criteria,
 	}
 
-	// if !plan.RulesEngine.Order.IsNull() {
-	// 	rulesEngineRequest.SetOrder(plan.RulesEngine.Order.ValueInt64())
-	// }
-
 	if phase.ValueString() == "default" {
 		phase = types.StringValue("request")
 	}
