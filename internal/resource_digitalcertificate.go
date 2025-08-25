@@ -296,8 +296,8 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 	var privateKey types.String
 	if state.CertificateResult == nil {
 		resp.Diagnostics.AddWarning(
-			"PrivateKey is controlled by Terraform",
-			"You need to put your private key in the state and set a terraform apply for update the state!",
+			"Private key not found in state",
+			"The private key must be managed through Terraform configuration. Please provide it in your configuration and re-run 'terraform apply' to ensure it is stored in state.",
 		)
 		privateKey = types.StringValue("")
 	} else {
@@ -319,7 +319,7 @@ func (r *digitalCertificateResource) Read(ctx context.Context, req resource.Read
 			CertificateType:    types.StringValue(certificateResponse.Results.GetCertificateType()),
 			Managed:            types.BoolValue(certificateResponse.Results.GetManaged()),
 			CSR:                types.StringValue(certificateResponse.Results.GetCsr()),
-			CertificateContent: types.StringValue(certificateResponse.Results.GetCertificateContent()),
+			CertificateContent: types.StringValue(state.CertificateResult.CertificateContent.ValueString()),
 			PrivateKey:         privateKey,
 			AzionInformation:   types.StringValue(certificateResponse.Results.GetAzionInformation()),
 		},
