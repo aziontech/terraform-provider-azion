@@ -222,7 +222,7 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 		if response.StatusCode == 429 {
 			wafRuleSetResponse, response, err = utils.RetryOn429(func() (*waf.SingleWAF, *http.Response, error) {
 				return r.client.wafApi.WAFAPI.CreateNewWAFRuleset(ctx).CreateNewWAFRulesetRequest(wafRulesetRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -321,7 +321,7 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 		if response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*waf.WAFSingle200, *http.Response, error) {
 				return r.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -461,7 +461,7 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 		if response.StatusCode == 429 {
 			wafRuleSetResponse, response, err = utils.RetryOn429(func() (*waf.SingleWAF, *http.Response, error) {
 				return r.client.wafApi.WAFAPI.UpdateWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).SingleWAF(wafRuleSetRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -557,7 +557,7 @@ func (r *wafRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if response.StatusCode == 429 {
 			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
 				return r.client.wafApi.WAFAPI.DeleteWAFRuleset(ctx, strconv.FormatInt(wafRuleSetID, 10)).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

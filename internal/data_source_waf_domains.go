@@ -171,7 +171,7 @@ func (o *WafDomainsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			wafDomainsResponse, response, err = utils.RetryOn429(func() (*waf.WAFDomains200, *http.Response, error) {
 				return o.client.wafApi.WAFAPI.GetWAFDomains(ctx, wafID.ValueInt64()).Page(page.ValueInt64()).
 					PageSize(pageSize.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

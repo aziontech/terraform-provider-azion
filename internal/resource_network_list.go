@@ -146,7 +146,7 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		if response.StatusCode == 429 {
 			createNetworkListResponse, response, err = utils.RetryOn429(func() (*networklist.NetworkListsResponse, *http.Response, error) {
 				return r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -225,7 +225,7 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 		if response.StatusCode == 429 {
 			getNetworkList, response, err = utils.RetryOn429(func() (*networklist.NetworkListUuidResponse, *http.Response, error) {
 				return r.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, networkListId).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -341,7 +341,7 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		if response.StatusCode == 429 {
 			updateNetworkList, response, err = utils.RetryOn429(func() (*networklist.NetworkListsResponse, *http.Response, error) {
 				return r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -416,7 +416,7 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 		if response.StatusCode == 429 {
 			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
 				return r.client.networkListApi.DefaultAPI.NetworkListsUuidDelete(ctx, networkListId).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

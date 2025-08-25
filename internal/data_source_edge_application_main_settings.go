@@ -179,7 +179,7 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		if response.StatusCode == 429 {
 			edgeApplicationsResponse, response, err = utils.RetryOn429(func() (*edgeapplications.GetApplicationResponse, *http.Response, error) {
 				return e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsIdGet(ctx, getEdgeApplicationId.ValueString()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

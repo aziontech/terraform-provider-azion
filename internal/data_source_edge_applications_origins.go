@@ -251,7 +251,7 @@ func (o *OriginsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		if response.StatusCode == 429 {
 			originsResponse, response, err = utils.RetryOn429(func() (*edgeapplications.OriginsResponse, *http.Response, error) {
 				return o.client.edgeApplicationsApi.EdgeApplicationsOriginsAPI.EdgeApplicationsEdgeApplicationIdOriginsGet(ctx, edgeApplicationID.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

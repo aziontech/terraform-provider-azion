@@ -137,7 +137,7 @@ func (r *environmentVariableResource) Create(ctx context.Context, req resource.C
 		if response.StatusCode == 429 {
 			environmentVariableResponse, response, err = utils.RetryOn429(func() (*variables.VariableGet, *http.Response, error) {
 				return r.client.variablesApi.VariablesAPI.ApiVariablesCreate(ctx).VariableCreate(environmentVariableRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -223,7 +223,7 @@ func (r *environmentVariableResource) Read(ctx context.Context, req resource.Rea
 		if response.StatusCode == 429 {
 			getEnvironmentVariable, response, err = utils.RetryOn429(func() (*variables.Variable, *http.Response, error) {
 				return r.client.variablesApi.VariablesAPI.ApiVariablesRetrieve(ctx, uuid).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -333,7 +333,7 @@ func (r *environmentVariableResource) Update(ctx context.Context, req resource.U
 		if response.StatusCode == 429 {
 			environmentVariableResponse, response, err = utils.RetryOn429(func() (*variables.VariableGet, *http.Response, error) {
 				return r.client.variablesApi.VariablesAPI.ApiVariablesUpdate(ctx, uuid).VariableCreate(environmentVariableRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
@@ -415,7 +415,7 @@ func (r *environmentVariableResource) Delete(ctx context.Context, req resource.D
 		if response.StatusCode == 429 {
 			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
 				return r.client.variablesApi.VariablesAPI.ApiVariablesDestroy(ctx, uuid).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here

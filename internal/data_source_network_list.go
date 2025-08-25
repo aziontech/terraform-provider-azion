@@ -116,7 +116,7 @@ func (n *NetworkListDataSource) Read(ctx context.Context, req datasource.ReadReq
 		if response.StatusCode == 429 {
 			networkListsResponse, response, err = utils.RetryOn429(func() (*networklist.NetworkListUuidResponse, *http.Response, error) {
 				return n.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, uuid.ValueString()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			}, 15) // Maximum 15 retries
 
 			if response != nil {
 				defer response.Body.Close() // <-- Close the body here
