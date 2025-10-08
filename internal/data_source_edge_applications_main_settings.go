@@ -4,8 +4,9 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
+	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -27,18 +28,11 @@ type EdgeApplicationsDataSource struct {
 }
 
 type EdgeApplicationsDataSourceModel struct {
-	SchemaVersion types.Int64                       `tfsdk:"schema_version"`
-	Counter       types.Int64                       `tfsdk:"counter"`
-	TotalPages    types.Int64                       `tfsdk:"total_pages"`
-	Page          types.Int64                       `tfsdk:"page"`
-	PageSize      types.Int64                       `tfsdk:"page_size"`
-	Links         *GetEdgeApplicationsResponseLinks `tfsdk:"links"`
-	Results       []EdgeApplicationsResult          `tfsdk:"results"`
-	ID            types.String                      `tfsdk:"id"`
-}
-type GetEdgeApplicationsResponseLinks struct {
-	Previous types.String `tfsdk:"previous"`
-	Next     types.String `tfsdk:"next"`
+	TotalCount types.Int64       `tfsdk:"total_count"`
+	Page       types.Int64       `tfsdk:"page"`
+	PageSize   types.Int64       `tfsdk:"page_size"`
+	Results    []ApplicationData `tfsdk:"results"`
+	ID         types.String      `tfsdk:"id"`
 }
 
 type EdgeApplicationsResult struct {
@@ -75,7 +69,7 @@ func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.Sche
 				Description: "Identifier of the data source.",
 				Computed:    true,
 			},
-			"counter": schema.Int64Attribute{
+			"total_count": schema.Int64Attribute{
 				Description: "The total number of edge applications.",
 				Computed:    true,
 			},
@@ -87,72 +81,75 @@ func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.Sche
 				Description: "The Page Size number of edge applications.",
 				Optional:    true,
 			},
-			"total_pages": schema.Int64Attribute{
-				Description: "The total number of pages.",
-				Computed:    true,
-			},
-			"links": schema.SingleNestedAttribute{
-				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"previous": schema.StringAttribute{
-						Computed: true,
-					},
-					"next": schema.StringAttribute{
-						Computed: true,
-					},
-				},
-			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
 			"results": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"application_id": schema.Int64Attribute{
-							Description: "The edge application identifier.",
+						"id": schema.Int64Attribute{
+							Description: "The Application identifier.",
 							Computed:    true,
 						},
 						"name": schema.StringAttribute{
+							Description: "The name of the Application.",
 							Computed:    true,
-							Description: "Name of the edge application.",
-						},
-						"active": schema.BoolAttribute{
-							Computed:    true,
-							Description: "Indicates if the edge application is active.",
-						},
-						"debug_rules": schema.BoolAttribute{
-							Computed:    true,
-							Description: "Indicates if debug rules are enabled for the edge application.",
 						},
 						"last_editor": schema.StringAttribute{
+							Description: "Last editor identifier.",
 							Computed:    true,
-							Description: "The email of the last editor of the edge application.",
 						},
 						"last_modified": schema.StringAttribute{
+							Description: "Last modified timestamp.",
 							Computed:    true,
-							Description: "The timestamp of the last modification of the edge application.",
 						},
-						"origins": schema.ListNestedAttribute{
-							Computed: true,
-							NestedObject: schema.NestedAttributeObject{
-								Attributes: map[string]schema.Attribute{
-									"name": schema.StringAttribute{
-										Computed:    true,
-										Description: "Name of the origin.",
+						"product_version": schema.StringAttribute{
+							Description: "Product version.",
+							Computed:    true,
+						},
+						"active": schema.BoolAttribute{
+							Description: "Whether the Application is active.",
+							Computed:    true,
+						},
+						"debug": schema.BoolAttribute{
+							Description: "Whether the Application is in debug mode.",
+							Computed:    true,
+						},
+						"modules": schema.SingleNestedAttribute{
+							Description: "Modules configuration.",
+							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"edge_cache": schema.SingleNestedAttribute{
+									Computed: true,
+									Attributes: map[string]schema.Attribute{
+										"enabled": schema.BoolAttribute{
+											Computed: true,
+										},
 									},
-									"origin_type": schema.StringAttribute{
-										Computed:    true,
-										Description: "Type of the origin.",
+								},
+								"functions": schema.SingleNestedAttribute{
+									Computed: true,
+									Attributes: map[string]schema.Attribute{
+										"enabled": schema.BoolAttribute{
+											Computed: true,
+										},
 									},
-									"origin_id": schema.StringAttribute{
-										Computed:    true,
-										Description: "Identifier of the origin.",
+								},
+								"application_accelerator": schema.SingleNestedAttribute{
+									Computed: true,
+									Attributes: map[string]schema.Attribute{
+										"enabled": schema.BoolAttribute{
+											Computed: true,
+										},
+									},
+								},
+								"image_processor": schema.SingleNestedAttribute{
+									Computed: true,
+									Attributes: map[string]schema.Attribute{
+										"enabled": schema.BoolAttribute{
+											Computed: true,
+										},
 									},
 								},
 							},
-							Description: "List of origins associated with the edge application.",
 						},
 					},
 				},
@@ -183,11 +180,11 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 		PageSize = types.Int64Value(10)
 	}
 
-	edgeAppResponse, response, err := e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+	appResponse, response, err := e.client.applicationsApi.ApplicationsAPI.ListApplications(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeAppResponse, response, err = utils.RetryOn429(func() (*edgeapplications.GetApplicationsResponse, *http.Response, error) {
-				return e.client.edgeApplicationsApi.EdgeApplicationsMainSettingsAPI.EdgeApplicationsGet(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+			appResponse, response, err = utils.RetryOn429(func() (*sdk.PaginatedApplicationList, *http.Response, error) {
+				return e.client.applicationsApi.ApplicationsAPI.ListApplications(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -218,53 +215,48 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 		}
 	}
 
-	var previous, next string
-	if edgeAppResponse.Links.Previous.Get() != nil {
-		previous = *edgeAppResponse.Links.Previous.Get()
-	}
-	if edgeAppResponse.Links.Next.Get() != nil {
-		next = *edgeAppResponse.Links.Next.Get()
+	appState := EdgeApplicationsDataSourceModel{
+		Page:       Page,
+		PageSize:   PageSize,
+		TotalCount: types.Int64Value(*appResponse.Count),
 	}
 
-	edgeApplicationsState := EdgeApplicationsDataSourceModel{
-		Page:          Page,
-		PageSize:      PageSize,
-		SchemaVersion: types.Int64Value(edgeAppResponse.SchemaVersion),
-		TotalPages:    types.Int64Value(edgeAppResponse.TotalPages),
-		Counter:       types.Int64Value(edgeAppResponse.Count),
-		Links: &GetEdgeApplicationsResponseLinks{
-			Previous: types.StringValue(previous),
-			Next:     types.StringValue(next),
-		},
-	}
-	for _, resultEdgeApplication := range edgeAppResponse.GetResults() {
-		edgeApplicationsState.Results = append(edgeApplicationsState.Results, EdgeApplicationsResult{
-			ApplicationID: types.Int64Value(resultEdgeApplication.GetId()),
-			Name:          types.StringValue(resultEdgeApplication.GetName()),
-			Active:        types.BoolValue(resultEdgeApplication.GetActive()),
-			DebugRules:    types.BoolValue(resultEdgeApplication.GetDebugRules()),
-			LastEditor:    types.StringValue(resultEdgeApplication.GetLastEditor()),
-			LastModified:  types.StringValue(resultEdgeApplication.GetLastModified()),
-			Origins:       GetOrigins(resultEdgeApplication.GetOrigins()),
+	for _, resultApplication := range appResponse.GetResults() {
+		mods := resultApplication.GetModules()
+		cache := mods.GetEdgeCache()
+		functions := mods.GetFunctions()
+		applicationAccelerator := mods.GetApplicationAccelerator()
+		imageProcessor := mods.GetImageProcessor()
+
+		modules := &ApplicationModules{
+			Cache: &CacheModule{
+				Enabled: types.BoolValue(cache.GetEnabled()),
+			},
+			Functions: &EdgeFunctionModule{
+				Enabled: types.BoolValue(functions.GetEnabled()),
+			},
+			ApplicationAccelerator: &ApplicationAcceleratorModule{
+				Enabled: types.BoolValue(applicationAccelerator.GetEnabled()),
+			},
+			ImageProcessor: &ImageProcessorModule{
+				Enabled: types.BoolValue(imageProcessor.GetEnabled()),
+			},
+		}
+		appState.Results = append(appState.Results, ApplicationData{
+			Id:             types.Int64Value(resultApplication.GetId()),
+			Name:           types.StringValue(resultApplication.GetName()),
+			LastEditor:     types.StringValue(resultApplication.GetLastEditor()),
+			LastModified:   types.StringValue(resultApplication.GetLastModified().Format(time.RFC3339)),
+			Modules:        modules,
+			ProductVersion: types.StringValue(resultApplication.GetProductVersion()),
+			Active:         types.BoolValue(resultApplication.GetActive()),
+			Debug:          types.BoolValue(resultApplication.GetDebug()),
 		})
 	}
-	edgeApplicationsState.ID = types.StringValue("Get All Edge Application")
-	diags := resp.State.Set(ctx, &edgeApplicationsState)
+	appState.ID = types.StringValue("Get All Edge Application")
+	diags := resp.State.Set(ctx, &appState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-}
-
-func GetOrigins(EdgeOrigins []edgeapplications.ApplicationOrigins) []ApplicationOrigins {
-	var origins []ApplicationOrigins
-	for _, origin := range EdgeOrigins {
-		origins = append(origins, ApplicationOrigins{
-			Name:       types.StringValue(*origin.Name),
-			OriginType: types.StringValue(*origin.OriginType),
-			OriginID:   types.StringValue(*origin.OriginId),
-		})
-	}
-
-	return origins
 }

@@ -1,9 +1,10 @@
 package provider
 
 import (
+	"os"
+
 	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/aziontech/azionapi-go-sdk/waf"
-	"os"
 
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
 	"github.com/aziontech/azionapi-go-sdk/domains"
@@ -13,6 +14,7 @@ import (
 	"github.com/aziontech/azionapi-go-sdk/edgefunctionsinstance_edgefirewall"
 	"github.com/aziontech/azionapi-go-sdk/networklist"
 	"github.com/aziontech/azionapi-go-sdk/variables"
+	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 )
 
 type apiClient struct {
@@ -25,8 +27,11 @@ type apiClient struct {
 	edgefunctionsConfig *edgefunctions.Configuration
 	edgefunctionsApi    *edgefunctions.APIClient
 
-	edgeApplicationsConfig *edgeapplications.Configuration
-	edgeApplicationsApi    *edgeapplications.APIClient
+	//TODO: remove this
+	edgeApplicationsApi *edgeapplications.APIClient
+
+	applicationsConfig *edgeapi.Configuration
+	applicationsApi    *edgeapi.APIClient
 
 	digitalCertificatesConfig *digital_certificates.Configuration
 	digitalCertificatesApi    *digital_certificates.APIClient
@@ -52,7 +57,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		idnsConfig:                              idns.NewConfiguration(),
 		domainsConfig:                           domains.NewConfiguration(),
 		edgefunctionsConfig:                     edgefunctions.NewConfiguration(),
-		edgeApplicationsConfig:                  edgeapplications.NewConfiguration(),
+		applicationsConfig:                      edgeapi.NewConfiguration(),
 		digitalCertificatesConfig:               digital_certificates.NewConfiguration(),
 		networkListConfig:                       networklist.NewConfiguration(),
 		edgefirewallConfig:                      edgefirewall.NewConfiguration(),
@@ -62,11 +67,16 @@ func Client(APIToken string, userAgent string) *apiClient {
 	}
 
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
+	v4url := "https://api.azion.com/v4"
+
+	// Always set v4 URL for applications API
+	client.applicationsConfig.Servers[0].URL = v4url
+	//TODO: update the configuration of V4 URL
+
 	if envApiEntrypoint != "" {
 		client.domainsConfig.Servers[0].URL = envApiEntrypoint
 		client.idnsConfig.Servers[0].URL = envApiEntrypoint
 		client.edgefunctionsConfig.Servers[0].URL = envApiEntrypoint
-		client.edgeApplicationsConfig.Servers[0].URL = envApiEntrypoint
 		client.digitalCertificatesConfig.Servers[0].URL = envApiEntrypoint
 		client.edgefirewallConfig.Servers[0].URL = envApiEntrypoint
 		client.edgefunctionsinstanceEdgefirewallConfig.Servers[0].URL = envApiEntrypoint
@@ -90,10 +100,10 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.edgefunctionsConfig.UserAgent = userAgent
 	client.edgefunctionsApi = edgefunctions.NewAPIClient(client.edgefunctionsConfig)
 
-	client.edgeApplicationsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-	client.edgeApplicationsConfig.AddDefaultHeader("Accept", "application/json; version=3")
-	client.edgeApplicationsConfig.UserAgent = userAgent
-	client.edgeApplicationsApi = edgeapplications.NewAPIClient(client.edgeApplicationsConfig)
+	client.applicationsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.applicationsConfig.AddDefaultHeader("Accept", "application/json; version=3")
+	client.applicationsConfig.UserAgent = userAgent
+	client.applicationsApi = edgeapi.NewAPIClient(client.applicationsConfig)
 
 	client.digitalCertificatesConfig.AddDefaultHeader("Authorization", "token "+APIToken)
 	client.digitalCertificatesConfig.AddDefaultHeader("Accept", "application/json; version=3")
