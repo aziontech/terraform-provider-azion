@@ -463,7 +463,6 @@ func (r *edgeApplicationResource) ImportState(ctx context.Context, req resource.
 }
 
 func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationModulesRequest {
-
 	modsRequest := sdk.ApplicationModulesRequest{}
 	if modsPlan != nil {
 		cachePlan := modsPlan.Cache
