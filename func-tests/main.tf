@@ -33,6 +33,8 @@ resource "azion_edge_application_main_setting" "testfunc" {
     raw_logs : true
     device_detection : false
     raw_logs : false
+    active : true
+    degug : true
   }
 }
 
