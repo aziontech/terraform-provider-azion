@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
+	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -28,9 +29,8 @@ type EdgeFunctionDataSource struct {
 }
 
 type EdgeFunctionDataSourceModel struct {
-	SchemaVersion types.Int64         `tfsdk:"schema_version"`
-	Data          EdgeFunctionResults `tfsdk:"data"`
-	ID            types.String        `tfsdk:"id"`
+	Data EdgeFunctionResults `tfsdk:"data"`
+	ID   types.String        `tfsdk:"id"`
 }
 
 type GetEdgeFunctionResponseLinks struct {
@@ -44,7 +44,7 @@ type EdgeFunctionResults struct {
 	LastEditor           types.String `tfsdk:"last_editor"`
 	LastModified         types.String `tfsdk:"last_modified"`
 	ProductVersion       types.String `tfsdk:"product_version"`
-	IsActive             types.Bool   `tfsdk:"active"`
+	Active               types.Bool   `tfsdk:"active"`
 	Runtime              types.String `tfsdk:"runtime"`
 	ExecutionEnvironment types.String `tfsdk:"execution_environment"`
 	Code                 types.String `tfsdk:"code"`
@@ -154,12 +154,14 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.
-		EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
+	edgeFunctionIDString := strconv.FormatInt(edgeFunctionID, 10)
+
+	functionsResponse, response, err := d.client.edgeApi.FunctionsAPI.
+		RetrieveFunction(ctx, edgeFunctionIDString).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			functionsResponse, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
-				return d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
+			functionsResponse, response, err = utils.RetryOn429(func() (*edgeapi.ResponseRetrieveFunctionsDoc, *http.Response, error) {
+				return d.client.edgeApi.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionIDString).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -181,9 +183,9 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	defaultArgsStr := ""
-	if functionsResponse.Results.JsonArgs != nil {
+	if functionsResponse.Data.DefaultArgs != nil {
 		var err error
-		defaultArgsStr, err = utils.ConvertInterfaceToString(functionsResponse.Results.JsonArgs)
+		defaultArgsStr, err = utils.ConvertInterfaceToString(functionsResponse.Data.DefaultArgs)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
@@ -194,34 +196,24 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	EdgeFunctionState := EdgeFunctionDataSourceModel{
-		SchemaVersion: types.Int64Value(int64(*functionsResponse.SchemaVersion)),
 		Data: EdgeFunctionResults{
-			ID:                   types.Int64Value(*functionsResponse.Results.Id),
-			Name:                 types.StringValue(*functionsResponse.Results.Name),
-			LastEditor:           types.StringValue(*functionsResponse.Results.LastEditor),
-			LastModified:         types.StringValue(*functionsResponse.Results.Modified),
-			IsActive:             types.BoolValue(*functionsResponse.Results.Active),
-			Code:                 types.StringValue(*functionsResponse.Results.Code),
+			ID:                   types.Int64Value(functionsResponse.Data.Id),
+			Name:                 types.StringValue(functionsResponse.Data.Name),
+			Code:                 types.StringValue(functionsResponse.Data.Code),
 			DefaultArgs:          types.StringValue(defaultArgsStr),
-			ReferenceCount:       types.Int64Value(int64(0)),
-			ProductVersion:       types.StringValue(""),
-			Runtime:              types.StringValue(""),
-			ExecutionEnvironment: types.StringValue(""),
-			Version:              types.StringValue(""),
-			Vendor:               types.StringValue(""),
+			ExecutionEnvironment: types.StringValue(*functionsResponse.Data.ExecutionEnvironment),
+			Active:               types.BoolValue(*functionsResponse.Data.Active),
+			LastEditor:           types.StringValue(functionsResponse.Data.LastEditor),
+			LastModified:         types.StringValue(functionsResponse.Data.LastModified.Format(time.RFC850)),
+			ProductVersion:       types.StringValue(functionsResponse.Data.ProductVersion),
+			Version:              types.StringValue(functionsResponse.Data.Version),
+			Vendor:               types.StringValue(functionsResponse.Data.Vendor),
+			ReferenceCount:       types.Int64Value(functionsResponse.Data.ReferenceCount),
 		},
 	}
 
-	// Set optional fields if they exist in the response
-	if functionsResponse.Results.ReferenceCount != nil {
-		EdgeFunctionState.Data.ReferenceCount = types.Int64Value(*functionsResponse.Results.ReferenceCount)
-	}
-	// Map old API fields to new schema fields
-	if functionsResponse.Results.Language != nil {
-		EdgeFunctionState.Data.Runtime = types.StringValue(*functionsResponse.Results.Language)
-	}
-	if functionsResponse.Results.InitiatorType != nil {
-		EdgeFunctionState.Data.ExecutionEnvironment = types.StringValue(*functionsResponse.Results.InitiatorType)
+	if functionsResponse.Data.Runtime != nil {
+		EdgeFunctionState.Data.Runtime = types.StringValue(*functionsResponse.Data.Runtime)
 	}
 
 	EdgeFunctionState.ID = types.StringValue("Get By Id Edge Function")
