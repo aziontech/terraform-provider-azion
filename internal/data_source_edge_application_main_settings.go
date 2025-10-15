@@ -182,11 +182,11 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	applicationsResponse, response, err := e.client.applicationsApi.ApplicationsAPI.RetrieveApplication(ctx, edgeApplicationId).Execute() //nolint
+	applicationsResponse, response, err := e.client.edgeApi.ApplicationsAPI.RetrieveApplication(ctx, edgeApplicationId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
 			applicationsResponse, response, err = utils.RetryOn429(func() (*sdk.ResponseRetrieveApplication, *http.Response, error) {
-				return e.client.applicationsApi.ApplicationsAPI.RetrieveApplication(ctx, edgeApplicationId).Execute() //nolint
+				return e.client.edgeApi.ApplicationsAPI.RetrieveApplication(ctx, edgeApplicationId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
