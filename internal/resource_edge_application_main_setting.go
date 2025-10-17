@@ -156,13 +156,13 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 
 	edgeApplication.Modules = &modsRequest
 
-	createEdgeApplication, response, err := r.client.applicationsApi.
+	createEdgeApplication, response, err := r.client.edgeApi.
 		ApplicationsAPI.CreateApplication(ctx).
 		ApplicationRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
 			createEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ResponseApplication, *http.Response, error) {
-				return r.client.applicationsApi.
+				return r.client.edgeApi.
 					ApplicationsAPI.CreateApplication(ctx).
 					ApplicationRequest(edgeApplication).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -250,7 +250,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	idInt64, _ := strconv.ParseInt(state.ID.ValueString(), 10, 64)
-	stateEdgeApplication, response, err := r.client.applicationsApi.
+	stateEdgeApplication, response, err := r.client.edgeApi.
 		ApplicationsAPI.
 		RetrieveApplication(ctx, idInt64).Execute() //nolint
 	if err != nil {
@@ -260,7 +260,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 		}
 		if response != nil && response.StatusCode == 429 {
 			stateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ResponseRetrieveApplication, *http.Response, error) {
-				return r.client.applicationsApi.ApplicationsAPI.RetrieveApplication(ctx, idInt64).Execute() //nolint
+				return r.client.edgeApi.ApplicationsAPI.RetrieveApplication(ctx, idInt64).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -352,14 +352,14 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 	edgeApplication.Modules = &modsRequest
 
 	idInt64, _ := strconv.ParseInt(plan.ID.ValueString(), 10, 64)
-	updateEdgeApplication, response, err := r.client.applicationsApi.
+	updateEdgeApplication, response, err := r.client.edgeApi.
 		ApplicationsAPI.
 		UpdateApplication(ctx, idInt64).
 		ApplicationRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
 			updateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ResponseApplication, *http.Response, error) {
-				return r.client.applicationsApi.
+				return r.client.edgeApi.
 					ApplicationsAPI.
 					UpdateApplication(ctx, idInt64).
 					ApplicationRequest(edgeApplication).Execute() //nolint
@@ -421,12 +421,12 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 	}
 
 	idInt64, _ := strconv.ParseInt(state.ID.ValueString(), 10, 64)
-	_, response, err := r.client.applicationsApi.ApplicationsAPI.
+	_, response, err := r.client.edgeApi.ApplicationsAPI.
 		DestroyApplication(ctx, idInt64).Execute() //nolint
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*sdk.ResponseDeleteApplication, *http.Response, error) {
-				return r.client.applicationsApi.ApplicationsAPI.DestroyApplication(ctx, idInt64).Execute() //nolint
+				return r.client.edgeApi.ApplicationsAPI.DestroyApplication(ctx, idInt64).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {

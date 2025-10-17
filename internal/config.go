@@ -30,8 +30,8 @@ type apiClient struct {
 	//TODO: remove this
 	edgeApplicationsApi *edgeapplications.APIClient
 
-	applicationsConfig *edgeapi.Configuration
-	applicationsApi    *edgeapi.APIClient
+	edgeConfig *edgeapi.Configuration
+	edgeApi    *edgeapi.APIClient
 
 	digitalCertificatesConfig *digital_certificates.Configuration
 	digitalCertificatesApi    *digital_certificates.APIClient
@@ -57,7 +57,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		idnsConfig:                              idns.NewConfiguration(),
 		domainsConfig:                           domains.NewConfiguration(),
 		edgefunctionsConfig:                     edgefunctions.NewConfiguration(),
-		applicationsConfig:                      edgeapi.NewConfiguration(),
+		edgeConfig:                              edgeapi.NewConfiguration(),
 		digitalCertificatesConfig:               digital_certificates.NewConfiguration(),
 		networkListConfig:                       networklist.NewConfiguration(),
 		edgefirewallConfig:                      edgefirewall.NewConfiguration(),
@@ -70,7 +70,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 	v4url := "https://api.azion.com/v4"
 
 	// Always set v4 URL for applications API
-	client.applicationsConfig.Servers[0].URL = v4url
+	client.edgeConfig.Servers[0].URL = v4url
 	//TODO: update the configuration of V4 URL
 
 	if envApiEntrypoint != "" {
@@ -100,10 +100,10 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.edgefunctionsConfig.UserAgent = userAgent
 	client.edgefunctionsApi = edgefunctions.NewAPIClient(client.edgefunctionsConfig)
 
-	client.applicationsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-	client.applicationsConfig.AddDefaultHeader("Accept", "application/json; version=3")
-	client.applicationsConfig.UserAgent = userAgent
-	client.applicationsApi = edgeapi.NewAPIClient(client.applicationsConfig)
+	client.edgeConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.edgeConfig.AddDefaultHeader("Accept", "application/json; version=3")
+	client.edgeConfig.UserAgent = userAgent
+	client.edgeApi = edgeapi.NewAPIClient(client.edgeConfig)
 
 	client.digitalCertificatesConfig.AddDefaultHeader("Authorization", "token "+APIToken)
 	client.digitalCertificatesConfig.AddDefaultHeader("Accept", "application/json; version=3")
