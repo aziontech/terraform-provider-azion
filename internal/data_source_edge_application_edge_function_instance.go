@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
-	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
+	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -29,21 +29,16 @@ type EdgeApplicationEdgeFunctionInstanceDataSource struct {
 
 type EdgeFunctionInstanceDataSourceModel struct {
 	ID            types.String                 `tfsdk:"id"`
-	ApplicationID types.Int64                  `tfsdk:"edge_application_id"`
-	SchemaVersion types.Int64                  `tfsdk:"schema_version"`
-	Results       EdgeFunctionInstanceResponse `tfsdk:"results"`
-}
-
-type GetEdgeFunctionInstanceResponseLinks struct {
-	Previous types.String `tfsdk:"previous"`
-	Next     types.String `tfsdk:"next"`
+	ApplicationID types.String                 `tfsdk:"application_id"`
+	Data          EdgeFunctionInstanceResponse `tfsdk:"data"`
 }
 
 type EdgeFunctionInstanceResponse struct {
-	ID             types.Int64  `tfsdk:"id"`
-	EdgeFunctionID types.Int64  `tfsdk:"edge_function_id"`
-	Name           types.String `tfsdk:"name"`
-	Args           types.String `tfsdk:"args"`
+	ID         types.Int64  `tfsdk:"id"`
+	FunctionID types.Int64  `tfsdk:"function_id"`
+	Name       types.String `tfsdk:"name"`
+	Args       types.String `tfsdk:"args"`
+	Active     types.Bool   `tfsdk:"active"`
 }
 
 func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -64,15 +59,11 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Schema(_ context.Context
 				Description: "Numeric identifier of the data source.",
 				Computed:    true,
 			},
-			"edge_application_id": schema.Int64Attribute{
+			"application_id": schema.StringAttribute{
 				Description: "Numeric identifier of the Edge Application",
 				Required:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
-			"results": schema.SingleNestedAttribute{
+			"data": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
@@ -91,6 +82,10 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Schema(_ context.Context
 						Description: "Code of the function.",
 						Computed:    true,
 					},
+					"active": schema.BoolAttribute{
+						Description: "Active status of the function instance.",
+						Computed:    true,
+					},
 				},
 			},
 		},
@@ -98,24 +93,24 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Schema(_ context.Context
 }
 
 func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var EdgeApplicationId types.Int64
-	diagsEdgeApplicationId := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &EdgeApplicationId)
+	var EdgeApplicationId types.String
+	diagsEdgeApplicationId := req.Config.GetAttribute(ctx, path.Root("application_id"), &EdgeApplicationId)
 	resp.Diagnostics.Append(diagsEdgeApplicationId...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var EdgeFunctionInstanceId types.Int64
-	diagsEdgeFunctionInstanceId := req.Config.GetAttribute(ctx, path.Root("results").AtName("id"), &EdgeFunctionInstanceId)
+	var EdgeFunctionInstanceId types.String
+	diagsEdgeFunctionInstanceId := req.Config.GetAttribute(ctx, path.Root("data").AtName("id"), &EdgeFunctionInstanceId)
 	resp.Diagnostics.Append(diagsEdgeFunctionInstanceId...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	edgeFunctionInstancesResponse, response, err := d.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdGet(ctx, EdgeApplicationId.ValueInt64(), EdgeFunctionInstanceId.ValueInt64()).Execute() //nolint
+	functionInstancesResponse, response, err := d.client.edgeApi.ApplicationsFunctionAPI.RetrieveApplicationFunctionInstance(ctx, EdgeApplicationId.ValueString(), EdgeFunctionInstanceId.ValueString()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstancesGetOneResponse, *http.Response, error) {
-				return d.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesFunctionsInstancesIdGet(ctx, EdgeApplicationId.ValueInt64(), EdgeFunctionInstanceId.ValueInt64()).Execute() //nolint
+			functionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapi.ResponseRetrieveApplicationFunctionInstance, *http.Response, error) {
+				return d.client.edgeApi.ApplicationsFunctionAPI.RetrieveApplicationFunctionInstance(ctx, EdgeApplicationId.ValueString(), EdgeFunctionInstanceId.ValueString()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -146,7 +141,7 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Read(ctx context.Context
 		}
 	}
 
-	jsonArgsStr, err := utils.ConvertInterfaceToString(edgeFunctionInstancesResponse.Results.GetArgs())
+	jsonArgsStr, err := utils.ConvertInterfaceToString(functionInstancesResponse.Data.GetArgs())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -155,16 +150,16 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Read(ctx context.Context
 	}
 	edgeApplicationsEdgeFunctionsInstanceState := EdgeFunctionInstanceDataSourceModel{
 		ApplicationID: EdgeApplicationId,
-		SchemaVersion: types.Int64Value(edgeFunctionInstancesResponse.SchemaVersion),
-		Results: EdgeFunctionInstanceResponse{
-			ID:             types.Int64Value(edgeFunctionInstancesResponse.Results.GetId()),
-			EdgeFunctionID: types.Int64Value(edgeFunctionInstancesResponse.Results.GetEdgeFunctionId()),
-			Name:           types.StringValue(edgeFunctionInstancesResponse.Results.GetName()),
-			Args:           types.StringValue(jsonArgsStr),
+		Data: EdgeFunctionInstanceResponse{
+			ID:         types.Int64Value(functionInstancesResponse.Data.GetId()),
+			FunctionID: types.Int64Value(functionInstancesResponse.Data.GetFunction()),
+			Name:       types.StringValue(functionInstancesResponse.Data.GetName()),
+			Args:       types.StringValue(jsonArgsStr),
+			Active:     types.BoolValue(functionInstancesResponse.Data.GetActive()),
 		},
 	}
 
-	edgeApplicationsEdgeFunctionsInstanceState.ID = types.StringValue("Get By ID Edge Applications Edge Functions Instances")
+	edgeApplicationsEdgeFunctionsInstanceState.ID = types.StringValue("Get Functions Instances By Applications")
 	diags := resp.State.Set(ctx, &edgeApplicationsEdgeFunctionsInstanceState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

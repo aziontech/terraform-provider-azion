@@ -916,7 +916,6 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 			}
 		}
 	}
-
 }
 
 func (r *rulesEngineResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
