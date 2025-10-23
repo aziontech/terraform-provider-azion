@@ -4,10 +4,11 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
-	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
+	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -28,27 +29,20 @@ type EdgeApplicationsEdgeFunctionInstanceDataSource struct {
 }
 
 type EdgeFunctionsInstanceDataSourceModel struct {
-	ID            types.String                           `tfsdk:"id"`
-	ApplicationID types.Int64                            `tfsdk:"edge_application_id"`
-	Counter       types.Int64                            `tfsdk:"counter"`
-	Page          types.Int64                            `tfsdk:"page"`
-	PageSize      types.Int64                            `tfsdk:"page_size"`
-	TotalPages    types.Int64                            `tfsdk:"total_pages"`
-	Links         *GetEdgeFunctionsInstanceResponseLinks `tfsdk:"links"`
-	SchemaVersion types.Int64                            `tfsdk:"schema_version"`
-	Results       []EdgeFunctionsInstanceResponse        `tfsdk:"results"`
-}
-
-type GetEdgeFunctionsInstanceResponseLinks struct {
-	Previous types.String `tfsdk:"previous"`
-	Next     types.String `tfsdk:"next"`
+	ID            types.String                    `tfsdk:"id"`
+	ApplicationID types.String                    `tfsdk:"application_id"`
+	TotalCount    types.Int64                     `tfsdk:"total_count"`
+	Results       []EdgeFunctionsInstanceResponse `tfsdk:"results"`
 }
 
 type EdgeFunctionsInstanceResponse struct {
-	ID             types.Int64  `tfsdk:"id"`
-	EdgeFunctionID types.Int64  `tfsdk:"edge_function_id"`
-	Name           types.String `tfsdk:"name"`
-	Args           types.String `tfsdk:"args"`
+	ID           types.Int64  `tfsdk:"id"`
+	FunctionID   types.Int64  `tfsdk:"function_id"`
+	Name         types.String `tfsdk:"name"`
+	Args         types.String `tfsdk:"args"`
+	Active       types.Bool   `tfsdk:"active"`
+	LastEditor   types.String `tfsdk:"last_editor"`
+	LastModified types.String `tfsdk:"last_modified"`
 }
 
 func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -69,59 +63,44 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Schema(_ context.Contex
 				Description: "Numeric identifier of the data source.",
 				Computed:    true,
 			},
-			"edge_application_id": schema.Int64Attribute{
+			"application_id": schema.Int64Attribute{
 				Description: "Numeric identifier of the Edge Application",
 				Required:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
-			"counter": schema.Int64Attribute{
+			"total_count": schema.Int64Attribute{
 				Description: "The total number of edge function instances.",
 				Computed:    true,
-			},
-			"page": schema.Int64Attribute{
-				Description: "The page number of edge function instances.",
-				Optional:    true,
-			},
-			"page_size": schema.Int64Attribute{
-				Description: "The Page Size number of edge function instances.",
-				Optional:    true,
-			},
-			"total_pages": schema.Int64Attribute{
-				Description: "The total number of pages.",
-				Computed:    true,
-			},
-			"links": schema.SingleNestedAttribute{
-				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"previous": schema.StringAttribute{
-						Computed: true,
-					},
-					"next": schema.StringAttribute{
-						Computed: true,
-					},
-				},
 			},
 			"results": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.Int64Attribute{
-							Description: "The function identifier.",
+							Description: "The function instance identifier.",
 							Computed:    true,
 						},
-						"edge_function_id": schema.Int64Attribute{
-							Description: "Name of the function.",
+						"function_id": schema.Int64Attribute{
+							Description: "The edge function identifier.",
 							Computed:    true,
 						},
 						"name": schema.StringAttribute{
-							Description: "Language of the function.",
+							Description: "Name of the function instance.",
 							Computed:    true,
 						},
 						"args": schema.StringAttribute{
-							Description: "Code of the function.",
+							Description: "Arguments of the function instance.",
+							Computed:    true,
+						},
+						"active": schema.BoolAttribute{
+							Description: "Active status of the function instance.",
+							Computed:    true,
+						},
+						"last_editor": schema.StringAttribute{
+							Description: "Last editor of the function instance.",
+							Computed:    true,
+						},
+						"last_modified": schema.StringAttribute{
+							Description: "Last modified timestamp of the function instance.",
 							Computed:    true,
 						},
 					},
@@ -134,7 +113,7 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Schema(_ context.Contex
 func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var Page types.Int64
 	var PageSize types.Int64
-	var EdgeApplicationId types.Int64
+	var EdgeApplicationId types.String
 	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
 	resp.Diagnostics.Append(diagsPage...)
 	if resp.Diagnostics.HasError() {
@@ -147,7 +126,7 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Contex
 		return
 	}
 
-	diagsEdgeApplicationId := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &EdgeApplicationId)
+	diagsEdgeApplicationId := req.Config.GetAttribute(ctx, path.Root("application_id"), &EdgeApplicationId)
 	resp.Diagnostics.Append(diagsEdgeApplicationId...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -160,11 +139,11 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Contex
 		PageSize = types.Int64Value(10)
 	}
 
-	edgeFunctionInstancesResponse, response, err := d.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+	edgeFunctionInstancesResponse, response, err := d.client.edgeApi.ApplicationsFunctionAPI.ListApplicationFunctionInstances(ctx, EdgeApplicationId.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationInstancesGetResponse, *http.Response, error) {
-				return d.client.edgeApplicationsApi.EdgeApplicationsEdgeFunctionsInstancesAPI.EdgeApplicationsEdgeApplicationIdFunctionsInstancesGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapi.PaginatedApplicationFunctionInstanceList, *http.Response, error) {
+				return d.client.edgeApi.ApplicationsFunctionAPI.ListApplicationFunctionInstances(ctx, EdgeApplicationId.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -195,25 +174,9 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Contex
 		}
 	}
 
-	var previous, next string
-	if edgeFunctionInstancesResponse.Links.Previous.Get() != nil {
-		previous = *edgeFunctionInstancesResponse.Links.Previous.Get()
-	}
-	if edgeFunctionInstancesResponse.Links.Next.Get() != nil {
-		next = *edgeFunctionInstancesResponse.Links.Next.Get()
-	}
-
 	edgeApplicationsEdgeFunctionsInstanceState := EdgeFunctionsInstanceDataSourceModel{
-		Page:          Page,
-		PageSize:      PageSize,
 		ApplicationID: EdgeApplicationId,
-		SchemaVersion: types.Int64Value(edgeFunctionInstancesResponse.SchemaVersion),
-		TotalPages:    types.Int64Value(edgeFunctionInstancesResponse.TotalPages),
-		Counter:       types.Int64Value(edgeFunctionInstancesResponse.Count),
-		Links: &GetEdgeFunctionsInstanceResponseLinks{
-			Previous: types.StringValue(previous),
-			Next:     types.StringValue(next),
-		},
+		TotalCount:    types.Int64Value(edgeFunctionInstancesResponse.GetCount()),
 	}
 
 	for _, resultEdgeApplication := range edgeFunctionInstancesResponse.GetResults() {
@@ -225,14 +188,17 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Contex
 			)
 		}
 		edgeApplicationsEdgeFunctionsInstanceState.Results = append(edgeApplicationsEdgeFunctionsInstanceState.Results, EdgeFunctionsInstanceResponse{
-			ID:             types.Int64Value(resultEdgeApplication.GetId()),
-			EdgeFunctionID: types.Int64Value(resultEdgeApplication.GetEdgeFunctionId()),
-			Name:           types.StringValue(resultEdgeApplication.GetName()),
-			Args:           types.StringValue(jsonArgsStr),
+			ID:           types.Int64Value(resultEdgeApplication.GetId()),
+			FunctionID:   types.Int64Value(resultEdgeApplication.GetFunction()),
+			Name:         types.StringValue(resultEdgeApplication.GetName()),
+			Args:         types.StringValue(jsonArgsStr),
+			Active:       types.BoolValue(resultEdgeApplication.GetActive()),
+			LastEditor:   types.StringValue(resultEdgeApplication.GetLastEditor()),
+			LastModified: types.StringValue(resultEdgeApplication.GetLastModified().Format(time.RFC3339)),
 		})
 	}
 
-	edgeApplicationsEdgeFunctionsInstanceState.ID = types.StringValue("Get All Edge Applications Edge Functions Instances")
+	edgeApplicationsEdgeFunctionsInstanceState.ID = types.StringValue("Get All Application Function Instances")
 	diags := resp.State.Set(ctx, &edgeApplicationsEdgeFunctionsInstanceState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

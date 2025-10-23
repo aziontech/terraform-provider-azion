@@ -1,6 +1,6 @@
 data "azion_edge_application_edge_function_instance" "example" {
-  edge_application_id = 1234567890
-  results = {
+  application_id = "1234567890"
+  data = {
     id = 123456
   }
 }
