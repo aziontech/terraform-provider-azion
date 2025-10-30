@@ -4,6 +4,9 @@ on: [pull_request]
 
 jobs:
   tflint:
+    permissions:
+      contents: write
+      pull-requests: write
     name: Lint .tf examples
     runs-on: ubuntu-latest
     steps:
@@ -38,6 +41,9 @@ jobs:
           done
           exit $exit_code
   validate-terraform:
+    permissions:
+      contents: write
+      pull-requests: write
     name: Check fmt and Validate .tf examples
     runs-on: ubuntu-latest
     steps:
@@ -92,6 +98,9 @@ jobs:
               popd
             done
   func-tests:
+    permissions:
+      contents: write
+      pull-requests: write
     name: Terraform Functional Tests
     timeout-minutes: 60
     env:
