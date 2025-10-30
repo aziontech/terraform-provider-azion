@@ -8,6 +8,9 @@ permissions:
 jobs:
   # Ensure the project can build first
   build:
+    permissions:
+      contents: write
+      pull-requests: write
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -26,6 +29,9 @@ jobs:
         run: |
           make install
   fmt:
+    permissions:
+      contents: write
+      pull-requests: write
     name: go fmt
     needs: [build]
     runs-on: ubuntu-latest
@@ -42,6 +48,9 @@ jobs:
           fi
 
   gosec:
+    permissions:
+      contents: write
+      pull-requests: write
     name: Run Gosec 
     needs: [ build ]
     runs-on: ubuntu-latest
@@ -53,6 +62,9 @@ jobs:
           make sec
 
   vet:
+    permissions:
+      contents: write
+      pull-requests: write
     name: go vet
     needs: [build]
     runs-on: ubuntu-latest
@@ -65,6 +77,9 @@ jobs:
       - run: go vet ./...
 
   lint:
+    permissions:
+      contents: write
+      pull-requests: write
     name: golangcli-lint
     needs: [ build ]
     runs-on: ubuntu-latest
