@@ -222,18 +222,29 @@ resource "azion_domain" "testfunc" {
 }
 
 resource "azion_edge_firewall_main_setting" "testfunc" {
-  results = {
-    name                       = "EdgeFirewall test-func"
-    is_active                  = true
-    edge_functions_enabled     = true
-    network_protection_enabled = true
-    waf_enabled                = true
-    domains                    = []
+  data = {
+    name   = "EdgeFirewall test-func"
+    active = true
+    debug  = false
+    
+    modules = {
+      functions = {
+        enabled = true
+      }
+      
+      network_protection = {
+        enabled = true
+      }
+      
+      waf = {
+        enabled = true
+      }
+    }
   }
 }
 
 resource "azion_edge_firewall_edge_functions_instance" "testfunc" {
-  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
+  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
   results = {
     name = "Terraform Test 1"
     "edge_function_id" : azion_edge_function.testfunc2firewall.edge_function.id

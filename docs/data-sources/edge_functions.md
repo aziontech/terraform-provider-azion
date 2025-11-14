@@ -22,21 +22,10 @@ data "azion_edge_functions" "example" {
 
 ### Read-Only
 
-- `counter` (Number) The total number of zones.
 - `id` (String) Numeric identifier of the data source.
-- `links` (Attributes) (see [below for nested schema](#nestedatt--links))
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
 - `schema_version` (Number) Schema Version.
-- `total_pages` (Number) The total number of pages.
-
-<a id="nestedatt--links"></a>
-### Nested Schema for `links`
-
-Read-Only:
-
-- `next` (String)
-- `previous` (String)
-
+- `total_count` (Number) The total count of edge functions.
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
@@ -45,13 +34,14 @@ Read-Only:
 
 - `active` (Boolean) Status of the function.
 - `code` (String) Code of the function.
-- `function_id` (Number) The function identifier.
-- `function_to_run` (String) The function to run.
-- `initiator_type` (String) Initiator type of the function.
-- `json_args` (String) JSON arguments of the function.
-- `language` (String) Language of the function.
+- `default_args` (String) Default arguments of the function as JSON.
+- `execution_environment` (String) Execution environment of the function.
+- `id` (Number) The function identifier.
 - `last_editor` (String) The last editor of the function.
-- `modified` (String) Last modified timestamp of the function.
+- `last_modified` (String) Last modified timestamp of the function.
 - `name` (String) Name of the function.
+- `product_version` (String) Product version of the function.
 - `reference_count` (Number) The reference count of the function.
+- `runtime` (String) Runtime of the function.
+- `vendor` (String) Vendor of the function.
 - `version` (String) Version of the function.

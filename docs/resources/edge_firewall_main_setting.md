@@ -30,35 +30,73 @@ resource "azion_edge_firewall_main_setting" "example" {
 
 ### Required
 
-- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
+- `data` (Attributes) (see [below for nested schema](#nestedatt--data))
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
-- `schema_version` (Number)
 
-<a id="nestedatt--results"></a>
-### Nested Schema for `results`
+<a id="nestedatt--data"></a>
+### Nested Schema for `data`
 
 Required:
 
-- `name` (String) Name of the edge firewall rule set.
+- `name` (String) Name of the firewall rule set.
 
 Optional:
 
-- `debug_rules` (Boolean) Whether debug rules are enabled for the rule set.
-- `domains` (List of Number) List of domains associated with the edge firewall rule set.
-- `edge_functions_enabled` (Boolean) Whether edge functions are enabled for the rule set.
-- `is_active` (Boolean) Whether the edge firewall rule set is active.
-- `network_protection_enabled` (Boolean) Whether network protection is enabled for the rule set.
-- `waf_enabled` (Boolean) Whether Web Application Firewall (WAF) is enabled for the rule set.
+- `active` (Boolean) Whether the firewall rule set is active.
+- `debug` (Boolean) Whether debug is enabled for the rule set.
+- `modules` (Attributes) Modules configuration for the firewall. (see [below for nested schema](#nestedatt--data--modules))
 
 Read-Only:
 
-- `id` (Number) ID of the edge firewall rule set.
-- `last_editor` (String) Last editor of the edge firewall rule set.
-- `last_modified` (String) Last modified timestamp of the edge firewall rule set.
+- `id` (Number) ID of the firewall rule set.
+- `last_editor` (String) Last editor of the firewall rule set.
+- `last_modified` (String) Last modified timestamp of the firewall rule set.
+- `product_version` (String) Product version of the firewall rule set.
+
+<a id="nestedatt--data--modules"></a>
+### Nested Schema for `data.modules`
+
+Optional:
+
+- `ddos_protection` (Attributes) DDoS protection module configuration. (see [below for nested schema](#nestedatt--data--modules--ddos_protection))
+- `functions` (Attributes) Functions module configuration. (see [below for nested schema](#nestedatt--data--modules--functions))
+- `network_protection` (Attributes) Network protection module configuration. (see [below for nested schema](#nestedatt--data--modules--network_protection))
+- `waf` (Attributes) WAF module configuration. (see [below for nested schema](#nestedatt--data--modules--waf))
+
+<a id="nestedatt--data--modules--ddos_protection"></a>
+### Nested Schema for `data.modules.ddos_protection`
+
+Optional:
+
+- `enabled` (Boolean) Whether DDoS protection is enabled.
+
+
+<a id="nestedatt--data--modules--functions"></a>
+### Nested Schema for `data.modules.functions`
+
+Optional:
+
+- `enabled` (Boolean) Whether functions are enabled.
+
+
+<a id="nestedatt--data--modules--network_protection"></a>
+### Nested Schema for `data.modules.network_protection`
+
+Optional:
+
+- `enabled` (Boolean) Whether network protection is enabled.
+
+
+<a id="nestedatt--data--modules--waf"></a>
+### Nested Schema for `data.modules.waf`
+
+Optional:
+
+- `enabled` (Boolean) Whether WAF is enabled.
 
 ## Import
 

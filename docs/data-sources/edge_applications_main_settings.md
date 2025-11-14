@@ -29,40 +29,61 @@ data "azion_edge_applications_main_settings" "example" {
 
 ### Read-Only
 
-- `counter` (Number) The total number of edge applications.
 - `id` (String) Identifier of the data source.
-- `links` (Attributes) (see [below for nested schema](#nestedatt--links))
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number) Schema Version.
-- `total_pages` (Number) The total number of pages.
-
-<a id="nestedatt--links"></a>
-### Nested Schema for `links`
-
-Read-Only:
-
-- `next` (String)
-- `previous` (String)
-
+- `total_count` (Number) The total number of edge applications.
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
 
 Read-Only:
 
-- `active` (Boolean) Indicates if the edge application is active.
-- `application_id` (Number) The edge application identifier.
-- `debug_rules` (Boolean) Indicates if debug rules are enabled for the edge application.
-- `last_editor` (String) The email of the last editor of the edge application.
-- `last_modified` (String) The timestamp of the last modification of the edge application.
-- `name` (String) Name of the edge application.
-- `origins` (Attributes List) List of origins associated with the edge application. (see [below for nested schema](#nestedatt--results--origins))
+- `active` (Boolean) Whether the Application is active.
+- `debug` (Boolean) Whether the Application is in debug mode.
+- `id` (Number) The Application identifier.
+- `last_editor` (String) Last editor identifier.
+- `last_modified` (String) Last modified timestamp.
+- `modules` (Attributes) Modules configuration. (see [below for nested schema](#nestedatt--results--modules))
+- `name` (String) The name of the Application.
+- `product_version` (String) Product version.
 
-<a id="nestedatt--results--origins"></a>
-### Nested Schema for `results.origins`
+<a id="nestedatt--results--modules"></a>
+### Nested Schema for `results.modules`
 
 Read-Only:
 
-- `name` (String) Name of the origin.
-- `origin_id` (String) Identifier of the origin.
-- `origin_type` (String) Type of the origin.
+- `application_accelerator` (Attributes) (see [below for nested schema](#nestedatt--results--modules--application_accelerator))
+- `edge_cache` (Attributes) (see [below for nested schema](#nestedatt--results--modules--edge_cache))
+- `functions` (Attributes) (see [below for nested schema](#nestedatt--results--modules--functions))
+- `image_processor` (Attributes) (see [below for nested schema](#nestedatt--results--modules--image_processor))
+
+<a id="nestedatt--results--modules--application_accelerator"></a>
+### Nested Schema for `results.modules.application_accelerator`
+
+Read-Only:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--results--modules--edge_cache"></a>
+### Nested Schema for `results.modules.edge_cache`
+
+Read-Only:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--results--modules--functions"></a>
+### Nested Schema for `results.modules.functions`
+
+Read-Only:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--results--modules--image_processor"></a>
+### Nested Schema for `results.modules.image_processor`
+
+Read-Only:
+
+- `enabled` (Boolean)

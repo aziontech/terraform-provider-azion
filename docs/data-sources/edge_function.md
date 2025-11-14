@@ -27,23 +27,24 @@ data "azion_edge_function" "example" {
 
 ### Read-Only
 
-- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
+- `data` (Attributes) (see [below for nested schema](#nestedatt--data))
 - `schema_version` (Number) Schema Version.
 
-<a id="nestedatt--results"></a>
-### Nested Schema for `results`
+<a id="nestedatt--data"></a>
+### Nested Schema for `data`
 
 Read-Only:
 
 - `active` (Boolean) Status of the function.
 - `code` (String) Code of the function.
-- `function_id` (Number) The function identifier.
-- `function_to_run` (String) The function to run.
-- `initiator_type` (String) Initiator type of the function.
-- `json_args` (String) JSON arguments of the function.
-- `language` (String) Language of the function.
+- `default_args` (String) Default arguments of the function as JSON.
+- `execution_environment` (String) Execution environment of the function.
+- `id` (Number) The function identifier.
 - `last_editor` (String) The last editor of the function.
-- `modified` (String) Last modified timestamp of the function.
+- `last_modified` (String) Last modified timestamp of the function.
 - `name` (String) Name of the function.
+- `product_version` (String) Product version of the function.
 - `reference_count` (Number) The reference count of the function.
+- `runtime` (String) Runtime of the function.
+- `vendor` (String) Vendor of the function.
 - `version` (String) Version of the function.
