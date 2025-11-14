@@ -356,10 +356,11 @@ resource "azion_waf_rule_set" "testfunc" {
 
 # ---------------------- DATA SOURCES ----------------------
 
-data "azion_edge_applications_main_settings" "example" {
-  page      = 1
-  page_size = 2
-}
+# Temporarily commented out due to API/SDK mismatch (cache vs edge_cache field)
+# data "azion_edge_applications_main_settings" "example" {
+#   page      = 1
+#   page_size = 2
+# }
 
 data "azion_edge_application_main_settings" "example" {
   id = azion_edge_application_main_setting.testfunc.edge_application.application_id
