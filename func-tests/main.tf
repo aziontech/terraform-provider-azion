@@ -13,11 +13,17 @@ variable "edge_functions_module" {
   default = false
 }
 
+# ---------------------- LOCALS ----------------------
+locals {
+  timestamp = formatdate("YYYY-MM-DD-hhmm", timestamp())
+  name_suffix = "test-func-${local.timestamp}"
+}
+
 # ---------------------- RESOURCES ----------------------
 
 resource "azion_edge_application_main_setting" "testfunc" {
   edge_application = {
-    name : "Terraform Main Settings test-func"
+    name : "Terraform Main Settings ${local.name_suffix}"
     supported_ciphers : "all"
     delivery_protocol : "http"
     http_port : [80]
@@ -41,7 +47,7 @@ resource "azion_edge_application_main_setting" "testfunc" {
 resource "azion_edge_application_origin" "testfunc" {
   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
   origin = {
-    name        = "Terraform Edge App Origin test-func"
+    name        = "Terraform Edge App Origin ${local.name_suffix}"
     origin_type = "single_origin"
     addresses : [
       {
@@ -59,7 +65,7 @@ resource "azion_edge_application_origin" "testfunc" {
 resource "azion_edge_application_cache_setting" "testfunc" {
   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
   cache_settings = {
-    name                               = "Terraform Cache Setting test-func"
+    name                               = "Terraform Cache Setting ${local.name_suffix}"
     browser_cache_settings             = "override"
     browser_cache_settings_maximum_ttl = 20
     cdn_cache_settings                 = "override"
@@ -157,7 +163,7 @@ resource "azion_edge_application_cache_setting" "testfunc" {
 
 resource "azion_edge_function" "testfunc" {
   edge_function = {
-    name           = "Terraform Edge Function test-func"
+    name           = "Terraform Edge Function ${local.name_suffix}"
     code           = file("${path.module}/mock_files/dummy_script.txt")
     language       = "javascript"
     initiator_type = "edge_application"
@@ -171,7 +177,7 @@ resource "azion_edge_function" "testfunc" {
 
 resource "azion_edge_function" "testfunc2firewall" {
   edge_function = {
-    name           = "Terraform Edge Function 2 Firewall test-func"
+    name           = "Terraform Edge Function 2 Firewall ${local.name_suffix}"
     code           = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
     language       = "javascript"
     initiator_type = "edge_firewall"
@@ -208,9 +214,9 @@ resource "azion_edge_function" "testfunc2firewall" {
 resource "azion_domain" "testfunc" {
   domain = {
     cnames : [
-      "www.terraformtest-func.qa"
+      "www.terraformtest-func-${local.timestamp}.qa"
     ]
-    name                   = "Terraform domain test-func"
+    name                   = "Terraform domain ${local.name_suffix}"
     digital_certificate_id = null
     cname_access_only      = false
     edge_application_id    = azion_edge_application_main_setting.testfunc.edge_application.application_id
@@ -223,7 +229,7 @@ resource "azion_domain" "testfunc" {
 
 resource "azion_edge_firewall_main_setting" "testfunc" {
   data = {
-    name   = "EdgeFirewall test-func"
+    name   = "EdgeFirewall ${local.name_suffix}"
     active = true
     debug  = false
     
@@ -259,7 +265,7 @@ resource "azion_edge_firewall_edge_functions_instance" "testfunc" {
 
 resource "azion_digital_certificate" "testfunc" {
   certificate_result = {
-    name                = "Terraform Digital Certificate test-func"
+    name                = "Terraform Digital Certificate ${local.name_suffix}"
     certificate_content = file("${path.module}/mock_files/dummy_certificate.pem")
     private_key         = file("${path.module}/mock_files/dummy_private_key.pem")
   }
@@ -267,7 +273,7 @@ resource "azion_digital_certificate" "testfunc" {
 
 resource "azion_intelligent_dns_zone" "testfunc" {
   zone = {
-    domain : "terraformtest-func.qa",
+    domain : "terraformtest-func-${local.timestamp}.qa",
     is_active : true,
     name : "example"
   }
@@ -299,7 +305,7 @@ resource "azion_intelligent_dns_record" "testfunc" {
 
 resource "azion_network_list" "exampleOne" {
   results = {
-    name      = "NetworkList Terraform test-func Countries"
+    name      = "NetworkList Terraform ${local.name_suffix} Countries"
     list_type = "countries"
     items_values_str = [
       "BR",
@@ -311,7 +317,7 @@ resource "azion_network_list" "exampleOne" {
 
 resource "azion_network_list" "exampleTwo" {
   results = {
-    name      = "NetworkList Terraform test-func ip_cidr"
+    name      = "NetworkList Terraform ${local.name_suffix} ip_cidr"
     list_type = "ip_cidr"
     items_values_str = [
       "192.168.0.1",
@@ -323,7 +329,7 @@ resource "azion_network_list" "exampleTwo" {
 
 resource "azion_waf_rule_set" "testfunc" {
   result = {
-    name                              = "Terraform WAF test-func",
+    name                              = "Terraform WAF ${local.name_suffix}",
     mode                              = "counting",
     active                            = true,
     sql_injection                     = true,
