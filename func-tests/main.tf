@@ -449,9 +449,9 @@ data "azion_digital_certificate" "example" {
 data "azion_domains" "example" {
 }
 
-data "azion_domain" "example" {
-  id = azion_domain.testfunc.domain.id
-}
+# data "azion_domain" "example" {
+#   id = azion_domain.testfunc.domain.id
+# }
 
 data "azion_intelligent_dns_zones" "examples" {}
 
