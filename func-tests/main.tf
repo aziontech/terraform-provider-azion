@@ -177,10 +177,11 @@ resource "azion_edge_function" "testfunc" {
 
 resource "azion_edge_function" "testfunc2firewall" {
   edge_function = {
-    name           = "Terraform Edge Function 2 Firewall ${local.name_suffix}"
-    code           = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
-    language       = "javascript"
-    initiator_type = "edge_firewall"
+    name                 = "Terraform Edge Function 2 Firewall ${local.name_suffix}"
+    code                 = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
+    language             = "javascript"
+    initiator_type       = "edge_firewall"
+    execution_environment = "firewall"
     json_args = jsonencode(
       { "key" = "Value",
         "key" = "example"
