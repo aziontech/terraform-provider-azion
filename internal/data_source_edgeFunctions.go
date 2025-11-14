@@ -70,11 +70,7 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Description: "Numeric identifier of the data source.",
 				Computed:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
-			"total_count": schema.Int64Attribute{
+			"counter": schema.Int64Attribute{
 				Description: "The total count of edge functions.",
 				Computed:    true,
 			},
