@@ -21,6 +21,11 @@ type EdgeFirewallEdgeFunctionsInstanceDataSource struct {
 	client *apiClient
 }
 
+type EdgeFirewallsResponseLinks struct {
+	Previous types.String `tfsdk:"previous"`
+	Next     types.String `tfsdk:"next"`
+}
+
 type EdgeFirewallEdgeFunctionsInstanceDataSourceModel struct {
 	ID             types.String                               `tfsdk:"id"`
 	EdgeFirewallID types.Int64                                `tfsdk:"edge_firewall_id"`

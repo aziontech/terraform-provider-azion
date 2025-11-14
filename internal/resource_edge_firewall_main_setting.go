@@ -7,8 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/edgefirewall"
-
+	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -34,23 +33,27 @@ type edgeFirewallResource struct {
 }
 
 type EdgeFirewallResourceModel struct {
-	SchemaVersion types.Int64                  `tfsdk:"schema_version"`
-	EdgeFirewall  *EdgeFirewallResourceResults `tfsdk:"results"`
-	ID            types.String                 `tfsdk:"id"`
-	LastUpdated   types.String                 `tfsdk:"last_updated"`
+	EdgeFirewall *EdgeFirewallResourceResults `tfsdk:"data"`
+	ID           types.String                 `tfsdk:"id"`
+	LastUpdated  types.String                 `tfsdk:"last_updated"`
+}
+
+type EdgeFirewallResourceModules struct {
+	DdosProtection    *DdosProtectionModule    `tfsdk:"ddos_protection"`
+	Functions         *FunctionsModule         `tfsdk:"functions"`
+	NetworkProtection *NetworkProtectionModule `tfsdk:"network_protection"`
+	WAF               *WAFModule               `tfsdk:"waf"`
 }
 
 type EdgeFirewallResourceResults struct {
-	ID                       types.Int64  `tfsdk:"id"`
-	LastEditor               types.String `tfsdk:"last_editor"`
-	LastModified             types.String `tfsdk:"last_modified"`
-	Name                     types.String `tfsdk:"name"`
-	IsActive                 types.Bool   `tfsdk:"is_active"`
-	EdgeFunctionsEnabled     types.Bool   `tfsdk:"edge_functions_enabled"`
-	NetworkProtectionEnabled types.Bool   `tfsdk:"network_protection_enabled"`
-	WAFEnabled               types.Bool   `tfsdk:"waf_enabled"`
-	DebugRules               types.Bool   `tfsdk:"debug_rules"`
-	Domains                  types.List   `tfsdk:"domains"`
+	ID             types.Int64                  `tfsdk:"id"`
+	Name           types.String                 `tfsdk:"name"`
+	Modules        *EdgeFirewallResourceModules `tfsdk:"modules"`
+	Debug          types.Bool                   `tfsdk:"debug"`
+	Active         types.Bool                   `tfsdk:"active"`
+	LastEditor     types.String                 `tfsdk:"last_editor"`
+	LastModified   types.String                 `tfsdk:"last_modified"`
+	ProductVersion types.String                 `tfsdk:"product_version"`
 }
 
 func (r *edgeFirewallResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -66,62 +69,88 @@ func (r *edgeFirewallResource) Schema(_ context.Context, _ resource.SchemaReques
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"schema_version": schema.Int64Attribute{
-				Computed: true,
-			},
 			"last_updated": schema.StringAttribute{
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"results": schema.SingleNestedAttribute{
+			"data": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
-						Description: "ID of the edge firewall rule set.",
-						Computed:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the edge firewall rule set.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the edge firewall rule set.",
+						Description: "ID of the firewall rule set.",
 						Computed:    true,
 					},
 					"name": schema.StringAttribute{
-						Description: "Name of the edge firewall rule set.",
+						Description: "Name of the firewall rule set.",
 						Required:    true,
 					},
-					"is_active": schema.BoolAttribute{
-						Description: "Whether the edge firewall rule set is active.",
-						Computed:    true,
+					"modules": schema.SingleNestedAttribute{
+						Description: "Modules configuration for the firewall.",
 						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"ddos_protection": schema.SingleNestedAttribute{
+								Description: "DDoS protection module configuration.",
+								Optional:    true,
+								Attributes: map[string]schema.Attribute{
+									"enabled": schema.BoolAttribute{
+										Description: "Whether DDoS protection is enabled.",
+										Optional:    true,
+									},
+								},
+							},
+							"functions": schema.SingleNestedAttribute{
+								Description: "Functions module configuration.",
+								Optional:    true,
+								Attributes: map[string]schema.Attribute{
+									"enabled": schema.BoolAttribute{
+										Description: "Whether functions are enabled.",
+										Optional:    true,
+									},
+								},
+							},
+							"network_protection": schema.SingleNestedAttribute{
+								Description: "Network protection module configuration.",
+								Optional:    true,
+								Attributes: map[string]schema.Attribute{
+									"enabled": schema.BoolAttribute{
+										Description: "Whether network protection is enabled.",
+										Optional:    true,
+									},
+								},
+							},
+							"waf": schema.SingleNestedAttribute{
+								Description: "WAF module configuration.",
+								Optional:    true,
+								Attributes: map[string]schema.Attribute{
+									"enabled": schema.BoolAttribute{
+										Description: "Whether WAF is enabled.",
+										Optional:    true,
+									},
+								},
+							},
+						},
 					},
-					"edge_functions_enabled": schema.BoolAttribute{
-						Description: "Whether edge functions are enabled for the rule set.",
-						Computed:    true,
+					"debug": schema.BoolAttribute{
+						Description: "Whether debug is enabled for the rule set.",
 						Optional:    true,
+						Computed:    true,
 					},
-					"network_protection_enabled": schema.BoolAttribute{
-						Description: "Whether network protection is enabled for the rule set.",
-						Computed:    true,
+					"active": schema.BoolAttribute{
+						Description: "Whether the firewall rule set is active.",
 						Optional:    true,
+						Computed:    true,
 					},
-					"waf_enabled": schema.BoolAttribute{
-						Description: "Whether Web Application Firewall (WAF) is enabled for the rule set.",
+					"last_editor": schema.StringAttribute{
+						Description: "Last editor of the firewall rule set.",
 						Computed:    true,
-						Optional:    true,
 					},
-					"debug_rules": schema.BoolAttribute{
-						Description: "Whether debug rules are enabled for the rule set.",
+					"last_modified": schema.StringAttribute{
+						Description: "Last modified timestamp of the firewall rule set.",
 						Computed:    true,
-						Optional:    true,
 					},
-					"domains": schema.ListAttribute{
+					"product_version": schema.StringAttribute{
+						Description: "Product version of the firewall rule set.",
 						Computed:    true,
-						Optional:    true,
-						ElementType: types.Int64Type,
-						Description: "List of domains associated with the edge firewall rule set.",
 					},
 				},
 			},
@@ -144,26 +173,37 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	edgeFirewallRequest := edgefirewall.CreateEdgeFirewallRequest{
-		Name:                     plan.EdgeFirewall.Name.ValueStringPointer(),
-		IsActive:                 plan.EdgeFirewall.IsActive.ValueBoolPointer(),
-		EdgeFunctionsEnabled:     plan.EdgeFirewall.EdgeFunctionsEnabled.ValueBoolPointer(),
-		NetworkProtectionEnabled: plan.EdgeFirewall.NetworkProtectionEnabled.ValueBoolPointer(),
-		WafEnabled:               plan.EdgeFirewall.WAFEnabled.ValueBoolPointer(),
-	}
-
-	if len(plan.EdgeFirewall.Domains.Elements()) > 0 {
-		diags = plan.EdgeFirewall.Domains.ElementsAs(ctx, &edgeFirewallRequest.Domains, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+	modules := sdk.FirewallModulesRequest{}
+	if plan.EdgeFirewall.Modules != nil {
+		if plan.EdgeFirewall.Modules.Functions != nil && !plan.EdgeFirewall.Modules.Functions.Enabled.IsNull() {
+			modules.Functions = &sdk.FirewallModuleRequest{
+				Enabled: plan.EdgeFirewall.Modules.Functions.Enabled.ValueBoolPointer(),
+			}
+		}
+		if plan.EdgeFirewall.Modules.NetworkProtection != nil && !plan.EdgeFirewall.Modules.NetworkProtection.Enabled.IsNull() {
+			modules.NetworkProtection = &sdk.FirewallModuleRequest{
+				Enabled: plan.EdgeFirewall.Modules.NetworkProtection.Enabled.ValueBoolPointer(),
+			}
+		}
+		if plan.EdgeFirewall.Modules.WAF != nil && !plan.EdgeFirewall.Modules.WAF.Enabled.IsNull() {
+			modules.Waf = &sdk.FirewallModuleRequest{
+				Enabled: plan.EdgeFirewall.Modules.WAF.Enabled.ValueBoolPointer(),
+			}
 		}
 	}
-	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallPost(ctx).CreateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
+
+	edgeFirewallRequest := sdk.FirewallRequest{
+		Name:    plan.EdgeFirewall.Name.ValueString(),
+		Active:  plan.EdgeFirewall.Active.ValueBoolPointer(),
+		Debug:   plan.EdgeFirewall.Debug.ValueBoolPointer(),
+		Modules: &modules,
+	}
+
+	edgeFirewallResponse, response, err := r.client.edgeApi.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(edgeFirewallRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*edgefirewall.EdgeFirewallResponse, *http.Response, error) {
-				return r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallPost(ctx).CreateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
+			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.ResponseFirewall, *http.Response, error) {
+				return r.client.edgeApi.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(edgeFirewallRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -194,25 +234,52 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 		}
 	}
 
-	plan.SchemaVersion = types.Int64Value(3)
-	var sliceInt []types.Int64
-	for _, itemsValuesInt := range edgeFirewallResponse.Results.GetDomains() {
-		sliceInt = append(sliceInt, types.Int64Value(itemsValuesInt))
-	}
-	plan.EdgeFirewall = &EdgeFirewallResourceResults{
-		ID:                       types.Int64Value(edgeFirewallResponse.Results.GetId()),
-		LastEditor:               types.StringValue(edgeFirewallResponse.Results.GetLastEditor()),
-		LastModified:             types.StringValue(edgeFirewallResponse.Results.GetLastModified()),
-		Name:                     types.StringValue(edgeFirewallResponse.Results.GetName()),
-		IsActive:                 types.BoolValue(edgeFirewallResponse.Results.GetIsActive()),
-		EdgeFunctionsEnabled:     types.BoolValue(edgeFirewallResponse.Results.GetEdgeFunctionsEnabled()),
-		NetworkProtectionEnabled: types.BoolValue(edgeFirewallResponse.Results.GetNetworkProtectionEnabled()),
-		WAFEnabled:               types.BoolValue(edgeFirewallResponse.Results.GetWafEnabled()),
-		DebugRules:               types.BoolValue(edgeFirewallResponse.Results.GetDebugRules()),
-		Domains:                  utils.SliceIntTypeToList(sliceInt),
+	mods := edgeFirewallResponse.Data.GetModules()
+	ddosProtection := mods.GetDdosProtection()
+	functions := mods.GetFunctions()
+	networkProtection := mods.GetNetworkProtection()
+	waf := mods.GetWaf()
+
+	var responseModulesPtr *EdgeFirewallResourceModules
+	if plan.EdgeFirewall.Modules != nil {
+		responseModules := EdgeFirewallResourceModules{}
+
+		if plan.EdgeFirewall.Modules.DdosProtection != nil {
+			responseModules.DdosProtection = &DdosProtectionModule{
+				Enabled: types.BoolValue(ddosProtection.GetEnabled()),
+			}
+		}
+		if plan.EdgeFirewall.Modules.Functions != nil {
+			responseModules.Functions = &FunctionsModule{
+				Enabled: types.BoolValue(functions.GetEnabled()),
+			}
+		}
+		if plan.EdgeFirewall.Modules.NetworkProtection != nil {
+			responseModules.NetworkProtection = &NetworkProtectionModule{
+				Enabled: types.BoolValue(networkProtection.GetEnabled()),
+			}
+		}
+		if plan.EdgeFirewall.Modules.WAF != nil {
+			responseModules.WAF = &WAFModule{
+				Enabled: types.BoolValue(waf.GetEnabled()),
+			}
+		}
+
+		responseModulesPtr = &responseModules
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(edgeFirewallResponse.Results.GetId(), 10))
+	plan.EdgeFirewall = &EdgeFirewallResourceResults{
+		ID:             types.Int64Value(edgeFirewallResponse.Data.GetId()),
+		Name:           types.StringValue(edgeFirewallResponse.Data.GetName()),
+		Modules:        responseModulesPtr,
+		Debug:          types.BoolValue(edgeFirewallResponse.Data.GetDebug()),
+		Active:         types.BoolValue(edgeFirewallResponse.Data.GetActive()),
+		LastEditor:     types.StringValue(edgeFirewallResponse.Data.GetLastEditor()),
+		LastModified:   types.StringValue(edgeFirewallResponse.Data.GetLastModified().Format(time.RFC3339)),
+		ProductVersion: types.StringValue(edgeFirewallResponse.Data.GetProductVersion()),
+	}
+
+	plan.ID = types.StringValue(strconv.FormatInt(edgeFirewallResponse.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -236,16 +303,16 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 		edgeFirewallID = state.ID.ValueString()
 	}
 
-	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.
-		EdgeFirewallUuidGet(ctx, edgeFirewallID).Execute() //nolint
+	edgeFirewallResponse, response, err := r.client.edgeApi.FirewallsAPI.
+		RetrieveFirewall(ctx, edgeFirewallID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 		if response.StatusCode == 429 {
-			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*edgefirewall.EdgeFirewallResponse, *http.Response, error) {
-				return r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidGet(ctx, edgeFirewallID).Execute() //nolint
+			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.ResponseRetrieveFirewall, *http.Response, error) {
+				return r.client.edgeApi.FirewallsAPI.RetrieveFirewall(ctx, edgeFirewallID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -276,25 +343,47 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 		}
 	}
 
-	var sliceInt []types.Int64
-	for _, itemsValuesInt := range edgeFirewallResponse.Results.GetDomains() {
-		sliceInt = append(sliceInt, types.Int64Value(int64(itemsValuesInt)))
+	modules := edgeFirewallResponse.Data.GetModules()
+	ddosProtection := modules.GetDdosProtection()
+	functions := modules.GetFunctions()
+	networkProtection := modules.GetNetworkProtection()
+	waf := modules.GetWaf()
+
+	modulesResponse := EdgeFirewallResourceModules{}
+	if state.EdgeFirewall != nil && state.EdgeFirewall.Modules != nil {
+		if state.EdgeFirewall.Modules.DdosProtection != nil {
+			modulesResponse.DdosProtection = &DdosProtectionModule{
+				Enabled: types.BoolValue(ddosProtection.GetEnabled()),
+			}
+		}
+		if state.EdgeFirewall.Modules.Functions != nil {
+			modulesResponse.Functions = &FunctionsModule{
+				Enabled: types.BoolValue(functions.GetEnabled()),
+			}
+		}
+		if state.EdgeFirewall.Modules.NetworkProtection != nil {
+			modulesResponse.NetworkProtection = &NetworkProtectionModule{
+				Enabled: types.BoolValue(networkProtection.GetEnabled()),
+			}
+		}
+		if state.EdgeFirewall.Modules.WAF != nil {
+			modulesResponse.WAF = &WAFModule{
+				Enabled: types.BoolValue(waf.GetEnabled()),
+			}
+		}
 	}
 
 	state.EdgeFirewall = &EdgeFirewallResourceResults{
-		ID:                       types.Int64Value(edgeFirewallResponse.Results.GetId()),
-		LastEditor:               types.StringValue(edgeFirewallResponse.Results.GetLastEditor()),
-		LastModified:             types.StringValue(edgeFirewallResponse.Results.GetLastModified()),
-		Name:                     types.StringValue(edgeFirewallResponse.Results.GetName()),
-		IsActive:                 types.BoolValue(edgeFirewallResponse.Results.GetIsActive()),
-		EdgeFunctionsEnabled:     types.BoolValue(edgeFirewallResponse.Results.GetEdgeFunctionsEnabled()),
-		NetworkProtectionEnabled: types.BoolValue(edgeFirewallResponse.Results.GetNetworkProtectionEnabled()),
-		WAFEnabled:               types.BoolValue(edgeFirewallResponse.Results.GetWafEnabled()),
-		DebugRules:               types.BoolValue(edgeFirewallResponse.Results.GetDebugRules()),
-		Domains:                  utils.SliceIntTypeToList(sliceInt),
+		ID:             types.Int64Value(edgeFirewallResponse.Data.GetId()),
+		LastEditor:     types.StringValue(edgeFirewallResponse.Data.GetLastEditor()),
+		LastModified:   types.StringValue(edgeFirewallResponse.Data.GetLastModified().Format(time.RFC3339)),
+		Name:           types.StringValue(edgeFirewallResponse.Data.GetName()),
+		Active:         types.BoolValue(edgeFirewallResponse.Data.GetActive()),
+		Debug:          types.BoolValue(edgeFirewallResponse.Data.GetDebug()),
+		Modules:        &modulesResponse,
+		ProductVersion: types.StringValue(edgeFirewallResponse.Data.GetProductVersion()),
 	}
 	state.ID = types.StringValue(edgeFirewallID)
-	state.SchemaVersion = types.Int64Value(int64(edgeFirewallResponse.GetSchemaVersion()))
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -325,25 +414,37 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 		edgeFirewallID = state.ID.ValueString()
 	}
 
-	edgeFirewallRequest := edgefirewall.UpdateEdgeFirewallRequest{
-		Name:                     plan.EdgeFirewall.Name.ValueStringPointer(),
-		IsActive:                 plan.EdgeFirewall.IsActive.ValueBoolPointer(),
-		EdgeFunctionsEnabled:     plan.EdgeFirewall.EdgeFunctionsEnabled.ValueBoolPointer(),
-		NetworkProtectionEnabled: plan.EdgeFirewall.NetworkProtectionEnabled.ValueBoolPointer(),
-		WafEnabled:               plan.EdgeFirewall.WAFEnabled.ValueBoolPointer(),
+	edgeFirewallRequest := sdk.PatchedFirewallRequest{
+		Name:   plan.EdgeFirewall.Name.ValueStringPointer(),
+		Active: plan.EdgeFirewall.Active.ValueBoolPointer(),
+		Debug:  plan.EdgeFirewall.Debug.ValueBoolPointer(),
 	}
 
-	requestItemsValue := plan.EdgeFirewall.Domains.ElementsAs(ctx, &edgeFirewallRequest.Domains, false)
-	resp.Diagnostics.Append(requestItemsValue...)
-	if resp.Diagnostics.HasError() {
-		return
+	modules := sdk.FirewallModulesRequest{}
+	if plan.EdgeFirewall.Modules != nil {
+		if plan.EdgeFirewall.Modules.Functions != nil && !plan.EdgeFirewall.Modules.Functions.Enabled.IsNull() {
+			modules.Functions = &sdk.FirewallModuleRequest{
+				Enabled: plan.EdgeFirewall.Modules.Functions.Enabled.ValueBoolPointer(),
+			}
+		}
+		if plan.EdgeFirewall.Modules.NetworkProtection != nil && !plan.EdgeFirewall.Modules.NetworkProtection.Enabled.IsNull() {
+			modules.NetworkProtection = &sdk.FirewallModuleRequest{
+				Enabled: plan.EdgeFirewall.Modules.NetworkProtection.Enabled.ValueBoolPointer(),
+			}
+		}
+		if plan.EdgeFirewall.Modules.WAF != nil && !plan.EdgeFirewall.Modules.WAF.Enabled.IsNull() {
+			modules.Waf = &sdk.FirewallModuleRequest{
+				Enabled: plan.EdgeFirewall.Modules.WAF.Enabled.ValueBoolPointer(),
+			}
+		}
 	}
+	edgeFirewallRequest.Modules = &modules
 
-	edgeFirewallResponse, response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidPut(ctx, edgeFirewallID).UpdateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
+	edgeFirewallResponse, response, err := r.client.edgeApi.FirewallsAPI.PartialUpdateFirewall(ctx, edgeFirewallID).PatchedFirewallRequest(edgeFirewallRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*edgefirewall.EdgeFirewallResponse, *http.Response, error) {
-				return r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidPut(ctx, edgeFirewallID).UpdateEdgeFirewallRequest(edgeFirewallRequest).Execute() //nolint
+			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.ResponseFirewall, *http.Response, error) {
+				return r.client.edgeApi.FirewallsAPI.PartialUpdateFirewall(ctx, edgeFirewallID).PatchedFirewallRequest(edgeFirewallRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -374,25 +475,53 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	plan.SchemaVersion = types.Int64Value(3)
-	var sliceInt []types.Int64
-	for _, itemsValuesInt := range edgeFirewallResponse.Results.GetDomains() {
-		sliceInt = append(sliceInt, types.Int64Value(int64(itemsValuesInt)))
-	}
-	plan.EdgeFirewall = &EdgeFirewallResourceResults{
-		ID:                       types.Int64Value(edgeFirewallResponse.Results.GetId()),
-		LastEditor:               types.StringValue(edgeFirewallResponse.Results.GetLastEditor()),
-		LastModified:             types.StringValue(edgeFirewallResponse.Results.GetLastModified()),
-		Name:                     types.StringValue(edgeFirewallResponse.Results.GetName()),
-		IsActive:                 types.BoolValue(edgeFirewallResponse.Results.GetIsActive()),
-		EdgeFunctionsEnabled:     types.BoolValue(edgeFirewallResponse.Results.GetEdgeFunctionsEnabled()),
-		NetworkProtectionEnabled: types.BoolValue(edgeFirewallResponse.Results.GetNetworkProtectionEnabled()),
-		WAFEnabled:               types.BoolValue(edgeFirewallResponse.Results.GetWafEnabled()),
-		DebugRules:               types.BoolValue(edgeFirewallResponse.Results.GetDebugRules()),
-		Domains:                  utils.SliceIntTypeToList(sliceInt),
+	mods := edgeFirewallResponse.Data.GetModules()
+	ddosProtection := mods.GetDdosProtection()
+	functions := mods.GetFunctions()
+	networkProtection := mods.GetNetworkProtection()
+	waf := mods.GetWaf()
+
+	var responseModulesPtr *EdgeFirewallResourceModules
+
+	if plan.EdgeFirewall.Modules != nil {
+		responseModules := EdgeFirewallResourceModules{}
+
+		if plan.EdgeFirewall.Modules.DdosProtection != nil {
+			responseModules.DdosProtection = &DdosProtectionModule{
+				Enabled: types.BoolValue(ddosProtection.GetEnabled()),
+			}
+		}
+		if plan.EdgeFirewall.Modules.Functions != nil {
+			responseModules.Functions = &FunctionsModule{
+				Enabled: types.BoolValue(functions.GetEnabled()),
+			}
+		}
+		if plan.EdgeFirewall.Modules.NetworkProtection != nil {
+			responseModules.NetworkProtection = &NetworkProtectionModule{
+				Enabled: types.BoolValue(networkProtection.GetEnabled()),
+			}
+		}
+		if plan.EdgeFirewall.Modules.WAF != nil {
+			responseModules.WAF = &WAFModule{
+				Enabled: types.BoolValue(waf.GetEnabled()),
+			}
+		}
+
+		responseModulesPtr = &responseModules
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(edgeFirewallResponse.Results.GetId(), 10))
+	plan.EdgeFirewall = &EdgeFirewallResourceResults{
+		ID:             types.Int64Value(edgeFirewallResponse.Data.GetId()),
+		LastEditor:     types.StringValue(edgeFirewallResponse.Data.GetLastEditor()),
+		LastModified:   types.StringValue(edgeFirewallResponse.Data.GetLastModified().Format(time.RFC3339)),
+		Name:           types.StringValue(edgeFirewallResponse.Data.GetName()),
+		Active:         types.BoolValue(edgeFirewallResponse.Data.GetActive()),
+		Debug:          types.BoolValue(edgeFirewallResponse.Data.GetDebug()),
+		ProductVersion: types.StringValue(edgeFirewallResponse.Data.GetProductVersion()),
+		Modules:        responseModulesPtr,
+	}
+
+	plan.ID = types.StringValue(strconv.FormatInt(edgeFirewallResponse.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)

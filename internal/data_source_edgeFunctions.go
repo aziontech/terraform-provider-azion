@@ -26,7 +26,7 @@ type EdgeFunctionsDataSource struct {
 }
 
 type EdgeFunctionsDataSourceModel struct {
-	Count   types.Int64            `tfsdk:"count"`
+	Counter types.Int64            `tfsdk:"counter"`
 	Results []EdgeFunctionsResults `tfsdk:"results"`
 	ID      types.String           `tfsdk:"id"`
 }
@@ -178,7 +178,7 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 
 	edgeFunctionsState := EdgeFunctionsDataSourceModel{
-		Count: types.Int64Value(*functionsResponse.Count),
+		Counter: types.Int64Value(*functionsResponse.Count),
 	}
 
 	for _, resultEdgeFunctions := range functionsResponse.GetResults() {
