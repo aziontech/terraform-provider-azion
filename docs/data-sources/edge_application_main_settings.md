@@ -27,29 +27,60 @@ data "azion_edge_application_main_settings" "example" {
 
 ### Read-Only
 
-- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
+- `data` (Attributes) (see [below for nested schema](#nestedatt--data))
 - `schema_version` (Number) Schema Version.
 
-<a id="nestedatt--results"></a>
-### Nested Schema for `results`
+<a id="nestedatt--data"></a>
+### Nested Schema for `data`
 
 Read-Only:
 
-- `active` (Boolean) Indicates whether the Edge Application is active.
-- `application_acceleration` (Boolean) Indicates whether application acceleration is enabled for the Edge Application.
-- `application_id` (Number) The Edge Application identifier.
-- `caching` (Boolean) Indicates whether caching is enabled for the Edge Application.
-- `debug_rules` (Boolean) Indicates whether debug rules are enabled for the Edge Application.
-- `delivery_protocol` (String) The delivery protocol of the Edge Application.
-- `device_detection` (Boolean) Indicates whether device detection is enabled for the Edge Application.
-- `edge_functions` (Boolean) Indicates whether edge functions are enabled for the Edge Application.
-- `http3` (Boolean) Indicates whether HTTP/3 is enabled for the Edge Application.
-- `http_port` (List of Number) The HTTP port(s) for the Edge Application.
-- `https_port` (List of Number) The HTTPS port(s) for the Edge Application.
-- `image_optimization` (Boolean) Indicates whether image optimization is enabled for the Edge Application.
-- `l2_caching` (Boolean) Indicates whether l2 caching is enabled for the Edge Application.
-- `load_balancer` (Boolean) Indicates whether load balancing is enabled for the Edge Application.
-- `minimum_tls_version` (String) The minimum TLS version supported by the Edge Application.
-- `name` (String) The name of the Edge Application.
-- `raw_logs` (Boolean) Indicates whether raw logs are enabled for the Edge Application.
-- `supported_ciphers` (String) The supported ciphers for the Edge Application.
+- `active` (Boolean) Whether the Application is active.
+- `debug` (Boolean) Whether debug is enabled.
+- `id` (Number) The Application identifier.
+- `last_editor` (String) Last editor identifier.
+- `last_modified` (String) Last modified timestamp.
+- `modules` (Attributes) (see [below for nested schema](#nestedatt--data--modules))
+- `name` (String) The name of the Application.
+- `product_version` (String) Product version.
+
+<a id="nestedatt--data--modules"></a>
+### Nested Schema for `data.modules`
+
+Read-Only:
+
+- `application_accelerator` (Attributes) (see [below for nested schema](#nestedatt--data--modules--application_accelerator))
+- `edge_cache` (Attributes) (see [below for nested schema](#nestedatt--data--modules--edge_cache))
+- `functions` (Attributes) (see [below for nested schema](#nestedatt--data--modules--functions))
+- `image_processor` (Attributes) (see [below for nested schema](#nestedatt--data--modules--image_processor))
+
+<a id="nestedatt--data--modules--application_accelerator"></a>
+### Nested Schema for `data.modules.application_accelerator`
+
+Read-Only:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--data--modules--edge_cache"></a>
+### Nested Schema for `data.modules.edge_cache`
+
+Read-Only:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--data--modules--functions"></a>
+### Nested Schema for `data.modules.functions`
+
+Read-Only:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--data--modules--image_processor"></a>
+### Nested Schema for `data.modules.image_processor`
+
+Read-Only:
+
+- `enabled` (Boolean)

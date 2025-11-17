@@ -26,7 +26,7 @@ type EdgeFunctionsDataSource struct {
 }
 
 type EdgeFunctionsDataSourceModel struct {
-	Count   types.Int64            `tfsdk:"count"`
+	Counter types.Int64            `tfsdk:"counter"`
 	Results []EdgeFunctionsResults `tfsdk:"results"`
 	ID      types.String           `tfsdk:"id"`
 }
@@ -70,11 +70,7 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Description: "Numeric identifier of the data source.",
 				Computed:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
-			"total_count": schema.Int64Attribute{
+			"counter": schema.Int64Attribute{
 				Description: "The total count of edge functions.",
 				Computed:    true,
 			},
@@ -178,7 +174,7 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 
 	edgeFunctionsState := EdgeFunctionsDataSourceModel{
-		Count: types.Int64Value(*functionsResponse.Count),
+		Counter: types.Int64Value(*functionsResponse.Count),
 	}
 
 	for _, resultEdgeFunctions := range functionsResponse.GetResults() {

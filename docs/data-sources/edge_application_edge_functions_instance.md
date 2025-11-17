@@ -14,7 +14,7 @@ description: |-
 
 ```terraform
 data "azion_edge_application_edge_functions_instance" "example" {
-  edge_application_id = "1234567890"
+  application_id = "1234567890"
 }
 ```
 
@@ -23,37 +23,23 @@ data "azion_edge_application_edge_functions_instance" "example" {
 
 ### Required
 
-- `edge_application_id` (Number) Numeric identifier of the Edge Application
-
-### Optional
-
-- `page` (Number) The page number of edge function instances.
-- `page_size` (Number) The Page Size number of edge function instances.
+- `application_id` (Number) Numeric identifier of the Edge Application
 
 ### Read-Only
 
-- `counter` (Number) The total number of edge function instances.
 - `id` (String) Numeric identifier of the data source.
-- `links` (Attributes) (see [below for nested schema](#nestedatt--links))
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number) Schema Version.
-- `total_pages` (Number) The total number of pages.
-
-<a id="nestedatt--links"></a>
-### Nested Schema for `links`
-
-Read-Only:
-
-- `next` (String)
-- `previous` (String)
-
+- `total_count` (Number) The total number of edge function instances.
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
 
 Read-Only:
 
-- `args` (String) Code of the function.
-- `edge_function_id` (Number) Name of the function.
-- `id` (Number) The function identifier.
-- `name` (String) Language of the function.
+- `active` (Boolean) Active status of the function instance.
+- `args` (String) Arguments of the function instance.
+- `function_id` (Number) The edge function identifier.
+- `id` (Number) The function instance identifier.
+- `last_editor` (String) Last editor of the function instance.
+- `last_modified` (String) Last modified timestamp of the function instance.
+- `name` (String) Name of the function instance.

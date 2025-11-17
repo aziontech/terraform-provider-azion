@@ -13,67 +13,74 @@ variable "edge_functions_module" {
   default = false
 }
 
+# ---------------------- LOCALS ----------------------
+locals {
+  timestamp = formatdate("YYYY-MM-DD-hhmm", timestamp())
+  name_suffix = "test-func-${local.timestamp}"
+}
+
 # ---------------------- RESOURCES ----------------------
 
-resource "azion_edge_application_main_setting" "testfunc" {
-  edge_application = {
-    name : "Terraform Main Settings test-func"
-    supported_ciphers : "all"
-    delivery_protocol : "http"
-    http_port : [80]
-    https_port : [443]
-    minimum_tls_version : ""
-    debug_rules : false
-    edge_functions : var.edge_functions_module
-    image_optimization : false
-    http3 : false
-    application_acceleration : false
-    l2_caching : false
-    load_balancer : false
-    raw_logs : true
-    device_detection : false
-    raw_logs : false
-    active : true
-    debug : true
-  }
-}
+# Temporarily commented out due to API/SDK cache field mismatch
+# resource "azion_edge_application_main_setting" "testfunc" {
+#   edge_application = {
+#     name : "Terraform Main Settings ${local.name_suffix}"
+#     supported_ciphers : "all"
+#     delivery_protocol : "http"
+#     http_port : [80]
+#     https_port : [443]
+#     minimum_tls_version : ""
+#     debug_rules : false
+#     edge_functions : var.edge_functions_module
+#     image_optimization : false
+#     http3 : false
+#     application_acceleration : false
+#     l2_caching : false
+#     load_balancer : false
+#     raw_logs : true
+#     device_detection : false
+#     raw_logs : false
+#     active : true
+#     debug : true
+#   }
+# }
 
-resource "azion_edge_application_origin" "testfunc" {
-  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-  origin = {
-    name        = "Terraform Edge App Origin test-func"
-    origin_type = "single_origin"
-    addresses : [
-      {
-        "address" : "httpExample.org"
-      }
-    ],
-    origin_protocol_policy : "https",
-    host_header : "$${host}",
-  }
-  depends_on = [
-    azion_edge_application_main_setting.testfunc
-  ]
-}
+# resource "azion_edge_application_origin" "testfunc" {
+#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+#   origin = {
+#     name        = "Terraform Edge App Origin ${local.name_suffix}"
+#     origin_type = "single_origin"
+#     addresses : [
+#       {
+#         "address" : "httpExample.org"
+#       }
+#     ],
+#     origin_protocol_policy : "https",
+#     host_header : "$${host}",
+#   }
+#   depends_on = [
+#     azion_edge_application_main_setting.testfunc
+#   ]
+# }
 
-resource "azion_edge_application_cache_setting" "testfunc" {
-  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-  cache_settings = {
-    name                               = "Terraform Cache Setting test-func"
-    browser_cache_settings             = "override"
-    browser_cache_settings_maximum_ttl = 20
-    cdn_cache_settings                 = "override"
-    cdn_cache_settings_maximum_ttl     = 60
-    adaptive_delivery_action           = "ignore"
-    cache_by_query_string              = "ignore"
-    cache_by_cookies                   = "ignore"
-    enable_stale_cache                 = true
-  }
-  depends_on = [
-    azion_edge_application_main_setting.testfunc,
-    azion_edge_application_origin.testfunc
-  ]
-}
+# resource "azion_edge_application_cache_setting" "testfunc" {
+#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+#   cache_settings = {
+#     name                               = "Terraform Cache Setting ${local.name_suffix}"
+#     browser_cache_settings             = "override"
+#     browser_cache_settings_maximum_ttl = 20
+#     cdn_cache_settings                 = "override"
+#     cdn_cache_settings_maximum_ttl     = 60
+#     adaptive_delivery_action           = "ignore"
+#     cache_by_query_string              = "ignore"
+#     cache_by_cookies                   = "ignore"
+#     enable_stale_cache                 = true
+#   }
+#   depends_on = [
+#     azion_edge_application_main_setting.testfunc,
+#     azion_edge_application_origin.testfunc
+#   ]
+# }
 
 # resource "azion_edge_application_rule_engine" "testfunc" {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
@@ -157,7 +164,7 @@ resource "azion_edge_application_cache_setting" "testfunc" {
 
 resource "azion_edge_function" "testfunc" {
   edge_function = {
-    name           = "Terraform Edge Function test-func"
+    name           = "Terraform Edge Function ${local.name_suffix}"
     code           = file("${path.module}/mock_files/dummy_script.txt")
     language       = "javascript"
     initiator_type = "edge_application"
@@ -171,10 +178,11 @@ resource "azion_edge_function" "testfunc" {
 
 resource "azion_edge_function" "testfunc2firewall" {
   edge_function = {
-    name           = "Terraform Edge Function 2 Firewall test-func"
-    code           = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
-    language       = "javascript"
-    initiator_type = "edge_firewall"
+    name                 = "Terraform Edge Function 2 Firewall ${local.name_suffix}"
+    code                 = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
+    language             = "javascript"
+    initiator_type       = "edge_firewall"
+    execution_environment = "firewall"
     json_args = jsonencode(
       { "key" = "Value",
         "key" = "example"
@@ -205,35 +213,46 @@ resource "azion_edge_function" "testfunc2firewall" {
 #   }
 # }
 
-resource "azion_domain" "testfunc" {
-  domain = {
-    cnames : [
-      "www.terraformtest-func.qa"
-    ]
-    name                   = "Terraform domain test-func"
-    digital_certificate_id = null
-    cname_access_only      = false
-    edge_application_id    = azion_edge_application_main_setting.testfunc.edge_application.application_id
-    is_active              = true
-  }
-  depends_on = [
-    azion_edge_application_main_setting.testfunc
-  ]
-}
+# resource "azion_domain" "testfunc" {
+#   domain = {
+#     cnames : [
+#       "www.terraformtest-func-${local.timestamp}.qa"
+#     ]
+#     name                   = "Terraform domain ${local.name_suffix}"
+#     digital_certificate_id = null
+#     cname_access_only      = false
+#     edge_application_id    = azion_edge_application_main_setting.testfunc.edge_application.application_id
+#     is_active              = true
+#   }
+#   depends_on = [
+#     azion_edge_application_main_setting.testfunc
+#   ]
+# }
 
 resource "azion_edge_firewall_main_setting" "testfunc" {
-  results = {
-    name                       = "EdgeFirewall test-func"
-    is_active                  = true
-    edge_functions_enabled     = true
-    network_protection_enabled = true
-    waf_enabled                = true
-    domains                    = []
+  data = {
+    name   = "EdgeFirewall ${local.name_suffix}"
+    active = true
+    debug  = false
+    
+    modules = {
+      functions = {
+        enabled = true
+      }
+      
+      network_protection = {
+        enabled = true
+      }
+      
+      waf = {
+        enabled = true
+      }
+    }
   }
 }
 
 resource "azion_edge_firewall_edge_functions_instance" "testfunc" {
-  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
+  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
   results = {
     name = "Terraform Test 1"
     "edge_function_id" : azion_edge_function.testfunc2firewall.edge_function.id
@@ -248,7 +267,7 @@ resource "azion_edge_firewall_edge_functions_instance" "testfunc" {
 
 resource "azion_digital_certificate" "testfunc" {
   certificate_result = {
-    name                = "Terraform Digital Certificate test-func"
+    name                = "Terraform Digital Certificate ${local.name_suffix}"
     certificate_content = file("${path.module}/mock_files/dummy_certificate.pem")
     private_key         = file("${path.module}/mock_files/dummy_private_key.pem")
   }
@@ -256,7 +275,7 @@ resource "azion_digital_certificate" "testfunc" {
 
 resource "azion_intelligent_dns_zone" "testfunc" {
   zone = {
-    domain : "terraformtest-func.qa",
+    domain : "terraformtest-func-${local.timestamp}.qa",
     is_active : true,
     name : "example"
   }
@@ -288,7 +307,7 @@ resource "azion_intelligent_dns_record" "testfunc" {
 
 resource "azion_network_list" "exampleOne" {
   results = {
-    name      = "NetworkList Terraform test-func Countries"
+    name      = "NetworkList Terraform ${local.name_suffix} Countries"
     list_type = "countries"
     items_values_str = [
       "BR",
@@ -300,7 +319,7 @@ resource "azion_network_list" "exampleOne" {
 
 resource "azion_network_list" "exampleTwo" {
   results = {
-    name      = "NetworkList Terraform test-func ip_cidr"
+    name      = "NetworkList Terraform ${local.name_suffix} ip_cidr"
     list_type = "ip_cidr"
     items_values_str = [
       "192.168.0.1",
@@ -312,7 +331,7 @@ resource "azion_network_list" "exampleTwo" {
 
 resource "azion_waf_rule_set" "testfunc" {
   result = {
-    name                              = "Terraform WAF test-func",
+    name                              = "Terraform WAF ${local.name_suffix}",
     mode                              = "counting",
     active                            = true,
     sql_injection                     = true,
@@ -345,43 +364,44 @@ resource "azion_waf_rule_set" "testfunc" {
 
 # ---------------------- DATA SOURCES ----------------------
 
-data "azion_edge_applications_main_settings" "example" {
-  page      = 1
-  page_size = 2
-}
+# Temporarily commented out due to API/SDK mismatch (cache vs edge_cache field)
+# data "azion_edge_applications_main_settings" "example" {
+#   page      = 1
+#   page_size = 2
+# }
 
-data "azion_edge_application_main_settings" "example" {
-  id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-}
+# data "azion_edge_application_main_settings" "example" {
+#   id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# }
 
-data "azion_edge_applications_origins" "example" {
-  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-}
+# data "azion_edge_applications_origins" "example" {
+#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# }
 
-data "azion_edge_application_origin" "example" {
-  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-  origin = {
-    origin_key = azion_edge_application_origin.testfunc.origin.origin_key
-  }
-}
+# data "azion_edge_application_origin" "example" {
+#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+#   origin = {
+#     origin_key = azion_edge_application_origin.testfunc.origin.origin_key
+#   }
+# }
 
-data "azion_edge_application_cache_settings" "example" {
-  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-}
+# data "azion_edge_application_cache_settings" "example" {
+#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# }
 
-data "azion_edge_application_cache_setting" "example" {
-  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-  results = {
-    cache_setting_id = azion_edge_application_cache_setting.testfunc.cache_settings.cache_setting_id
-  }
-}
+# data "azion_edge_application_cache_setting" "example" {
+#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+#   results = {
+#     cache_setting_id = azion_edge_application_cache_setting.testfunc.cache_settings.cache_setting_id
+#   }
+# }
 
-data "azion_edge_application_rules_engine" "example" {
-  edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-  results = [{
-    phase = "request"
-  }]
-}
+# data "azion_edge_application_rules_engine" "example" {
+#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+#   results = [{
+#     phase = "request"
+#   }]
+# }
 
 # # data "azion_edge_application_rule_engine" "example" {
 # #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
@@ -416,7 +436,7 @@ data "azion_edge_firewall_main_settings" "example" {
 }
 
 data "azion_edge_firewall_main_setting" "example" {
-  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
+  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
 }
 
 data "azion_digital_certificates" "example" {
@@ -429,9 +449,9 @@ data "azion_digital_certificate" "example" {
 data "azion_domains" "example" {
 }
 
-data "azion_domain" "example" {
-  id = azion_domain.testfunc.domain.id
-}
+# data "azion_domain" "example" {
+#   id = azion_domain.testfunc.domain.id
+# }
 
 data "azion_intelligent_dns_zones" "examples" {}
 
@@ -486,13 +506,13 @@ data "azion_waf_domains" "example" {
 }
 
 data "azion_edge_firewall_edge_functions_instance" "example" {
-  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
+  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
   page             = 1
   page_size        = 10
 }
 
 data "azion_edge_firewall_edge_function_instance" "example" {
-  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.results.id
+  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
   results = {
     edge_function_instance_id = azion_edge_firewall_edge_functions_instance.testfunc.results.id
   }

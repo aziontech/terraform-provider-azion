@@ -83,37 +83,65 @@ resource "azion_edge_application_cache_setting" "example" {
 
 - `id` (String) The ID of this resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
-- `schema_version` (Number)
 
 <a id="nestedatt--edge_application"></a>
 ### Nested Schema for `edge_application`
 
 Required:
 
-- `delivery_protocol` (String) The delivery protocol of the Edge Application.
-- `http_port` (List of Number) The HTTP port(s) for the Edge Application.
-- `https_port` (List of Number) The HTTPS port(s) for the Edge Application.
 - `name` (String) The name of the Edge Application.
-- `supported_ciphers` (String) The supported ciphers for the Edge Application.
 
 Optional:
 
-- `application_acceleration` (Boolean) Indicates whether application acceleration is enabled for the Edge Application.
-- `caching` (Boolean) Indicates whether caching is enabled for the Edge Application.
-- `debug_rules` (Boolean) Indicates whether debug rules are enabled for the Edge Application.
-- `device_detection` (Boolean) Indicates whether device detection is enabled for the Edge Application.
-- `edge_functions` (Boolean) Indicates whether edge functions are enabled for the Edge Application.
-- `http3` (Boolean) Indicates whether HTTP/3 is enabled for the Edge Application.
-- `image_optimization` (Boolean) Indicates whether image optimization is enabled for the Edge Application.
-- `l2_caching` (Boolean) Indicates whether l2 caching is enabled for the Edge Application.
-- `load_balancer` (Boolean) Indicates whether load balancing is enabled for the Edge Application.
-- `minimum_tls_version` (String) The minimum TLS version supported by the Edge Application.
-- `raw_logs` (Boolean) Indicates whether raw logs are enabled for the Edge Application.
+- `active` (Boolean) Indicates whether the Edge Application is active.
+- `debug` (Boolean) Indicates whether debug rules are enabled for the Edge Application.
+- `modules` (Attributes) (see [below for nested schema](#nestedatt--edge_application--modules))
 
 Read-Only:
 
-- `active` (Boolean) Indicates whether the Edge Application is active.
 - `application_id` (Number) The Edge Application identifier.
+- `product_version` (String) The product version.
+
+<a id="nestedatt--edge_application--modules"></a>
+### Nested Schema for `edge_application.modules`
+
+Optional:
+
+- `application_accelerator` (Attributes) (see [below for nested schema](#nestedatt--edge_application--modules--application_accelerator))
+- `edge_cache` (Attributes) (see [below for nested schema](#nestedatt--edge_application--modules--edge_cache))
+- `functions` (Attributes) (see [below for nested schema](#nestedatt--edge_application--modules--functions))
+- `image_processor` (Attributes) (see [below for nested schema](#nestedatt--edge_application--modules--image_processor))
+
+<a id="nestedatt--edge_application--modules--application_accelerator"></a>
+### Nested Schema for `edge_application.modules.application_accelerator`
+
+Optional:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--edge_application--modules--edge_cache"></a>
+### Nested Schema for `edge_application.modules.edge_cache`
+
+Optional:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--edge_application--modules--functions"></a>
+### Nested Schema for `edge_application.modules.functions`
+
+Optional:
+
+- `enabled` (Boolean)
+
+
+<a id="nestedatt--edge_application--modules--image_processor"></a>
+### Nested Schema for `edge_application.modules.image_processor`
+
+Optional:
+
+- `enabled` (Boolean)
 
 ## Import
 

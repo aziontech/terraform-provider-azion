@@ -14,8 +14,8 @@ description: |-
 
 ```terraform
 data "azion_edge_application_edge_function_instance" "example" {
-  edge_application_id = 1234567890
-  results = {
+  application_id = "1234567890"
+  data = {
     id = 123456
   }
 }
@@ -26,16 +26,15 @@ data "azion_edge_application_edge_function_instance" "example" {
 
 ### Required
 
-- `edge_application_id` (Number) Numeric identifier of the Edge Application
-- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
+- `application_id` (String) Numeric identifier of the Edge Application
+- `data` (Attributes) (see [below for nested schema](#nestedatt--data))
 
 ### Read-Only
 
 - `id` (String) Numeric identifier of the data source.
-- `schema_version` (Number) Schema Version.
 
-<a id="nestedatt--results"></a>
-### Nested Schema for `results`
+<a id="nestedatt--data"></a>
+### Nested Schema for `data`
 
 Required:
 
@@ -43,6 +42,7 @@ Required:
 
 Read-Only:
 
+- `active` (Boolean) Active status of the function instance.
 - `args` (String) Code of the function.
 - `edge_function_id` (Number) The function identifier.
 - `name` (String) Name of the function.

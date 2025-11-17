@@ -72,10 +72,6 @@ func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Description: "Numeric identifier of the data source.",
 				Required:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
 			"data": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{

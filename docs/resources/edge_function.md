@@ -3,8 +3,8 @@
 page_title: "azion_edge_function Resource - terraform-provider-azion"
 subcategory: ""
 description: |-
-  ~> Note about Json_Args
-  Parameter json_args must be specified with jsonencode function
+  ~> Note about default_args
+  Parameter default_args must be specified with jsonencode function
   ~> Note about Code
   Parameter code: For prevent any inconsistent use the function trimspace() - https://developer.hashicorp.com/terraform/language/functions/trimspace
    Can be specified with local_file in - https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file
@@ -12,8 +12,8 @@ description: |-
 
 # azion_edge_function (Resource)
 
-~> **Note about Json_Args**
-Parameter `json_args` must be specified with `jsonencode` function
+~> **Note about default_args**
+Parameter `default_args` must be specified with `jsonencode` function
 
 ~> **Note about Code**
 Parameter `code`: For prevent any inconsistent use the function trimspace() - https://developer.hashicorp.com/terraform/language/functions/trimspace
@@ -62,27 +62,30 @@ resource "azion_edge_function" "example2" {
 
 - `id` (String) The ID of this resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
-- `schema_version` (Number)
 
 <a id="nestedatt--edge_function"></a>
 ### Nested Schema for `edge_function`
 
 Required:
 
-- `active` (Boolean) Status of the function.
-- `code` (String) Path Code of the function.
-- `initiator_type` (String) Initiator type of the function.
-- `json_args` (String) JSON arguments of the function.
-- `language` (String) Language of the function.
+- `code` (String) Code of the function.
 - `name` (String) Name of the function.
+
+Optional:
+
+- `active` (Boolean) Status of the function.
+- `default_args` (String) Default arguments of the function as JSON.
+- `execution_environment` (String) Execution environment of the function.
+- `runtime` (String) Runtime of the function.
 
 Read-Only:
 
-- `function_id` (Number) The function identifier.
-- `function_to_run` (String) The function to run.
+- `id` (Number) The function identifier.
 - `last_editor` (String) The last editor of the function.
-- `modified` (String) Last modified timestamp of the function.
+- `last_modified` (String) Last modified timestamp of the function.
+- `product_version` (String) Product version of the function.
 - `reference_count` (Number) The reference count of the function.
+- `vendor` (String) Vendor of the function.
 - `version` (String) Version of the function.
 
 ## Import

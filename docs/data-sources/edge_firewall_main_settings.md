@@ -24,41 +24,65 @@ data "azion_edge_firewall_main_settings" "example" {
 
 ### Optional
 
-- `page` (Number) The page number of edge firewalls.
-- `page_size` (Number) The Page Size number of edge firewalls.
+- `page` (Number) The page number of firewalls.
+- `page_size` (Number) The page size number of firewalls.
 
 ### Read-Only
 
-- `counter` (Number) The total number of edge firewalls.
-- `links` (Attributes) (see [below for nested schema](#nestedatt--links))
+- `counter` (Number) The total number of firewalls.
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number) Schema Version.
-- `total_pages` (Number) The total number of pages.
-
-<a id="nestedatt--links"></a>
-### Nested Schema for `links`
-
-Read-Only:
-
-- `next` (String)
-- `previous` (String)
-
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
 
-Required:
+Read-Only:
 
-- `id` (Number) ID of the edge firewall rule set.
+- `active` (Boolean) Whether the firewall rule set is active.
+- `debug` (Boolean) Whether debug is enabled for the rule set.
+- `id` (Number) ID of the firewall rule set.
+- `last_editor` (String) Last editor of the firewall rule set.
+- `last_modified` (String) Last modified timestamp of the firewall rule set.
+- `modules` (Attributes) Modules configuration for the firewall. (see [below for nested schema](#nestedatt--results--modules))
+- `name` (String) Name of the firewall rule set.
+- `product_version` (String) Product version of the firewall rule set.
+
+<a id="nestedatt--results--modules"></a>
+### Nested Schema for `results.modules`
 
 Read-Only:
 
-- `debug_rules` (Boolean) Whether debug rules are enabled for the rule set.
-- `domains` (List of Number) List of domains associated with the edge firewall rule set.
-- `edge_functions_enabled` (Boolean) Whether edge functions are enabled for the rule set.
-- `is_active` (Boolean) Whether the edge firewall rule set is active.
-- `last_editor` (String) Last editor of the edge firewall rule set.
-- `last_modified` (String) Last modified timestamp of the edge firewall rule set.
-- `name` (String) Name of the edge firewall rule set.
-- `network_protection_enabled` (Boolean) Whether network protection is enabled for the rule set.
-- `waf_enabled` (Boolean) Whether Web Application Firewall (WAF) is enabled for the rule set.
+- `ddos_protection` (Attributes) DDoS protection module configuration. (see [below for nested schema](#nestedatt--results--modules--ddos_protection))
+- `functions` (Attributes) Functions module configuration. (see [below for nested schema](#nestedatt--results--modules--functions))
+- `network_protection` (Attributes) Network protection module configuration. (see [below for nested schema](#nestedatt--results--modules--network_protection))
+- `waf` (Attributes) WAF module configuration. (see [below for nested schema](#nestedatt--results--modules--waf))
+
+<a id="nestedatt--results--modules--ddos_protection"></a>
+### Nested Schema for `results.modules.ddos_protection`
+
+Read-Only:
+
+- `enabled` (Boolean) Whether DDoS protection is enabled.
+
+
+<a id="nestedatt--results--modules--functions"></a>
+### Nested Schema for `results.modules.functions`
+
+Read-Only:
+
+- `enabled` (Boolean) Whether functions are enabled.
+
+
+<a id="nestedatt--results--modules--network_protection"></a>
+### Nested Schema for `results.modules.network_protection`
+
+Read-Only:
+
+- `enabled` (Boolean) Whether network protection is enabled.
+
+
+<a id="nestedatt--results--modules--waf"></a>
+### Nested Schema for `results.modules.waf`
+
+Read-Only:
+
+- `enabled` (Boolean) Whether WAF is enabled.
