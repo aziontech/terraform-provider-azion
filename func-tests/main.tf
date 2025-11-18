@@ -512,10 +512,7 @@ data "azion_edge_firewall_edge_functions_instance" "example" {
   page_size        = 10
 }
 
-data "azion_edge_firewall_edge_function_instance" "example" {
-  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
-  results = {
-    edge_function_instance_id = azion_edge_firewall_edge_functions_instance.testfunc.data.id
-  }
-}
+# data "azion_edge_firewall_edge_function_instance" "example" {
+#   edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
+# }
 
