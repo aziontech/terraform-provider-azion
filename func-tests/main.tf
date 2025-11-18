@@ -416,7 +416,7 @@ data "azion_edge_functions" "example" {
 }
 
 data "azion_edge_function" "example" {
-  id = azion_edge_function.testfunc.edge_function.id
+  id = azion_edge_function.testfunc2firewall.edge_function.id
 }
 
 # data "azion_edge_application_edge_functions_instance" "example" {
