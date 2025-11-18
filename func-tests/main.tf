@@ -415,9 +415,9 @@ resource "azion_waf_rule_set" "testfunc" {
 data "azion_edge_functions" "example" {
 }
 
-data "azion_edge_function" "example" {
-  id = azion_edge_function.testfunc2firewall.edge_function.id
-}
+# data "azion_edge_function" "example" {
+#   id = azion_edge_function.testfunc2firewall.edge_function.id
+# }
 
 # data "azion_edge_application_edge_functions_instance" "example" {
 #   depends_on          = [azion_edge_application_edge_functions_instance.testfunc]
