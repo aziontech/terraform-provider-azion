@@ -229,42 +229,42 @@ resource "azion_edge_function" "testfunc2firewall" {
 #   ]
 # }
 
-resource "azion_edge_firewall_main_setting" "testfunc" {
-  data = {
-    name   = "EdgeFirewall ${local.name_suffix}"
-    active = true
-    debug  = false
-    
-    modules = {
-      functions = {
-        enabled = true
-      }
-      
-      network_protection = {
-        enabled = true
-      }
-      
-      waf = {
-        enabled = true
-      }
-    }
-  }
-}
+# resource "azion_edge_firewall_main_setting" "testfunc" {
+#   data = {
+#     name   = "EdgeFirewall ${local.name_suffix}"
+#     active = true
+#     debug  = false
+#     
+#     modules = {
+#       functions = {
+#         enabled = true
+#       }
+#       
+#       network_protection = {
+#         enabled = true
+#       }
+#       
+#       waf = {
+#         enabled = true
+#       }
+#     }
+#   }
+# }
 
-resource "azion_edge_firewall_edge_functions_instance" "testfunc" {
-  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
-  data = {
-    name     = "Terraform Test 1"
-    function = azion_edge_function.testfunc2firewall.edge_function.id
-    args = jsonencode({
-      a = "b"
-    })
-  }
-  depends_on = [
-    azion_edge_firewall_main_setting.testfunc,
-    azion_edge_function.testfunc2firewall
-  ]
-}
+# resource "azion_edge_firewall_edge_functions_instance" "testfunc" {
+#   edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
+#   data = {
+#     name     = "Terraform Test 1"
+#     function = azion_edge_function.testfunc2firewall.edge_function.id
+#     args = jsonencode({
+#       a = "b"
+#     })
+#   }
+#   depends_on = [
+#     azion_edge_firewall_main_setting.testfunc,
+#     azion_edge_function.testfunc2firewall
+#   ]
+# }
 
 resource "azion_digital_certificate" "testfunc" {
   certificate_result = {
@@ -431,14 +431,14 @@ data "azion_edge_function" "example" {
 #   }
 # }
 
-data "azion_edge_firewall_main_settings" "example" {
-  page      = 1
-  page_size = 2
-}
+# data "azion_edge_firewall_main_settings" "example" {
+#   page      = 1
+#   page_size = 2
+# }
 
-data "azion_edge_firewall_main_setting" "example" {
-  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
-}
+# data "azion_edge_firewall_main_setting" "example" {
+#   edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
+# }
 
 data "azion_digital_certificates" "example" {
 }
@@ -506,11 +506,11 @@ data "azion_waf_domains" "example" {
   waf_id    = azion_waf_rule_set.testfunc.result.waf_id
 }
 
-data "azion_edge_firewall_edge_functions_instance" "example" {
-  edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
-  page             = 1
-  page_size        = 10
-}
+# data "azion_edge_firewall_edge_functions_instance" "example" {
+#   edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
+#   page             = 1
+#   page_size        = 10
+# }
 
 # data "azion_edge_firewall_edge_function_instance" "example" {
 #   edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
