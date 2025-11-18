@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     azion = {
-      source  = "github.com/aziontech/azion"
-      version = "0.1.0"
+      source  = "aziontech/azion"
+      version = ">= 1.33.0"
     }
   }
 }
