@@ -26,25 +26,22 @@ data "azion_edge_firewall_edge_function_instance" "example" {
 
 ### Required
 
-- `edge_firewall_id` (Number) Numeric identifier of the Edge Firewall
-- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
+- `edge_firewall_id` (String) Identifier of the Edge Firewall
 
 ### Read-Only
 
+- `data` (Attributes) (see [below for nested schema](#nestedatt--data))
 - `id` (String) Numeric identifier of the data source.
-- `schema_version` (Number) Schema Version.
 
-<a id="nestedatt--results"></a>
-### Nested Schema for `results`
-
-Required:
-
-- `edge_function_instance_id` (Number) ID of the edge firewall edge functions instance.
+<a id="nestedatt--data"></a>
+### Nested Schema for `data`
 
 Read-Only:
 
-- `edge_function_id` (Number) ID of the Edge Function for Edge Firewall you with to configure.
-- `json_args` (String) Requisition status code and message.
-- `last_editor` (String) Last editor of the edge firewall edge functions instance.
-- `last_modified` (String) Last modified timestamp of the edge firewall edge functions instance.
-- `name` (String) Name of the edge firewall edge functions instance.
+- `active` (Boolean) Whether the edge function instance is active.
+- `args` (String) Arguments for the edge function instance.
+- `function` (Number) ID of the Edge Function for Edge Firewall you wish to configure.
+- `id` (Number) ID of the edge firewall edge function instance.
+- `last_editor` (String) Last editor of the edge firewall edge function instance.
+- `last_modified` (String) Last modified timestamp of the edge firewall edge function instance.
+- `name` (String) Name of the edge firewall edge function instance.

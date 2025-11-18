@@ -90,7 +90,6 @@ func (r *edgeFirewallFunctionsInstanceResource) Schema(_ context.Context, _ reso
 					"args": schema.StringAttribute{
 						Description: "JSON arguments of the function.",
 						Optional:    true,
-						Computed:    true,
 					},
 					"function": schema.Int64Attribute{
 						Description: "The edge function identifier.",
@@ -361,11 +360,9 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 	}
 
 	if plan.Data.ID.IsNull() || plan.Data.ID.ValueString() == "" {
-		convertedId := strconv.FormatInt(state.Data.Function.ValueInt64(), 10)
-		functionsInstancesId = types.StringValue(convertedId)
+		functionsInstancesId = state.Data.ID
 	} else {
-		convertedId := strconv.FormatInt(plan.Data.Function.ValueInt64(), 10)
-		functionsInstancesId = types.StringValue(convertedId)
+		functionsInstancesId = plan.Data.ID
 	}
 
 	if plan.EdgeFirewallID.IsNull() {

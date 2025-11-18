@@ -253,11 +253,12 @@ resource "azion_edge_firewall_main_setting" "testfunc" {
 
 resource "azion_edge_firewall_edge_functions_instance" "testfunc" {
   edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
-  results = {
-    name = "Terraform Test 1"
-    "edge_function_id" : azion_edge_function.testfunc2firewall.edge_function.id
-    "args" : jsonencode(
-    { a = "b" })
+  data = {
+    name     = "Terraform Test 1"
+    function = azion_edge_function.testfunc2firewall.edge_function.id
+    args = jsonencode({
+      a = "b"
+    })
   }
   depends_on = [
     azion_edge_firewall_main_setting.testfunc,
@@ -514,7 +515,7 @@ data "azion_edge_firewall_edge_functions_instance" "example" {
 data "azion_edge_firewall_edge_function_instance" "example" {
   edge_firewall_id = azion_edge_firewall_main_setting.testfunc.data.id
   results = {
-    edge_function_instance_id = azion_edge_firewall_edge_functions_instance.testfunc.results.id
+    edge_function_instance_id = azion_edge_firewall_edge_functions_instance.testfunc.data.id
   }
 }
 

@@ -36,31 +36,18 @@ data "azion_edge_firewall_edge_functions_instance" "example" {
 
 - `counter` (Number) The total number of edge firewalls.
 - `id` (String) Numeric identifier of the data source.
-- `links` (Attributes) (see [below for nested schema](#nestedatt--links))
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number) Schema Version.
 - `total_pages` (Number) The total number of pages.
-
-<a id="nestedatt--links"></a>
-### Nested Schema for `links`
-
-Read-Only:
-
-- `next` (String)
-- `previous` (String)
-
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
 
-Required:
-
-- `edge_function_instance_id` (Number) ID of the edge firewall edge functions instance.
-
 Read-Only:
 
-- `edge_function` (Number) ID of the Edge Function for Edge Firewall you with to configure.
-- `json_args` (String) Requisition status code and message.
+- `active` (Boolean) Whether the edge function instance is active.
+- `args` (String) Arguments for the edge function instance.
+- `function` (Number) ID of the Edge Function for Edge Firewall you wish to configure.
+- `id` (Number) ID of the edge firewall edge functions instance.
 - `last_editor` (String) Last editor of the edge firewall edge functions instance.
 - `last_modified` (String) Last modified timestamp of the edge firewall edge functions instance.
 - `name` (String) Name of the edge firewall edge functions instance.

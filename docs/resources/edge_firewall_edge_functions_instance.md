@@ -29,30 +29,31 @@ resource "azion_edge_firewall_edge_functions_instance" "example" {
 
 ### Required
 
-- `edge_firewall_id` (Number) The edge firewall identifier.
-- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
+- `data` (Attributes) (see [below for nested schema](#nestedatt--data))
+- `edge_firewall_id` (String) The edge firewall identifier.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
-- `schema_version` (Number)
+- `state` (String) State of the edge function instance.
 
-<a id="nestedatt--results"></a>
-### Nested Schema for `results`
+<a id="nestedatt--data"></a>
+### Nested Schema for `data`
 
 Required:
 
-- `edge_function_id` (Number) The edge function identifier.
+- `function` (Number) The edge function identifier.
 - `name` (String) Name of the function.
 
 Optional:
 
+- `active` (Boolean) Whether the edge function instance is active.
 - `args` (String) JSON arguments of the function.
 
 Read-Only:
 
-- `id` (Number) The edge function instance identifier.
+- `id` (String) The edge function instance identifier.
 - `last_editor` (String) Last editor of the edge firewall edge functions instance.
 - `last_modified` (String) Last modified timestamp of the edge firewall edge functions instance.
 

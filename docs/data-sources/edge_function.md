@@ -28,7 +28,6 @@ data "azion_edge_function" "example" {
 ### Read-Only
 
 - `data` (Attributes) (see [below for nested schema](#nestedatt--data))
-- `schema_version` (Number) Schema Version.
 
 <a id="nestedatt--data"></a>
 ### Nested Schema for `data`
