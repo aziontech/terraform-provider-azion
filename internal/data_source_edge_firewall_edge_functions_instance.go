@@ -4,8 +4,9 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/edgefunctionsinstance_edgefirewall"
+	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -21,30 +22,23 @@ type EdgeFirewallEdgeFunctionsInstanceDataSource struct {
 	client *apiClient
 }
 
-type EdgeFirewallsResponseLinks struct {
-	Previous types.String `tfsdk:"previous"`
-	Next     types.String `tfsdk:"next"`
-}
-
 type EdgeFirewallEdgeFunctionsInstanceDataSourceModel struct {
 	ID             types.String                               `tfsdk:"id"`
-	EdgeFirewallID types.Int64                                `tfsdk:"edge_firewall_id"`
+	EdgeFirewallID types.String                               `tfsdk:"edge_firewall_id"`
 	Counter        types.Int64                                `tfsdk:"counter"`
-	TotalPages     types.Int64                                `tfsdk:"total_pages"`
 	Page           types.Int64                                `tfsdk:"page"`
 	PageSize       types.Int64                                `tfsdk:"page_size"`
-	Links          *EdgeFirewallsResponseLinks                `tfsdk:"links"`
-	SchemaVersion  types.Int64                                `tfsdk:"schema_version"`
 	Results        []EdgeFirewallEdgeFunctionsInstanceResults `tfsdk:"results"`
 }
 
 type EdgeFirewallEdgeFunctionsInstanceResults struct {
-	ID           types.Int64  `tfsdk:"edge_function_instance_id"`
+	ID           types.Int64  `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	Args         types.String `tfsdk:"args"`
+	Function     types.Int64  `tfsdk:"function"`
+	Active       types.Bool   `tfsdk:"active"`
 	LastEditor   types.String `tfsdk:"last_editor"`
 	LastModified types.String `tfsdk:"last_modified"`
-	Name         types.String `tfsdk:"name"`
-	JsonArgs     types.String `tfsdk:"json_args"`
-	EdgeFunction types.Int64  `tfsdk:"edge_function"`
 }
 
 func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -85,28 +79,29 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Schema(_ context.Context, 
 				Description: "The total number of pages.",
 				Computed:    true,
 			},
-			"links": schema.SingleNestedAttribute{
-				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"previous": schema.StringAttribute{
-						Computed: true,
-					},
-					"next": schema.StringAttribute{
-						Computed: true,
-					},
-				},
-			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
 			"results": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"edge_function_instance_id": schema.Int64Attribute{
+						"id": schema.Int64Attribute{
 							Description: "ID of the edge firewall edge functions instance.",
-							Required:    true,
+							Computed:    true,
+						},
+						"name": schema.StringAttribute{
+							Description: "Name of the edge firewall edge functions instance.",
+							Computed:    true,
+						},
+						"args": schema.StringAttribute{
+							Description: "Arguments for the edge function instance.",
+							Computed:    true,
+						},
+						"function": schema.Int64Attribute{
+							Description: "ID of the Edge Function for Edge Firewall you wish to configure.",
+							Computed:    true,
+						},
+						"active": schema.BoolAttribute{
+							Description: "Whether the edge function instance is active.",
+							Computed:    true,
 						},
 						"last_editor": schema.StringAttribute{
 							Description: "Last editor of the edge firewall edge functions instance.",
@@ -116,17 +111,6 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Schema(_ context.Context, 
 							Description: "Last modified timestamp of the edge firewall edge functions instance.",
 							Computed:    true,
 						},
-						"name": schema.StringAttribute{
-							Description: "Name of the edge firewall edge functions instance.",
-							Computed:    true,
-						},
-						"json_args": schema.StringAttribute{
-							Description: "Requisition status code and message.",
-							Computed:    true,
-						},
-						"edge_function": schema.Int64Attribute{
-							Description: "ID of the Edge Function for Edge Firewall you with to configure.",
-							Computed:    true},
 					},
 				},
 			},
@@ -137,7 +121,7 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Schema(_ context.Context, 
 func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var page types.Int64
 	var pageSize types.Int64
-	var edgeFirewallID types.Int64
+	var edgeFirewallID types.String
 
 	diagsEdgeApplicationId := req.Config.GetAttribute(ctx, path.Root("edge_firewall_id"), &edgeFirewallID)
 	resp.Diagnostics.Append(diagsEdgeApplicationId...)
@@ -164,16 +148,16 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, 
 		pageSize = types.Int64Value(10)
 	}
 
-	EdgeFirewallFunctionsInstanceResponse, response, err := e.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
-		EdgeFirewallEdgeFirewallIdFunctionsInstancesGet(ctx, edgeFirewallID.ValueInt64()).
+	EdgeFirewallFunctionsInstanceResponse, response, err := e.client.edgeApi.FirewallsFunctionAPI.
+		ListFirewallFunction(ctx, edgeFirewallID.ValueString()).
 		Page(page.ValueInt64()).
 		PageSize(pageSize.ValueInt64()).
 		Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			EdgeFirewallFunctionsInstanceResponse, response, err = utils.RetryOn429(func() (*edgefunctionsinstance_edgefirewall.ListEdgeFunctionsInstancesResponse, *http.Response, error) {
-				return e.client.edgefunctionsinstanceEdgefirewallApi.DefaultAPI.
-					EdgeFirewallEdgeFirewallIdFunctionsInstancesGet(ctx, edgeFirewallID.ValueInt64()).Page(page.ValueInt64()).
+			EdgeFirewallFunctionsInstanceResponse, response, err = utils.RetryOn429(func() (*edgeapi.PaginatedFirewallFunctionInstanceList, *http.Response, error) {
+				return e.client.edgeApi.FirewallsFunctionAPI.
+					ListFirewallFunction(ctx, edgeFirewallID.ValueString()).Page(page.ValueInt64()).
 					PageSize(pageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -207,37 +191,33 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, 
 
 	var edgeFirewallsResults []EdgeFirewallEdgeFunctionsInstanceResults
 	for _, results := range EdgeFirewallFunctionsInstanceResponse.Results {
-		jsonArgsStr, err := utils.ConvertInterfaceToString(results.GetJsonArgs())
+		jsonArgsStr, err := utils.ConvertInterfaceToString(results.GetArgs())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
 				"err",
 			)
 		}
+
 		GetEdgeFirewalls := EdgeFirewallEdgeFunctionsInstanceResults{
 			ID:           types.Int64Value(results.GetId()),
-			LastEditor:   types.StringValue(results.GetLastEditor()),
-			LastModified: types.StringValue(results.GetLastModified()),
 			Name:         types.StringValue(results.GetName()),
-			EdgeFunction: types.Int64Value(results.GetEdgeFunction()),
-			JsonArgs:     types.StringValue(jsonArgsStr),
+			Args:         types.StringValue(jsonArgsStr),
+			Function:     types.Int64Value(results.GetFunction()),
+			Active:       types.BoolValue(results.GetActive()),
+			LastEditor:   types.StringValue(results.GetLastEditor()),
+			LastModified: types.StringValue(results.GetLastModified().Format(time.RFC3339)),
 		}
 		edgeFirewallsResults = append(edgeFirewallsResults, GetEdgeFirewalls)
 	}
 
 	EdgeFirewallsState := EdgeFirewallEdgeFunctionsInstanceDataSourceModel{
-		SchemaVersion:  types.Int64Value(EdgeFirewallFunctionsInstanceResponse.GetSchemaVersion()),
 		ID:             types.StringValue("Get All Edge Firewall Edge Functions Instance"),
 		EdgeFirewallID: edgeFirewallID,
 		Counter:        types.Int64Value(EdgeFirewallFunctionsInstanceResponse.GetCount()),
-		TotalPages:     types.Int64Value(EdgeFirewallFunctionsInstanceResponse.GetTotalPages()),
 		Page:           page,
 		PageSize:       pageSize,
-		Links: &EdgeFirewallsResponseLinks{
-			Previous: types.StringValue(EdgeFirewallFunctionsInstanceResponse.Links.GetPrevious()),
-			Next:     types.StringValue(EdgeFirewallFunctionsInstanceResponse.Links.GetNext()),
-		},
-		Results: edgeFirewallsResults,
+		Results:        edgeFirewallsResults,
 	}
 
 	diags := resp.State.Set(ctx, &EdgeFirewallsState)

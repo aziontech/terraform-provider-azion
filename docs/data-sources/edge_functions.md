@@ -22,10 +22,9 @@ data "azion_edge_functions" "example" {
 
 ### Read-Only
 
+- `counter` (Number) The total count of edge functions.
 - `id` (String) Numeric identifier of the data source.
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number) Schema Version.
-- `total_count` (Number) The total count of edge functions.
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
