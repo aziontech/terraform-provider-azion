@@ -43,30 +43,26 @@ resource "azion_network_list" "exampleTwo" {
 
 ### Required
 
-- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
+- `data` (Attributes) (see [below for nested schema](#nestedatt--data))
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
-- `schema_version` (Number)
 
-<a id="nestedatt--results"></a>
-### Nested Schema for `results`
+<a id="nestedatt--data"></a>
+### Nested Schema for `data`
 
 Required:
 
-- `items_values_str` (Set of String) List of countries in the network list.
-- `list_type` (String) Type of the network list.
+- `items` (List of String) List of items in the network list.
 - `name` (String) Name of the network list.
-
-Optional:
-
-- `items_values_int` (List of Number) List of countries in the network list.
+- `type` (String) Type of the network list.
 
 Read-Only:
 
-- `id` (Number) Identification of this entry.
+- `active` (Boolean) Whether the network list is active.
+- `id` (Number) ID of the network list.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
 

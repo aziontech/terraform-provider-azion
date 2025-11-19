@@ -24,37 +24,20 @@ data "azion_network_lists" "example" {
 ### Optional
 
 - `id` (String) Identifier of the data source.
-- `page` (Number) The page number of Cache Settings.
 
 ### Read-Only
 
-- `counter` (Number) The total number of Cache Settings.
-- `links` (Attributes) (see [below for nested schema](#nestedatt--links))
+- `counter` (Number) The total number of network lists.
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number) Schema Version.
-- `total_pages` (Number) The total number of pages.
-
-<a id="nestedatt--links"></a>
-### Nested Schema for `links`
-
-Read-Only:
-
-- `next` (String)
-- `previous` (String)
-
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
 
-Required:
-
-- `id` (Number) ID of the network list.
-
 Read-Only:
 
-- `country_list` (List of String) List of countries in the network list.
-- `ip_list` (List of String) List of IP addresses in the network list.
+- `active` (Boolean) Whether the network list is active.
+- `id` (Number) ID of the network list.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
-- `list_type` (String) Type of the network list.
 - `name` (String) Name of the network list.
+- `type` (String) Type of the network list.

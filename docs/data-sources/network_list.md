@@ -23,7 +23,7 @@ data "azion_network_list" "example" {
 
 ### Required
 
-- `network_list_id` (String) The edge application identifier.
+- `network_list_id` (String) The network list identifier.
 
 ### Optional
 
@@ -31,17 +31,17 @@ data "azion_network_list" "example" {
 
 ### Read-Only
 
-- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number) Schema Version.
+- `data` (Attributes) (see [below for nested schema](#nestedatt--data))
 
-<a id="nestedatt--results"></a>
-### Nested Schema for `results`
+<a id="nestedatt--data"></a>
+### Nested Schema for `data`
 
 Read-Only:
 
-- `items_values_int` (List of Number) List of countries in the network list.
-- `items_values_str` (List of String) List of countries in the network list.
+- `active` (Boolean) Whether the network list is active.
+- `id` (Number) ID of the network list.
+- `items` (List of String) List of items in the network list.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
-- `list_type` (String) Type of the network list.
 - `name` (String) Name of the network list.
+- `type` (String) Type of the network list.

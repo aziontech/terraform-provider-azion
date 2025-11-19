@@ -468,7 +468,6 @@ data "azion_intelligent_dns_records" "examples" {
 }
 
 data "azion_network_lists" "example" {
-  page = 1
 }
 
 data "azion_network_list" "exampleOne" {
