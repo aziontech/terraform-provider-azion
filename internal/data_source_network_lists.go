@@ -4,12 +4,12 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/networklist"
+	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -27,28 +27,18 @@ type NetworkListsDataSource struct {
 }
 
 type NetworkListsDataSourceModel struct {
-	SchemaVersion types.Int64                `tfsdk:"schema_version"`
-	Counter       types.Int64                `tfsdk:"counter"`
-	Page          types.Int64                `tfsdk:"page"`
-	TotalPages    types.Int64                `tfsdk:"total_pages"`
-	Links         *NetworkListsResponseLinks `tfsdk:"links"`
-	Results       []NetworkListsResults      `tfsdk:"results"`
-	ID            types.String               `tfsdk:"id"`
-}
-
-type NetworkListsResponseLinks struct {
-	Previous types.String `tfsdk:"previous"`
-	Next     types.String `tfsdk:"next"`
+	Counter types.Int64           `tfsdk:"counter"`
+	Results []NetworkListsResults `tfsdk:"results"`
+	ID      types.String          `tfsdk:"id"`
 }
 
 type NetworkListsResults struct {
 	ID           types.Int64  `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	Type         types.String `tfsdk:"type"`
 	LastEditor   types.String `tfsdk:"last_editor"`
 	LastModified types.String `tfsdk:"last_modified"`
-	ListType     types.String `tfsdk:"list_type"`
-	Name         types.String `tfsdk:"name"`
-	CountryList  types.List   `tfsdk:"country_list"`
-	IPList       types.List   `tfsdk:"ip_list"`
+	Active       types.Bool   `tfsdk:"active"`
 }
 
 func (n *NetworkListsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -69,32 +59,9 @@ func (n *NetworkListsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Description: "Identifier of the data source.",
 				Optional:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
 			"counter": schema.Int64Attribute{
-				Description: "The total number of Cache Settings.",
+				Description: "The total number of network lists.",
 				Computed:    true,
-			},
-			"page": schema.Int64Attribute{
-				Description: "The page number of Cache Settings.",
-				Optional:    true,
-			},
-			"total_pages": schema.Int64Attribute{
-				Description: "The total number of pages.",
-				Computed:    true,
-			},
-			"links": schema.SingleNestedAttribute{
-				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"previous": schema.StringAttribute{
-						Computed: true,
-					},
-					"next": schema.StringAttribute{
-						Computed: true,
-					},
-				},
 			},
 			"results": schema.ListNestedAttribute{
 				Computed: true,
@@ -102,7 +69,15 @@ func (n *NetworkListsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 					Attributes: map[string]schema.Attribute{
 						"id": schema.Int64Attribute{
 							Description: "ID of the network list.",
-							Required:    true,
+							Computed:    true,
+						},
+						"name": schema.StringAttribute{
+							Description: "Name of the network list.",
+							Computed:    true,
+						},
+						"type": schema.StringAttribute{
+							Description: "Type of the network list.",
+							Computed:    true,
 						},
 						"last_editor": schema.StringAttribute{
 							Description: "Last editor of the network list.",
@@ -112,23 +87,9 @@ func (n *NetworkListsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Description: "Last modified timestamp of the network list.",
 							Computed:    true,
 						},
-						"list_type": schema.StringAttribute{
-							Description: "Type of the network list.",
+						"active": schema.BoolAttribute{
+							Description: "Whether the network list is active.",
 							Computed:    true,
-						},
-						"name": schema.StringAttribute{
-							Description: "Name of the network list.",
-							Computed:    true,
-						},
-						"country_list": schema.ListAttribute{
-							Computed:    true,
-							ElementType: types.StringType,
-							Description: "List of countries in the network list.",
-						},
-						"ip_list": schema.ListAttribute{
-							Computed:    true,
-							ElementType: types.StringType,
-							Description: "List of IP addresses in the network list.",
 						},
 					},
 				},
@@ -138,29 +99,12 @@ func (n *NetworkListsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 }
 
 func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var Page types.Int64
-	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
-	resp.Diagnostics.Append(diagsPage...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if Page.ValueInt64() == 0 {
-		Page = types.Int64Value(1)
-	}
-
-	page32, err := utils.CheckInt64toInt32Security(Page.ValueInt64())
-	if err != nil {
-		utils.ExceedsValidRange(resp, Page.ValueInt64())
-		return
-	}
-
-	networkListsResponse, response, err := n.client.networkListApi.DefaultAPI.
-		NetworkListsGet(ctx).Page(page32).Execute() //nolint
+	networkListsResponse, response, err := n.client.edgeApi.NetworkListsAPI.
+		ListNetworkLists(ctx).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			networkListsResponse, response, err = utils.RetryOn429(func() (*networklist.ListNetworkListsResponse, *http.Response, error) {
-				return n.client.networkListApi.DefaultAPI.NetworkListsGet(ctx).Page(page32).Execute() //nolint
+			networkListsResponse, response, err = utils.RetryOn429(func() (*edgeapi.PaginatedNetworkListList, *http.Response, error) {
+				return n.client.edgeApi.NetworkListsAPI.ListNetworkLists(ctx).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -193,37 +137,19 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	var networkLists []NetworkListsResults
 	for _, nl := range networkListsResponse.Results {
-		var sliceCountryList []types.String
-		for _, countryList := range nl.GetCountryList() {
-			sliceCountryList = append(sliceCountryList, types.StringValue(countryList))
-		}
-
-		var sliceIpList []types.String
-		for _, ipList := range nl.GetIpList() {
-			sliceIpList = append(sliceIpList, types.StringValue(ipList))
-		}
-
 		networkList := NetworkListsResults{
 			ID:           types.Int64Value(nl.GetId()),
-			LastEditor:   types.StringValue(nl.GetLastEditor()),
-			LastModified: types.StringValue(nl.GetLastModified()),
-			ListType:     types.StringValue(nl.GetListType()),
 			Name:         types.StringValue(nl.GetName()),
-			CountryList:  utils.SliceStringTypeToList(sliceCountryList),
-			IPList:       utils.SliceStringTypeToList(sliceIpList),
+			Type:         types.StringValue(nl.GetType()),
+			LastEditor:   types.StringValue(nl.GetLastEditor()),
+			LastModified: types.StringValue(nl.GetLastModified().Format(time.RFC3339)),
+			Active:       types.BoolValue(nl.GetActive()),
 		}
 		networkLists = append(networkLists, networkList)
 	}
 
 	networkListsState := NetworkListsDataSourceModel{
-		SchemaVersion: types.Int64Value(networkListsResponse.GetSchemaVersion()),
-		Counter:       types.Int64Value(networkListsResponse.GetCount()),
-		Page:          types.Int64Value(Page.ValueInt64()),
-		TotalPages:    types.Int64Value(networkListsResponse.GetTotalPages()),
-		Links: &NetworkListsResponseLinks{
-			Previous: types.StringValue(networkListsResponse.Links.GetPrevious()),
-			Next:     types.StringValue(networkListsResponse.Links.GetNext()),
-		},
+		Counter: types.Int64Value(networkListsResponse.GetCount()),
 		Results: networkLists,
 		ID:      types.StringValue("Get All Network Lists"),
 	}

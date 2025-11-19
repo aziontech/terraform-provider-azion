@@ -7,8 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/networklist"
-
+	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -34,20 +33,19 @@ type networkListResource struct {
 }
 
 type NetworkListResourceModel struct {
-	SchemaVersion types.Int64                 `tfsdk:"schema_version"`
-	NetworkList   *NetworkListResourceResults `tfsdk:"results"`
-	ID            types.String                `tfsdk:"id"`
-	LastUpdated   types.String                `tfsdk:"last_updated"`
+	Data        *NetworkListResourceData `tfsdk:"data"`
+	ID          types.String             `tfsdk:"id"`
+	LastUpdated types.String             `tfsdk:"last_updated"`
 }
 
-type NetworkListResourceResults struct {
-	ID             types.Int64  `tfsdk:"id"`
-	LastEditor     types.String `tfsdk:"last_editor"`
-	LastModified   types.String `tfsdk:"last_modified"`
-	ListType       types.String `tfsdk:"list_type"`
-	Name           types.String `tfsdk:"name"`
-	ItemsValuesStr types.Set    `tfsdk:"items_values_str"`
-	ItemsValuesInt types.List   `tfsdk:"items_values_int"`
+type NetworkListResourceData struct {
+	ID           types.Int64  `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	Type         types.String `tfsdk:"type"`
+	Items        types.List   `tfsdk:"items"`
+	LastEditor   types.String `tfsdk:"last_editor"`
+	LastModified types.String `tfsdk:"last_modified"`
+	Active       types.Bool   `tfsdk:"active"`
 }
 
 func (r *networkListResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -63,19 +61,29 @@ func (r *networkListResource) Schema(_ context.Context, _ resource.SchemaRequest
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"schema_version": schema.Int64Attribute{
-				Computed: true,
-			},
 			"last_updated": schema.StringAttribute{
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"results": schema.SingleNestedAttribute{
+			"data": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Computed:    true,
-						Description: "Identification of this entry.",
+						Description: "ID of the network list.",
+					},
+					"name": schema.StringAttribute{
+						Description: "Name of the network list.",
+						Required:    true,
+					},
+					"type": schema.StringAttribute{
+						Description: "Type of the network list.",
+						Required:    true,
+					},
+					"items": schema.ListAttribute{
+						Required:    true,
+						ElementType: types.StringType,
+						Description: "List of items in the network list.",
 					},
 					"last_editor": schema.StringAttribute{
 						Description: "Last editor of the network list.",
@@ -85,23 +93,9 @@ func (r *networkListResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Description: "Last modified timestamp of the network list.",
 						Computed:    true,
 					},
-					"list_type": schema.StringAttribute{
-						Description: "Type of the network list.",
-						Required:    true,
-					},
-					"name": schema.StringAttribute{
-						Description: "Name of the network list.",
-						Required:    true,
-					},
-					"items_values_str": schema.SetAttribute{
-						Required:    true,
-						ElementType: types.StringType,
-						Description: "List of countries in the network list.",
-					},
-					"items_values_int": schema.ListAttribute{
-						Optional:    true,
-						ElementType: types.Int64Type,
-						Description: "List of countries in the network list.",
+					"active": schema.BoolAttribute{
+						Description: "Whether the network list is active.",
+						Computed:    true,
 					},
 				},
 			},
@@ -124,32 +118,29 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	diagsInt := req.Plan.SetAttribute(ctx, path.Root("results").AtName("items_values_int"), types.ListNull(types.Int64Type))
-	resp.Diagnostics.Append(diagsInt...)
+	// Extract items from the plan
+	var items []string
+	diags = plan.Data.Items.ElementsAs(ctx, &items, false)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	networkListRequest := networklist.CreateNetworkListsRequest{
-		Name:     plan.NetworkList.Name.ValueStringPointer(),
-		ListType: plan.NetworkList.ListType.ValueStringPointer(),
+	networkListRequest := edgeapi.NetworkListDetailRequest{
+		Name:  plan.Data.Name.ValueString(),
+		Type:  plan.Data.Type.ValueString(),
+		Items: items,
 	}
 
-	requestItemsValue := plan.NetworkList.ItemsValuesStr.ElementsAs(ctx, &networkListRequest.ItemsValues, false)
-	resp.Diagnostics.Append(requestItemsValue...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	createNetworkListResponse, response, err := r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
+	createNetworkListResponse, response, err := r.client.edgeApi.NetworkListsAPI.CreateNetworkList(ctx).NetworkListDetailRequest(networkListRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			createNetworkListResponse, response, err = utils.RetryOn429(func() (*networklist.NetworkListsResponse, *http.Response, error) {
-				return r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
+			createNetworkListResponse, response, err = utils.RetryOn429(func() (*edgeapi.ResponseNetworkListDetail, *http.Response, error) {
+				return r.client.edgeApi.NetworkListsAPI.CreateNetworkList(ctx).NetworkListDetailRequest(networkListRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
@@ -176,22 +167,22 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		}
 	}
 
-	plan.SchemaVersion = types.Int64Value(3)
-	var sliceString []types.String
-	for _, itemsValuesStr := range createNetworkListResponse.Results.GetItemsValues() {
-		sliceString = append(sliceString, types.StringValue(itemsValuesStr))
-	}
-	plan.NetworkList = &NetworkListResourceResults{
-		ID:             types.Int64Value(createNetworkListResponse.Results.GetId()),
-		LastEditor:     types.StringValue(createNetworkListResponse.Results.GetLastEditor()),
-		LastModified:   types.StringValue(createNetworkListResponse.Results.GetLastModified()),
-		ListType:       types.StringValue(createNetworkListResponse.Results.GetListType()),
-		Name:           types.StringValue(createNetworkListResponse.Results.GetName()),
-		ItemsValuesStr: utils.SliceStringTypeToSet(sliceString),
-		ItemsValuesInt: types.ListNull(types.Int64Type),
+	var responseItems []types.String
+	for _, item := range createNetworkListResponse.Data.GetItems() {
+		responseItems = append(responseItems, types.StringValue(item))
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(createNetworkListResponse.Results.GetId(), 10))
+	plan.Data = &NetworkListResourceData{
+		ID:           types.Int64Value(createNetworkListResponse.Data.GetId()),
+		Name:         types.StringValue(createNetworkListResponse.Data.GetName()),
+		Type:         types.StringValue(createNetworkListResponse.Data.GetType()),
+		Items:        utils.SliceStringTypeToList(responseItems),
+		LastEditor:   types.StringValue(createNetworkListResponse.Data.GetLastEditor()),
+		LastModified: types.StringValue(createNetworkListResponse.Data.GetLastModified().Format(time.RFC3339)),
+		Active:       types.BoolValue(createNetworkListResponse.Data.GetActive()),
+	}
+
+	plan.ID = types.StringValue(strconv.FormatInt(createNetworkListResponse.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -208,27 +199,23 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	var networkListId string
-	if state.ID.IsNull() {
-		networkListId = strconv.Itoa(int(state.NetworkList.ID.ValueInt64()))
-	} else {
-		networkListId = state.ID.ValueString()
-	}
 
-	getNetworkList, response, err := r.client.networkListApi.DefaultAPI.
-		NetworkListsUuidGet(ctx, networkListId).Execute() //nolint
+	networkListId := state.ID.ValueString()
+
+	getNetworkList, response, err := r.client.edgeApi.NetworkListsAPI.
+		RetrieveNetworkList(ctx, networkListId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 		if response.StatusCode == 429 {
-			getNetworkList, response, err = utils.RetryOn429(func() (*networklist.NetworkListUuidResponse, *http.Response, error) {
-				return r.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, networkListId).Execute() //nolint
+			getNetworkList, response, err = utils.RetryOn429(func() (*edgeapi.ResponseRetrieveNetworkListDetail, *http.Response, error) {
+				return r.client.edgeApi.NetworkListsAPI.RetrieveNetworkList(ctx, networkListId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
@@ -255,51 +242,29 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 		}
 	}
 
-	var sliceString []types.String
-	for _, itemsValuesStr := range getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetItemsValues() {
-		sliceString = append(sliceString, types.StringValue(itemsValuesStr))
-	}
-	var sliceInt []types.Int64
-	for _, itemsValuesInt := range getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetItemsValues() {
-		sliceInt = append(sliceInt, types.Int64Value(int64(itemsValuesInt)))
+	var responseItems []types.String
+	if getNetworkList.Data.GetItems() != nil {
+		for _, item := range getNetworkList.Data.GetItems() {
+			responseItems = append(responseItems, types.StringValue(item))
+		}
 	}
 
-	if len(sliceString) != 0 {
-		networkListsState := NetworkListResourceModel{
-			SchemaVersion: types.Int64Value(getNetworkList.GetSchemaVersion()),
-			NetworkList: &NetworkListResourceResults{
-				LastEditor:     types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetLastEditor()),
-				LastModified:   types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetLastModified()),
-				ListType:       types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetListType()),
-				Name:           types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetName()),
-				ItemsValuesStr: utils.SliceStringTypeToSet(sliceString),
-				ItemsValuesInt: types.ListNull(types.Int64Type),
-			},
-			ID: types.StringValue(networkListId),
-		}
-		diags = resp.State.Set(ctx, &networkListsState)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		networkListsState := NetworkListResourceModel{
-			SchemaVersion: types.Int64Value(getNetworkList.GetSchemaVersion()),
-			NetworkList: &NetworkListResourceResults{
-				LastEditor:     types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetLastEditor()),
-				LastModified:   types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetLastModified()),
-				ListType:       types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetListType()),
-				Name:           types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetName()),
-				ItemsValuesStr: types.SetValueMust(types.StringType, nil),
-				ItemsValuesInt: utils.SliceIntTypeToList(sliceInt),
-			},
-			ID: types.StringValue(networkListId),
-		}
-		diags = resp.State.Set(ctx, &networkListsState)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	networkListData := &NetworkListResourceData{
+		ID:           types.Int64Value(getNetworkList.Data.GetId()),
+		Name:         types.StringValue(getNetworkList.Data.GetName()),
+		Type:         types.StringValue(getNetworkList.Data.GetType()),
+		Items:        utils.SliceStringTypeToList(responseItems),
+		LastEditor:   types.StringValue(getNetworkList.Data.GetLastEditor()),
+		LastModified: types.StringValue(getNetworkList.Data.GetLastModified().Format(time.RFC3339)),
+		Active:       types.BoolValue(getNetworkList.Data.GetActive()),
+	}
+
+	state.Data = networkListData
+
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }
 
@@ -312,39 +277,37 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	var state NetworkListResourceModel
-	diagsNetworkList := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diagsNetworkList...)
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var networkListId string
-	if state.ID.IsNull() {
-		networkListId = strconv.Itoa(int(state.NetworkList.ID.ValueInt64()))
-	} else {
-		networkListId = state.ID.ValueString()
-	}
+	networkListId := state.ID.ValueString()
 
-	networkListRequest := networklist.CreateNetworkListsRequest{
-		Name:     plan.NetworkList.Name.ValueStringPointer(),
-		ListType: plan.NetworkList.ListType.ValueStringPointer(),
-	}
-
-	requestItemsValue := plan.NetworkList.ItemsValuesStr.ElementsAs(ctx, &networkListRequest.ItemsValues, false)
-	resp.Diagnostics.Append(requestItemsValue...)
+	// Extract items from the plan
+	var items []string
+	diags = plan.Data.Items.ElementsAs(ctx, &items, false)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	updateNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
+	networkListRequest := edgeapi.PatchedNetworkListDetailRequest{
+		Name:  plan.Data.Name.ValueStringPointer(),
+		Type:  plan.Data.Type.ValueStringPointer(),
+		Items: items,
+	}
+
+	updateNetworkList, response, err := r.client.edgeApi.NetworkListsAPI.PartialUpdateNetworkList(ctx, networkListId).PatchedNetworkListDetailRequest(networkListRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			updateNetworkList, response, err = utils.RetryOn429(func() (*networklist.NetworkListsResponse, *http.Response, error) {
-				return r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
+			updateNetworkList, response, err = utils.RetryOn429(func() (*edgeapi.ResponseNetworkListDetail, *http.Response, error) {
+				return r.client.edgeApi.NetworkListsAPI.PartialUpdateNetworkList(ctx, networkListId).PatchedNetworkListDetailRequest(networkListRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
@@ -371,22 +334,22 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 	}
 
-	plan.SchemaVersion = types.Int64Value(3)
-	var sliceString []types.String
-	for _, itemsValuesStr := range updateNetworkList.Results.GetItemsValues() {
-		sliceString = append(sliceString, types.StringValue(itemsValuesStr))
-	}
-	plan.NetworkList = &NetworkListResourceResults{
-		ID:             types.Int64Value(updateNetworkList.Results.GetId()),
-		LastEditor:     types.StringValue(updateNetworkList.Results.GetLastEditor()),
-		LastModified:   types.StringValue(updateNetworkList.Results.GetLastModified()),
-		ListType:       types.StringValue(updateNetworkList.Results.GetListType()),
-		Name:           types.StringValue(updateNetworkList.Results.GetName()),
-		ItemsValuesStr: utils.SliceStringTypeToSet(sliceString),
-		ItemsValuesInt: types.ListNull(types.Int64Type),
+	var responseItems []types.String
+	for _, item := range updateNetworkList.Data.GetItems() {
+		responseItems = append(responseItems, types.StringValue(item))
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(updateNetworkList.Results.GetId(), 10))
+	plan.Data = &NetworkListResourceData{
+		ID:           types.Int64Value(updateNetworkList.Data.GetId()),
+		Name:         types.StringValue(updateNetworkList.Data.GetName()),
+		Type:         types.StringValue(updateNetworkList.Data.GetType()),
+		Items:        utils.SliceStringTypeToList(responseItems),
+		LastEditor:   types.StringValue(updateNetworkList.Data.GetLastEditor()),
+		LastModified: types.StringValue(updateNetworkList.Data.GetLastModified().Format(time.RFC3339)),
+		Active:       types.BoolValue(updateNetworkList.Data.GetActive()),
+	}
+
+	plan.ID = types.StringValue(strconv.FormatInt(updateNetworkList.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -404,22 +367,17 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	var networkListId string
-	if state.ID.IsNull() {
-		networkListId = strconv.Itoa(int(state.NetworkList.ID.ValueInt64()))
-	} else {
-		networkListId = state.ID.ValueString()
-	}
+	networkListId := state.ID.ValueString()
 
-	response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidDelete(ctx, networkListId).Execute() //nolint
+	_, response, err := r.client.edgeApi.NetworkListsAPI.DestroyNetworkList(ctx, networkListId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
-				return r.client.networkListApi.DefaultAPI.NetworkListsUuidDelete(ctx, networkListId).Execute() //nolint
+			_, response, err = utils.RetryOn429(func() (*edgeapi.ResponseDeleteNetworkListDetail, *http.Response, error) {
+				return r.client.edgeApi.NetworkListsAPI.DestroyNetworkList(ctx, networkListId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {

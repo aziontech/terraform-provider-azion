@@ -4,8 +4,9 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/networklist"
+	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -27,19 +28,19 @@ type NetworkListDataSource struct {
 }
 
 type NetworkListDataSourceModel struct {
-	SchemaVersion types.Int64        `tfsdk:"schema_version"`
-	Results       *NetworkListResult `tfsdk:"results"`
-	NetworkListID types.String       `tfsdk:"network_list_id"`
-	ID            types.String       `tfsdk:"id"`
+	Data          *NetworkListData `tfsdk:"data"`
+	NetworkListID types.String     `tfsdk:"network_list_id"`
+	ID            types.String     `tfsdk:"id"`
 }
 
-type NetworkListResult struct {
-	LastEditor     types.String `tfsdk:"last_editor"`
-	LastModified   types.String `tfsdk:"last_modified"`
-	ListType       types.String `tfsdk:"list_type"`
-	Name           types.String `tfsdk:"name"`
-	ItemsValuesStr types.List   `tfsdk:"items_values_str"`
-	ItemsValuesInt types.List   `tfsdk:"items_values_int"`
+type NetworkListData struct {
+	ID           types.Int64  `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	Type         types.String `tfsdk:"type"`
+	Items        types.List   `tfsdk:"items"`
+	LastEditor   types.String `tfsdk:"last_editor"`
+	LastModified types.String `tfsdk:"last_modified"`
+	Active       types.Bool   `tfsdk:"active"`
 }
 
 func (n *NetworkListDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -61,16 +62,29 @@ func (n *NetworkListDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Optional:    true,
 			},
 			"network_list_id": schema.StringAttribute{
-				Description: "The edge application identifier.",
+				Description: "The network list identifier.",
 				Required:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
-			"results": schema.SingleNestedAttribute{
+			"data": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
+					"id": schema.Int64Attribute{
+						Description: "ID of the network list.",
+						Computed:    true,
+					},
+					"name": schema.StringAttribute{
+						Description: "Name of the network list.",
+						Computed:    true,
+					},
+					"type": schema.StringAttribute{
+						Description: "Type of the network list.",
+						Computed:    true,
+					},
+					"items": schema.ListAttribute{
+						Computed:    true,
+						ElementType: types.StringType,
+						Description: "List of items in the network list.",
+					},
 					"last_editor": schema.StringAttribute{
 						Description: "Last editor of the network list.",
 						Computed:    true,
@@ -79,23 +93,9 @@ func (n *NetworkListDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						Description: "Last modified timestamp of the network list.",
 						Computed:    true,
 					},
-					"list_type": schema.StringAttribute{
-						Description: "Type of the network list.",
+					"active": schema.BoolAttribute{
+						Description: "Whether the network list is active.",
 						Computed:    true,
-					},
-					"name": schema.StringAttribute{
-						Description: "Name of the network list.",
-						Computed:    true,
-					},
-					"items_values_str": schema.ListAttribute{
-						Computed:    true,
-						ElementType: types.StringType,
-						Description: "List of countries in the network list.",
-					},
-					"items_values_int": schema.ListAttribute{
-						Computed:    true,
-						ElementType: types.Int64Type,
-						Description: "List of countries in the network list.",
 					},
 				},
 			},
@@ -104,22 +104,23 @@ func (n *NetworkListDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 }
 
 func (n *NetworkListDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var uuid types.String
-	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("network_list_id"), &uuid)
-	resp.Diagnostics.Append(diagsPageSize...)
+	var networkListID types.String
+	diags := req.Config.GetAttribute(ctx, path.Root("network_list_id"), &networkListID)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	networkListsResponse, response, err := n.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, uuid.ValueString()).Execute() //nolint
+	networkListResponse, response, err := n.client.edgeApi.NetworkListsAPI.
+		RetrieveNetworkList(ctx, networkListID.ValueString()).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
-			networkListsResponse, response, err = utils.RetryOn429(func() (*networklist.NetworkListUuidResponse, *http.Response, error) {
-				return n.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, uuid.ValueString()).Execute() //nolint
+		if response != nil && response.StatusCode == 429 {
+			networkListResponse, response, err = utils.RetryOn429(func() (*edgeapi.ResponseRetrieveNetworkListDetail, *http.Response, error) {
+				return n.client.edgeApi.NetworkListsAPI.RetrieveNetworkList(ctx, networkListID.ValueString()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
@@ -130,66 +131,53 @@ func (n *NetworkListDataSource) Read(ctx context.Context, req datasource.ReadReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
+			if response != nil {
+				bodyBytes, errReadAll := io.ReadAll(response.Body)
+				if errReadAll != nil {
+					resp.Diagnostics.AddError(
+						errReadAll.Error(),
+						"Failed to read response body",
+					)
+				}
+				bodyString := string(bodyBytes)
 				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
+					err.Error(),
+					bodyString,
+				)
+			} else {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed",
 				)
 			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
 			return
 		}
 	}
 
-	var sliceString []types.String
-	for _, itemsValuesStr := range networkListsResponse.GetResults().NetworkListUuidResponseEntryString.GetItemsValues() {
-		sliceString = append(sliceString, types.StringValue(itemsValuesStr))
-	}
-	var sliceInt []types.Int64
-	for _, itemsValuesInt := range networkListsResponse.GetResults().NetworkListUuidResponseEntryInt.GetItemsValues() {
-		sliceInt = append(sliceInt, types.Int64Value(int64(itemsValuesInt)))
+	// Convert items to string slice
+	var items []types.String
+	data := networkListResponse.GetData()
+	for _, item := range data.Items {
+		items = append(items, types.StringValue(item))
 	}
 
-	if len(sliceString) != 0 {
-		networkListsState := NetworkListDataSourceModel{
-			SchemaVersion: types.Int64Value(networkListsResponse.GetSchemaVersion()),
-			Results: &NetworkListResult{
-				LastEditor:     types.StringValue(networkListsResponse.GetResults().NetworkListUuidResponseEntryString.GetLastEditor()),
-				LastModified:   types.StringValue(networkListsResponse.GetResults().NetworkListUuidResponseEntryString.GetLastModified()),
-				ListType:       types.StringValue(networkListsResponse.GetResults().NetworkListUuidResponseEntryString.GetListType()),
-				Name:           types.StringValue(networkListsResponse.GetResults().NetworkListUuidResponseEntryString.GetName()),
-				ItemsValuesStr: utils.SliceStringTypeToList(sliceString),
-				ItemsValuesInt: types.ListValueMust(types.Int64Type, nil),
-			},
-			ID: types.StringValue("Get By ID Network List"),
-		}
-		diags := resp.State.Set(ctx, &networkListsState)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		networkListsState := NetworkListDataSourceModel{
-			SchemaVersion: types.Int64Value(networkListsResponse.GetSchemaVersion()),
-			Results: &NetworkListResult{
-				LastEditor:     types.StringValue(networkListsResponse.GetResults().NetworkListUuidResponseEntryInt.GetLastEditor()),
-				LastModified:   types.StringValue(networkListsResponse.GetResults().NetworkListUuidResponseEntryInt.GetLastModified()),
-				ListType:       types.StringValue(networkListsResponse.GetResults().NetworkListUuidResponseEntryInt.GetListType()),
-				Name:           types.StringValue(networkListsResponse.GetResults().NetworkListUuidResponseEntryInt.GetName()),
-				ItemsValuesStr: types.ListValueMust(types.StringType, nil),
-				ItemsValuesInt: utils.SliceIntTypeToList(sliceInt),
-			},
-			ID: types.StringValue("Get By ID Network List"),
-		}
-		diags := resp.State.Set(ctx, &networkListsState)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	networkListState := NetworkListDataSourceModel{
+		NetworkListID: networkListID,
+		Data: &NetworkListData{
+			ID:           types.Int64Value(data.GetId()),
+			Name:         types.StringValue(data.GetName()),
+			Type:         types.StringValue(data.GetType()),
+			Items:        utils.SliceStringTypeToList(items),
+			LastEditor:   types.StringValue(data.GetLastEditor()),
+			LastModified: types.StringValue(data.GetLastModified().Format(time.RFC3339)),
+			Active:       types.BoolValue(data.GetActive()),
+		},
+		ID: types.StringValue("Get Network List By ID"),
+	}
+
+	diags = resp.State.Set(ctx, &networkListState)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }
