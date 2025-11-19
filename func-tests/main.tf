@@ -305,29 +305,30 @@ resource "azion_intelligent_dns_record" "testfunc" {
   depends_on = [azion_intelligent_dns_zone.testfunc]
 }
 
-resource "azion_network_list" "exampleOne" {
-  data = {
-    name = "NetworkList Terraform ${local.name_suffix} Countries"
-    type = "countries"
-    items = [
-      "BR",
-      "US",
-      "AG"
-    ]
-  }
-}
+# Temporarily commented out - will be uncommented when provider is released with v4 API
+# resource "azion_network_list" "exampleOne" {
+#   data = {
+#     name = "NetworkList Terraform ${local.name_suffix} Countries"
+#     type = "countries"
+#     items = [
+#       "BR",
+#       "US",
+#       "AG"
+#     ]
+#   }
+# }
 
-resource "azion_network_list" "exampleTwo" {
-  data = {
-    name = "NetworkList Terraform ${local.name_suffix} ip_cidr"
-    type = "ip_cidr"
-    items = [
-      "192.168.0.1",
-      "192.168.0.2",
-      "192.168.0.3"
-    ]
-  }
-}
+# resource "azion_network_list" "exampleTwo" {
+#   data = {
+#     name = "NetworkList Terraform ${local.name_suffix} ip_cidr"
+#     type = "ip_cidr"
+#     items = [
+#       "192.168.0.1",
+#       "192.168.0.2",
+#       "192.168.0.3"
+#     ]
+#   }
+# }
 
 resource "azion_waf_rule_set" "testfunc" {
   result = {
@@ -470,13 +471,14 @@ data "azion_intelligent_dns_records" "examples" {
 data "azion_network_lists" "example" {
 }
 
-data "azion_network_list" "exampleOne" {
-  network_list_id = azion_network_list.exampleOne.data.id
-}
+# Temporarily commented out - will be uncommented when provider is released with v4 API
+# data "azion_network_list" "exampleOne" {
+#   network_list_id = azion_network_list.exampleOne.data.id
+# }
 
-data "azion_network_list" "exampleTwo" {
-  network_list_id = azion_network_list.exampleTwo.data.id
-}
+# data "azion_network_list" "exampleTwo" {
+#   network_list_id = azion_network_list.exampleTwo.data.id
+# }
 
 data "azion_environment_variables" "example" {
 }
