@@ -135,13 +135,6 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	var zoneIdFromConfig types.String
-	diagsZoneID := req.Config.GetAttribute(ctx, path.Root("zone_id"), &zoneIdFromConfig)
-	resp.Diagnostics.Append(diagsZoneID...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	policyStr := plan.Record.Policy.ValueString()
 	record := dnsapi.RecordRequest{
 		Type:   plan.Record.Type.ValueString(),
@@ -159,6 +152,13 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 			desc := plan.Record.Description.ValueString()
 			record.Description = &desc
 		}
+	} else {
+		plan.Record.Weight = types.Int64Value(0)
+		plan.Record.Description = types.StringValue("")
+		weight := int64(50)
+		record.Weight = &weight
+		desc := ""
+		record.Description = &desc
 	}
 
 	var rdataValues []string
@@ -171,7 +171,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 	record.Rdata = rdataValues
 
-	zoneId := zoneIdFromConfig.ValueString()
+	zoneId := plan.ZoneId.ValueString()
 
 	createRecord, httpResponse, err := r.client.idnsApi.DNSRecordsAPI.CreateDnsRecord(ctx, zoneId).RecordRequest(record).Execute() //nolint
 	if err != nil {
@@ -206,7 +206,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 	originalTtl := plan.Record.Ttl
 
-	plan.ZoneId = zoneIdFromConfig
+	plan.ZoneId = types.StringValue(plan.ZoneId.ValueString())
 	plan.ID = types.StringValue(strconv.FormatInt(int64(createRecord.Data.GetId()), 10))
 
 	plan.Record = &recordModel{
@@ -217,16 +217,13 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		Rdata:  utils.SliceStringTypeToList(slice),
 	}
 
-	if createRecord.Data.Weight != nil {
-		plan.Record.Weight = types.Int64Value(int64(*createRecord.Data.Weight))
-	} else {
-		plan.Record.Weight = types.Int64Null()
-	}
-
-	if createRecord.Data.Description != nil {
-		plan.Record.Description = types.StringValue(*createRecord.Data.Description)
-	} else {
-		plan.Record.Description = types.StringNull()
+	if plan.Record.Policy.ValueString() == "weighted" {
+		if createRecord.Data.Weight != nil {
+			plan.Record.Weight = types.Int64Value(int64(*createRecord.Data.Weight))
+		}
+		if createRecord.Data.Description != nil && *createRecord.Data.Description != "" {
+			plan.Record.Description = types.StringValue(*createRecord.Data.Description)
+		}
 	}
 
 	if createRecord.Data.Ttl != nil {
