@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
+	dnsapi "github.com/aziontech/azionapi-v4-go-sdk-dev/dns-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -34,23 +34,18 @@ type zoneResource struct {
 }
 
 type zoneResourceModel struct {
-	ID            types.String `tfsdk:"id"`
-	SchemaVersion types.Int64  `tfsdk:"schema_version"`
-	Zone          *zoneModel   `tfsdk:"zone"`
-	LastUpdated   types.String `tfsdk:"last_updated"`
+	ID          types.String      `tfsdk:"id"`
+	Data        *zoneResourceData `tfsdk:"data"`
+	LastUpdated types.String      `tfsdk:"last_updated"`
 }
 
-type zoneModel struct {
-	ID          types.Int64  `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Domain      types.String `tfsdk:"domain"`
-	IsActive    types.Bool   `tfsdk:"is_active"`
-	Retry       types.Int64  `tfsdk:"retry"`
-	NxTtl       types.Int64  `tfsdk:"nxttl"`
-	SoaTtl      types.Int64  `tfsdk:"soattl"`
-	Refresh     types.Int64  `tfsdk:"refresh"`
-	Expiry      types.Int64  `tfsdk:"expiry"`
-	Nameservers types.List   `tfsdk:"nameservers"`
+type zoneResourceData struct {
+	ID             types.Int64  `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	Domain         types.String `tfsdk:"domain"`
+	IsActive       types.Bool   `tfsdk:"is_active"`
+	Nameservers    types.List   `tfsdk:"nameservers"`
+	ProductVersion types.String `tfsdk:"product_version"`
 }
 
 func (r *zoneResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -67,15 +62,11 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
 			"last_updated": schema.StringAttribute{
 				Description: "Timestamp of the last Terraform update of the order.",
 				Computed:    true,
 			},
-			"zone": schema.SingleNestedAttribute{
+			"data": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
@@ -93,29 +84,13 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 						Required:    true,
 						Description: "Status of the zone.",
 					},
-					"retry": schema.Int64Attribute{
-						Computed:    true,
-						Description: "The rate at which a secondary server will retry to refresh the primary zone file if the initial refresh failed.",
-					},
-					"nxttl": schema.Int64Attribute{
-						Computed:    true,
-						Description: "In the event that requesting the domain results in a non-existent query (NXDOMAIN), this is the amount of time that is respected by the recursor to return the NXDOMAIN response.",
-					},
-					"soattl": schema.Int64Attribute{
-						Computed:    true,
-						Description: "The interval at which the SOA record itself is refreshed.",
-					},
-					"refresh": schema.Int64Attribute{
-						Computed:    true,
-						Description: "The interval at which secondary servers (secondary DNS) are set to refresh the primary zone file from the primary server.",
-					},
-					"expiry": schema.Int64Attribute{
-						Computed:    true,
-						Description: "If Refresh and Retry fail repeatedly, this is the time period after which the primary should be considered gone and no longer authoritative for the given zone.",
-					},
 					"nameservers": schema.ListAttribute{
 						Computed:    true,
 						ElementType: types.StringType,
+					},
+					"product_version": schema.StringAttribute{
+						Computed:    true,
+						Description: "Product version of the zone.",
 					},
 				},
 			},
@@ -139,17 +114,17 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	zone := idns.Zone{
-		Name:     idns.PtrString(plan.Zone.Name.ValueString()),
-		Domain:   idns.PtrString(plan.Zone.Domain.ValueString()),
-		IsActive: idns.PtrBool(plan.Zone.IsActive.ValueBool()),
+	zone := dnsapi.ZoneRequest{
+		Name:   plan.Data.Name.ValueString(),
+		Domain: plan.Data.Domain.ValueString(),
+		Active: plan.Data.IsActive.ValueBool(),
 	}
 
-	createZone, response, err := r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute() //nolint
+	createZone, response, err := r.client.idnsApi.DNSZonesAPI.CreateDnsZone(ctx).ZoneRequest(zone).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
-			createZone, response, err = utils.RetryOn429(func() (*idns.PostOrPutZoneResponse, *http.Response, error) {
-				return r.client.idnsApi.ZonesAPI.PostZone(ctx).Zone(zone).Execute() //nolint
+		if response != nil && response.StatusCode == 429 {
+			createZone, response, err = utils.RetryOn429(func() (*dnsapi.ResponseZone, *http.Response, error) {
+				return r.client.idnsApi.DNSZonesAPI.CreateDnsZone(ctx).ZoneRequest(zone).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -164,41 +139,44 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
+			if response != nil {
+				bodyBytes, errReadAll := io.ReadAll(response.Body)
+				if errReadAll != nil {
+					resp.Diagnostics.AddError(
+						errReadAll.Error(),
+						"err",
+					)
+				}
+				bodyString := string(bodyBytes)
 				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
+					err.Error(),
+					bodyString,
+				)
+			} else {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"No response from API",
 				)
 			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
 			return
 		}
 	}
 
-	plan.ID = types.StringValue(strconv.Itoa(int(*createZone.Results[0].Id)))
-	plan.SchemaVersion = types.Int64Value(int64(*createZone.SchemaVersion))
-	for _, resultZone := range createZone.Results {
-		var slice []types.String
-		for _, Nameservers := range resultZone.Nameservers {
-			slice = append(slice, types.StringValue(Nameservers))
-		}
-		plan.Zone = &zoneModel{
-			ID:          types.Int64Value(int64(*resultZone.Id)),
-			Name:        types.StringValue(*resultZone.Name),
-			Domain:      types.StringValue(*resultZone.Domain),
-			IsActive:    types.BoolValue(*resultZone.IsActive),
-			NxTtl:       types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.NxTtl))),
-			Retry:       types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.Retry))),
-			Refresh:     types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.Refresh))),
-			Expiry:      types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.Expiry))),
-			SoaTtl:      types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.SoaTtl))),
-			Nameservers: utils.SliceStringTypeToList(slice),
-		}
+	plan.ID = types.StringValue(strconv.FormatInt(createZone.Data.Id, 10))
+	zoneData := createZone.Data
+
+	var slice []types.String
+	for _, ns := range zoneData.Nameservers {
+		slice = append(slice, types.StringValue(ns))
+	}
+
+	plan.Data = &zoneResourceData{
+		ID:             types.Int64Value(zoneData.Id),
+		Name:           types.StringValue(zoneData.Name),
+		Domain:         types.StringValue(zoneData.Domain),
+		IsActive:       types.BoolValue(zoneData.Active),
+		Nameservers:    utils.SliceStringTypeToList(slice),
+		ProductVersion: types.StringValue(zoneData.ProductVersion),
 	}
 
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -218,24 +196,17 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	idPlan, err := strconv.ParseInt(state.ID.ValueString(), 10, 32)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Value Conversion error ",
-			"Could not convert ID",
-		)
-		return
-	}
+	zoneID := state.ID.ValueString()
 
-	order, response, err := r.client.idnsApi.ZonesAPI.GetZone(ctx, int32(idPlan)).Execute() //nolint
+	order, response, err := r.client.idnsApi.DNSZonesAPI.RetrieveDnsZone(ctx, zoneID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 		if response.StatusCode == 429 {
-			order, response, err = utils.RetryOn429(func() (*idns.GetZoneResponse, *http.Response, error) {
-				return r.client.idnsApi.ZonesAPI.GetZone(ctx, int32(idPlan)).Execute() //nolint
+			order, response, err = utils.RetryOn429(func() (*dnsapi.ResponseRetrieveZone, *http.Response, error) {
+				return r.client.idnsApi.DNSZonesAPI.RetrieveDnsZone(ctx, zoneID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -267,20 +238,16 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	var slice []types.String
-	for _, Nameservers := range order.Results.Nameservers {
+	for _, Nameservers := range order.Data.Nameservers {
 		slice = append(slice, types.StringValue(Nameservers))
 	}
-	state.Zone = &zoneModel{
-		ID:          types.Int64Value(int64(*order.Results.Id)),
-		Name:        types.StringValue(*order.Results.Name),
-		Domain:      types.StringValue(*order.Results.Domain),
-		IsActive:    types.BoolValue(*order.Results.IsActive),
-		NxTtl:       types.Int64Value(int64(*idns.NullableInt32.Get(order.Results.NxTtl))),
-		Retry:       types.Int64Value(int64(*idns.NullableInt32.Get(order.Results.Retry))),
-		Refresh:     types.Int64Value(int64(*idns.NullableInt32.Get(order.Results.Refresh))),
-		Expiry:      types.Int64Value(int64(*idns.NullableInt32.Get(order.Results.Expiry))),
-		SoaTtl:      types.Int64Value(int64(*idns.NullableInt32.Get(order.Results.SoaTtl))),
-		Nameservers: utils.SliceStringTypeToList(slice),
+	state.Data = &zoneResourceData{
+		ID:             types.Int64Value(order.Data.Id),
+		Name:           types.StringValue(order.Data.Name),
+		Domain:         types.StringValue(order.Data.Domain),
+		IsActive:       types.BoolValue(order.Data.Active),
+		Nameservers:    utils.SliceStringTypeToList(slice),
+		ProductVersion: types.StringValue(order.Data.ProductVersion),
 	}
 
 	diags = resp.State.Set(ctx, &state)
@@ -293,31 +260,19 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan zoneResourceModel
 	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	zoneID := plan.ID.ValueString()
+
+	zoneReq := dnsapi.PatchedUpdateZoneRequest{
+		Name:   plan.Data.Name.ValueStringPointer(),
+		Active: plan.Data.IsActive.ValueBoolPointer(),
 	}
 
-	idPlan, err := strconv.ParseInt(plan.ID.ValueString(), 10, 32)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Value Conversion error ",
-			"Could not conversion ID",
-		)
-		return
-	}
-	zone := idns.Zone{
-		Name:     idns.PtrString(plan.Zone.Name.ValueString()),
-		Domain:   idns.PtrString(plan.Zone.Domain.ValueString()),
-		IsActive: idns.PtrBool(plan.Zone.IsActive.ValueBool()),
-	}
-
-	updateZone, response, err := r.client.idnsApi.ZonesAPI.
-		PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
+	updateZone, response, err := r.client.idnsApi.DNSZonesAPI.
+		PartialUpdateDnsZone(ctx, zoneID).PatchedUpdateZoneRequest(zoneReq).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			updateZone, response, err = utils.RetryOn429(func() (*idns.PostOrPutZoneResponse, *http.Response, error) {
-				return r.client.idnsApi.ZonesAPI.PutZone(ctx, int32(idPlan)).Zone(zone).Execute() //nolint
+			updateZone, response, err = utils.RetryOn429(func() (*dnsapi.ResponseZone, *http.Response, error) {
+				return r.client.idnsApi.DNSZonesAPI.PartialUpdateDnsZone(ctx, zoneID).PatchedUpdateZoneRequest(zoneReq).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -348,25 +303,21 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		}
 	}
 
-	plan.ID = types.StringValue(strconv.Itoa(int(*updateZone.Results[0].Id)))
-	plan.SchemaVersion = types.Int64Value(int64(*updateZone.SchemaVersion))
-	for _, resultZone := range updateZone.Results {
-		var slice []types.String
-		for _, Nameservers := range resultZone.Nameservers {
-			slice = append(slice, types.StringValue(Nameservers))
-		}
-		plan.Zone = &zoneModel{
-			ID:          types.Int64Value(int64(*resultZone.Id)),
-			Name:        types.StringValue(*resultZone.Name),
-			Domain:      types.StringValue(*resultZone.Domain),
-			IsActive:    types.BoolValue(*resultZone.IsActive),
-			NxTtl:       types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.NxTtl))),
-			Retry:       types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.Retry))),
-			Refresh:     types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.Refresh))),
-			Expiry:      types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.Expiry))),
-			SoaTtl:      types.Int64Value(int64(*idns.NullableInt32.Get(resultZone.SoaTtl))),
-			Nameservers: utils.SliceStringTypeToList(slice),
-		}
+	plan.ID = types.StringValue(strconv.FormatInt(updateZone.Data.Id, 10))
+	zoneData := updateZone.Data
+
+	var slice []types.String
+	for _, ns := range zoneData.Nameservers {
+		slice = append(slice, types.StringValue(ns))
+	}
+
+	plan.Data = &zoneResourceData{
+		ID:             types.Int64Value(zoneData.Id),
+		Name:           types.StringValue(zoneData.Name),
+		Domain:         types.StringValue(zoneData.Domain),
+		IsActive:       types.BoolValue(zoneData.Active),
+		Nameservers:    utils.SliceStringTypeToList(slice),
+		ProductVersion: types.StringValue(zoneData.ProductVersion),
 	}
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -385,17 +336,13 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	zoneID, err := utils.CheckInt64toInt32Security(state.Zone.ID.ValueInt64())
-	if err != nil {
-		utils.ExceedsValidRange(resp, zoneID)
-		return
-	}
+	zoneID := state.ID.ValueString()
 
-	_, response, err := r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneID).Execute() //nolint
+	_, response, err := r.client.idnsApi.DNSZonesAPI.DeleteDnsZone(ctx, zoneID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (string, *http.Response, error) {
-				return r.client.idnsApi.ZonesAPI.DeleteZone(ctx, zoneID).Execute() //nolint
+			_, response, err = utils.RetryOn429(func() (*dnsapi.ResponseDeleteZone, *http.Response, error) {
+				return r.client.idnsApi.DNSZonesAPI.DeleteDnsZone(ctx, zoneID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {

@@ -5,9 +5,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
+	dnsapi "github.com/aziontech/azionapi-v4-go-sdk-dev/dns-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -28,25 +27,18 @@ type ZonesDataSource struct {
 }
 
 type ZonesDataSourceModel struct {
-	SchemaVersion types.Int64            `tfsdk:"schema_version"`
-	Counter       types.Int64            `tfsdk:"counter"`
-	TotalPages    types.Int64            `tfsdk:"total_pages"`
-	Page          types.Int64            `tfsdk:"page"`
-	PageSize      types.Int64            `tfsdk:"page_size"`
-	Links         *GetZonesResponseLinks `tfsdk:"links"`
-	Results       []Zones                `tfsdk:"results"`
-	ID            types.String           `tfsdk:"id"`
+	Counter types.Int64  `tfsdk:"counter"`
+	Results []ZoneResult `tfsdk:"results"`
+	ID      types.String `tfsdk:"id"`
 }
 
-type GetZonesResponseLinks struct {
-	Previous types.String `tfsdk:"previous"`
-	Next     types.String `tfsdk:"next"`
-}
-type Zones struct {
-	ZoneId   types.Int64  `tfsdk:"zone_id"`
-	Name     types.String `tfsdk:"name"`
-	Domain   types.String `tfsdk:"domain"`
-	IsActive types.Bool   `tfsdk:"is_active"`
+type ZoneResult struct {
+	ID             types.Int64  `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	Domain         types.String `tfsdk:"domain"`
+	Active         types.Bool   `tfsdk:"active"`
+	Nameservers    types.List   `tfsdk:"nameservers"`
+	ProductVersion types.String `tfsdk:"product_version"`
 }
 
 func (d *ZonesDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -67,55 +59,37 @@ func (d *ZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				Description: "Numeric identifier of the data source.",
 				Computed:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
-			"page": schema.Int64Attribute{
-				Description: "The page number of Zones.",
-				Optional:    true,
-			},
-			"page_size": schema.Int64Attribute{
-				Description: "The page size number of Zones.",
-				Optional:    true,
-			},
 			"counter": schema.Int64Attribute{
 				Description: "The total number of zones.",
 				Computed:    true,
-			},
-			"total_pages": schema.Int64Attribute{
-				Description: "The total number of pages.",
-				Computed:    true,
-			},
-			"links": schema.SingleNestedAttribute{
-				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"previous": schema.StringAttribute{
-						Computed: true,
-					},
-					"next": schema.StringAttribute{
-						Computed: true,
-					},
-				},
 			},
 			"results": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"id": schema.Int64Attribute{
+							Description: "ID of the zone.",
+							Computed:    true,
+						},
+						"name": schema.StringAttribute{
+							Description: "The name of the zone.",
+							Computed:    true,
+						},
 						"domain": schema.StringAttribute{
 							Description: "Domain name attributed by Azion to this configuration.",
 							Computed:    true,
 						},
-						"is_active": schema.BoolAttribute{
-							Computed:    true,
+						"active": schema.BoolAttribute{
 							Description: "Status of the zone.",
-						},
-						"name": schema.StringAttribute{
-							Description: "The name of the zone. Must provide only one of zone_id, name.",
 							Computed:    true,
 						},
-						"zone_id": schema.Int64Attribute{
-							Description: "The zone identifier to target for the resource.",
+						"nameservers": schema.ListAttribute{
+							Description: "List of nameservers for the zone.",
+							ElementType: types.StringType,
+							Computed:    true,
+						},
+						"product_version": schema.StringAttribute{
+							Description: "Product version of the zone.",
 							Computed:    true,
 						},
 					},
@@ -126,33 +100,11 @@ func (d *ZonesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 }
 
 func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var Page types.Int64
-	var PageSize types.Int64
-	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
-	resp.Diagnostics.Append(diagsPage...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("page_size"), &PageSize)
-	resp.Diagnostics.Append(diagsPageSize...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if Page.ValueInt64() == 0 {
-		Page = types.Int64Value(1)
-	}
-
-	if PageSize.ValueInt64() == 0 {
-		PageSize = types.Int64Value(10)
-	}
-
-	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZones(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+	zoneResponse, response, err := d.client.idnsApi.DNSZonesAPI.ListDnsZones(ctx).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			zoneResponse, response, err = utils.RetryOn429(func() (*idns.GetZonesResponse, *http.Response, error) {
-				return d.client.idnsApi.ZonesAPI.GetZones(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+			zoneResponse, response, err = utils.RetryOn429(func() (*dnsapi.PaginatedZoneList, *http.Response, error) {
+				return d.client.idnsApi.DNSZonesAPI.ListDnsZones(ctx).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -184,24 +136,31 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 
 	zoneState := ZonesDataSourceModel{
-		SchemaVersion: types.Int64Value(int64(zoneResponse.GetSchemaVersion())),
-		TotalPages:    types.Int64Value(int64(zoneResponse.GetTotalPages())),
-		Page:          types.Int64Value(Page.ValueInt64()),
-		PageSize:      types.Int64Value(PageSize.ValueInt64()),
-		Counter:       types.Int64Value(int64(zoneResponse.GetCount())),
-		Links: &GetZonesResponseLinks{
-			Previous: types.StringValue(zoneResponse.Links.GetPrevious()),
-			Next:     types.StringValue(zoneResponse.Links.GetNext()),
-		},
+		Counter: types.Int64Value(int64(zoneResponse.GetCount())),
 	}
+
 	for _, resultZone := range zoneResponse.Results {
-		zoneState.Results = append(zoneState.Results, Zones{
-			ZoneId:   types.Int64Value(int64(resultZone.GetId())),
-			Name:     types.StringValue(resultZone.GetName()),
-			Domain:   types.StringValue(resultZone.GetDomain()),
-			IsActive: types.BoolValue(resultZone.GetIsActive()),
+		var nameserverValues []types.String
+		for _, ns := range resultZone.GetNameservers() {
+			nameserverValues = append(nameserverValues, types.StringValue(ns))
+		}
+
+		nameserversList, diag := types.ListValueFrom(ctx, types.StringType, nameserverValues)
+		resp.Diagnostics.Append(diag...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		zoneState.Results = append(zoneState.Results, ZoneResult{
+			ID:             types.Int64Value(int64(resultZone.GetId())),
+			Name:           types.StringValue(resultZone.GetName()),
+			Domain:         types.StringValue(resultZone.GetDomain()),
+			Active:         types.BoolValue(resultZone.GetActive()),
+			Nameservers:    nameserversList,
+			ProductVersion: types.StringValue("1"),
 		})
 	}
+
 	zoneState.ID = types.StringValue("Get All Zones")
 	diags := resp.State.Set(ctx, &zoneState)
 	resp.Diagnostics.Append(diags...)

@@ -8,7 +8,7 @@ import (
 
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
+	dnsapi "github.com/aziontech/azionapi-v4-go-sdk-dev/dns-api"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -29,22 +29,17 @@ type ZoneDataSource struct {
 }
 
 type ZoneDataSourceModel struct {
-	SchemaVersion types.Int64  `tfsdk:"schema_version"`
-	Results       Zone         `tfsdk:"results"`
-	ID            types.String `tfsdk:"id"`
+	Data *ZoneData    `tfsdk:"data"`
+	ID   types.String `tfsdk:"id"`
 }
 
-type Zone struct {
-	ZoneID      types.Int64  `tfsdk:"zone_id"`
-	Name        types.String `tfsdk:"name"`
-	Domain      types.String `tfsdk:"domain"`
-	IsActive    types.Bool   `tfsdk:"is_active"`
-	Retry       types.Int64  `tfsdk:"retry"`
-	NxTtl       types.Int64  `tfsdk:"nxttl"`
-	SoaTtl      types.Int64  `tfsdk:"soattl"`
-	Refresh     types.Int64  `tfsdk:"refresh"`
-	Expiry      types.Int64  `tfsdk:"expiry"`
-	Nameservers types.List   `tfsdk:"nameservers"`
+type ZoneData struct {
+	ID             types.Int64  `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	Domain         types.String `tfsdk:"domain"`
+	Active         types.Bool   `tfsdk:"active"`
+	Nameservers    types.List   `tfsdk:"nameservers"`
+	ProductVersion types.String `tfsdk:"product_version"`
 }
 
 func (d *ZoneDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -63,54 +58,34 @@ func (d *ZoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Numeric identifier of the data source.",
-				Optional:    true,
+				Required:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
-			"results": schema.SingleNestedAttribute{
+			"data": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
-					"zone_id": schema.Int64Attribute{
-						Description: "The zone identifier to target for the resource.",
-						Required:    true,
+					"id": schema.Int64Attribute{
+						Description: "ID of the zone.",
+						Computed:    true,
 					},
 					"name": schema.StringAttribute{
-						Description: "The name of the zone. Must provide only one of zone_id, name.",
+						Description: "The name of the zone.",
 						Computed:    true,
 					},
 					"domain": schema.StringAttribute{
 						Computed:    true,
 						Description: "Domain name attributed by Azion to this configuration.",
 					},
-					"is_active": schema.BoolAttribute{
+					"active": schema.BoolAttribute{
 						Computed:    true,
 						Description: "Status of the zone.",
-					},
-					"retry": schema.Int64Attribute{
-						Computed:    true,
-						Description: "The rate at which a secondary server will retry to refresh the primary zone file if the initial refresh failed.",
-					},
-					"nxttl": schema.Int64Attribute{
-						Computed:    true,
-						Description: "In the event that requesting the domain results in a non-existent query (NXDOMAIN), this is the amount of time that is respected by the recursor to return the NXDOMAIN response.",
-					},
-					"soattl": schema.Int64Attribute{
-						Computed:    true,
-						Description: "The interval at which the SOA record itself is refreshed.",
-					},
-					"refresh": schema.Int64Attribute{
-						Computed:    true,
-						Description: "The interval at which secondary servers (secondary DNS) are set to refresh the primary zone file from the primary server.",
-					},
-					"expiry": schema.Int64Attribute{
-						Computed:    true,
-						Description: "If Refresh and Retry fail repeatedly, this is the time period after which the primary should be considered gone and no longer authoritative for the given zone.",
 					},
 					"nameservers": schema.ListAttribute{
 						Computed:    true,
 						ElementType: types.StringType,
+					},
+					"product_version": schema.StringAttribute{
+						Computed:    true,
+						Description: "Product version of the zone.",
 					},
 				},
 			},
@@ -134,11 +109,11 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	zoneResponse, response, err := d.client.idnsApi.ZonesAPI.GetZone(ctx, int32(zoneId)).Execute() //nolint
+	zoneResponse, response, err := d.client.idnsApi.DNSZonesAPI.ListDnsZones(ctx).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			zoneResponse, response, err = utils.RetryOn429(func() (*idns.GetZoneResponse, *http.Response, error) {
-				return d.client.idnsApi.ZonesAPI.GetZone(ctx, int32(zoneId)).Execute() //nolint
+			zoneResponse, response, err = utils.RetryOn429(func() (*dnsapi.PaginatedZoneList, *http.Response, error) {
+				return d.client.idnsApi.DNSZonesAPI.ListDnsZones(ctx).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -169,26 +144,41 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		}
 	}
 
-	var slice []types.String
-	for _, Nameservers := range zoneResponse.Results.Nameservers {
-		slice = append(slice, types.StringValue(Nameservers))
+	var selectedZone *dnsapi.Zone
+	for _, z := range zoneResponse.Results {
+		if int64(z.GetId()) == zoneId {
+			zoneCopy := z
+			selectedZone = &zoneCopy
+			break
+		}
 	}
+
+	if selectedZone == nil {
+		resp.Diagnostics.AddError(
+			"Zone not found",
+			"No DNS zone found with the given ID",
+		)
+		return
+	}
+
+	var slice []types.String
+	for _, ns := range selectedZone.GetNameservers() {
+		slice = append(slice, types.StringValue(ns))
+	}
+
+	nameserversList := utils.SliceStringTypeToList(slice)
+
 	zoneState := ZoneDataSourceModel{
-		SchemaVersion: types.Int64Value(int64(*zoneResponse.SchemaVersion)),
-		Results: Zone{
-			ZoneID:      types.Int64Value(int64(*zoneResponse.Results.Id)),
-			Name:        types.StringValue(*zoneResponse.Results.Name),
-			Domain:      types.StringValue(*zoneResponse.Results.Domain),
-			IsActive:    types.BoolValue(*zoneResponse.Results.IsActive),
-			NxTtl:       types.Int64Value(int64(*idns.NullableInt32.Get(zoneResponse.Results.NxTtl))),
-			Retry:       types.Int64Value(int64(*idns.NullableInt32.Get(zoneResponse.Results.Retry))),
-			Refresh:     types.Int64Value(int64(*idns.NullableInt32.Get(zoneResponse.Results.Refresh))),
-			Expiry:      types.Int64Value(int64(*idns.NullableInt32.Get(zoneResponse.Results.Expiry))),
-			SoaTtl:      types.Int64Value(int64(*idns.NullableInt32.Get(zoneResponse.Results.SoaTtl))),
-			Nameservers: utils.SliceStringTypeToList(slice),
+		Data: &ZoneData{
+			ID:             types.Int64Value(int64(selectedZone.GetId())),
+			Name:           types.StringValue(selectedZone.GetName()),
+			Domain:         types.StringValue(selectedZone.GetDomain()),
+			Active:         types.BoolValue(selectedZone.GetActive()),
+			Nameservers:    nameserversList,
+			ProductVersion: types.StringValue("1"),
 		},
 	}
-	zoneState.ID = types.StringValue("Get By ID Zone")
+	zoneState.ID = types.StringValue("Get Zone by ID")
 	diags = resp.State.Set(ctx, &zoneState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

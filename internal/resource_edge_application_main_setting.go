@@ -207,9 +207,9 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	if createEdgeApplication.Data.Modules != nil {
 		modulesResp := createEdgeApplication.Data.GetModules()
 		modules := ApplicationModules{}
-		if modulesResp.EdgeCache != nil {
+		if modulesResp.Cache != nil {
 			modules.Cache = &CacheModule{
-				Enabled: types.BoolValue(modulesResp.EdgeCache.GetEnabled()),
+				Enabled: types.BoolValue(modulesResp.Cache.GetEnabled()),
 			}
 		}
 		if modulesResp.Functions != nil {
@@ -303,9 +303,9 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 	modelPlan := ApplicationModules{}
 	if stateEdgeApplication.Data.Modules != nil {
 		modelState := stateEdgeApplication.Data.GetModules()
-		if modelState.EdgeCache != nil {
+		if modelState.Cache != nil {
 			modelPlan.Cache = &CacheModule{
-				Enabled: types.BoolValue(modelState.EdgeCache.GetEnabled()),
+				Enabled: types.BoolValue(modelState.Cache.GetEnabled()),
 			}
 		}
 		if modelState.Functions != nil {
@@ -422,11 +422,11 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 
 	idInt64, _ := strconv.ParseInt(state.ID.ValueString(), 10, 64)
 	_, response, err := r.client.edgeApi.ApplicationsAPI.
-		DestroyApplication(ctx, idInt64).Execute() //nolint
+		DeleteApplication(ctx, idInt64).Execute() //nolint
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*sdk.ResponseDeleteApplication, *http.Response, error) {
-				return r.client.edgeApi.ApplicationsAPI.DestroyApplication(ctx, idInt64).Execute() //nolint
+				return r.client.edgeApi.ApplicationsAPI.DeleteApplication(ctx, idInt64).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -471,7 +471,7 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 			cacheReq := sdk.CacheModuleRequest{
 				Enabled: enabled.ValueBoolPointer(),
 			}
-			modsRequest.SetEdgeCache(cacheReq)
+			modsRequest.SetCache(cacheReq)
 		}
 		functionsPlan := modsPlan.Functions
 		if functionsPlan != nil && !functionsPlan.Enabled.IsNull() {

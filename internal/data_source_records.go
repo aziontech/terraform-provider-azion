@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
+	dnsapi "github.com/aziontech/azionapi-v4-go-sdk-dev/dns-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -27,36 +27,21 @@ type RecordsDataSource struct {
 }
 
 type RecordsDataSourceModel struct {
-	ZoneId        types.Int64                `tfsdk:"zone_id"`
-	SchemaVersion types.Int64                `tfsdk:"schema_version"`
-	TotalPages    types.Int64                `tfsdk:"total_pages"`
-	Page          types.Int64                `tfsdk:"page"`
-	PageSize      types.Int64                `tfsdk:"page_size"`
-	Counter       types.Int64                `tfsdk:"counter"`
-	Links         *GetRecordsResponseLinks   `tfsdk:"links"`
-	Results       *GetRecordsResponseResults `tfsdk:"results"`
-	Id            types.String               `tfsdk:"id"`
+	ZoneId  types.String `tfsdk:"zone_id"`
+	Counter types.Int64  `tfsdk:"counter"`
+	Results []RecordData `tfsdk:"results"`
+	Id      types.String `tfsdk:"id"`
 }
 
-type GetRecordsResponseLinks struct {
-	Previous types.String `tfsdk:"previous"`
-	Next     types.String `tfsdk:"next"`
-}
-
-type GetRecordsResponseResults struct {
-	ZoneId  types.Int64  `tfsdk:"zone_id"`
-	Domain  types.String `tfsdk:"domain"`
-	Records []Record     `tfsdk:"records"`
-}
-
-type Record struct {
-	RecordId    types.Int64    `tfsdk:"record_id"`
-	Entry       types.String   `tfsdk:"entry"`
-	Description types.String   `tfsdk:"description"`
-	AnswersList []types.String `tfsdk:"answers_list"`
-	Policy      types.String   `tfsdk:"policy"`
-	RecordType  types.String   `tfsdk:"record_type"`
-	Ttl         types.Int64    `tfsdk:"ttl"`
+type RecordData struct {
+	ID          types.Int64  `tfsdk:"id"`
+	Description types.String `tfsdk:"description"`
+	Name        types.String `tfsdk:"name"`
+	Ttl         types.Int64  `tfsdk:"ttl"`
+	Type        types.String `tfsdk:"type"`
+	Rdata       types.List   `tfsdk:"rdata"`
+	Policy      types.String `tfsdk:"policy"`
+	Weight      types.Int64  `tfsdk:"weight"`
 }
 
 func (d *RecordsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -76,85 +61,49 @@ func (d *RecordsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"id": schema.StringAttribute{
 				Optional: true,
 			},
-			"zone_id": schema.Int64Attribute{
+			"zone_id": schema.StringAttribute{
 				Required:    true,
 				Description: "The zone identifier to target for the resource.",
-			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
-			"page": schema.Int64Attribute{
-				Description: "The page number of Records.",
-				Optional:    true,
-			},
-			"page_size": schema.Int64Attribute{
-				Description: "The page size number of Records.",
-				Optional:    true,
 			},
 			"counter": schema.Int64Attribute{
 				Description: "The total number of records.",
 				Computed:    true,
 			},
-			"total_pages": schema.Int64Attribute{
-				Description: "The total number of pages.",
-				Computed:    true,
-			},
-			"links": schema.SingleNestedAttribute{
+			"results": schema.ListNestedAttribute{
 				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"previous": schema.StringAttribute{
-						Computed: true,
-					},
-					"next": schema.StringAttribute{
-						Computed: true,
-					},
-				},
-			},
-			"results": schema.SingleNestedAttribute{
-				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"zone_id": schema.Int64Attribute{
-						Description: "The zone identifier to target for the resource.",
-						Computed:    true,
-					},
-					"domain": schema.StringAttribute{
-						Computed:    true,
-						Description: "Zone name of the found DNS record.",
-					},
-					"records": schema.ListNestedAttribute{
-						Computed: true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"record_id": schema.Int64Attribute{
-									Description: "The record identifier.",
-									Computed:    true,
-								},
-								"entry": schema.StringAttribute{
-									Computed:    true,
-									Description: "The first part of domain or 'Name'.",
-								},
-								"description": schema.StringAttribute{
-									Computed: true,
-								},
-								"answers_list": schema.ListAttribute{
-									Optional:    true,
-									ElementType: types.StringType,
-									Description: "List of answers replied by DNS Authoritative to that Record.",
-								},
-								"policy": schema.StringAttribute{
-									Computed:    true,
-									Description: "Must be 'simple' or 'weighted'.",
-								},
-								"record_type": schema.StringAttribute{
-									Computed:    true,
-									Description: "DNS record type to filter record results on.",
-								},
-								"ttl": schema.Int64Attribute{
-									Computed:    true,
-									Description: "Time-to-live defines max-time for packets life in seconds.",
-								},
-							},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.Int64Attribute{
+							Description: "ID of the DNS record.",
+							Computed:    true,
+						},
+						"description": schema.StringAttribute{
+							Computed: true,
+						},
+						"name": schema.StringAttribute{
+							Description: "Record name.",
+							Computed:    true,
+						},
+						"ttl": schema.Int64Attribute{
+							Description: "Time-to-live defines max-time for packets life in seconds.",
+							Computed:    true,
+						},
+						"type": schema.StringAttribute{
+							Description: "DNS record type.",
+							Computed:    true,
+						},
+						"rdata": schema.ListAttribute{
+							Description: "Record data values (answers).",
+							ElementType: types.StringType,
+							Computed:    true,
+						},
+						"policy": schema.StringAttribute{
+							Description: "Must be 'simple' or 'weighted'.",
+							Computed:    true,
+						},
+						"weight": schema.Int64Attribute{
+							Description: "Weight of the record (for weighted policies).",
+							Computed:    true,
 						},
 					},
 				},
@@ -182,49 +131,22 @@ func (d *RecordsDataSource) errorPrint(resp *datasource.ReadResponse, errCode in
 }
 
 func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var Page types.Int64
-	var PageSize types.Int64
-	var getZoneId types.Int64
-	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
-	resp.Diagnostics.Append(diagsPage...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	diagsPageSize := req.Config.GetAttribute(ctx, path.Root("page_size"), &PageSize)
-	resp.Diagnostics.Append(diagsPageSize...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if Page.ValueInt64() == 0 {
-		Page = types.Int64Value(1)
-	}
-
-	if PageSize.ValueInt64() == 0 {
-		PageSize = types.Int64Value(10)
-	}
-
+	var getZoneId types.String
 	diags := req.Config.GetAttribute(ctx, path.Root("zone_id"), &getZoneId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	zoneID32, err := utils.CheckInt64toInt32Security(getZoneId.ValueInt64())
-	if err != nil {
-		utils.ExceedsValidRange(resp, getZoneId.ValueInt64())
-		return
-	}
+	zoneID := getZoneId.ValueString()
 
-	recordsResponse, httpResp, err := d.client.idnsApi.RecordsAPI.
-		GetZoneRecords(ctx, zoneID32).Page(Page.ValueInt64()).
-		PageSize(PageSize.ValueInt64()).Execute() //nolint
+	recordsResponse, httpResp, err := d.client.idnsApi.DNSRecordsAPI.
+		ListDnsRecords(ctx, zoneID).Execute() //nolint
 	if err != nil {
 		if httpResp.StatusCode == 429 {
-			recordsResponse, httpResp, err = utils.RetryOn429(func() (*idns.GetRecordsResponse, *http.Response, error) {
-				return d.client.idnsApi.RecordsAPI.
-					GetZoneRecords(ctx, zoneID32).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+			recordsResponse, httpResp, err = utils.RetryOn429(func() (*dnsapi.PaginatedRecordList, *http.Response, error) {
+				return d.client.idnsApi.DNSRecordsAPI.
+					ListDnsRecords(ctx, zoneID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if httpResp != nil {
@@ -244,54 +166,52 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		}
 	}
 
-	var previous, next string
-	if recordsResponse.Links != nil {
-		if recordsResponse.Links.Previous.Get() != nil {
-			previous = *recordsResponse.Links.Previous.Get()
-		}
-		if recordsResponse.Links.Next.Get() != nil {
-			next = *recordsResponse.Links.Next.Get()
-		}
-	}
-
 	recordsState := RecordsDataSourceModel{
-		ZoneId:        getZoneId,
-		SchemaVersion: types.Int64Value(int64(*recordsResponse.SchemaVersion)),
-		TotalPages:    types.Int64Value(int64(*recordsResponse.TotalPages)),
-		Page:          types.Int64Value(Page.ValueInt64()),
-		PageSize:      types.Int64Value(PageSize.ValueInt64()),
-		Counter:       types.Int64Value(int64(*recordsResponse.Count)),
-		Links: &GetRecordsResponseLinks{
-			Previous: types.StringValue(previous),
-			Next:     types.StringValue(next),
-		},
-		Results: &GetRecordsResponseResults{},
-	}
-	recordsState.Id = types.StringValue("placeholder")
-
-	if recordsResponse.Results.ZoneId != nil {
-		recordsState.Results.ZoneId = types.Int64Value(int64(*recordsResponse.Results.ZoneId))
+		ZoneId:  getZoneId,
+		Counter: types.Int64Value(*recordsResponse.Count),
+		Id:      types.StringValue("Get DNS records"),
 	}
 
-	if recordsResponse.Results.ZoneDomain != nil {
-		recordsState.Results.Domain = types.StringValue(*recordsResponse.Results.ZoneDomain)
-	}
-
-	for _, resultRecords := range recordsResponse.Results.Records {
-		var r = Record{
-			RecordId:    types.Int64Value(int64(*resultRecords.RecordId)),
-			Entry:       types.StringValue(*resultRecords.Entry),
-			Description: types.StringValue(*resultRecords.Description),
-			Policy:      types.StringValue(*resultRecords.Policy),
-			RecordType:  types.StringValue(*resultRecords.RecordType),
-			Ttl:         types.Int64Value(int64(*resultRecords.Ttl)),
+	for _, resultRecord := range recordsResponse.Results {
+		var rdataValues []types.String
+		for _, rdata := range resultRecord.Rdata {
+			rdataValues = append(rdataValues, types.StringValue(rdata))
 		}
 
-		for _, answer := range resultRecords.AnswersList {
-			r.AnswersList = append(r.AnswersList, types.StringValue(answer))
+		rdataList := utils.SliceStringTypeToList(rdataValues)
+
+		var description string
+		if resultRecord.Description != nil {
+			description = *resultRecord.Description
 		}
 
-		recordsState.Results.Records = append(recordsState.Results.Records, r)
+		var ttl int64
+		if resultRecord.Ttl != nil {
+			ttl = *resultRecord.Ttl
+		}
+
+		var policy string
+		if resultRecord.Policy != nil {
+			policy = *resultRecord.Policy
+		}
+
+		var weight int64
+		if resultRecord.Weight != nil {
+			weight = *resultRecord.Weight
+		}
+
+		record := RecordData{
+			ID:          types.Int64Value(resultRecord.Id),
+			Description: types.StringValue(description),
+			Name:        types.StringValue(resultRecord.Name),
+			Ttl:         types.Int64Value(ttl),
+			Type:        types.StringValue(resultRecord.Type),
+			Rdata:       rdataList,
+			Policy:      types.StringValue(policy),
+			Weight:      types.Int64Value(weight),
+		}
+
+		recordsState.Results = append(recordsState.Results, record)
 	}
 
 	diags = resp.State.Set(ctx, &recordsState)

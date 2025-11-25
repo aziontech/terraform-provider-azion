@@ -3,7 +3,6 @@ package provider
 import (
 	"os"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
 	"github.com/aziontech/azionapi-go-sdk/waf"
 
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
@@ -14,12 +13,13 @@ import (
 	"github.com/aziontech/azionapi-go-sdk/edgefunctionsinstance_edgefirewall"
 	"github.com/aziontech/azionapi-go-sdk/networklist"
 	"github.com/aziontech/azionapi-go-sdk/variables"
+	dnsapi "github.com/aziontech/azionapi-v4-go-sdk-dev/dns-api"
 	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 )
 
 type apiClient struct {
-	idnsConfig *idns.Configuration
-	idnsApi    *idns.APIClient
+	idnsConfig *dnsapi.Configuration
+	idnsApi    *dnsapi.APIClient
 
 	domainsConfig *domains.Configuration
 	domainsApi    *domains.APIClient
@@ -54,7 +54,7 @@ type apiClient struct {
 
 func Client(APIToken string, userAgent string) *apiClient {
 	client := &apiClient{
-		idnsConfig:                              idns.NewConfiguration(),
+		idnsConfig:                              dnsapi.NewConfiguration(),
 		domainsConfig:                           domains.NewConfiguration(),
 		edgefunctionsConfig:                     edgefunctions.NewConfiguration(),
 		edgeConfig:                              edgeapi.NewConfiguration(),
@@ -69,8 +69,9 @@ func Client(APIToken string, userAgent string) *apiClient {
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
 	v4url := "https://api.azion.com/v4"
 
-	// Always set v4 URL for applications API
+	// Always set v4 URL for applications API and DNS API
 	client.edgeConfig.Servers[0].URL = v4url
+	client.idnsConfig.Servers[0].URL = v4url
 	//TODO: update the configuration of V4 URL
 
 	if envApiEntrypoint != "" {
@@ -93,7 +94,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
 	client.idnsConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.idnsConfig.UserAgent = userAgent
-	client.idnsApi = idns.NewAPIClient(client.idnsConfig)
+	client.idnsApi = dnsapi.NewAPIClient(client.idnsConfig)
 
 	client.edgefunctionsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
 	client.edgefunctionsConfig.AddDefaultHeader("Accept", "application/json; version=3")

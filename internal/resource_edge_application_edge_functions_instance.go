@@ -457,7 +457,7 @@ func (r *edgeFunctionsInstanceResource) Delete(ctx context.Context, req resource
 	}
 
 	functionInstanceID := strconv.FormatInt(state.EdgeFunction.ID.ValueInt64(), 10)
-	_, response, err := r.client.edgeApi.ApplicationsFunctionAPI.DestroyApplicationFunctionInstance(ctx, state.ApplicationID.ValueString(), functionInstanceID).Execute() //nolint
+	_, response, err := r.client.edgeApi.ApplicationsFunctionAPI.DeleteApplicationFunctionInstance(ctx, state.ApplicationID.ValueString(), functionInstanceID).Execute() //nolint
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			// Resource already deleted, consider this a success
@@ -465,7 +465,7 @@ func (r *edgeFunctionsInstanceResource) Delete(ctx context.Context, req resource
 		}
 		if response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*edgeapi.ResponseDeleteApplicationFunctionInstance, *http.Response, error) {
-				return r.client.edgeApi.ApplicationsFunctionAPI.DestroyApplicationFunctionInstance(ctx, state.ApplicationID.ValueString(), functionInstanceID).Execute() //nolint
+				return r.client.edgeApi.ApplicationsFunctionAPI.DeleteApplicationFunctionInstance(ctx, state.ApplicationID.ValueString(), functionInstanceID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {

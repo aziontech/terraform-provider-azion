@@ -524,11 +524,11 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 	functionIdString := strconv.FormatInt(edgeFunctionId, 10)
 
-	_, response, err := r.client.edgeApi.FunctionsAPI.DestroyFunction(ctx, functionIdString).Execute() //nolint
+	_, response, err := r.client.edgeApi.FunctionsAPI.DeleteFunction(ctx, functionIdString).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*sdk.ResponseDeleteFunctionsDoc, *http.Response, error) {
-				return r.client.edgeApi.FunctionsAPI.DestroyFunction(ctx, functionIdString).Execute() //nolint
+				return r.client.edgeApi.FunctionsAPI.DeleteFunction(ctx, functionIdString).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {

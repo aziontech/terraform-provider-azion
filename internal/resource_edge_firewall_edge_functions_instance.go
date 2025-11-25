@@ -500,13 +500,13 @@ func (r *edgeFirewallFunctionsInstanceResource) Delete(ctx context.Context, req 
 	}
 
 	_, response, err := r.client.edgeApi.FirewallsFunctionAPI.
-		DestroyFirewallFunction(ctx, state.EdgeFirewallID.ValueString(), state.Data.ID.ValueString()).
+		DeleteFirewallFunction(ctx, state.EdgeFirewallID.ValueString(), state.Data.ID.ValueString()).
 		Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*edgeapi.ResponseDeleteFirewallFunctionInstance, *http.Response, error) {
 				return r.client.edgeApi.FirewallsFunctionAPI.
-					DestroyFirewallFunction(ctx, state.EdgeFirewallID.ValueString(), state.Data.ID.ValueString()).
+					DeleteFirewallFunction(ctx, state.EdgeFirewallID.ValueString(), state.Data.ID.ValueString()).
 					Execute() //nolint
 			}, 5) // Maximum 5 retries
 

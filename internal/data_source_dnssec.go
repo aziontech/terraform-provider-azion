@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/aziontech/azionapi-go-sdk/idns"
+	dnsapi "github.com/aziontech/azionapi-v4-go-sdk-dev/dns-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -27,10 +27,9 @@ type dnsSecDataSource struct {
 }
 
 type dnsSecDataSourceModel struct {
-	ID            types.String   `tfsdk:"id"`
-	ZoneId        types.Int64    `tfsdk:"zone_id"`
-	SchemaVersion types.Int64    `tfsdk:"schema_version"`
-	DnsSec        *dnsSecDSModel `tfsdk:"dns_sec"`
+	ID     types.String   `tfsdk:"id"`
+	ZoneId types.Int64    `tfsdk:"zone_id"`
+	DnsSec *dnsSecDSModel `tfsdk:"dns_sec"`
 }
 
 type dnsSecDSModel struct {
@@ -39,10 +38,10 @@ type dnsSecDSModel struct {
 	DelegationSigner *DnsDelegationSignerDSModel `tfsdk:"delegation_signer"`
 }
 type DnsDelegationSignerDSModel struct {
-	DigestType    *DigestTypeDS    `tfsdk:"digesttype"`
-	AlgorithmType *AlgorithmTypeDS `tfsdk:"algorithmtype"`
+	DigestType    *DigestTypeDS    `tfsdk:"digest_type"`
+	AlgorithmType *AlgorithmTypeDS `tfsdk:"algorithm_type"`
 	Digest        types.String     `tfsdk:"digest"`
-	KeyTag        types.Int64      `tfsdk:"keytag"`
+	KeyTag        types.Int64      `tfsdk:"key_tag"`
 }
 
 type DigestTypeDS struct {
@@ -76,10 +75,6 @@ func (d *dnsSecDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: "The zone identifier to target for the resource.",
 				Required:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Optional:    true,
-			},
 			"dns_sec": schema.SingleNestedAttribute{
 				Optional: true,
 				Attributes: map[string]schema.Attribute{
@@ -103,12 +98,12 @@ func (d *dnsSecDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 }
 func DnsDelegationSignerDS() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
-		"digesttype": schema.SingleNestedAttribute{
+		"digest_type": schema.SingleNestedAttribute{
 			Description: "Digest Type for Zone DNSSEC.",
 			Computed:    true,
 			Attributes:  digesttypeDS(),
 		},
-		"algorithmtype": schema.SingleNestedAttribute{
+		"algorithm_type": schema.SingleNestedAttribute{
 			Description: "Digest algorithm use for Zone DNSSEC.",
 			Computed:    true,
 			Attributes:  algorithmtypeDS(),
@@ -117,7 +112,7 @@ func DnsDelegationSignerDS() map[string]schema.Attribute {
 			Optional:    true,
 			Description: "Zone DNSSEC digest.",
 		},
-		"keytag": schema.Int64Attribute{
+		"key_tag": schema.Int64Attribute{
 			Optional:    true,
 			Description: "Key Tag for the Zone DNSSEC.",
 		},
@@ -162,11 +157,12 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	getDnsSec, response, err := d.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, zoneID32).Execute() //nolint
+	getDnsSec, response, err := d.client.idnsApi.DNSDNSSECAPI.
+		RetrieveDnssec(ctx, int64(zoneID32)).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			getDnsSec, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
-				return d.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, zoneID32).Execute() //nolint
+			getDnsSec, response, err = utils.RetryOn429(func() (*dnsapi.ResponseRetrieveDNSSEC, *http.Response, error) {
+				return d.client.idnsApi.DNSDNSSECAPI.RetrieveDnssec(ctx, int64(zoneID32)).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -197,47 +193,31 @@ func (d *dnsSecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		}
 	}
 
-	if getDnsSec.Results.DelegationSigner != nil {
-		dnsSecState := &dnsSecDataSourceModel{
-			SchemaVersion: types.Int64Value(int64(*getDnsSec.SchemaVersion)),
-			ZoneId:        getZoneId,
-			DnsSec: &dnsSecDSModel{
-				IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
-				Status:    types.StringValue(*getDnsSec.Results.Status),
-				DelegationSigner: &DnsDelegationSignerDSModel{
-					DigestType: &DigestTypeDS{
-						Id:   types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.DigestType.Id)),
-						Slug: types.StringValue(*getDnsSec.Results.DelegationSigner.DigestType.Slug),
-					},
-					AlgorithmType: &AlgorithmTypeDS{
-						Id:   types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
-						Slug: types.StringValue(*getDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
-					},
-					Digest: types.StringValue(*getDnsSec.Results.DelegationSigner.Digest),
-					KeyTag: types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.KeyTag)),
+	delegationSigner := getDnsSec.Data.GetDelegationSigner()
+
+	dnsSecState := &dnsSecDataSourceModel{
+		ZoneId: getZoneId,
+		DnsSec: &dnsSecDSModel{
+			IsEnabled: types.BoolValue(getDnsSec.Data.GetEnabled()),
+			Status:    types.StringValue(getDnsSec.Data.GetStatus()),
+			DelegationSigner: &DnsDelegationSignerDSModel{
+				DigestType: &DigestTypeDS{
+					Id:   types.Int64Value(int64(delegationSigner.DigestType.GetId())),
+					Slug: types.StringValue(delegationSigner.DigestType.GetSlug()),
 				},
+				AlgorithmType: &AlgorithmTypeDS{
+					Id:   types.Int64Value(int64(delegationSigner.AlgorithmType.GetId())),
+					Slug: types.StringValue(delegationSigner.AlgorithmType.GetSlug()),
+				},
+				Digest: types.StringValue(delegationSigner.GetDigest()),
+				KeyTag: types.Int64Value(int64(delegationSigner.GetKeyTag())),
 			},
-		}
-		dnsSecState.ID = types.StringValue("Get DNSSEC")
-		diags = resp.State.Set(ctx, &dnsSecState)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		dnsSecState := &dnsSecDataSourceModel{
-			SchemaVersion: types.Int64Value(int64(*getDnsSec.SchemaVersion)),
-			ZoneId:        getZoneId,
-			DnsSec: &dnsSecDSModel{
-				IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
-				Status:    types.StringValue(*getDnsSec.Results.Status),
-			},
-		}
-		dnsSecState.ID = types.StringValue("Get DNSSEC")
-		diags = resp.State.Set(ctx, &dnsSecState)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+		},
+	}
+	dnsSecState.ID = types.StringValue("Get DNSSEC")
+	diags = resp.State.Set(ctx, &dnsSecState)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }

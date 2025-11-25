@@ -223,7 +223,7 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 
 	for _, resultApplication := range appResponse.GetResults() {
 		mods := resultApplication.GetModules()
-		cache := mods.GetEdgeCache()
+		cache := mods.GetCache()
 		functions := mods.GetFunctions()
 		applicationAccelerator := mods.GetApplicationAccelerator()
 		imageProcessor := mods.GetImageProcessor()

@@ -282,13 +282,13 @@ resource "azion_intelligent_dns_zone" "testfunc" {
   }
 }
 
-# # resource "azion_intelligent_dns_dnssec" "testfunc" {
-# #   zone_id = azion_intelligent_dns_zone.testfunc.zone.id
-# #   dns_sec = {
-# #     is_enabled = true
-# #   }
-# #   depends_on = [azion_intelligent_dns_zone.testfunc]
-# # }
+resource "azion_intelligent_dns_dnssec" "testfunc" {
+  zone_id = azion_intelligent_dns_zone.testfunc.zone.id
+  dns_sec = {
+    is_enabled = true
+  }
+  depends_on = [azion_intelligent_dns_zone.testfunc]
+}
 
 resource "azion_intelligent_dns_record" "testfunc" {
   zone_id = azion_intelligent_dns_zone.testfunc.zone.id

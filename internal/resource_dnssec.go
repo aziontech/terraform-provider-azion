@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aziontech/azionapi-go-sdk/idns"
+	dnsapi "github.com/aziontech/azionapi-v4-go-sdk-dev/dns-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -33,16 +34,27 @@ type dnssecResource struct {
 }
 
 type dnssecResourceModel struct {
-	ZoneId        types.String `tfsdk:"zone_id"`
-	SchemaVersion types.Int64  `tfsdk:"schema_version"`
-	DnsSec        *dnsSecModel `tfsdk:"dns_sec"`
-	LastUpdated   types.String `tfsdk:"last_updated"`
+	ZoneId      types.String `tfsdk:"zone_id"`
+	DnsSec      *dnsSecModel `tfsdk:"dns_sec"`
+	LastUpdated types.String `tfsdk:"last_updated"`
 }
 
 type dnsSecModel struct {
-	IsEnabled types.Bool `tfsdk:"is_enabled"`
-	//Status           types.String              `tfsdk:"status"`
-	//DelegationSigner *DnsDelegationSignerModel `tfsdk:"delegation_signer"`
+	Enabled          types.Bool                `tfsdk:"is_enabled"`
+	Status           types.String              `tfsdk:"status"`
+	DelegationSigner *DnsDelegationSignerModel `tfsdk:"delegation_signer"`
+}
+
+type DnsDelegationSignerModel struct {
+	AlgorithmType *DnsDelegationSignerDigestType `tfsdk:"algorithm_type"`
+	Digest        types.String                   `tfsdk:"digest"`
+	DigestType    *DnsDelegationSignerDigestType `tfsdk:"digest_type"`
+	KeyTag        types.Int64                    `tfsdk:"key_tag"`
+}
+
+type DnsDelegationSignerDigestType struct {
+	Id   types.Int64  `tfsdk:"id"`
+	Slug types.String `tfsdk:"slug"`
 }
 
 func (r *dnssecResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -74,62 +86,56 @@ func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Required:    true,
 						Description: "Zone DNSSEC flags for enabled.",
 					},
-					//"status": schema.StringAttribute{
-					//	Computed:    true,
-					//	Description: "The status of the Zone DNSSEC.",
-					//},
-					//"delegation_signer": schema.SingleNestedAttribute{
-					//	Description: "Zone DNSSEC delegation-signer.",
-					//	Computed:    true,
-					//	Attributes:  DnsDelegationSigner(),
-					//},
+					"status": schema.StringAttribute{
+						Computed:    true,
+						Description: "The status of the Zone DNSSEC.",
+					},
+					"delegation_signer": schema.SingleNestedAttribute{
+						Description: "Zone DNSSEC delegation-signer.",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"digest_type": schema.SingleNestedAttribute{
+								Computed:    true,
+								Description: "Digest Type for Zone DNSSEC.",
+								Attributes: map[string]schema.Attribute{
+									"id": schema.Int64Attribute{
+										Description: "The ID of this digest.",
+										Computed:    true,
+									},
+									"slug": schema.StringAttribute{
+										Description: "The Slug of this digest.",
+										Computed:    true,
+									},
+								},
+							},
+							"algorithm_type": schema.SingleNestedAttribute{
+								Computed:    true,
+								Description: "Digest algorithm used for Zone DNSSEC.",
+								Attributes: map[string]schema.Attribute{
+									"id": schema.Int64Attribute{
+										Description: "The ID of this digest.",
+										Computed:    true,
+									},
+									"slug": schema.StringAttribute{
+										Description: "The Slug of this digest.",
+										Computed:    true,
+									},
+								},
+							},
+							"digest": schema.StringAttribute{
+								Computed:    true,
+								Description: "Zone DNSSEC digest.",
+							},
+							"key_tag": schema.Int64Attribute{
+								Computed:    true,
+								Description: "Key Tag for the Zone DNSSEC.",
+							},
+						},
+					},
 				},
 			},
 		},
 	}
-}
-
-//func DnsDelegationSigner() map[string]schema.Attribute {
-//	return map[string]schema.Attribute{
-//		"digesttype": schema.SingleNestedAttribute{
-//			Computed:    true,
-//			Description: "Digest Type for Zone DNSSEC.",
-//			Attributes:  DnsDelegationSignerDigestTypeScheme(),
-//		},
-//		"algorithmtype": schema.SingleNestedAttribute{
-//			Computed:    true,
-//			Description: "Digest algorithm use for Zone DNSSEC.",
-//			Attributes:  DnsDelegationSignerDigestTypeScheme(),
-//		},
-//		"digest": schema.StringAttribute{
-//			Computed:    true,
-//			Description: "Zone DNSSEC digest.",
-//		},
-//		"keytag": schema.Int64Attribute{
-//			Computed:    true,
-//			Description: "Key Tag for the Zone DNSSEC.",
-//		},
-//	}
-//}
-//func DnsDelegationSignerDigestTypeScheme() map[string]schema.Attribute {
-//	return map[string]schema.Attribute{
-//		"id": schema.Int64Attribute{
-//			Description: "The ID of this digest.",
-//			Computed:    true,
-//		},
-//		"slug": schema.StringAttribute{
-//			Description: "The Slug of this digest.",
-//			Computed:    true,
-//		},
-//	}
-//}
-
-func (r *dnssecResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	r.client = req.ProviderData.(*apiClient)
 }
 
 func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -140,23 +146,25 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	zoneId, err := strconv.ParseInt(plan.ZoneId.ValueString(), 10, 32)
+	idPlan, err := strconv.ParseInt(plan.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not convert ID",
+			"Could not conversion ID",
 		)
 		return
 	}
-	dnsSec := idns.DnsSec{
-		IsEnabled: idns.PtrBool(plan.DnsSec.IsEnabled.ValueBool()),
+
+	dnsSec := dnsapi.PatchedDNSSECRequest{
+		Enabled: idns.PtrBool(plan.DnsSec.Enabled.ValueBool()),
 	}
 
-	enableDnsSec, response, err := r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute() //nolint
+	enableDnsSec, response, err := r.client.idnsApi.DNSDNSSECAPI.
+		PartialUpdateDnssec(ctx, idPlan).PatchedDNSSECRequest(dnsSec).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			enableDnsSec, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
-				return r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute() //nolint
+			enableDnsSec, response, err = utils.RetryOn429(func() (*dnsapi.ResponseDNSSEC, *http.Response, error) {
+				return r.client.idnsApi.DNSDNSSECAPI.PartialUpdateDnssec(ctx, idPlan).PatchedDNSSECRequest(dnsSec).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -187,31 +195,39 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 		}
 	}
 
-	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
-	plan.DnsSec = &dnsSecModel{
-		IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
-		//Status:    types.StringValue(*enableDnsSec.Results.Status),
-		//DelegationSigner: &DnsDelegationSignerModel{
-		//	DigestType: &DnsDelegationSignerDigestType{
-		//		Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.DigestType.Id)),
-		//		Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.DigestType.Slug),
-		//	},
-		//	AlgorithmType: &DnsDelegationSignerDigestType{
-		//		Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
-		//		Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
-		//	},
-		//	Digest: types.StringValue(*enableDnsSec.Results.DelegationSigner.Digest),
-		//	KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
-		//},
-	}
-
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
+	delegationSigner := enableDnsSec.Data.GetDelegationSigner()
+
+	plan.DnsSec = &dnsSecModel{
+		Enabled: types.BoolValue(enableDnsSec.Data.GetEnabled()),
+		Status:  types.StringValue(enableDnsSec.Data.GetStatus()),
+		DelegationSigner: &DnsDelegationSignerModel{
+			DigestType: &DnsDelegationSignerDigestType{
+				Id:   types.Int64Value(int64(delegationSigner.DigestType.GetId())),
+				Slug: types.StringValue(delegationSigner.DigestType.GetSlug()),
+			},
+			AlgorithmType: &DnsDelegationSignerDigestType{
+				Id:   types.Int64Value(int64(delegationSigner.AlgorithmType.GetId())),
+				Slug: types.StringValue(delegationSigner.AlgorithmType.GetSlug()),
+			},
+			Digest: types.StringValue(delegationSigner.GetDigest()),
+			KeyTag: types.Int64Value(int64(delegationSigner.GetKeyTag())),
+		},
+	}
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+func (r *dnssecResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+
+	r.client = req.ProviderData.(*apiClient)
 }
 
 func (r *dnssecResource) Read(
@@ -231,22 +247,16 @@ func (r *dnssecResource) Read(
 		return
 	}
 
-	zoneID32, err := utils.CheckInt64toInt32Security(zoneID)
-	if err != nil {
-		utils.ExceedsValidRange(resp, zoneID)
-		return
-	}
-
-	getDnsSec, response, err := r.client.idnsApi.DNSSECAPI.
-		GetZoneDnsSec(ctx, zoneID32).Execute() //nolint
+	getDnsSec, response, err := r.client.idnsApi.DNSDNSSECAPI.
+		RetrieveDnssec(ctx, zoneID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 		if response.StatusCode == 429 {
-			getDnsSec, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
-				return r.client.idnsApi.DNSSECAPI.GetZoneDnsSec(ctx, zoneID32).Execute() //nolint
+			getDnsSec, response, err = utils.RetryOn429(func() (*dnsapi.ResponseRetrieveDNSSEC, *http.Response, error) {
+				return r.client.idnsApi.DNSDNSSECAPI.RetrieveDnssec(ctx, zoneID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -277,21 +287,23 @@ func (r *dnssecResource) Read(
 		}
 	}
 
+	delegationSigner := getDnsSec.Data.GetDelegationSigner()
+
 	state.DnsSec = &dnsSecModel{
-		IsEnabled: types.BoolValue(*getDnsSec.Results.IsEnabled),
-		//Status:    types.StringValue(*getDnsSec.Results.Status),
-		//DelegationSigner: &DnsDelegationSignerModel{
-		//	DigestType: &DnsDelegationSignerDigestType{
-		//		Id:   types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.DigestType.Id)),
-		//		Slug: types.StringValue(*getDnsSec.Results.DelegationSigner.DigestType.Slug),
-		//	},
-		//	AlgorithmType: &DnsDelegationSignerDigestType{
-		//		Id:   types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
-		//		Slug: types.StringValue(*getDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
-		//	},
-		//	Digest: types.StringValue(*getDnsSec.Results.DelegationSigner.Digest),
-		//	KeyTag: types.Int64Value(int64(*getDnsSec.Results.DelegationSigner.KeyTag)),
-		//},
+		Enabled: types.BoolValue(getDnsSec.Data.GetEnabled()),
+		Status:  types.StringValue(getDnsSec.Data.GetStatus()),
+		DelegationSigner: &DnsDelegationSignerModel{
+			DigestType: &DnsDelegationSignerDigestType{
+				Id:   types.Int64Value(int64(delegationSigner.DigestType.GetId())),
+				Slug: types.StringValue(delegationSigner.DigestType.GetSlug()),
+			},
+			AlgorithmType: &DnsDelegationSignerDigestType{
+				Id:   types.Int64Value(int64(delegationSigner.AlgorithmType.GetId())),
+				Slug: types.StringValue(delegationSigner.AlgorithmType.GetSlug()),
+			},
+			Digest: types.StringValue(delegationSigner.GetDigest()),
+			KeyTag: types.Int64Value(int64(delegationSigner.GetKeyTag())),
+		},
 	}
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -317,16 +329,16 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	dnsSec := idns.DnsSec{
-		IsEnabled: idns.PtrBool(plan.DnsSec.IsEnabled.ValueBool()),
+	dnsSec := dnsapi.PatchedDNSSECRequest{
+		Enabled: idns.PtrBool(plan.DnsSec.Enabled.ValueBool()),
 	}
 
-	enableDnsSec, response, err := r.client.idnsApi.DNSSECAPI.
-		PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute() //nolint
+	enableDnsSec, response, err := r.client.idnsApi.DNSDNSSECAPI.
+		PartialUpdateDnssec(ctx, idPlan).PatchedDNSSECRequest(dnsSec).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			enableDnsSec, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
-				return r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(idPlan)).DnsSec(dnsSec).Execute() //nolint
+			enableDnsSec, response, err = utils.RetryOn429(func() (*dnsapi.ResponseDNSSEC, *http.Response, error) {
+				return r.client.idnsApi.DNSDNSSECAPI.PartialUpdateDnssec(ctx, idPlan).PatchedDNSSECRequest(dnsSec).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -357,24 +369,25 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 		}
 	}
 
-	plan.SchemaVersion = types.Int64Value(int64(*enableDnsSec.SchemaVersion))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
+	delegationSigner := enableDnsSec.Data.GetDelegationSigner()
+
 	plan.DnsSec = &dnsSecModel{
-		IsEnabled: types.BoolValue(*enableDnsSec.Results.IsEnabled),
-		//Status:    types.StringValue(*enableDnsSec.Results.Status),
-		//DelegationSigner: &DnsDelegationSignerModel{
-		//	DigestType: &DnsDelegationSignerDigestType{
-		//		Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.DigestType.Id)),
-		//		Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.DigestType.Slug),
-		//	},
-		//	AlgorithmType: &DnsDelegationSignerDigestType{
-		//		Id:   types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Id)),
-		//		Slug: types.StringValue(*enableDnsSec.Results.DelegationSigner.AlgorithmType.Slug),
-		//	},
-		//	Digest: types.StringValue(*enableDnsSec.Results.DelegationSigner.Digest),
-		//	KeyTag: types.Int64Value(int64(*enableDnsSec.Results.DelegationSigner.KeyTag)),
-		//},
+		Enabled: types.BoolValue(enableDnsSec.Data.GetEnabled()),
+		Status:  types.StringValue(enableDnsSec.Data.GetStatus()),
+		DelegationSigner: &DnsDelegationSignerModel{
+			DigestType: &DnsDelegationSignerDigestType{
+				Id:   types.Int64Value(int64(delegationSigner.DigestType.GetId())),
+				Slug: types.StringValue(delegationSigner.DigestType.GetSlug()),
+			},
+			AlgorithmType: &DnsDelegationSignerDigestType{
+				Id:   types.Int64Value(int64(delegationSigner.AlgorithmType.GetId())),
+				Slug: types.StringValue(delegationSigner.AlgorithmType.GetSlug()),
+			},
+			Digest: types.StringValue(delegationSigner.GetDigest()),
+			KeyTag: types.Int64Value(int64(delegationSigner.GetKeyTag())),
+		},
 	}
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -391,7 +404,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	zoneId, err := strconv.ParseInt(state.ZoneId.ValueString(), 10, 32)
+	idPlan, err := strconv.ParseInt(state.ZoneId.ValueString(), 10, 32)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -399,16 +412,17 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		)
 		return
 	}
-	dnsSec := idns.DnsSec{
-		IsEnabled: idns.PtrBool(false),
+
+	dnsSec := dnsapi.PatchedDNSSECRequest{
+		Enabled: idns.PtrBool(false),
 	}
 
-	_, response, err := r.client.idnsApi.DNSSECAPI.
-		PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute() //nolint
+	_, response, err := r.client.idnsApi.DNSDNSSECAPI.
+		PartialUpdateDnssec(ctx, idPlan).PatchedDNSSECRequest(dnsSec).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*idns.GetOrPatchDnsSecResponse, *http.Response, error) {
-				return r.client.idnsApi.DNSSECAPI.PutZoneDnsSec(ctx, int32(zoneId)).DnsSec(dnsSec).Execute() //nolint
+			_, response, err = utils.RetryOn429(func() (*dnsapi.ResponseDNSSEC, *http.Response, error) {
+				return r.client.idnsApi.DNSDNSSECAPI.PartialUpdateDnssec(ctx, idPlan).PatchedDNSSECRequest(dnsSec).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -438,6 +452,8 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 			return
 		}
 	}
+
+	resp.State.RemoveResource(ctx)
 }
 
 func (r *dnssecResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
