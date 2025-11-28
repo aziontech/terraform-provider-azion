@@ -131,7 +131,7 @@ jobs:
 
         - name: replace test-func string on .tf
           run: |
-            sed -i 's/test-func/test-func-action-003/g' func-tests/main.tf
+            sed -i 's/test-func/test-func-run-${{ github.run_number }}/g' func-tests/main.tf
 
         - name: destroy before run func tests
           if: ${{ always() }}
