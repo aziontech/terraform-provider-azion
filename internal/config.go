@@ -14,6 +14,7 @@ import (
 	"github.com/aziontech/azionapi-go-sdk/edgefunctionsinstance_edgefirewall"
 	"github.com/aziontech/azionapi-go-sdk/networklist"
 	"github.com/aziontech/azionapi-go-sdk/variables"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 )
 
@@ -30,6 +31,11 @@ type apiClient struct {
 	//TODO: remove this
 	edgeApplicationsApi *edgeapplications.APIClient
 
+	// V4 SDK (azion-api) - preferred for new implementations
+	apiConfig *azionapi.Configuration
+	api       *azionapi.APIClient
+
+	// Legacy V4 SDK (edge-api) - kept for backward compatibility
 	edgeConfig *edgeapi.Configuration
 	edgeApi    *edgeapi.APIClient
 
@@ -57,6 +63,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 		idnsConfig:                              idns.NewConfiguration(),
 		domainsConfig:                           domains.NewConfiguration(),
 		edgefunctionsConfig:                     edgefunctions.NewConfiguration(),
+		apiConfig:                               azionapi.NewConfiguration(),
 		edgeConfig:                              edgeapi.NewConfiguration(),
 		digitalCertificatesConfig:               digital_certificates.NewConfiguration(),
 		networkListConfig:                       networklist.NewConfiguration(),
@@ -69,9 +76,9 @@ func Client(APIToken string, userAgent string) *apiClient {
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
 	v4url := "https://api.azion.com/v4"
 
-	// Always set v4 URL for applications API
+	// Always set v4 URL for V4 SDKs (azion-api and edge-api)
+	client.apiConfig.Servers[0].URL = v4url
 	client.edgeConfig.Servers[0].URL = v4url
-	//TODO: update the configuration of V4 URL
 
 	if envApiEntrypoint != "" {
 		client.domainsConfig.Servers[0].URL = envApiEntrypoint
@@ -100,6 +107,13 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.edgefunctionsConfig.UserAgent = userAgent
 	client.edgefunctionsApi = edgefunctions.NewAPIClient(client.edgefunctionsConfig)
 
+	// V4 SDK (azion-api) - preferred for new implementations
+	client.apiConfig.AddDefaultHeader("Authorization", "token "+APIToken)
+	client.apiConfig.AddDefaultHeader("Accept", "application/json; version=3")
+	client.apiConfig.UserAgent = userAgent
+	client.api = azionapi.NewAPIClient(client.apiConfig)
+
+	// Legacy V4 SDK (edge-api) - kept for backward compatibility
 	client.edgeConfig.AddDefaultHeader("Authorization", "token "+APIToken)
 	client.edgeConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.edgeConfig.UserAgent = userAgent

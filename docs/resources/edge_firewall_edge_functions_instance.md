@@ -30,7 +30,7 @@ resource "azion_edge_firewall_edge_functions_instance" "example" {
 ### Required
 
 - `data` (Attributes) (see [below for nested schema](#nestedatt--data))
-- `edge_firewall_id` (String) The edge firewall identifier.
+- `edge_firewall_id` (Number) The edge firewall identifier.
 
 ### Read-Only
 
@@ -53,7 +53,7 @@ Optional:
 
 Read-Only:
 
-- `id` (String) The edge function instance identifier.
+- `id` (Number) The edge function instance identifier.
 - `last_editor` (String) Last editor of the edge firewall edge functions instance.
 - `last_modified` (String) Last modified timestamp of the edge firewall edge functions instance.
 

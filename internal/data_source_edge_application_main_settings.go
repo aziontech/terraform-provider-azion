@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -182,11 +182,11 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	applicationsResponse, response, err := e.client.edgeApi.ApplicationsAPI.RetrieveApplication(ctx, edgeApplicationId).Execute() //nolint
+	applicationsResponse, response, err := e.client.api.ApplicationsAPI.RetrieveApplication(ctx, edgeApplicationId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			applicationsResponse, response, err = utils.RetryOn429(func() (*sdk.ResponseRetrieveApplication, *http.Response, error) {
-				return e.client.edgeApi.ApplicationsAPI.RetrieveApplication(ctx, edgeApplicationId).Execute() //nolint
+			applicationsResponse, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
+				return e.client.api.ApplicationsAPI.RetrieveApplication(ctx, edgeApplicationId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -218,7 +218,7 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	mods := applicationsResponse.Data.GetModules()
-	cache := mods.GetEdgeCache()
+	cache := mods.GetCache()
 	functions := mods.GetFunctions()
 	applicationAccelerator := mods.GetApplicationAccelerator()
 	imageProcessor := mods.GetImageProcessor()

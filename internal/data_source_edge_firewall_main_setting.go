@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -175,11 +175,11 @@ func (e *EdgeFirewallDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	edgeFirewallResponse, response, err := e.client.edgeApi.FirewallsAPI.RetrieveFirewall(ctx, getEdgeFirewallID.String()).Execute() //nolint
+	edgeFirewallResponse, response, err := e.client.api.FirewallsAPI.RetrieveFirewall(ctx, getEdgeFirewallID.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.ResponseRetrieveFirewall, *http.Response, error) {
-				return e.client.edgeApi.FirewallsAPI.RetrieveFirewall(ctx, getEdgeFirewallID.String()).Execute() //nolint
+			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
+				return e.client.api.FirewallsAPI.RetrieveFirewall(ctx, getEdgeFirewallID.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {

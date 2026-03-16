@@ -26,7 +26,7 @@ data "azion_edge_firewall_edge_function_instance" "example" {
 
 ### Required
 
-- `edge_firewall_id` (String) Identifier of the Edge Firewall
+- `edge_firewall_id` (Number) Identifier of the Edge Firewall
 
 ### Read-Only
 

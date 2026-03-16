@@ -4,10 +4,9 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
-	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -34,7 +33,7 @@ type edgeFirewallResource struct {
 
 type EdgeFirewallResourceModel struct {
 	EdgeFirewall *EdgeFirewallResourceResults `tfsdk:"data"`
-	ID           types.String                 `tfsdk:"id"`
+	ID           types.Int64                  `tfsdk:"id"`
 	LastUpdated  types.String                 `tfsdk:"last_updated"`
 }
 
@@ -199,11 +198,11 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 		Modules: &modules,
 	}
 
-	edgeFirewallResponse, response, err := r.client.edgeApi.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(edgeFirewallRequest).Execute() //nolint
+	edgeFirewallResponse, response, err := r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(edgeFirewallRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.ResponseFirewall, *http.Response, error) {
-				return r.client.edgeApi.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(edgeFirewallRequest).Execute() //nolint
+			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
+				return r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(edgeFirewallRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -279,7 +278,7 @@ func (r *edgeFirewallResource) Create(ctx context.Context, req resource.CreateRe
 		ProductVersion: types.StringValue(edgeFirewallResponse.Data.GetProductVersion()),
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(edgeFirewallResponse.Data.GetId(), 10))
+	plan.ID = types.Int64Value(edgeFirewallResponse.Data.GetId())
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -296,14 +295,14 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	var edgeFirewallID string
+	var edgeFirewallID int64
 	if state.ID.IsNull() {
-		edgeFirewallID = strconv.Itoa(int(state.EdgeFirewall.ID.ValueInt64()))
+		edgeFirewallID = state.EdgeFirewall.ID.ValueInt64()
 	} else {
-		edgeFirewallID = state.ID.ValueString()
+		edgeFirewallID = state.ID.ValueInt64()
 	}
 
-	edgeFirewallResponse, response, err := r.client.edgeApi.FirewallsAPI.
+	edgeFirewallResponse, response, err := r.client.api.FirewallsAPI.
 		RetrieveFirewall(ctx, edgeFirewallID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == http.StatusNotFound {
@@ -311,8 +310,8 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 			return
 		}
 		if response.StatusCode == 429 {
-			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.ResponseRetrieveFirewall, *http.Response, error) {
-				return r.client.edgeApi.FirewallsAPI.RetrieveFirewall(ctx, edgeFirewallID).Execute() //nolint
+			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
+				return r.client.api.FirewallsAPI.RetrieveFirewall(ctx, edgeFirewallID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -383,7 +382,7 @@ func (r *edgeFirewallResource) Read(ctx context.Context, req resource.ReadReques
 		Modules:        &modulesResponse,
 		ProductVersion: types.StringValue(edgeFirewallResponse.Data.GetProductVersion()),
 	}
-	state.ID = types.StringValue(edgeFirewallID)
+	state.ID = types.Int64Value(edgeFirewallID)
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -407,11 +406,11 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	var edgeFirewallID string
+	var edgeFirewallID int64
 	if state.ID.IsNull() {
-		edgeFirewallID = strconv.Itoa(int(state.EdgeFirewall.ID.ValueInt64()))
+		edgeFirewallID = state.EdgeFirewall.ID.ValueInt64()
 	} else {
-		edgeFirewallID = state.ID.ValueString()
+		edgeFirewallID = state.ID.ValueInt64()
 	}
 
 	edgeFirewallRequest := sdk.PatchedFirewallRequest{
@@ -440,11 +439,11 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 	edgeFirewallRequest.Modules = &modules
 
-	edgeFirewallResponse, response, err := r.client.edgeApi.FirewallsAPI.PartialUpdateFirewall(ctx, edgeFirewallID).PatchedFirewallRequest(edgeFirewallRequest).Execute() //nolint
+	edgeFirewallResponse, response, err := r.client.api.FirewallsAPI.PartialUpdateFirewall(ctx, edgeFirewallID).PatchedFirewallRequest(edgeFirewallRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.ResponseFirewall, *http.Response, error) {
-				return r.client.edgeApi.FirewallsAPI.PartialUpdateFirewall(ctx, edgeFirewallID).PatchedFirewallRequest(edgeFirewallRequest).Execute() //nolint
+			edgeFirewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
+				return r.client.api.FirewallsAPI.PartialUpdateFirewall(ctx, edgeFirewallID).PatchedFirewallRequest(edgeFirewallRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -521,7 +520,7 @@ func (r *edgeFirewallResource) Update(ctx context.Context, req resource.UpdateRe
 		Modules:        responseModulesPtr,
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(edgeFirewallResponse.Data.GetId(), 10))
+	plan.ID = types.Int64Value(edgeFirewallResponse.Data.GetId())
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -539,18 +538,18 @@ func (r *edgeFirewallResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	var edgeFirewallID string
+	var edgeFirewallID int64
 	if state.ID.IsNull() {
-		edgeFirewallID = strconv.Itoa(int(state.EdgeFirewall.ID.ValueInt64()))
+		edgeFirewallID = state.EdgeFirewall.ID.ValueInt64()
 	} else {
-		edgeFirewallID = state.ID.ValueString()
+		edgeFirewallID = state.ID.ValueInt64()
 	}
 
-	response, err := r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidDelete(ctx, edgeFirewallID).Execute() //nolint
+	_, response, err := r.client.api.FirewallsAPI.DeleteFirewall(ctx, edgeFirewallID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
-				return r.client.edgeFirewallApi.DefaultAPI.EdgeFirewallUuidDelete(ctx, edgeFirewallID).Execute() //nolint
+			_, response, err = utils.RetryOn429(func() (*sdk.DeleteResponse, *http.Response, error) {
+				return r.client.api.FirewallsAPI.DeleteFirewall(ctx, edgeFirewallID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {

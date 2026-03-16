@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -150,14 +150,12 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	edgeFunctionIDString := strconv.FormatInt(edgeFunctionID, 10)
-
-	functionsResponse, response, err := d.client.edgeApi.FunctionsAPI.
-		RetrieveFunction(ctx, edgeFunctionIDString).Execute() //nolint
+	functionsResponse, response, err := d.client.api.FunctionsAPI.
+		RetrieveFunction(ctx, edgeFunctionID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			functionsResponse, response, err = utils.RetryOn429(func() (*edgeapi.ResponseRetrieveFunctionsDoc, *http.Response, error) {
-				return d.client.edgeApi.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionIDString).Execute() //nolint
+			functionsResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
+				return d.client.api.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {

@@ -9,11 +9,12 @@ import (
 	"sync"
 	"time"
 
-	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -79,10 +80,14 @@ func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaReq
 					},
 					"active": schema.BoolAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(true),
 						Description: "Indicates whether the Edge Application is active.",
 					},
 					"debug": schema.BoolAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(false),
 						Description: "Indicates whether debug rules are enabled for the Edge Application.",
 					},
 					"product_version": schema.StringAttribute{
@@ -156,13 +161,13 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 
 	edgeApplication.Modules = &modsRequest
 
-	createEdgeApplication, response, err := r.client.edgeApi.
+	createEdgeApplication, response, err := r.client.api.
 		ApplicationsAPI.CreateApplication(ctx).
 		ApplicationRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
-			createEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ResponseApplication, *http.Response, error) {
-				return r.client.edgeApi.
+			createEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
+				return r.client.api.
 					ApplicationsAPI.CreateApplication(ctx).
 					ApplicationRequest(edgeApplication).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -204,25 +209,29 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		Modules:        plan.EdgeApplication.Modules,
 	}
 
-	if createEdgeApplication.Data.Modules != nil {
+	// Only update modules from API response if the plan had modules specified
+	// This prevents Terraform from seeing an inconsistency when modules was null in plan
+	if plan.EdgeApplication.Modules != nil && createEdgeApplication.Data.Modules != nil {
 		modulesResp := createEdgeApplication.Data.GetModules()
 		modules := ApplicationModules{}
-		if modulesResp.EdgeCache != nil {
+
+		// Only populate modules that were specified in the plan
+		if plan.EdgeApplication.Modules.Cache != nil && modulesResp.Cache != nil {
 			modules.Cache = &CacheModule{
-				Enabled: types.BoolValue(modulesResp.EdgeCache.GetEnabled()),
+				Enabled: types.BoolValue(modulesResp.Cache.GetEnabled()),
 			}
 		}
-		if modulesResp.Functions != nil {
+		if plan.EdgeApplication.Modules.Functions != nil && modulesResp.Functions != nil {
 			modules.Functions = &EdgeFunctionModule{
 				Enabled: types.BoolValue(modulesResp.Functions.GetEnabled()),
 			}
 		}
-		if modulesResp.ApplicationAccelerator != nil {
+		if plan.EdgeApplication.Modules.ApplicationAccelerator != nil && modulesResp.ApplicationAccelerator != nil {
 			modules.ApplicationAccelerator = &ApplicationAcceleratorModule{
 				Enabled: types.BoolValue(modulesResp.ApplicationAccelerator.GetEnabled()),
 			}
 		}
-		if modulesResp.ImageProcessor != nil {
+		if plan.EdgeApplication.Modules.ImageProcessor != nil && modulesResp.ImageProcessor != nil {
 			modules.ImageProcessor = &ImageProcessorModule{
 				Enabled: types.BoolValue(modulesResp.ImageProcessor.GetEnabled()),
 			}
@@ -250,7 +259,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	idInt64, _ := strconv.ParseInt(state.ID.ValueString(), 10, 64)
-	stateEdgeApplication, response, err := r.client.edgeApi.
+	stateEdgeApplication, response, err := r.client.api.
 		ApplicationsAPI.
 		RetrieveApplication(ctx, idInt64).Execute() //nolint
 	if err != nil {
@@ -259,8 +268,8 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 			return
 		}
 		if response != nil && response.StatusCode == 429 {
-			stateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ResponseRetrieveApplication, *http.Response, error) {
-				return r.client.edgeApi.ApplicationsAPI.RetrieveApplication(ctx, idInt64).Execute() //nolint
+			stateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
+				return r.client.api.ApplicationsAPI.RetrieveApplication(ctx, idInt64).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -303,9 +312,9 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 	modelPlan := ApplicationModules{}
 	if stateEdgeApplication.Data.Modules != nil {
 		modelState := stateEdgeApplication.Data.GetModules()
-		if modelState.EdgeCache != nil {
+		if modelState.Cache != nil {
 			modelPlan.Cache = &CacheModule{
-				Enabled: types.BoolValue(modelState.EdgeCache.GetEnabled()),
+				Enabled: types.BoolValue(modelState.Cache.GetEnabled()),
 			}
 		}
 		if modelState.Functions != nil {
@@ -352,14 +361,14 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 	edgeApplication.Modules = &modsRequest
 
 	idInt64, _ := strconv.ParseInt(plan.ID.ValueString(), 10, 64)
-	updateEdgeApplication, response, err := r.client.edgeApi.
+	updateEdgeApplication, response, err := r.client.api.
 		ApplicationsAPI.
 		UpdateApplication(ctx, idInt64).
 		ApplicationRequest(edgeApplication).Execute() //nolint
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
-			updateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ResponseApplication, *http.Response, error) {
-				return r.client.edgeApi.
+			updateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
+				return r.client.api.
 					ApplicationsAPI.
 					UpdateApplication(ctx, idInt64).
 					ApplicationRequest(edgeApplication).Execute() //nolint
@@ -421,12 +430,12 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 	}
 
 	idInt64, _ := strconv.ParseInt(state.ID.ValueString(), 10, 64)
-	_, response, err := r.client.edgeApi.ApplicationsAPI.
-		DestroyApplication(ctx, idInt64).Execute() //nolint
+	_, response, err := r.client.api.ApplicationsAPI.
+		DeleteApplication(ctx, idInt64).Execute() //nolint
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*sdk.ResponseDeleteApplication, *http.Response, error) {
-				return r.client.edgeApi.ApplicationsAPI.DestroyApplication(ctx, idInt64).Execute() //nolint
+			_, response, err = utils.RetryOn429(func() (*sdk.DeleteResponse, *http.Response, error) {
+				return r.client.api.ApplicationsAPI.DeleteApplication(ctx, idInt64).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -471,16 +480,18 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 			cacheReq := sdk.CacheModuleRequest{
 				Enabled: enabled.ValueBoolPointer(),
 			}
-			modsRequest.SetEdgeCache(cacheReq)
+			modsRequest.SetCache(cacheReq)
 		}
+
 		functionsPlan := modsPlan.Functions
 		if functionsPlan != nil && !functionsPlan.Enabled.IsNull() {
 			enabled := functionsPlan.Enabled
-			functionsReq := sdk.EdgeFunctionModuleRequest{
+			functionsReq := sdk.FunctionModuleRequest{
 				Enabled: enabled.ValueBoolPointer(),
 			}
 			modsRequest.SetFunctions(functionsReq)
 		}
+
 		applicationAcceleratorPlan := modsPlan.ApplicationAccelerator
 		if applicationAcceleratorPlan != nil && !applicationAcceleratorPlan.Enabled.IsNull() {
 			enabled := applicationAcceleratorPlan.Enabled
@@ -489,6 +500,7 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 			}
 			modsRequest.SetApplicationAccelerator(appAccReq)
 		}
+
 		imageProcessorPlan := modsPlan.ImageProcessor
 		if imageProcessorPlan != nil && !imageProcessorPlan.Enabled.IsNull() {
 			enabled := imageProcessorPlan.Enabled

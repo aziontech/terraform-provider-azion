@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -180,11 +180,11 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 		PageSize = types.Int64Value(10)
 	}
 
-	appResponse, response, err := e.client.edgeApi.ApplicationsAPI.ListApplications(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+	appResponse, response, err := e.client.api.ApplicationsAPI.ListApplications(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
 			appResponse, response, err = utils.RetryOn429(func() (*sdk.PaginatedApplicationList, *http.Response, error) {
-				return e.client.edgeApi.ApplicationsAPI.ListApplications(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+				return e.client.api.ApplicationsAPI.ListApplications(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -223,7 +223,7 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 
 	for _, resultApplication := range appResponse.GetResults() {
 		mods := resultApplication.GetModules()
-		cache := mods.GetEdgeCache()
+		cache := mods.GetCache()
 		functions := mods.GetFunctions()
 		applicationAccelerator := mods.GetApplicationAccelerator()
 		imageProcessor := mods.GetImageProcessor()

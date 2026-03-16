@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -37,12 +37,12 @@ type edgeFirewallEdgeFunctionInstanceResourceModel struct {
 	State          types.String                                    `tfsdk:"state"`
 	Data           edgeFirewallEdgeFunctionInstanceResourceResults `tfsdk:"data"`
 	ID             types.String                                    `tfsdk:"id"`
-	EdgeFirewallID types.String                                    `tfsdk:"edge_firewall_id"`
+	EdgeFirewallID types.Int64                                     `tfsdk:"edge_firewall_id"`
 	LastUpdated    types.String                                    `tfsdk:"last_updated"`
 }
 
 type edgeFirewallEdgeFunctionInstanceResourceResults struct {
-	ID           types.String `tfsdk:"id"`
+	ID           types.Int64  `tfsdk:"id"`
 	Name         types.String `tfsdk:"name"`
 	Args         types.String `tfsdk:"args"`
 	Function     types.Int64  `tfsdk:"function"`
@@ -64,7 +64,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Schema(_ context.Context, _ reso
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"edge_firewall_id": schema.StringAttribute{
+			"edge_firewall_id": schema.Int64Attribute{
 				Description: "The edge firewall identifier.",
 				Required:    true,
 			},
@@ -79,7 +79,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Schema(_ context.Context, _ reso
 			"data": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
-					"id": schema.StringAttribute{
+					"id": schema.Int64Attribute{
 						Description: "The edge function instance identifier.",
 						Computed:    true,
 					},
@@ -123,7 +123,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Configure(_ context.Context, req
 
 func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan edgeFirewallEdgeFunctionInstanceResourceModel
-	var edgeFirewallId types.String
+	var edgeFirewallId types.Int64
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -161,21 +161,21 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 		return
 	}
 
-	edgeFunctionInstanceRequest := edgeapi.FirewallFunctionInstanceRequest{
+	edgeFunctionInstanceRequest := azionapi.FirewallFunctionInstanceRequest{
 		Name:     plan.Data.Name.ValueString(),
 		Function: plan.Data.Function.ValueInt64(),
 		Args:     &planJsonArgs,
 	}
 
-	edgeFunctionInstancesResponse, response, err := r.client.edgeApi.FirewallsFunctionAPI.
-		CreateFirewallFunction(ctx, edgeFirewallId.ValueString()).
+	edgeFunctionInstancesResponse, response, err := r.client.api.FirewallsFunctionAPI.
+		CreateFirewallFunction(ctx, edgeFirewallId.ValueInt64()).
 		FirewallFunctionInstanceRequest(edgeFunctionInstanceRequest).
 		Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapi.ResponseFirewallFunctionInstance, *http.Response, error) {
-				return r.client.edgeApi.FirewallsFunctionAPI.
-					CreateFirewallFunction(ctx, edgeFirewallId.ValueString()).
+			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*azionapi.FirewallFunctionInstanceResponse, *http.Response, error) {
+				return r.client.api.FirewallsFunctionAPI.
+					CreateFirewallFunction(ctx, edgeFirewallId.ValueInt64()).
 					FirewallFunctionInstanceRequest(edgeFunctionInstanceRequest).
 					Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -223,7 +223,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 		Name:         types.StringValue(edgeFunctionInstancesResponse.Data.GetName()),
 		Args:         types.StringValue(jsonArgsStr),
 		Function:     types.Int64Value(edgeFunctionInstancesResponse.Data.GetFunction()),
-		ID:           types.StringValue(strconv.FormatInt(edgeFunctionInstancesResponse.Data.GetId(), 10)),
+		ID:           types.Int64Value(edgeFunctionInstancesResponse.Data.GetId()),
 		Active:       types.BoolValue(edgeFunctionInstancesResponse.Data.GetActive()),
 		LastEditor:   types.StringValue(edgeFunctionInstancesResponse.Data.GetLastEditor()),
 		LastModified: types.StringValue(edgeFunctionInstancesResponse.Data.GetLastModified().Format(time.RFC850)),
@@ -231,6 +231,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Create(ctx context.Context, req 
 
 	plan.State = types.StringValue(edgeFunctionInstancesResponse.GetState())
 	plan.ID = types.StringValue(strconv.FormatInt(edgeFunctionInstancesResponse.Data.GetId(), 10))
+	plan.EdgeFirewallID = edgeFirewallId
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -247,18 +248,18 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	var edgeFirewallID string
-	var functionsInstancesId string
+	var edgeFirewallID int64
+	var functionsInstancesId int64
 	valueFromCmd := strings.Split(state.ID.ValueString(), "/")
 	if len(valueFromCmd) > 1 {
-		edgeFirewallID = valueFromCmd[0]
-		functionsInstancesId = valueFromCmd[1]
+		edgeFirewallID, _ = strconv.ParseInt(valueFromCmd[0], 10, 64)
+		functionsInstancesId, _ = strconv.ParseInt(valueFromCmd[1], 10, 64)
 	} else {
-		edgeFirewallID = state.EdgeFirewallID.ValueString()
-		functionsInstancesId = state.Data.ID.ValueString()
+		edgeFirewallID = state.EdgeFirewallID.ValueInt64()
+		functionsInstancesId = state.Data.ID.ValueInt64()
 	}
 
-	if functionsInstancesId == "" {
+	if functionsInstancesId == 0 {
 		resp.Diagnostics.AddError(
 			"Edge Functions Instance id error ",
 			"should not be null or empty",
@@ -267,18 +268,17 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 	}
 
 	edgeFunctionInstancesResponse, response, err := r.client.
-		edgeApi.FirewallsFunctionAPI.
-		RetrieveFirewallFunction(
-			ctx, edgeFirewallID, functionsInstancesId).Execute() //nolint
+		api.FirewallsFunctionAPI.
+		RetrieveFirewallFunction(ctx, edgeFirewallID, functionsInstancesId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 		if response.StatusCode == 429 {
-			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapi.ResponseRetrieveFirewallFunctionInstance, *http.Response, error) {
+			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*azionapi.FirewallFunctionInstanceResponse, *http.Response, error) {
 				return r.client.
-					edgeApi.FirewallsFunctionAPI.
+					api.FirewallsFunctionAPI.
 					RetrieveFirewallFunction(ctx, edgeFirewallID, functionsInstancesId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -321,11 +321,11 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 	stateValue := "executed"
 
 	edgeApplicationsEdgeFunctionsInstanceState := edgeFirewallEdgeFunctionInstanceResourceModel{
-		EdgeFirewallID: types.StringValue(edgeFirewallID),
+		EdgeFirewallID: types.Int64Value(edgeFirewallID),
 		State:          types.StringValue(stateValue),
 		ID:             types.StringValue(strconv.FormatInt(edgeFunctionInstancesResponse.Data.GetId(), 10)),
 		Data: edgeFirewallEdgeFunctionInstanceResourceResults{
-			ID:           types.StringValue(strconv.FormatInt(edgeFunctionInstancesResponse.Data.GetId(), 10)),
+			ID:           types.Int64Value(edgeFunctionInstancesResponse.Data.GetId()),
 			LastEditor:   types.StringValue(edgeFunctionInstancesResponse.Data.GetLastEditor()),
 			LastModified: types.StringValue(edgeFunctionInstancesResponse.Data.GetLastModified().Format(time.RFC850)),
 			Name:         types.StringValue(edgeFunctionInstancesResponse.Data.GetName()),
@@ -344,8 +344,8 @@ func (r *edgeFirewallFunctionsInstanceResource) Read(ctx context.Context, req re
 
 func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan edgeFirewallEdgeFunctionInstanceResourceModel
-	var edgeFirewallID types.String
-	var functionsInstancesId types.String
+	var edgeFirewallID types.Int64
+	var functionsInstancesId types.Int64
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -359,7 +359,7 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		return
 	}
 
-	if plan.Data.ID.IsNull() || plan.Data.ID.ValueString() == "" {
+	if plan.Data.ID.IsNull() {
 		functionsInstancesId = state.Data.ID
 	} else {
 		functionsInstancesId = plan.Data.ID
@@ -396,21 +396,21 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		return
 	}
 
-	ApplicationPutInstanceRequest := edgeapi.PatchedFirewallFunctionInstanceRequest{
+	ApplicationPutInstanceRequest := azionapi.PatchedFirewallFunctionInstanceRequest{
 		Name:     plan.Data.Name.ValueStringPointer(),
 		Function: plan.Data.Function.ValueInt64Pointer(),
 		Args:     &requestJsonArgsStr,
 	}
 
-	edgeFunctionInstancesUpdateResponse, response, err := r.client.edgeApi.FirewallsFunctionAPI.
-		PartialUpdateFirewallFunction(ctx, edgeFirewallID.ValueString(), functionsInstancesId.ValueString()).
+	edgeFunctionInstancesUpdateResponse, response, err := r.client.api.FirewallsFunctionAPI.
+		PartialUpdateFirewallFunction(ctx, edgeFirewallID.ValueInt64(), functionsInstancesId.ValueInt64()).
 		PatchedFirewallFunctionInstanceRequest(ApplicationPutInstanceRequest).
 		Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeFunctionInstancesUpdateResponse, response, err = utils.RetryOn429(func() (*edgeapi.ResponseFirewallFunctionInstance, *http.Response, error) {
-				return r.client.edgeApi.FirewallsFunctionAPI.
-					PartialUpdateFirewallFunction(ctx, edgeFirewallID.ValueString(), functionsInstancesId.ValueString()).
+			edgeFunctionInstancesUpdateResponse, response, err = utils.RetryOn429(func() (*azionapi.FirewallFunctionInstanceResponse, *http.Response, error) {
+				return r.client.api.FirewallsFunctionAPI.
+					PartialUpdateFirewallFunction(ctx, edgeFirewallID.ValueInt64(), functionsInstancesId.ValueInt64()).
 					PatchedFirewallFunctionInstanceRequest(ApplicationPutInstanceRequest).
 					Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -460,12 +460,13 @@ func (r *edgeFirewallFunctionsInstanceResource) Update(ctx context.Context, req 
 		LastEditor:   types.StringValue(edgeFunctionInstancesUpdateResponse.Data.GetLastEditor()),
 		LastModified: types.StringValue(edgeFunctionInstancesUpdateResponse.Data.GetLastModified().Format(time.RFC850)),
 		Args:         types.StringValue(jsonArgsStr),
-		ID:           types.StringValue(strconv.FormatInt(edgeFunctionInstancesUpdateResponse.Data.GetId(), 10)),
+		ID:           types.Int64Value(edgeFunctionInstancesUpdateResponse.Data.GetId()),
 		Active:       types.BoolValue(edgeFunctionInstancesUpdateResponse.Data.GetActive()),
 	}
 
 	plan.State = types.StringValue(edgeFunctionInstancesUpdateResponse.GetState())
 	plan.ID = types.StringValue(strconv.FormatInt(edgeFunctionInstancesUpdateResponse.Data.GetId(), 10))
+	plan.EdgeFirewallID = edgeFirewallID
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -499,14 +500,14 @@ func (r *edgeFirewallFunctionsInstanceResource) Delete(ctx context.Context, req 
 		return
 	}
 
-	_, response, err := r.client.edgeApi.FirewallsFunctionAPI.
-		DestroyFirewallFunction(ctx, state.EdgeFirewallID.ValueString(), state.Data.ID.ValueString()).
+	_, response, err := r.client.api.FirewallsFunctionAPI.
+		DeleteFirewallFunction(ctx, state.EdgeFirewallID.ValueInt64(), state.Data.ID.ValueInt64()).
 		Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*edgeapi.ResponseDeleteFirewallFunctionInstance, *http.Response, error) {
-				return r.client.edgeApi.FirewallsFunctionAPI.
-					DestroyFirewallFunction(ctx, state.EdgeFirewallID.ValueString(), state.Data.ID.ValueString()).
+			_, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
+				return r.client.api.FirewallsFunctionAPI.
+					DeleteFirewallFunction(ctx, state.EdgeFirewallID.ValueInt64(), state.Data.ID.ValueInt64()).
 					Execute() //nolint
 			}, 5) // Maximum 5 retries
 

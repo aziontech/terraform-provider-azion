@@ -29,7 +29,7 @@ type EdgeApplicationEdgeFunctionInstanceDataSource struct {
 
 type EdgeFunctionInstanceDataSourceModel struct {
 	ID            types.String                 `tfsdk:"id"`
-	ApplicationID types.String                 `tfsdk:"application_id"`
+	ApplicationID types.Int64                  `tfsdk:"application_id"`
 	Data          EdgeFunctionInstanceResponse `tfsdk:"data"`
 }
 
@@ -93,24 +93,24 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Schema(_ context.Context
 }
 
 func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var EdgeApplicationId types.String
+	var EdgeApplicationId types.Int64
 	diagsEdgeApplicationId := req.Config.GetAttribute(ctx, path.Root("application_id"), &EdgeApplicationId)
 	resp.Diagnostics.Append(diagsEdgeApplicationId...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var EdgeFunctionInstanceId types.String
+	var EdgeFunctionInstanceId types.Int64
 	diagsEdgeFunctionInstanceId := req.Config.GetAttribute(ctx, path.Root("data").AtName("id"), &EdgeFunctionInstanceId)
 	resp.Diagnostics.Append(diagsEdgeFunctionInstanceId...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	functionInstancesResponse, response, err := d.client.edgeApi.ApplicationsFunctionAPI.RetrieveApplicationFunctionInstance(ctx, EdgeApplicationId.ValueString(), EdgeFunctionInstanceId.ValueString()).Execute() //nolint
+	functionInstancesResponse, response, err := d.client.edgeApi.ApplicationsFunctionAPI.RetrieveApplicationFunctionInstance(ctx, EdgeApplicationId.ValueInt64(), EdgeFunctionInstanceId.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			functionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapi.ResponseRetrieveApplicationFunctionInstance, *http.Response, error) {
-				return d.client.edgeApi.ApplicationsFunctionAPI.RetrieveApplicationFunctionInstance(ctx, EdgeApplicationId.ValueString(), EdgeFunctionInstanceId.ValueString()).Execute() //nolint
+			functionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapi.FunctionInstanceResponse, *http.Response, error) {
+				return d.client.edgeApi.ApplicationsFunctionAPI.RetrieveApplicationFunctionInstance(ctx, EdgeApplicationId.ValueInt64(), EdgeFunctionInstanceId.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {

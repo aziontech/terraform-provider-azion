@@ -24,7 +24,7 @@ type EdgeFirewallEdgeFunctionsInstanceDataSource struct {
 
 type EdgeFirewallEdgeFunctionsInstanceDataSourceModel struct {
 	ID             types.String                               `tfsdk:"id"`
-	EdgeFirewallID types.String                               `tfsdk:"edge_firewall_id"`
+	EdgeFirewallID types.Int64                                `tfsdk:"edge_firewall_id"`
 	Counter        types.Int64                                `tfsdk:"counter"`
 	Page           types.Int64                                `tfsdk:"page"`
 	PageSize       types.Int64                                `tfsdk:"page_size"`
@@ -121,7 +121,7 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Schema(_ context.Context, 
 func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var page types.Int64
 	var pageSize types.Int64
-	var edgeFirewallID types.String
+	var edgeFirewallID types.Int64
 
 	diagsEdgeApplicationId := req.Config.GetAttribute(ctx, path.Root("edge_firewall_id"), &edgeFirewallID)
 	resp.Diagnostics.Append(diagsEdgeApplicationId...)
@@ -149,7 +149,7 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, 
 	}
 
 	EdgeFirewallFunctionsInstanceResponse, response, err := e.client.edgeApi.FirewallsFunctionAPI.
-		ListFirewallFunction(ctx, edgeFirewallID.ValueString()).
+		ListFirewallFunction(ctx, edgeFirewallID.ValueInt64()).
 		Page(page.ValueInt64()).
 		PageSize(pageSize.ValueInt64()).
 		Execute() //nolint
@@ -157,7 +157,7 @@ func (e *EdgeFirewallEdgeFunctionsInstanceDataSource) Read(ctx context.Context, 
 		if response.StatusCode == 429 {
 			EdgeFirewallFunctionsInstanceResponse, response, err = utils.RetryOn429(func() (*edgeapi.PaginatedFirewallFunctionInstanceList, *http.Response, error) {
 				return e.client.edgeApi.FirewallsFunctionAPI.
-					ListFirewallFunction(ctx, edgeFirewallID.ValueString()).Page(page.ValueInt64()).
+					ListFirewallFunction(ctx, edgeFirewallID.ValueInt64()).Page(page.ValueInt64()).
 					PageSize(pageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 

@@ -189,7 +189,7 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 	createEdgeFunction, response, err := r.client.edgeApi.FunctionsAPI.CreateFunction(ctx).EdgeFunctionsRequest(edgeFunction).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			createEdgeFunction, response, err = utils.RetryOn429(func() (*sdk.ResponseFunctionsDoc, *http.Response, error) {
+			createEdgeFunction, response, err = utils.RetryOn429(func() (*sdk.FunctionResponse, *http.Response, error) {
 				return r.client.edgeApi.FunctionsAPI.CreateFunction(ctx).EdgeFunctionsRequest(edgeFunction).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -284,17 +284,15 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 		}
 	}
 
-	funcIdStr := strconv.FormatInt(edgeFunctionId, 10)
-
-	getEdgeFunction, response, err := r.client.edgeApi.FunctionsAPI.RetrieveFunction(ctx, funcIdStr).Execute() //nolint
+	getEdgeFunction, response, err := r.client.edgeApi.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 		if response.StatusCode == 429 {
-			getEdgeFunction, response, err = utils.RetryOn429(func() (*sdk.ResponseRetrieveFunctionsDoc, *http.Response, error) {
-				return r.client.edgeApi.FunctionsAPI.RetrieveFunction(ctx, funcIdStr).Execute() //nolint
+			getEdgeFunction, response, err = utils.RetryOn429(func() (*sdk.FunctionResponse, *http.Response, error) {
+				return r.client.edgeApi.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -423,13 +421,11 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	funcIdStr := strconv.FormatInt(edgeFunctionId, 10)
-
-	updateEdgeFunction, response, err := r.client.edgeApi.FunctionsAPI.PartialUpdateFunction(ctx, funcIdStr).PatchedEdgeFunctionsRequest(updateEdgeFunctionRequest).Execute() //nolint
+	updateEdgeFunction, response, err := r.client.edgeApi.FunctionsAPI.PartialUpdateFunction(ctx, edgeFunctionId).PatchedEdgeFunctionsRequest(updateEdgeFunctionRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			updateEdgeFunction, response, err = utils.RetryOn429(func() (*sdk.ResponseFunctionsDoc, *http.Response, error) {
-				return r.client.edgeApi.FunctionsAPI.PartialUpdateFunction(ctx, funcIdStr).PatchedEdgeFunctionsRequest(updateEdgeFunctionRequest).Execute() //nolint
+			updateEdgeFunction, response, err = utils.RetryOn429(func() (*sdk.FunctionResponse, *http.Response, error) {
+				return r.client.edgeApi.FunctionsAPI.PartialUpdateFunction(ctx, edgeFunctionId).PatchedEdgeFunctionsRequest(updateEdgeFunctionRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -522,13 +518,12 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 			return
 		}
 	}
-	functionIdString := strconv.FormatInt(edgeFunctionId, 10)
 
-	_, response, err := r.client.edgeApi.FunctionsAPI.DestroyFunction(ctx, functionIdString).Execute() //nolint
+	_, response, err := r.client.edgeApi.FunctionsAPI.DeleteFunction(ctx, edgeFunctionId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*sdk.ResponseDeleteFunctionsDoc, *http.Response, error) {
-				return r.client.edgeApi.FunctionsAPI.DestroyFunction(ctx, functionIdString).Execute() //nolint
+			_, response, err = utils.RetryOn429(func() (*sdk.DeleteResponse, *http.Response, error) {
+				return r.client.edgeApi.FunctionsAPI.DeleteFunction(ctx, edgeFunctionId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {

@@ -2,13 +2,14 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -42,26 +43,32 @@ type RulesEngineResourceModel struct {
 }
 
 type RulesEngineResourceResults struct {
-	ID          types.Int64                        `tfsdk:"id"`
-	Name        types.String                       `tfsdk:"name"`
-	Phase       types.String                       `tfsdk:"phase"`
-	Behaviors   []RulesEngineBehaviorResourceModel `tfsdk:"behaviors"`
-	Criteria    []CriteriaResourceModel            `tfsdk:"criteria"`
-	IsActive    types.Bool                         `tfsdk:"is_active"`
-	Order       types.Int64                        `tfsdk:"order"`
-	Description types.String                       `tfsdk:"description"`
+	ID           types.Int64                        `tfsdk:"id"`
+	Name         types.String                       `tfsdk:"name"`
+	Phase        types.String                       `tfsdk:"phase"`
+	Active       types.Bool                         `tfsdk:"active"`
+	Behaviors    []RulesEngineBehaviorResourceModel `tfsdk:"behaviors"`
+	Criteria     []CriteriaResourceModel            `tfsdk:"criteria"`
+	Description  types.String                       `tfsdk:"description"`
+	Order        types.Int64                        `tfsdk:"order"`
+	LastEditor   types.String                       `tfsdk:"last_editor"`
+	LastModified types.String                       `tfsdk:"last_modified"`
 }
 
 type RulesEngineBehaviorResourceModel struct {
-	Name               types.String           `tfsdk:"name"`
-	TargetCaptureMatch *TargetCaptureResource `tfsdk:"target_object"`
+	Type         types.String                     `tfsdk:"type"`
+	Attributes   *BehaviorAttributesResourceModel `tfsdk:"attributes"`
+	CaptureAttrs *CaptureAttributesResourceModel  `tfsdk:"capture_attributes"`
 }
 
-type TargetCaptureResource struct {
-	Target        types.String `tfsdk:"target"`
-	CapturedArray types.String `tfsdk:"captured_array"`
+type BehaviorAttributesResourceModel struct {
+	Value types.String `tfsdk:"value"`
+}
+
+type CaptureAttributesResourceModel struct {
 	Subject       types.String `tfsdk:"subject"`
 	Regex         types.String `tfsdk:"regex"`
+	CapturedArray types.String `tfsdk:"captured_array"`
 }
 
 type CriteriaResourceModel struct {
@@ -69,10 +76,10 @@ type CriteriaResourceModel struct {
 }
 
 type RulesEngineResourceCriteria struct {
+	Conditional types.String `tfsdk:"conditional"`
 	Variable    types.String `tfsdk:"variable"`
 	Operator    types.String `tfsdk:"operator"`
-	Conditional types.String `tfsdk:"conditional"`
-	InputValue  types.String `tfsdk:"input_value"`
+	Argument    types.String `tfsdk:"argument"`
 }
 
 func (r *rulesEngineResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -111,39 +118,47 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Required:    true,
 					},
 					"phase": schema.StringAttribute{
-						Description: "The phase in which the rule is executed (e.g., default, request, response).",
+						Description: "The phase in which the rule is executed (request or response).",
 						Required:    true,
+					},
+					"active": schema.BoolAttribute{
+						Description: "Whether the rule is active.",
+						Optional:    true,
+						Computed:    true,
 					},
 					"behaviors": schema.ListNestedAttribute{
 						Required: true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"name": schema.StringAttribute{
-									Description: "The name of the behavior.",
+								"type": schema.StringAttribute{
+									Description: "The type of behavior.",
 									Required:    true,
 								},
-								"target_object": schema.SingleNestedAttribute{
-									Required: true,
+								"attributes": schema.SingleNestedAttribute{
+									Description: "Behavior attributes (for behaviors with args).",
+									Optional:    true,
 									Attributes: map[string]schema.Attribute{
-										"target": schema.StringAttribute{
-											Description: "The target of the behavior.",
-											Computed:    true,
-											Optional:    true,
+										"value": schema.StringAttribute{
+											Description: "Value for the behavior.",
+											Required:    true,
 										},
-										"captured_array": schema.StringAttribute{
-											Description: "The name of the behavior.",
-											Computed:    true,
-											Optional:    true,
-										},
+									},
+								},
+								"capture_attributes": schema.SingleNestedAttribute{
+									Description: "Capture attributes (for capture_match_groups).",
+									Optional:    true,
+									Attributes: map[string]schema.Attribute{
 										"subject": schema.StringAttribute{
-											Description: "The target of the behavior.",
-											Computed:    true,
-											Optional:    true,
+											Description: "Subject for capture.",
+											Required:    true,
 										},
 										"regex": schema.StringAttribute{
-											Description: "The target of the behavior.",
-											Computed:    true,
-											Optional:    true,
+											Description: "Regex pattern.",
+											Required:    true,
+										},
+										"captured_array": schema.StringAttribute{
+											Description: "Captured array name.",
+											Required:    true,
 										},
 									},
 								},
@@ -158,6 +173,10 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 									Required: true,
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
+											"conditional": schema.StringAttribute{
+												Description: "The conditional operator used in the rule's criteria (e.g., if, and, or).",
+												Required:    true,
+											},
 											"variable": schema.StringAttribute{
 												Description: "The variable used in the rule's criteria.",
 												Required:    true,
@@ -166,13 +185,9 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 												Description: "The operator used in the rule's criteria.",
 												Required:    true,
 											},
-											"conditional": schema.StringAttribute{
-												Description: "The conditional operator used in the rule's criteria (e.g., if, and, or).",
-												Required:    true,
-											},
-											"input_value": schema.StringAttribute{
-												Description: "The input value used in the rule's criteria.",
-												Required:    true,
+											"argument": schema.StringAttribute{
+												Description: "The argument used in the rule's criteria.",
+												Optional:    true,
 											},
 										},
 									},
@@ -180,17 +195,21 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 							},
 						},
 					},
-					"is_active": schema.BoolAttribute{
-						Description: "The status of the rules engine rule.",
+					"description": schema.StringAttribute{
+						Description: "The description of the rules engine rule.",
+						Optional:    true,
 						Computed:    true,
 					},
 					"order": schema.Int64Attribute{
 						Description: "The order of the rule in the rules engine.",
 						Computed:    true,
 					},
-					"description": schema.StringAttribute{
-						Description: "The description of the rules engine rule.",
-						Optional:    true,
+					"last_editor": schema.StringAttribute{
+						Description: "The last editor of the rule.",
+						Computed:    true,
+					},
+					"last_modified": schema.StringAttribute{
+						Description: "The last modified timestamp.",
 						Computed:    true,
 					},
 				},
@@ -228,60 +247,13 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	var behaviors []edgeapplications.RulesEngineBehaviorEntry
-	for _, behavior := range plan.RulesEngine.Behaviors {
-		if behavior.Name.ValueString() == "capture_match_groups" && behavior.TargetCaptureMatch.Target.ValueString() != "" {
-			resp.Diagnostics.AddError("capture_match_groups",
-				"Behavior capture_match_groups can not have a target value.")
-			return
-		}
-		switch {
-		case behavior.TargetCaptureMatch == nil:
-		case behavior.Name.ValueString() == "capture_match_groups":
-			RulesEngineBehaviorObject := edgeapplications.RulesEngineBehaviorObject{
-				Name: behavior.Name.ValueString(),
-				Target: edgeapplications.RulesEngineBehaviorObjectTarget{
-					CapturedArray: behavior.TargetCaptureMatch.CapturedArray.ValueStringPointer(),
-					Subject:       behavior.TargetCaptureMatch.Subject.ValueStringPointer(),
-					Regex:         behavior.TargetCaptureMatch.Regex.ValueStringPointer(),
-				},
-			}
-			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorObject: &RulesEngineBehaviorObject})
-		case behavior.TargetCaptureMatch.Target.ValueString() != "":
-			RulesEngineBehaviorString := edgeapplications.RulesEngineBehaviorString{
-				Name:   behavior.Name.ValueString(),
-				Target: behavior.TargetCaptureMatch.Target.ValueString(),
-			}
-			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
-		case behavior.TargetCaptureMatch.CapturedArray.IsUnknown() && behavior.TargetCaptureMatch.Regex.IsUnknown() && behavior.TargetCaptureMatch.Subject.IsUnknown():
-			RulesEngineBehaviorString := edgeapplications.RulesEngineBehaviorString{
-				Name:   behavior.Name.ValueString(),
-				Target: "",
-			}
-			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
-		}
-	}
+	// Build criteria
+	criteria := buildCriteriaRequestV4(plan.RulesEngine.Criteria)
 
-	var criteria [][]edgeapplications.RulesEngineCriteria
-	for _, criterion := range plan.RulesEngine.Criteria {
-		var criterionSet []edgeapplications.RulesEngineCriteria
-		for _, criterionGroup := range criterion.Entries {
-			criterionSet = append(criterionSet, edgeapplications.RulesEngineCriteria{
-				Variable:    criterionGroup.Variable.ValueString(),
-				Operator:    criterionGroup.Operator.ValueString(),
-				Conditional: criterionGroup.Conditional.ValueString(),
-				InputValue:  criterionGroup.InputValue.ValueStringPointer(),
-			})
-		}
-		criteria = append(criteria, criterionSet)
-	}
+	phaseStr := phase.ValueString()
 
-	var rulesEngineResponse *edgeapplications.RulesEngineIdResponse
-	var response *http.Response
-	var err error
-	if plan.RulesEngine.Phase.ValueString() == "default" {
-		// the Default Rule is automatically created when the Edge Application is created, we need to fake its creation here
-
+	// Default Rule handling - it exists automatically, we just update it
+	if phaseStr == "default" {
 		if plan.RulesEngine.Name.ValueString() != "Default Rule" {
 			resp.Diagnostics.AddError(
 				"Name error",
@@ -290,16 +262,20 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			return
 		}
 
-		// both the default and first rule have the `order = 1`, so we need to get both of them and check the name
-		rulesResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), "request").OrderBy("order").PageSize(2).Page(1).Sort("asc").Execute() //nolint
+		// Find the Default Rule ID - it's in the request phase
+		rulesResponse, response, err := r.client.api.ApplicationsRequestRulesAPI.
+			ListApplicationRequestRules(ctx, edgeApplicationID.ValueInt64()).
+			Page(1).PageSize(2).Execute()
 		if err != nil {
 			if response.StatusCode == 429 {
-				rulesResponse, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineResponse, *http.Response, error) {
-					return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesGet(ctx, edgeApplicationID.ValueInt64(), "request").OrderBy("order").PageSize(2).Page(1).Sort("asc").Execute() //nolint
-				}, 5) // Maximum 5 retries
+				rulesResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedRequestPhaseRuleList, *http.Response, error) {
+					return r.client.api.ApplicationsRequestRulesAPI.
+						ListApplicationRequestRules(ctx, edgeApplicationID.ValueInt64()).
+						Page(1).PageSize(2).Execute()
+				}, 5)
 
 				if response != nil {
-					defer response.Body.Close() // <-- Close the body here
+					defer response.Body.Close()
 				}
 
 				if err != nil {
@@ -327,118 +303,111 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		var ruleID int64
-		if rulesResponse.Results[0].Name == "Default Rule" && rulesResponse.Results[0].Phase == "default" {
-			ruleID = rulesResponse.Results[0].Id
-		} else {
-			ruleID = rulesResponse.Results[1].Id
-		}
-
-		rulesEngineRequest := edgeapplications.UpdateRulesEngineRequest{
-			Name:        plan.RulesEngine.Name.ValueString(),
-			Description: plan.RulesEngine.Description.ValueStringPointer(),
-			Behaviors:   behaviors,
-			Criteria:    criteria,
-		}
-
-		rulesEngineResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), "request", ruleID).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
-		if err != nil {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
+		for _, rule := range rulesResponse.Results {
+			if rule.Name == "Default Rule" {
+				ruleID = rule.GetId()
+				break
 			}
-			bodyString := string(bodyBytes)
+		}
+
+		if ruleID == 0 {
 			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
+				"Default Rule not found",
+				"Could not find Default Rule in the request phase",
 			)
 			return
 		}
-	} else {
-		rulesEngineRequest := edgeapplications.CreateRulesEngineRequest{
-			Name:        plan.RulesEngine.Name.ValueString(),
-			Description: plan.RulesEngine.Description.ValueStringPointer(),
-			Behaviors:   behaviors,
-			Criteria:    criteria,
-		}
 
-		rulesEngineResponse, response, err = r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.
-			EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesPost(ctx, edgeApplicationID.ValueInt64(), phase.ValueString()).
-			CreateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
-	}
-
-	if err != nil {
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
+		// Update the Default Rule
+		behaviors := buildBehaviorsRequestV4(plan.RulesEngine.Behaviors)
+		ruleRequest := azionapi.NewRequestPhaseRuleRequest(
+			plan.RulesEngine.Name.ValueString(),
+			criteria,
+			behaviors,
 		)
-		return
-	}
 
-	var behaviorResponse []RulesEngineBehaviorResourceModel
-	for _, behavior := range rulesEngineResponse.Results.Behaviors {
-		if behavior.RulesEngineBehaviorString != nil {
-			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
-				Name: types.StringValue(behavior.RulesEngineBehaviorString.GetName()),
-				TargetCaptureMatch: &TargetCaptureResource{
-					Target: types.StringValue(behavior.RulesEngineBehaviorString.GetTarget()),
-				},
-			})
+		if !plan.RulesEngine.Active.IsNull() && !plan.RulesEngine.Active.IsUnknown() {
+			ruleRequest.SetActive(plan.RulesEngine.Active.ValueBool())
+		}
+		if !plan.RulesEngine.Description.IsNull() && !plan.RulesEngine.Description.IsUnknown() {
+			ruleRequest.SetDescription(plan.RulesEngine.Description.ValueString())
+		}
+
+		updateResponse, response, err := r.client.api.ApplicationsRequestRulesAPI.
+			UpdateApplicationRequestRule(ctx, edgeApplicationID.ValueInt64(), ruleID).
+			RequestPhaseRuleRequest(*ruleRequest).
+			Execute()
+		if err != nil {
+			handleResourceAPIError(resp, response, err)
+			return
+		}
+
+		plan = buildStateFromResponse(updateResponse.Data, edgeApplicationID, types.StringValue("default"))
+	} else {
+		// Create new rule for request or response phase
+		var rulesEngineResponse *azionapi.RequestPhaseRuleResponse
+		var response *http.Response
+		var err error
+
+		if phaseStr == "request" {
+			behaviors := buildBehaviorsRequestV4(plan.RulesEngine.Behaviors)
+			ruleRequest := azionapi.NewRequestPhaseRuleRequest(
+				plan.RulesEngine.Name.ValueString(),
+				criteria,
+				behaviors,
+			)
+
+			if !plan.RulesEngine.Active.IsNull() && !plan.RulesEngine.Active.IsUnknown() {
+				ruleRequest.SetActive(plan.RulesEngine.Active.ValueBool())
+			}
+			if !plan.RulesEngine.Description.IsNull() && !plan.RulesEngine.Description.IsUnknown() {
+				ruleRequest.SetDescription(plan.RulesEngine.Description.ValueString())
+			}
+
+			rulesEngineResponse, response, err = r.client.api.ApplicationsRequestRulesAPI.
+				CreateApplicationRequestRule(ctx, edgeApplicationID.ValueInt64()).
+				RequestPhaseRuleRequest(*ruleRequest).
+				Execute()
+		} else if phaseStr == "response" {
+			behaviors := buildBehaviorsResponseV4(plan.RulesEngine.Behaviors)
+			responseRuleRequest := azionapi.NewResponsePhaseRuleRequest(
+				plan.RulesEngine.Name.ValueString(),
+				criteria,
+				behaviors,
+			)
+
+			if !plan.RulesEngine.Active.IsNull() && !plan.RulesEngine.Active.IsUnknown() {
+				responseRuleRequest.SetActive(plan.RulesEngine.Active.ValueBool())
+			}
+			if !plan.RulesEngine.Description.IsNull() && !plan.RulesEngine.Description.IsUnknown() {
+				responseRuleRequest.SetDescription(plan.RulesEngine.Description.ValueString())
+			}
+
+			var responseRulesEngineResponse *azionapi.ResponsePhaseRuleResponse
+			responseRulesEngineResponse, response, err = r.client.api.ApplicationsResponseRulesAPI.
+				CreateApplicationResponseRule(ctx, edgeApplicationID.ValueInt64()).
+				ResponsePhaseRuleRequest(*responseRuleRequest).
+				Execute()
+			if err == nil {
+				// Convert response to request phase rule response format for consistent handling
+				rulesEngineResponse = &azionapi.RequestPhaseRuleResponse{
+					Data: convertResponseToRequestPhaseRule(responseRulesEngineResponse.Data),
+				}
+			}
 		} else {
-			target := behavior.RulesEngineBehaviorObject.GetTarget()
-			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
-				Name: types.StringValue(behavior.RulesEngineBehaviorObject.GetName()),
-				TargetCaptureMatch: &TargetCaptureResource{
-					CapturedArray: types.StringValue(target.GetCapturedArray()),
-					Subject:       types.StringValue(target.GetSubject()),
-					Regex:         types.StringValue(target.GetRegex()),
-				},
-			})
+			resp.Diagnostics.AddError(
+				"Invalid phase value",
+				fmt.Sprintf("Phase must be 'request', 'response', or 'default', got: %s", phaseStr),
+			)
+			return
 		}
-	}
 
-	var criteriaResult []CriteriaResourceModel
-	for _, criterion := range rulesEngineResponse.Results.Criteria {
-		var criterionSet []RulesEngineResourceCriteria
-		for _, criterionGroup := range criterion {
-			criterionSet = append(criterionSet, RulesEngineResourceCriteria{
-				Variable:    types.StringValue(criterionGroup.GetVariable()),
-				Operator:    types.StringValue(criterionGroup.GetOperator()),
-				Conditional: types.StringValue(criterionGroup.GetConditional()),
-				InputValue:  types.StringValue(criterionGroup.GetInputValue()),
-			})
+		if err != nil {
+			handleResourceAPIError(resp, response, err)
+			return
 		}
-		criteriaResult = append(criteriaResult, CriteriaResourceModel{
-			Entries: criterionSet,
-		})
-	}
-	rulesEngineResults := &RulesEngineResourceResults{
-		ID:          types.Int64Value(rulesEngineResponse.Results.GetId()),
-		Name:        types.StringValue(rulesEngineResponse.Results.GetName()),
-		Phase:       types.StringValue(rulesEngineResponse.Results.GetPhase()),
-		Behaviors:   behaviorResponse,
-		Criteria:    criteriaResult,
-		IsActive:    types.BoolValue(rulesEngineResponse.Results.GetIsActive()),
-		Order:       types.Int64Value(rulesEngineResponse.Results.GetOrder()),
-		Description: types.StringValue(rulesEngineResponse.Results.GetDescription()),
-	}
 
-	plan = RulesEngineResourceModel{
-		ApplicationID: edgeApplicationID,
-		ID:            types.StringValue(strconv.FormatInt(rulesEngineResponse.Results.GetId(), 10)),
-		LastUpdated:   types.StringValue(time.Now().Format(time.RFC850)),
-		SchemaVersion: types.Int64Value(rulesEngineResponse.SchemaVersion),
-		RulesEngine:   rulesEngineResults,
+		plan = buildStateFromResponse(rulesEngineResponse.Data, edgeApplicationID, phase)
 	}
 
 	diags = resp.State.Set(ctx, &plan)
@@ -455,6 +424,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	var edgeApplicationID int64
 	var ruleID int64
 	var phase string
@@ -463,123 +433,64 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		edgeApplicationID = int64(utils.AtoiNoError(valueFromCmd[0], resp))
 		phase = valueFromCmd[1]
 		ruleID = int64(utils.AtoiNoError(valueFromCmd[2], resp))
+	} else if len(valueFromCmd) == 1 {
+		edgeApplicationID = state.ApplicationID.ValueInt64()
+		ruleID = state.RulesEngine.ID.ValueInt64()
+		phase = state.RulesEngine.Phase.ValueString()
 	} else {
-		if len(valueFromCmd) == 1 {
-			edgeApplicationID = state.ApplicationID.ValueInt64()
-			ruleID = state.RulesEngine.ID.ValueInt64()
-			phase = state.RulesEngine.Phase.ValueString()
-		} else {
-			resp.Diagnostics.AddError(
-				"Parameters error",
-				"you need to pass <edgeApplicationID>/<phase>/<ruleEngineID>",
-			)
-			return
-		}
-	}
-
-	if ruleID == 0 {
 		resp.Diagnostics.AddError(
-			"Rules ID id error ",
-			"is not null",
+			"Parameters error",
+			"you need to pass <edgeApplicationID>/<phase>/<ruleEngineID>",
 		)
 		return
 	}
 
-	if phase == "default" {
-		phase = "request"
+	if ruleID == 0 {
+		resp.Diagnostics.AddError(
+			"Rules ID error",
+			"rule ID cannot be 0",
+		)
+		return
 	}
 
-	ruleEngineResponse, response, err := r.client.edgeApplicationsApi.
-		EdgeApplicationsRulesEngineAPI.
-		EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(
-			ctx, edgeApplicationID, phase, ruleID).Execute() //nolint
-	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		if response.StatusCode == 429 {
-			ruleEngineResponse, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
-				return r.client.edgeApplicationsApi.
-					EdgeApplicationsRulesEngineAPI.
-					EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdGet(ctx, edgeApplicationID, phase, ruleID).Execute() //nolint
-			}, 5) // Maximum 5 retries
+	// Default phase is actually stored in request phase
+	apiPhase := phase
+	if phase == "default" {
+		apiPhase = "request"
+	}
 
-			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
-			}
+	var result *RulesEngineResourceResults
 
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
+	if apiPhase == "request" {
+		ruleResponse, response, err := r.client.api.ApplicationsRequestRulesAPI.
+			RetrieveApplicationRequestRule(ctx, edgeApplicationID, ruleID).
+			Execute()
+		if err != nil {
+			if response.StatusCode == http.StatusNotFound {
+				resp.State.RemoveResource(ctx)
 				return
 			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			handleResourceAPIError(resp, response, err)
 			return
 		}
+		result = transformRuleToResultsModelFromResponse(ruleResponse.Data, phase)
+	} else if apiPhase == "response" {
+		ruleResponse, response, err := r.client.api.ApplicationsResponseRulesAPI.
+			RetrieveApplicationResponseRule(ctx, edgeApplicationID, ruleID).
+			Execute()
+		if err != nil {
+			if response.StatusCode == http.StatusNotFound {
+				resp.State.RemoveResource(ctx)
+				return
+			}
+			handleResourceAPIError(resp, response, err)
+			return
+		}
+		result = transformRuleToResultsModelFromResponse(ruleResponse.Data, phase)
 	}
 
-	var behaviorResponse []RulesEngineBehaviorResourceModel
-	for _, behavior := range ruleEngineResponse.Results.Behaviors {
-		if behavior.RulesEngineBehaviorString != nil {
-			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
-				Name: types.StringValue(behavior.RulesEngineBehaviorString.GetName()),
-				TargetCaptureMatch: &TargetCaptureResource{
-					Target: types.StringValue(behavior.RulesEngineBehaviorString.GetTarget()),
-				},
-			})
-		} else {
-			target := behavior.RulesEngineBehaviorObject.GetTarget()
-			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
-				Name: types.StringValue(behavior.RulesEngineBehaviorObject.GetName()),
-				TargetCaptureMatch: &TargetCaptureResource{
-					CapturedArray: types.StringValue(target.GetCapturedArray()),
-					Subject:       types.StringValue(target.GetSubject()),
-					Regex:         types.StringValue(target.GetRegex()),
-				},
-			})
-		}
-	}
-
-	var criteria []CriteriaResourceModel
-	for _, criterion := range ruleEngineResponse.Results.Criteria {
-		var criterionSet []RulesEngineResourceCriteria
-		for _, criterionGroup := range criterion {
-			criterionSet = append(criterionSet, RulesEngineResourceCriteria{
-				Variable:    types.StringValue(criterionGroup.GetVariable()),
-				Operator:    types.StringValue(criterionGroup.GetOperator()),
-				Conditional: types.StringValue(criterionGroup.GetConditional()),
-				InputValue:  types.StringValue(criterionGroup.GetInputValue()),
-			})
-		}
-		criteria = append(criteria, CriteriaResourceModel{
-			Entries: criterionSet,
-		})
-	}
-	state.RulesEngine = &RulesEngineResourceResults{
-		ID:          types.Int64Value(ruleEngineResponse.Results.GetId()),
-		Name:        types.StringValue(ruleEngineResponse.Results.GetName()),
-		Phase:       types.StringValue(ruleEngineResponse.Results.GetPhase()),
-		Behaviors:   behaviorResponse,
-		Criteria:    criteria,
-		IsActive:    types.BoolValue(ruleEngineResponse.Results.GetIsActive()),
-		Order:       types.Int64Value(ruleEngineResponse.Results.GetOrder()),
-		Description: types.StringValue(ruleEngineResponse.Results.GetDescription()),
-	}
+	state.ApplicationID = types.Int64Value(edgeApplicationID)
+	state.RulesEngine = result
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -631,55 +542,16 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		ruleID = plan.RulesEngine.ID
 	}
 
-	var behaviors []edgeapplications.RulesEngineBehaviorEntry
-	for _, behavior := range plan.RulesEngine.Behaviors {
-		if behavior.Name.ValueString() == "capture_match_groups" && behavior.TargetCaptureMatch.Target.ValueString() != "" {
-			resp.Diagnostics.AddError("capture_match_groups",
-				"Behavior capture_match_groups can not have a target value.")
-			return
-		}
-		switch {
-		case behavior.TargetCaptureMatch == nil:
-		case behavior.Name.ValueString() == "capture_match_groups":
-			RulesEngineBehaviorObject := edgeapplications.RulesEngineBehaviorObject{
-				Name: behavior.Name.ValueString(),
-				Target: edgeapplications.RulesEngineBehaviorObjectTarget{
-					CapturedArray: behavior.TargetCaptureMatch.CapturedArray.ValueStringPointer(),
-					Subject:       behavior.TargetCaptureMatch.Subject.ValueStringPointer(),
-					Regex:         behavior.TargetCaptureMatch.Regex.ValueStringPointer(),
-				},
-			}
-			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorObject: &RulesEngineBehaviorObject})
-		case behavior.TargetCaptureMatch.Target.ValueString() != "":
-			RulesEngineBehaviorString := edgeapplications.RulesEngineBehaviorString{
-				Name:   behavior.Name.ValueString(),
-				Target: behavior.TargetCaptureMatch.Target.ValueString(),
-			}
-			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
-		case behavior.TargetCaptureMatch.CapturedArray.IsUnknown() && behavior.TargetCaptureMatch.Regex.IsUnknown() && behavior.TargetCaptureMatch.Subject.IsUnknown():
-			RulesEngineBehaviorString := edgeapplications.RulesEngineBehaviorString{
-				Name:   behavior.Name.ValueString(),
-				Target: "",
-			}
-			behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
-		}
+	// Build criteria
+	criteria := buildCriteriaRequestV4(plan.RulesEngine.Criteria)
+
+	phaseStr := phase.ValueString()
+	apiPhase := phaseStr
+	if phaseStr == "default" {
+		apiPhase = "request"
 	}
 
-	var criteria [][]edgeapplications.RulesEngineCriteria
-	for _, criterion := range plan.RulesEngine.Criteria {
-		var criterionSet []edgeapplications.RulesEngineCriteria
-		for _, criterionGroup := range criterion.Entries {
-			criterionSet = append(criterionSet, edgeapplications.RulesEngineCriteria{
-				Variable:    criterionGroup.Variable.ValueString(),
-				Operator:    criterionGroup.Operator.ValueString(),
-				Conditional: criterionGroup.Conditional.ValueString(),
-				InputValue:  criterionGroup.InputValue.ValueStringPointer(),
-			})
-		}
-		criteria = append(criteria, criterionSet)
-	}
-
-	var rulesEngineRequest edgeapplications.UpdateRulesEngineRequest
+	// Validate Default Rule name
 	if state.RulesEngine.Phase.ValueString() == "default" {
 		if plan.RulesEngine.Name.ValueString() != "Default Rule" {
 			resp.Diagnostics.AddError(
@@ -690,107 +562,62 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 	}
 
-	rulesEngineRequest = edgeapplications.UpdateRulesEngineRequest{
-		Name:        plan.RulesEngine.Name.ValueString(),
-		Description: plan.RulesEngine.Description.ValueStringPointer(),
-		Behaviors:   behaviors,
-		Criteria:    criteria,
+	var rulesEngineResponse *azionapi.RequestPhaseRuleResponse
+	var response *http.Response
+	var err error
+
+	if apiPhase == "request" {
+		behaviors := buildBehaviorsRequestV4(plan.RulesEngine.Behaviors)
+		ruleRequest := azionapi.NewRequestPhaseRuleRequest(
+			plan.RulesEngine.Name.ValueString(),
+			criteria,
+			behaviors,
+		)
+
+		if !plan.RulesEngine.Active.IsNull() && !plan.RulesEngine.Active.IsUnknown() {
+			ruleRequest.SetActive(plan.RulesEngine.Active.ValueBool())
+		}
+		if !plan.RulesEngine.Description.IsNull() && !plan.RulesEngine.Description.IsUnknown() {
+			ruleRequest.SetDescription(plan.RulesEngine.Description.ValueString())
+		}
+
+		rulesEngineResponse, response, err = r.client.api.ApplicationsRequestRulesAPI.
+			UpdateApplicationRequestRule(ctx, edgeApplicationID.ValueInt64(), ruleID.ValueInt64()).
+			RequestPhaseRuleRequest(*ruleRequest).
+			Execute()
+	} else if apiPhase == "response" {
+		behaviors := buildBehaviorsResponseV4(plan.RulesEngine.Behaviors)
+		responseRuleRequest := azionapi.NewResponsePhaseRuleRequest(
+			plan.RulesEngine.Name.ValueString(),
+			criteria,
+			behaviors,
+		)
+
+		if !plan.RulesEngine.Active.IsNull() && !plan.RulesEngine.Active.IsUnknown() {
+			responseRuleRequest.SetActive(plan.RulesEngine.Active.ValueBool())
+		}
+		if !plan.RulesEngine.Description.IsNull() && !plan.RulesEngine.Description.IsUnknown() {
+			responseRuleRequest.SetDescription(plan.RulesEngine.Description.ValueString())
+		}
+
+		var responseRulesEngineResponse *azionapi.ResponsePhaseRuleResponse
+		responseRulesEngineResponse, response, err = r.client.api.ApplicationsResponseRulesAPI.
+			UpdateApplicationResponseRule(ctx, edgeApplicationID.ValueInt64(), ruleID.ValueInt64()).
+			ResponsePhaseRuleRequest(*responseRuleRequest).
+			Execute()
+		if err == nil {
+			rulesEngineResponse = &azionapi.RequestPhaseRuleResponse{
+				Data: convertResponseToRequestPhaseRule(responseRulesEngineResponse.Data),
+			}
+		}
 	}
 
-	if phase.ValueString() == "default" {
-		phase = types.StringValue("request")
-	}
-
-	rulesEngineResponse, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
-			rulesEngineResponse, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
-				return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPut(ctx, edgeApplicationID.ValueInt64(), phase.ValueString(), ruleID.ValueInt64()).UpdateRulesEngineRequest(rulesEngineRequest).Execute() //nolint
-			}, 5) // Maximum 5 retries
-
-			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
-			return
-		}
+		handleResourceAPIError(resp, response, err)
+		return
 	}
 
-	var behaviorResponse []RulesEngineBehaviorResourceModel
-	for _, behavior := range rulesEngineResponse.Results.Behaviors {
-		if behavior.RulesEngineBehaviorString != nil {
-			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
-				Name: types.StringValue(behavior.RulesEngineBehaviorString.GetName()),
-				TargetCaptureMatch: &TargetCaptureResource{
-					Target: types.StringValue(behavior.RulesEngineBehaviorString.GetTarget()),
-				},
-			})
-		} else {
-			target := behavior.RulesEngineBehaviorObject.GetTarget()
-			behaviorResponse = append(behaviorResponse, RulesEngineBehaviorResourceModel{
-				Name: types.StringValue(behavior.RulesEngineBehaviorObject.GetName()),
-				TargetCaptureMatch: &TargetCaptureResource{
-					CapturedArray: types.StringValue(target.GetCapturedArray()),
-					Subject:       types.StringValue(target.GetSubject()),
-					Regex:         types.StringValue(target.GetRegex()),
-				},
-			})
-		}
-	}
-
-	var criteriaResult []CriteriaResourceModel
-	for _, criterion := range rulesEngineResponse.Results.Criteria {
-		var criterionSet []RulesEngineResourceCriteria
-		for _, criterionGroup := range criterion {
-			criterionSet = append(criterionSet, RulesEngineResourceCriteria{
-				Variable:    types.StringValue(criterionGroup.GetVariable()),
-				Operator:    types.StringValue(criterionGroup.GetOperator()),
-				Conditional: types.StringValue(criterionGroup.GetConditional()),
-				InputValue:  types.StringValue(criterionGroup.GetInputValue()),
-			})
-		}
-		criteriaResult = append(criteriaResult, CriteriaResourceModel{
-			Entries: criterionSet,
-		})
-	}
-	rulesEngineResults := &RulesEngineResourceResults{
-		ID:          types.Int64Value(rulesEngineResponse.Results.GetId()),
-		Name:        types.StringValue(rulesEngineResponse.Results.GetName()),
-		Phase:       types.StringValue(rulesEngineResponse.Results.GetPhase()),
-		Behaviors:   behaviorResponse,
-		Criteria:    criteriaResult,
-		IsActive:    types.BoolValue(rulesEngineResponse.Results.GetIsActive()),
-		Order:       types.Int64Value(rulesEngineResponse.Results.GetOrder()),
-		Description: types.StringValue(rulesEngineResponse.Results.GetDescription()),
-	}
-
-	plan = RulesEngineResourceModel{
-		ApplicationID: edgeApplicationID,
-		ID:            plan.ID,
-		LastUpdated:   types.StringValue(time.Now().Format(time.RFC850)),
-		SchemaVersion: types.Int64Value(rulesEngineResponse.SchemaVersion),
-		RulesEngine:   rulesEngineResults,
-	}
+	plan = buildStateFromResponse(rulesEngineResponse.Data, edgeApplicationID, phase)
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -809,109 +636,75 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	if state.ApplicationID.IsNull() {
 		resp.Diagnostics.AddError(
-			"Edge Application ID error ",
-			"is not null",
+			"Edge Application ID error",
+			"Edge Application ID cannot be null",
 		)
 		return
 	}
 
 	if state.RulesEngine.ID.IsNull() {
 		resp.Diagnostics.AddError(
-			"Rules Engine ID error ",
-			"is not null",
+			"Rules Engine ID error",
+			"Rules Engine ID cannot be null",
 		)
 		return
 	}
 
 	if state.RulesEngine.Phase.IsNull() {
 		resp.Diagnostics.AddError(
-			"Phase error ",
-			"is not null",
+			"Phase error",
+			"Phase cannot be null",
 		)
 		return
 	}
 
-	// Default Rule cannot be deleted, so we just set its behavior to no_content and return
+	// Default Rule cannot be deleted, so we just set its behavior to deliver and return
 	if state.RulesEngine.Name == types.StringValue("Default Rule") {
-		var behaviors []edgeapplications.RulesEngineBehaviorEntry
-		RulesEngineBehaviorString := edgeapplications.RulesEngineBehaviorString{
-			Name:   "no_content",
-			Target: "",
-		}
-		behaviors = append(behaviors, edgeapplications.RulesEngineBehaviorEntry{RulesEngineBehaviorString: &RulesEngineBehaviorString})
-		var rulesEngineRequest edgeapplications.PatchRulesEngineRequest
-		rulesEngineRequest.Behaviors = behaviors
+		// Create a deliver behavior
+		deliverBehavior := azionapi.NewBehaviorNoArgs("deliver")
+		behaviorRequest := azionapi.BehaviorNoArgsAsRequestPhaseBehaviorRequest(deliverBehavior)
+		behaviors := []azionapi.RequestPhaseBehaviorRequest{behaviorRequest}
 
-		_, response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPatch(ctx, state.ApplicationID.ValueInt64(), "request", state.RulesEngine.ID.ValueInt64()).PatchRulesEngineRequest(rulesEngineRequest).Execute() //nolint
+		// Empty criteria for default
+		criteria := [][]azionapi.ApplicationCriterionFieldRequest{}
+
+		ruleRequest := azionapi.NewRequestPhaseRuleRequest(
+			"Default Rule",
+			criteria,
+			behaviors,
+		)
+
+		_, response, err := r.client.api.ApplicationsRequestRulesAPI.
+			UpdateApplicationRequestRule(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.ID.ValueInt64()).
+			RequestPhaseRuleRequest(*ruleRequest).
+			Execute()
 		if err != nil {
-			if response.StatusCode == 429 {
-				_, response, err = utils.RetryOn429(func() (*edgeapplications.RulesEngineIdResponse, *http.Response, error) {
-					return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdPatch(ctx, state.ApplicationID.ValueInt64(), "request", state.RulesEngine.ID.ValueInt64()).PatchRulesEngineRequest(rulesEngineRequest).Execute() //nolint
-				}, 5) // Maximum 5 retries
-
-				if response != nil {
-					defer response.Body.Close() // <-- Close the body here
-				}
-
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"API request failed after too many retries",
-					)
-					return
-				}
-			} else {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"err",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
-				return
-			}
+			handleResourceAPIError(resp, response, err)
+			return
 		}
+
 		resp.Diagnostics.AddWarning(
 			"Default Rule",
 			"Default Rule cannot be deleted. Behaviors were set to default values instead.",
 		)
 	} else {
-		response, err := r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdDelete(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.Phase.ValueString(), state.RulesEngine.ID.ValueInt64()).Execute() //nolint
+		phase := state.RulesEngine.Phase.ValueString()
+		var response *http.Response
+		var err error
+
+		if phase == "request" {
+			_, response, err = r.client.api.ApplicationsRequestRulesAPI.
+				DeleteApplicationRequestRule(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.ID.ValueInt64()).
+				Execute()
+		} else if phase == "response" {
+			_, response, err = r.client.api.ApplicationsResponseRulesAPI.
+				DeleteApplicationResponseRule(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.ID.ValueInt64()).
+				Execute()
+		}
+
 		if err != nil {
-			if response.StatusCode == 429 {
-				response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
-					return r.client.edgeApplicationsApi.EdgeApplicationsRulesEngineAPI.EdgeApplicationsEdgeApplicationIdRulesEnginePhaseRulesRuleIdDelete(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.Phase.ValueString(), state.RulesEngine.ID.ValueInt64()).Execute() //nolint
-				}, 5) // Maximum 5 retries
-
-				if response != nil {
-					defer response.Body.Close() // <-- Close the body here
-				}
-
-				if err != nil {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"API request failed after too many retries",
-					)
-					return
-				}
-			} else {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"err",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
+			if response != nil && response.StatusCode != http.StatusNotFound {
+				handleResourceAPIError(resp, response, err)
 				return
 			}
 		}
@@ -919,5 +712,410 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 }
 
 func (r *rulesEngineResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	parts := strings.Split(req.ID, "/")
+	if len(parts) != 3 {
+		resp.Diagnostics.AddError(
+			"Invalid import format",
+			"Expected format: {edge_application_id}/{phase}/{rule_id}",
+		)
+		return
+	}
+
+	applicationID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid application ID",
+			"Could not parse application ID",
+		)
+		return
+	}
+
+	phase := parts[1]
+
+	ruleID, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid rule ID",
+			"Could not parse rule ID",
+		)
+		return
+	}
+
+	var state RulesEngineResourceModel
+	state.ApplicationID = types.Int64Value(applicationID)
+	state.RulesEngine = &RulesEngineResourceResults{
+		ID:    types.Int64Value(ruleID),
+		Phase: types.StringValue(phase),
+	}
+	state.ID = types.StringValue(fmt.Sprintf("%d/%s/%d", applicationID, phase, ruleID))
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+}
+
+// Helper functions
+
+func buildCriteriaRequestV4(criteria []CriteriaResourceModel) [][]azionapi.ApplicationCriterionFieldRequest {
+	var result [][]azionapi.ApplicationCriterionFieldRequest
+	for _, criterion := range criteria {
+		var criterionGroup []azionapi.ApplicationCriterionFieldRequest
+		for _, c := range criterion.Entries {
+			criterionField := azionapi.NewApplicationCriterionFieldRequest(
+				c.Conditional.ValueString(),
+				c.Variable.ValueString(),
+				c.Operator.ValueString(),
+			)
+			if !c.Argument.IsNull() && !c.Argument.IsUnknown() {
+				arg := azionapi.ApplicationCriterionArgumentRequest{
+					String: c.Argument.ValueStringPointer(),
+				}
+				criterionField.SetArgument(arg)
+			}
+			criterionGroup = append(criterionGroup, *criterionField)
+		}
+		result = append(result, criterionGroup)
+	}
+	return result
+}
+
+func buildBehaviorsRequestV4(behaviors []RulesEngineBehaviorResourceModel) []azionapi.RequestPhaseBehaviorRequest {
+	var result []azionapi.RequestPhaseBehaviorRequest
+	for _, b := range behaviors {
+		if b.Attributes != nil && !b.Attributes.Value.IsNull() {
+			// Behavior with args
+			value := azionapi.BehaviorArgsAttributesValue{
+				String: b.Attributes.Value.ValueStringPointer(),
+			}
+			attrs := azionapi.NewBehaviorArgsAttributes(value)
+			argsBehavior := azionapi.NewBehaviorArgs(b.Type.ValueString(), *attrs)
+			behaviorRequest := azionapi.BehaviorArgsAsRequestPhaseBehaviorRequest(argsBehavior)
+			result = append(result, behaviorRequest)
+		} else if b.CaptureAttrs != nil {
+			// Capture behavior
+			captureAttrs := azionapi.NewBehaviorCaptureMatchGroupsAttributes(
+				b.CaptureAttrs.Subject.ValueString(),
+				b.CaptureAttrs.Regex.ValueString(),
+				b.CaptureAttrs.CapturedArray.ValueString(),
+			)
+			captureBehavior := azionapi.NewBehaviorCapture(b.Type.ValueString(), *captureAttrs)
+			behaviorRequest := azionapi.BehaviorCaptureAsRequestPhaseBehaviorRequest(captureBehavior)
+			result = append(result, behaviorRequest)
+		} else {
+			// No args behavior
+			noArgsBehavior := azionapi.NewBehaviorNoArgs(b.Type.ValueString())
+			behaviorRequest := azionapi.BehaviorNoArgsAsRequestPhaseBehaviorRequest(noArgsBehavior)
+			result = append(result, behaviorRequest)
+		}
+	}
+	return result
+}
+
+func buildBehaviorsResponseV4(behaviors []RulesEngineBehaviorResourceModel) []azionapi.ResponsePhaseBehaviorRequest {
+	var result []azionapi.ResponsePhaseBehaviorRequest
+	for _, b := range behaviors {
+		if b.Attributes != nil && !b.Attributes.Value.IsNull() {
+			// Behavior with args
+			value := azionapi.BehaviorArgsAttributesValue{
+				String: b.Attributes.Value.ValueStringPointer(),
+			}
+			attrs := azionapi.NewBehaviorArgsAttributes(value)
+			argsBehavior := azionapi.NewBehaviorArgs(b.Type.ValueString(), *attrs)
+			behaviorRequest := azionapi.BehaviorArgsAsResponsePhaseBehaviorRequest(argsBehavior)
+			result = append(result, behaviorRequest)
+		} else if b.CaptureAttrs != nil {
+			// Capture behavior
+			captureAttrs := azionapi.NewBehaviorCaptureMatchGroupsAttributes(
+				b.CaptureAttrs.Subject.ValueString(),
+				b.CaptureAttrs.Regex.ValueString(),
+				b.CaptureAttrs.CapturedArray.ValueString(),
+			)
+			captureBehavior := azionapi.NewBehaviorCapture(b.Type.ValueString(), *captureAttrs)
+			behaviorRequest := azionapi.BehaviorCaptureAsResponsePhaseBehaviorRequest(captureBehavior)
+			result = append(result, behaviorRequest)
+		} else {
+			// No args behavior
+			noArgsBehavior := azionapi.NewBehaviorNoArgs(b.Type.ValueString())
+			behaviorRequest := azionapi.BehaviorNoArgsAsResponsePhaseBehaviorRequest(noArgsBehavior)
+			result = append(result, behaviorRequest)
+		}
+	}
+	return result
+}
+
+func buildStateFromResponse(rule azionapi.RequestPhaseRule, applicationID types.Int64, phase types.String) RulesEngineResourceModel {
+	result := transformRuleToResultsModel(rule, phase.ValueString())
+	return RulesEngineResourceModel{
+		ApplicationID: applicationID,
+		ID:            types.StringValue(fmt.Sprintf("%d/%s/%d", applicationID.ValueInt64(), phase.ValueString(), result.ID.ValueInt64())),
+		LastUpdated:   types.StringValue(time.Now().Format(time.RFC850)),
+		RulesEngine:   result,
+	}
+}
+
+func transformRuleToResultsModel(rule azionapi.RequestPhaseRule, phase string) *RulesEngineResourceResults {
+	result := &RulesEngineResourceResults{
+		ID:    types.Int64Value(rule.GetId()),
+		Name:  types.StringValue(rule.GetName()),
+		Phase: types.StringValue(phase),
+		Order: types.Int64Value(rule.GetOrder()),
+	}
+
+	if rule.Active != nil {
+		result.Active = types.BoolValue(*rule.Active)
+	}
+	if rule.Description != nil {
+		result.Description = types.StringValue(*rule.Description)
+	}
+	if rule.LastEditor.IsSet() && rule.LastEditor.Get() != nil {
+		result.LastEditor = types.StringValue(*rule.LastEditor.Get())
+	}
+	if rule.LastModified.IsSet() && rule.LastModified.Get() != nil {
+		result.LastModified = types.StringValue(rule.LastModified.Get().Format(time.RFC3339))
+	}
+
+	// Transform criteria
+	for _, criterionGroup := range rule.Criteria {
+		var criterionSet []RulesEngineResourceCriteria
+		for _, c := range criterionGroup {
+			arg := getCriterionArgumentValue(c.Argument)
+			var argValue types.String
+			if arg == "" {
+				argValue = types.StringNull()
+			} else {
+				argValue = types.StringValue(arg)
+			}
+			criterionSet = append(criterionSet, RulesEngineResourceCriteria{
+				Conditional: types.StringValue(c.GetConditional()),
+				Variable:    types.StringValue(c.GetVariable()),
+				Operator:    types.StringValue(c.GetOperator()),
+				Argument:    argValue,
+			})
+		}
+		result.Criteria = append(result.Criteria, CriteriaResourceModel{
+			Entries: criterionSet,
+		})
+	}
+
+	// Transform behaviors
+	for _, b := range rule.Behaviors {
+		behavior := RulesEngineBehaviorResourceModel{}
+
+		if b.BehaviorArgs != nil {
+			behavior.Type = types.StringValue(b.BehaviorArgs.GetType())
+			val := getBehaviorArgsValueV4(b.BehaviorArgs.Attributes.Value)
+			behavior.Attributes = &BehaviorAttributesResourceModel{
+				Value: types.StringValue(val),
+			}
+		} else if b.BehaviorCapture != nil {
+			behavior.Type = types.StringValue(b.BehaviorCapture.GetType())
+			behavior.CaptureAttrs = &CaptureAttributesResourceModel{
+				Subject:       types.StringValue(b.BehaviorCapture.Attributes.GetSubject()),
+				Regex:         types.StringValue(b.BehaviorCapture.Attributes.GetRegex()),
+				CapturedArray: types.StringValue(b.BehaviorCapture.Attributes.GetCapturedArray()),
+			}
+		} else if b.BehaviorNoArgs != nil {
+			behavior.Type = types.StringValue(b.BehaviorNoArgs.GetType())
+		}
+		result.Behaviors = append(result.Behaviors, behavior)
+	}
+
+	return result
+}
+
+func transformRuleToResultsModelFromResponse(rule azionapi.ResponsePhaseRule, phase string) *RulesEngineResourceResults {
+	result := &RulesEngineResourceResults{
+		ID:    types.Int64Value(rule.GetId()),
+		Name:  types.StringValue(rule.GetName()),
+		Phase: types.StringValue(phase),
+		Order: types.Int64Value(rule.GetOrder()),
+	}
+
+	if rule.Active != nil {
+		result.Active = types.BoolValue(*rule.Active)
+	}
+	if rule.Description != nil {
+		result.Description = types.StringValue(*rule.Description)
+	}
+	if rule.LastEditor.IsSet() && rule.LastEditor.Get() != nil {
+		result.LastEditor = types.StringValue(*rule.LastEditor.Get())
+	}
+	if rule.LastModified.IsSet() && rule.LastModified.Get() != nil {
+		result.LastModified = types.StringValue(rule.LastModified.Get().Format(time.RFC3339))
+	}
+
+	// Transform criteria
+	for _, criterionGroup := range rule.Criteria {
+		var criterionSet []RulesEngineResourceCriteria
+		for _, c := range criterionGroup {
+			arg := getCriterionArgumentValue(c.Argument)
+			var argValue types.String
+			if arg == "" {
+				argValue = types.StringNull()
+			} else {
+				argValue = types.StringValue(arg)
+			}
+			criterionSet = append(criterionSet, RulesEngineResourceCriteria{
+				Conditional: types.StringValue(c.GetConditional()),
+				Variable:    types.StringValue(c.GetVariable()),
+				Operator:    types.StringValue(c.GetOperator()),
+				Argument:    argValue,
+			})
+		}
+		result.Criteria = append(result.Criteria, CriteriaResourceModel{
+			Entries: criterionSet,
+		})
+	}
+
+	// Transform behaviors
+	for _, b := range rule.Behaviors {
+		behavior := RulesEngineBehaviorResourceModel{}
+
+		if b.BehaviorArgs != nil {
+			behavior.Type = types.StringValue(b.BehaviorArgs.GetType())
+			val := getBehaviorArgsValueV4(b.BehaviorArgs.Attributes.Value)
+			behavior.Attributes = &BehaviorAttributesResourceModel{
+				Value: types.StringValue(val),
+			}
+		} else if b.BehaviorCapture != nil {
+			behavior.Type = types.StringValue(b.BehaviorCapture.GetType())
+			behavior.CaptureAttrs = &CaptureAttributesResourceModel{
+				Subject:       types.StringValue(b.BehaviorCapture.Attributes.GetSubject()),
+				Regex:         types.StringValue(b.BehaviorCapture.Attributes.GetRegex()),
+				CapturedArray: types.StringValue(b.BehaviorCapture.Attributes.GetCapturedArray()),
+			}
+		} else if b.BehaviorNoArgs != nil {
+			behavior.Type = types.StringValue(b.BehaviorNoArgs.GetType())
+		}
+		result.Behaviors = append(result.Behaviors, behavior)
+	}
+
+	return result
+}
+
+func getBehaviorArgsValueV4(value azionapi.BehaviorArgsAttributesValue) string {
+	if value.String != nil {
+		return *value.String
+	}
+	if value.Int64 != nil {
+		return fmt.Sprintf("%d", *value.Int64)
+	}
+	return ""
+}
+
+func getCriterionArgumentValue(arg azionapi.NullableApplicationCriterionArgument) string {
+	if !arg.IsSet() {
+		return ""
+	}
+	argValue := arg.Get()
+	if argValue == nil {
+		return ""
+	}
+	if argValue.String != nil {
+		return *argValue.String
+	}
+	if argValue.Int64 != nil {
+		return fmt.Sprintf("%d", *argValue.Int64)
+	}
+	return ""
+}
+
+func convertResponseToRequestPhaseRule(rule azionapi.ResponsePhaseRule) azionapi.RequestPhaseRule {
+	// Convert criteria
+	var criteria [][]azionapi.ApplicationCriterionField
+	for _, group := range rule.Criteria {
+		var criterionGroup []azionapi.ApplicationCriterionField
+		for _, c := range group {
+			criterionField := azionapi.NewApplicationCriterionField(
+				c.GetConditional(),
+				c.GetVariable(),
+				c.GetOperator(),
+			)
+			if c.Argument.IsSet() {
+				if arg := c.Argument.Get(); arg != nil {
+					criterionField.SetArgument(*arg)
+				}
+			}
+			criterionGroup = append(criterionGroup, *criterionField)
+		}
+		criteria = append(criteria, criterionGroup)
+	}
+
+	// Convert behaviors
+	var behaviors []azionapi.RequestPhaseBehavior
+	for _, b := range rule.Behaviors {
+		if b.BehaviorArgs != nil {
+			behaviors = append(behaviors, azionapi.BehaviorArgsAsRequestPhaseBehavior(b.BehaviorArgs))
+		} else if b.BehaviorCapture != nil {
+			behaviors = append(behaviors, azionapi.BehaviorCaptureAsRequestPhaseBehavior(b.BehaviorCapture))
+		} else if b.BehaviorNoArgs != nil {
+			behaviors = append(behaviors, azionapi.BehaviorNoArgsAsRequestPhaseBehavior(b.BehaviorNoArgs))
+		}
+	}
+
+	result := azionapi.NewRequestPhaseRuleWithDefaults()
+	result.SetId(rule.GetId())
+	result.SetName(rule.GetName())
+	result.SetCriteria(criteria)
+	result.SetBehaviors(behaviors)
+
+	if rule.Active != nil {
+		result.SetActive(*rule.Active)
+	}
+	if rule.Description != nil {
+		result.SetDescription(*rule.Description)
+	}
+	result.SetOrder(rule.GetOrder())
+	if rule.LastEditor.IsSet() {
+		if val := rule.LastEditor.Get(); val != nil {
+			result.SetLastEditor(*val)
+		}
+	}
+	if rule.LastModified.IsSet() {
+		if val := rule.LastModified.Get(); val != nil {
+			result.SetLastModified(*val)
+		}
+	}
+
+	return *result
+}
+
+func handleResourceAPIError(resp interface{}, response *http.Response, err error) {
+	switch r := resp.(type) {
+	case *resource.CreateResponse:
+		if response != nil && response.StatusCode == 429 {
+			r.Diagnostics.AddError(err.Error(), "Rate limited. Please retry.")
+		} else if response != nil {
+			bodyBytes, _ := io.ReadAll(response.Body)
+			r.Diagnostics.AddError(err.Error(), string(bodyBytes))
+		} else {
+			r.Diagnostics.AddError(err.Error(), "API request failed")
+		}
+	case *resource.ReadResponse:
+		if response != nil && response.StatusCode == 429 {
+			r.Diagnostics.AddError(err.Error(), "Rate limited. Please retry.")
+		} else if response != nil {
+			bodyBytes, _ := io.ReadAll(response.Body)
+			r.Diagnostics.AddError(err.Error(), string(bodyBytes))
+		} else {
+			r.Diagnostics.AddError(err.Error(), "API request failed")
+		}
+	case *resource.UpdateResponse:
+		if response != nil && response.StatusCode == 429 {
+			r.Diagnostics.AddError(err.Error(), "Rate limited. Please retry.")
+		} else if response != nil {
+			bodyBytes, _ := io.ReadAll(response.Body)
+			r.Diagnostics.AddError(err.Error(), string(bodyBytes))
+		} else {
+			r.Diagnostics.AddError(err.Error(), "API request failed")
+		}
+	case *resource.DeleteResponse:
+		if response != nil && response.StatusCode == 429 {
+			r.Diagnostics.AddError(err.Error(), "Rate limited. Please retry.")
+		} else if response != nil {
+			bodyBytes, _ := io.ReadAll(response.Body)
+			r.Diagnostics.AddError(err.Error(), string(bodyBytes))
+		} else {
+			r.Diagnostics.AddError(err.Error(), "API request failed")
+		}
+	}
 }

@@ -4,10 +4,9 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
-	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -24,8 +23,8 @@ type EdgeFirewallEdgeFunctionInstanceDataSource struct {
 }
 
 type EdgeFirewallEdgeFunctionInstanceDataSourceModel struct {
-	ID             types.String                            `tfsdk:"id"`
-	EdgeFirewallID types.String                            `tfsdk:"edge_firewall_id"`
+	ID             types.Int64                             `tfsdk:"id"`
+	EdgeFirewallID types.Int64                             `tfsdk:"edge_firewall_id"`
 	Data           EdgeFirewallEdgeFunctionInstanceResults `tfsdk:"data"`
 }
 
@@ -53,11 +52,11 @@ func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Metadata(ctx context.Contex
 func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
+			"id": schema.Int64Attribute{
 				Description: "Numeric identifier of the data source.",
 				Computed:    true,
 			},
-			"edge_firewall_id": schema.StringAttribute{
+			"edge_firewall_id": schema.Int64Attribute{
 				Description: "Identifier of the Edge Firewall",
 				Required:    true,
 			},
@@ -99,7 +98,7 @@ func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Schema(_ context.Context, _
 }
 
 func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var edgeFirewallID types.String
+	var edgeFirewallID types.Int64
 	var edgeFunctionInstanceID types.Int64
 
 	diagsEdgeFirewallId := req.Config.GetAttribute(ctx, path.Root("edge_firewall_id"), &edgeFirewallID)
@@ -110,13 +109,13 @@ func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Read(ctx context.Context, r
 
 	edgeFunctionInstanceID = types.Int64Value(0)
 
-	EdgeFirewallFunctionsInstanceResponse, response, err := e.client.edgeApi.FirewallsFunctionAPI.
-		RetrieveFirewallFunction(ctx, edgeFirewallID.ValueString(), strconv.FormatInt(edgeFunctionInstanceID.ValueInt64(), 10)).Execute() //nolint
+	EdgeFirewallFunctionsInstanceResponse, response, err := e.client.api.FirewallsFunctionAPI.
+		RetrieveFirewallFunction(ctx, edgeFirewallID.ValueInt64(), edgeFunctionInstanceID.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			EdgeFirewallFunctionsInstanceResponse, response, err = utils.RetryOn429(func() (*edgeapi.ResponseRetrieveFirewallFunctionInstance, *http.Response, error) {
-				return e.client.edgeApi.FirewallsFunctionAPI.
-					RetrieveFirewallFunction(ctx, edgeFirewallID.ValueString(), strconv.FormatInt(edgeFunctionInstanceID.ValueInt64(), 10)).Execute() //nolint
+			EdgeFirewallFunctionsInstanceResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallFunctionInstanceResponse, *http.Response, error) {
+				return e.client.api.FirewallsFunctionAPI.
+					RetrieveFirewallFunction(ctx, edgeFirewallID.ValueInt64(), edgeFunctionInstanceID.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -166,7 +165,7 @@ func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Read(ctx context.Context, r
 	}
 
 	EdgeFirewallsState := EdgeFirewallEdgeFunctionInstanceDataSourceModel{
-		ID:             types.StringValue("Get By Id Edge Firewall Edge Function Instance"),
+		ID:             edgeFirewallID,
 		EdgeFirewallID: edgeFirewallID,
 		Data:           GetEdgeFirewall,
 	}

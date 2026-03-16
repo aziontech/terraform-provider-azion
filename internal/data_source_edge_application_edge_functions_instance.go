@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
-	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -29,8 +29,8 @@ type EdgeApplicationsEdgeFunctionInstanceDataSource struct {
 }
 
 type EdgeFunctionsInstanceDataSourceModel struct {
-	ID            types.String                    `tfsdk:"id"`
-	ApplicationID types.String                    `tfsdk:"application_id"`
+	ID            types.Int64                     `tfsdk:"id"`
+	ApplicationID types.Int64                     `tfsdk:"application_id"`
 	TotalCount    types.Int64                     `tfsdk:"total_count"`
 	Results       []EdgeFunctionsInstanceResponse `tfsdk:"results"`
 }
@@ -59,7 +59,7 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Metadata(ctx context.Co
 func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
+			"id": schema.Int64Attribute{
 				Description: "Numeric identifier of the data source.",
 				Computed:    true,
 			},
@@ -113,7 +113,7 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Schema(_ context.Contex
 func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var Page types.Int64
 	var PageSize types.Int64
-	var EdgeApplicationId types.String
+	var EdgeApplicationId types.Int64
 	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
 	resp.Diagnostics.Append(diagsPage...)
 	if resp.Diagnostics.HasError() {
@@ -139,11 +139,11 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Contex
 		PageSize = types.Int64Value(10)
 	}
 
-	edgeFunctionInstancesResponse, response, err := d.client.edgeApi.ApplicationsFunctionAPI.ListApplicationFunctionInstances(ctx, EdgeApplicationId.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+	edgeFunctionInstancesResponse, response, err := d.client.api.ApplicationsFunctionAPI.ListApplicationFunctionInstances(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*edgeapi.PaginatedApplicationFunctionInstanceList, *http.Response, error) {
-				return d.client.edgeApi.ApplicationsFunctionAPI.ListApplicationFunctionInstances(ctx, EdgeApplicationId.ValueString()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+			edgeFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedFunctionInstanceList, *http.Response, error) {
+				return d.client.api.ApplicationsFunctionAPI.ListApplicationFunctionInstances(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -198,7 +198,7 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Contex
 		})
 	}
 
-	edgeApplicationsEdgeFunctionsInstanceState.ID = types.StringValue("Get All Application Function Instances")
+	edgeApplicationsEdgeFunctionsInstanceState.ID = types.Int64Value(0)
 	diags := resp.State.Set(ctx, &edgeApplicationsEdgeFunctionsInstanceState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
