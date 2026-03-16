@@ -24,24 +24,23 @@ locals {
 # Temporarily commented out due to API/SDK cache field mismatch
 # resource "azion_edge_application_main_setting" "testfunc" {
 #   edge_application = {
-#     name : "Terraform Main Settings ${local.name_suffix}"
-#     supported_ciphers : "all"
-#     delivery_protocol : "http"
-#     http_port : [80]
-#     https_port : [443]
-#     minimum_tls_version : ""
-#     debug_rules : false
-#     edge_functions : var.edge_functions_module
-#     image_optimization : false
-#     http3 : false
-#     application_acceleration : false
-#     l2_caching : false
-#     load_balancer : false
-#     raw_logs : true
-#     device_detection : false
-#     raw_logs : false
-#     active : true
-#     debug : true
+#     name   = "Terraform Main Settings ${local.name_suffix}"
+#     active = true
+#     debug  = true
+#     modules = {
+#       edge_cache = {
+#         enabled = true
+#       }
+#       functions = {
+#         enabled = var.edge_functions_module
+#       }
+#       application_accelerator = {
+#         enabled = false
+#       }
+#       image_processor = {
+#         enabled = false
+#       }
+#     }
 #   }
 # }
 
@@ -65,16 +64,21 @@ locals {
 
 # resource "azion_edge_application_cache_setting" "testfunc" {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
-#   cache_settings = {
-#     name                               = "Terraform Cache Setting ${local.name_suffix}"
-#     browser_cache_settings             = "override"
-#     browser_cache_settings_maximum_ttl = 20
-#     cdn_cache_settings                 = "override"
-#     cdn_cache_settings_maximum_ttl     = 60
-#     adaptive_delivery_action           = "ignore"
-#     cache_by_query_string              = "ignore"
-#     cache_by_cookies                   = "ignore"
-#     enable_stale_cache                 = true
+#   cache_setting = {
+#     name = "Terraform Cache Setting ${local.name_suffix}"
+#     browser_cache = {
+#       behavior = "override"
+#       max_age  = 20
+#     }
+#     modules = {
+#       cache = {
+#         behavior = "override"
+#         max_age  = 60
+#         stale_cache = {
+#           enabled = true
+#         }
+#       }
+#     }
 #   }
 #   depends_on = [
 #     azion_edge_application_main_setting.testfunc,
@@ -86,23 +90,12 @@ locals {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   results = {
 #     name        = "Default Rule"
-#     phase       = "default"
+#     phase       = "request"
 #     description = ""
 #     behaviors = [
 #       {
-#         name = "set_origin",
-#         target_object = {
-#           target = azion_edge_application_origin.testfunc.id
-#         }
-#       },
-#       {
-#         name = "capture_match_groups",
-#         target_object = {
-#           "captured_array" : "Terraform",
-#           "subject" : "$${uri}",
-#           "regex" : "1101"
-#         }
-#       },
+#         type = "deliver"
+#       }
 #     ]
 #     criteria = [
 #       {
@@ -111,7 +104,7 @@ locals {
 #             variable    = "$${uri}"
 #             operator    = "starts_with"
 #             conditional = "if"
-#             input_value = "/"
+#             argument    = "/"
 #           },
 #         ]
 #       }
@@ -132,15 +125,15 @@ locals {
 #     description = "My rule engine"
 #     behaviors = [
 #       {
-#         name = "add_request_header",
-#         target_object = {
-#           target = "X-Cache: 100"
+#         type = "add_request_header"
+#         attributes = {
+#           value = "X-Cache: 100"
 #         }
 #       },
 #       {
-#         name = "filter_request_header",
-#         target_object = {
-#           target = "X-Cache"
+#         type = "filter_request_header"
+#         attributes = {
+#           value = "X-Cache"
 #         }
 #       }
 #     ]
@@ -151,7 +144,7 @@ locals {
 #             variable    = "$${uri}"
 #             operator    = "is_equal"
 #             conditional = "if"
-#             input_value = "/"
+#             argument    = "/"
 #           }
 #         ]
 #       }

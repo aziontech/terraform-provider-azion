@@ -447,3 +447,49 @@ When generating a new resource or data source from OpenAPI:
 10. **Handle JSON fields**: Use `utils.ConvertStringToInterface` and `utils.ConvertInterfaceToString`
 11. **Register in provider.go**: Add to DataSources() or Resources()
 12. **Generate documentation**: Create docs and examples
+13. **Update example/test files**: After any schema changes, update the corresponding files
+
+---
+
+## Updating Example and Test Files After Schema Changes
+
+**CRITICAL**: Whenever you modify the schema or structure of a resource or data source, you MUST also update the corresponding example and test files to match the new format.
+
+### Files to Update
+
+When changing a resource/data source schema, check and update these files:
+
+| File Type | Location | Purpose |
+|-----------|----------|---------|
+| Data Source Examples | `examples/data-sources/azion_<resource_name>/data-source.tf` | Example usage for data sources |
+| Resource Examples | `examples/resources/azion_<resource_name>/resource.tf` | Example usage for resources |
+| Functional Tests | `func-tests/main.tf` | Integration tests (if applicable) |
+| Documentation | `docs/data-sources/<resource_name>.md` | Data source documentation |
+| Documentation | `docs/resources/<resource_name>.md` | Resource documentation |
+
+### Common Schema Changes Requiring Example Updates
+
+- **Attribute name changes**: Update all references to the old attribute name
+- **Nested structure changes**: Update to reflect new nesting hierarchy
+- **Type changes**: Ensure example values match the new type (string vs int, etc.)
+- **Required/Optional changes**: Add or remove required fields from examples
+- **Block format changes**: Update from flat attributes to nested blocks or vice versa
+
+### Example Update Process
+
+1. After modifying a resource schema, locate the corresponding example files
+2. Update the example Terraform configuration to use the new schema format
+3. Ensure all required attributes are present in the example
+4. Verify the example is valid by running `terraform validate` in the example directory
+5. Update documentation to reflect the new schema
+
+### Validation Command
+
+To verify all example files are valid after changes:
+
+```bash
+for dir in $(find ./examples -type f -name '*.tf' -exec dirname {} \; | sort -u); do
+  echo "===> Validating: $dir <==="
+  (cd "$dir" && terraform init -backend=false && terraform validate)
+done
+```
