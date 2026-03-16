@@ -4,6 +4,7 @@ on:  [pull_request]
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   # Ensure the project can build first
