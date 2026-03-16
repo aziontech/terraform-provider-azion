@@ -36,7 +36,7 @@ resource "azion_edge_application_rule_engine" "example_with_args" {
     phase       = "request"
     active      = true
     description = "Rule with behavior that has arguments"
-    
+
     behaviors = [
       {
         type = "add_request_header"
@@ -45,7 +45,7 @@ resource "azion_edge_application_rule_engine" "example_with_args" {
         }
       }
     ]
-    
+
     criteria = [
       {
         entries = [
@@ -68,18 +68,18 @@ resource "azion_edge_application_rule_engine" "example_capture" {
     name        = "Capture Match Groups Example"
     phase       = "request"
     description = "Rule with capture_match_groups behavior"
-    
+
     behaviors = [
       {
         type = "capture_match_groups"
         capture_attributes = {
-          subject       = "$${uri}"
-          regex         = "/api/([a-z]+)"
+          subject        = "$${uri}"
+          regex          = "/api/([a-z]+)"
           captured_array = "api_paths"
         }
       }
     ]
-    
+
     criteria = [
       {
         entries = [
@@ -102,7 +102,7 @@ resource "azion_edge_application_rule_engine" "example_response" {
     name        = "Response Phase Example"
     phase       = "response"
     description = "Response phase rule"
-    
+
     behaviors = [
       {
         type = "add_request_header"
@@ -111,7 +111,7 @@ resource "azion_edge_application_rule_engine" "example_response" {
         }
       }
     ]
-    
+
     criteria = [
       {
         entries = [
