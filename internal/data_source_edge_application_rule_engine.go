@@ -263,11 +263,15 @@ func (r *RuleEngineDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			}
 			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(err.Error(), bodyString)
+			response.Body.Close()
 			return
 		} else {
 			resp.Diagnostics.AddError(err.Error(), "API request failed")
 			return
 		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 
 	state := RuleEngineDataSourceModel{

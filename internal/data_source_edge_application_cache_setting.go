@@ -33,7 +33,7 @@ type CacheSettingDataSourceModel struct {
 	ID            types.Int64        `tfsdk:"id"`
 }
 
-// Model structs matching V4 API structure
+// Model structs matching V4 API structure.
 type CacheSettingModel struct {
 	ID           types.Int64                `tfsdk:"id"`
 	Name         types.String               `tfsdk:"name"`
@@ -344,7 +344,7 @@ func retrieveCacheSettingRawDS(ctx context.Context, client *apiClient, applicati
 	return &wrapper.Data, nil
 }
 
-// Transform function for converting SDK response to model
+// Transform function for converting SDK response to model.
 func transformCacheSettingToModel(cs *azionapi.CacheSetting) *CacheSettingModel {
 	if cs == nil {
 		return nil

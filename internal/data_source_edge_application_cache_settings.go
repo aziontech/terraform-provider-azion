@@ -262,8 +262,14 @@ func (d *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 			}
 			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(err.Error(), bodyString)
+			if response != nil {
+				response.Body.Close()
+			}
 			return
 		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 
 	// Build state

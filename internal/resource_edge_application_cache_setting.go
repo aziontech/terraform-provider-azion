@@ -35,7 +35,7 @@ type edgeApplicationCacheSettingsResource struct {
 	client *apiClient
 }
 
-// Resource model matching V4 API structure
+// Resource model matching V4 API structure.
 type EdgeApplicationCacheSettingsResourceModel struct {
 	ApplicationID types.Int64                `tfsdk:"edge_application_id"`
 	CacheSetting  *CacheSettingResourceModel `tfsdk:"cache_setting"`
@@ -336,8 +336,12 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 			}
 			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(err.Error(), bodyString)
+			response.Body.Close()
 			return
 		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 
 	// Build result starting with plan values (prevents inconsistency errors when nested objects were null)
@@ -634,8 +638,12 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 			}
 			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(err.Error(), bodyString)
+			response.Body.Close()
 			return
 		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 
 	// Build result starting with plan values (prevents inconsistency errors when nested objects were null)
@@ -843,8 +851,12 @@ func (r *edgeApplicationCacheSettingsResource) Delete(ctx context.Context, req r
 			}
 			bodyString := string(bodyBytes)
 			resp.Diagnostics.AddError(err.Error(), bodyString)
+			response.Body.Close()
 			return
 		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 }
 
@@ -896,7 +908,7 @@ func (r *edgeApplicationCacheSettingsResource) ImportState(ctx context.Context, 
 	resp.Diagnostics.Append(diags...)
 }
 
-// Helper: Build Modules Request
+// Helper: Build Modules Request.
 func buildModulesRequest(modules *CacheSettingsModulesResourceModel) *azionapi.CacheSettingsModulesRequest {
 	modulesRequest := azionapi.NewCacheSettingsModulesRequest()
 
@@ -1030,7 +1042,7 @@ func buildDevicesRequest(devices *CacheVaryByDevicesResourceModel) *azionapi.Cac
 	return request
 }
 
-// Transform API response to resource model
+// Transform API response to resource model.
 func transformCacheSettingResponseToResourceModel(cs *azionapi.CacheSetting) *CacheSettingResourceModel {
 	if cs == nil {
 		return nil

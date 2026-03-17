@@ -298,8 +298,12 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 					err.Error(),
 					bodyString,
 				)
+				response.Body.Close()
 				return
 			}
+		}
+		if response != nil {
+			defer response.Body.Close()
 		}
 
 		var ruleID int64
@@ -337,6 +341,9 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			UpdateApplicationRequestRule(ctx, edgeApplicationID.ValueInt64(), ruleID).
 			RequestPhaseRuleRequest(*ruleRequest).
 			Execute()
+		if response != nil {
+			defer response.Body.Close()
+		}
 		if err != nil {
 			handleResourceAPIError(resp, response, err)
 			return
@@ -368,6 +375,9 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 				CreateApplicationRequestRule(ctx, edgeApplicationID.ValueInt64()).
 				RequestPhaseRuleRequest(*ruleRequest).
 				Execute()
+			if response != nil {
+				defer response.Body.Close()
+			}
 		} else if phaseStr == "response" {
 			behaviors := buildBehaviorsResponseV4(plan.RulesEngine.Behaviors)
 			responseRuleRequest := azionapi.NewResponsePhaseRuleRequest(
@@ -388,6 +398,9 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 				CreateApplicationResponseRule(ctx, edgeApplicationID.ValueInt64()).
 				ResponsePhaseRuleRequest(*responseRuleRequest).
 				Execute()
+			if response != nil {
+				defer response.Body.Close()
+			}
 			if err == nil {
 				// Convert response to request phase rule response format for consistent handling
 				rulesEngineResponse = &azionapi.RequestPhaseRuleResponse{
@@ -465,6 +478,9 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		ruleResponse, response, err := r.client.api.ApplicationsRequestRulesAPI.
 			RetrieveApplicationRequestRule(ctx, edgeApplicationID, ruleID).
 			Execute()
+		if response != nil {
+			defer response.Body.Close()
+		}
 		if err != nil {
 			if response.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
@@ -478,6 +494,9 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		ruleResponse, response, err := r.client.api.ApplicationsResponseRulesAPI.
 			RetrieveApplicationResponseRule(ctx, edgeApplicationID, ruleID).
 			Execute()
+		if response != nil {
+			defer response.Body.Close()
+		}
 		if err != nil {
 			if response.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
@@ -585,6 +604,9 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 			UpdateApplicationRequestRule(ctx, edgeApplicationID.ValueInt64(), ruleID.ValueInt64()).
 			RequestPhaseRuleRequest(*ruleRequest).
 			Execute()
+		if response != nil {
+			defer response.Body.Close()
+		}
 	} else if apiPhase == "response" {
 		behaviors := buildBehaviorsResponseV4(plan.RulesEngine.Behaviors)
 		responseRuleRequest := azionapi.NewResponsePhaseRuleRequest(
@@ -605,6 +627,9 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 			UpdateApplicationResponseRule(ctx, edgeApplicationID.ValueInt64(), ruleID.ValueInt64()).
 			ResponsePhaseRuleRequest(*responseRuleRequest).
 			Execute()
+		if response != nil {
+			defer response.Body.Close()
+		}
 		if err == nil {
 			rulesEngineResponse = &azionapi.RequestPhaseRuleResponse{
 				Data: convertResponseToRequestPhaseRule(responseRulesEngineResponse.Data),
@@ -678,6 +703,9 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 			UpdateApplicationRequestRule(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.ID.ValueInt64()).
 			RequestPhaseRuleRequest(*ruleRequest).
 			Execute()
+		if response != nil {
+			defer response.Body.Close()
+		}
 		if err != nil {
 			handleResourceAPIError(resp, response, err)
 			return
@@ -700,6 +728,10 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 			_, response, err = r.client.api.ApplicationsResponseRulesAPI.
 				DeleteApplicationResponseRule(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.ID.ValueInt64()).
 				Execute()
+		}
+
+		if response != nil {
+			defer response.Body.Close()
 		}
 
 		if err != nil {
