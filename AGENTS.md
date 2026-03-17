@@ -11,6 +11,7 @@ For detailed documentation on specific packages, see the `agents/` folder:
 
 - **[agents/APPLICATIONS.md](agents/APPLICATIONS.md)** - Edge Applications (Main Settings)
 - **[agents/CACHE_SETTINGS.md](agents/CACHE_SETTINGS.md)** - Cache Settings
+- **[agents/FUNCTIONS.md](agents/FUNCTIONS.md)** - Edge Functions
 - **[agents/RULES_ENGINE.md](agents/RULES_ENGINE.md)** - Rules Engine
 
 ---
@@ -435,7 +436,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 
 When generating a new resource or data source from OpenAPI:
 
-1. **Identify the correct SDK**: V4 (`edge-api`) or legacy (`edgeapplications`, etc.)
+1. **Identify the correct SDK**: V4 (`azion-api`) or legacy (`edgeapplications`, etc.)
 2. **Determine ID types**: `int64` or `string` based on SDK
 3. **Determine update method**: PUT (full update) or PATCH (partial update)
 4. **Create model structs**: With appropriate `tfsdk` tags
