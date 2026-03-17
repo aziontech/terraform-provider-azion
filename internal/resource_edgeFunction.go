@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -156,22 +156,22 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	edgeFunction := sdk.EdgeFunctionsRequest{
+	edgeFunction := azionapi.FunctionsRequest{
 		Name: plan.EdgeFunction.Name.ValueString(),
 		Code: plan.EdgeFunction.Code.ValueString(),
 	}
 
 	// Only include optional fields if they are set
 	if !plan.EdgeFunction.Active.IsNull() && !plan.EdgeFunction.Active.IsUnknown() {
-		edgeFunction.Active = sdk.PtrBool(plan.EdgeFunction.Active.ValueBool())
+		edgeFunction.SetActive(plan.EdgeFunction.Active.ValueBool())
 	}
 
 	if !plan.EdgeFunction.ExecutionEnvironment.IsNull() && !plan.EdgeFunction.ExecutionEnvironment.IsUnknown() {
-		edgeFunction.ExecutionEnvironment = sdk.PtrString(plan.EdgeFunction.ExecutionEnvironment.ValueString())
+		edgeFunction.SetExecutionEnvironment(plan.EdgeFunction.ExecutionEnvironment.ValueString())
 	}
 
 	if !plan.EdgeFunction.Runtime.IsNull() && !plan.EdgeFunction.Runtime.IsUnknown() {
-		edgeFunction.Runtime = sdk.PtrString(plan.EdgeFunction.Runtime.ValueString())
+		edgeFunction.SetRuntime(plan.EdgeFunction.Runtime.ValueString())
 	}
 
 	if !plan.EdgeFunction.DefaultArgs.IsNull() && !plan.EdgeFunction.DefaultArgs.IsUnknown() {
@@ -183,14 +183,14 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 			)
 			return
 		}
-		edgeFunction.DefaultArgs = planJsonArgs
+		edgeFunction.SetDefaultArgs(planJsonArgs)
 	}
 
-	createEdgeFunction, response, err := r.client.edgeApi.FunctionsAPI.CreateFunction(ctx).EdgeFunctionsRequest(edgeFunction).Execute() //nolint
+	createEdgeFunction, response, err := r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			createEdgeFunction, response, err = utils.RetryOn429(func() (*sdk.FunctionResponse, *http.Response, error) {
-				return r.client.edgeApi.FunctionsAPI.CreateFunction(ctx).EdgeFunctionsRequest(edgeFunction).Execute() //nolint
+			createEdgeFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
+				return r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -284,15 +284,15 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 		}
 	}
 
-	getEdgeFunction, response, err := r.client.edgeApi.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionId).Execute() //nolint
+	getEdgeFunction, response, err := r.client.api.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 		if response.StatusCode == 429 {
-			getEdgeFunction, response, err = utils.RetryOn429(func() (*sdk.FunctionResponse, *http.Response, error) {
-				return r.client.edgeApi.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionId).Execute() //nolint
+			getEdgeFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
+				return r.client.api.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -376,22 +376,27 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	updateEdgeFunctionRequest := sdk.PatchedEdgeFunctionsRequest{
-		Name: plan.EdgeFunction.Name.ValueStringPointer(),
-		Code: plan.EdgeFunction.Code.ValueStringPointer(),
-	}
+	updateEdgeFunctionRequest := azionapi.PatchedFunctionsRequest{}
 
 	// Only include optional fields if they are set
+	if !plan.EdgeFunction.Name.IsNull() && !plan.EdgeFunction.Name.IsUnknown() {
+		updateEdgeFunctionRequest.SetName(plan.EdgeFunction.Name.ValueString())
+	}
+
+	if !plan.EdgeFunction.Code.IsNull() && !plan.EdgeFunction.Code.IsUnknown() {
+		updateEdgeFunctionRequest.SetCode(plan.EdgeFunction.Code.ValueString())
+	}
+
 	if !plan.EdgeFunction.Active.IsNull() && !plan.EdgeFunction.Active.IsUnknown() {
-		updateEdgeFunctionRequest.Active = plan.EdgeFunction.Active.ValueBoolPointer()
+		updateEdgeFunctionRequest.SetActive(plan.EdgeFunction.Active.ValueBool())
 	}
 
 	if !plan.EdgeFunction.ExecutionEnvironment.IsNull() && !plan.EdgeFunction.ExecutionEnvironment.IsUnknown() {
-		updateEdgeFunctionRequest.ExecutionEnvironment = plan.EdgeFunction.ExecutionEnvironment.ValueStringPointer()
+		updateEdgeFunctionRequest.SetExecutionEnvironment(plan.EdgeFunction.ExecutionEnvironment.ValueString())
 	}
 
 	if !plan.EdgeFunction.Runtime.IsNull() && !plan.EdgeFunction.Runtime.IsUnknown() {
-		updateEdgeFunctionRequest.Runtime = plan.EdgeFunction.Runtime.ValueStringPointer()
+		updateEdgeFunctionRequest.SetRuntime(plan.EdgeFunction.Runtime.ValueString())
 	}
 
 	if !plan.EdgeFunction.DefaultArgs.IsNull() && !plan.EdgeFunction.DefaultArgs.IsUnknown() {
@@ -403,7 +408,7 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 			)
 			return
 		}
-		updateEdgeFunctionRequest.DefaultArgs = requestJsonArgs
+		updateEdgeFunctionRequest.SetDefaultArgs(requestJsonArgs)
 	}
 
 	var edgeFunctionId int64
@@ -421,11 +426,11 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	updateEdgeFunction, response, err := r.client.edgeApi.FunctionsAPI.PartialUpdateFunction(ctx, edgeFunctionId).PatchedEdgeFunctionsRequest(updateEdgeFunctionRequest).Execute() //nolint
+	updateEdgeFunction, response, err := r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, edgeFunctionId).PatchedFunctionsRequest(updateEdgeFunctionRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			updateEdgeFunction, response, err = utils.RetryOn429(func() (*sdk.FunctionResponse, *http.Response, error) {
-				return r.client.edgeApi.FunctionsAPI.PartialUpdateFunction(ctx, edgeFunctionId).PatchedEdgeFunctionsRequest(updateEdgeFunctionRequest).Execute() //nolint
+			updateEdgeFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
+				return r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, edgeFunctionId).PatchedFunctionsRequest(updateEdgeFunctionRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -519,11 +524,11 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 		}
 	}
 
-	_, response, err := r.client.edgeApi.FunctionsAPI.DeleteFunction(ctx, edgeFunctionId).Execute() //nolint
+	_, response, err := r.client.api.FunctionsAPI.DeleteFunction(ctx, edgeFunctionId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*sdk.DeleteResponse, *http.Response, error) {
-				return r.client.edgeApi.FunctionsAPI.DeleteFunction(ctx, edgeFunctionId).Execute() //nolint
+			_, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
+				return r.client.api.FunctionsAPI.DeleteFunction(ctx, edgeFunctionId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {

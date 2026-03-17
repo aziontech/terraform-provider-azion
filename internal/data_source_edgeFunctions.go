@@ -2,10 +2,10 @@ package provider
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"net/http"
 
-	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -138,11 +138,11 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 }
 
 func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	functionsResponse, response, err := d.client.edgeApi.FunctionsAPI.ListFunctions(ctx).Execute() //nolint
+	functionsResponse, response, err := d.client.api.FunctionsAPI.ListFunctions(ctx).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			functionsResponse, response, err = utils.RetryOn429(func() (*edgeapi.PaginatedEdgeFunctionsList, *http.Response, error) {
-				return d.client.edgeApi.FunctionsAPI.ListFunctions(ctx).Execute() //nolint
+			functionsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedFunctionsList, *http.Response, error) {
+				return d.client.api.FunctionsAPI.ListFunctions(ctx).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -157,18 +157,8 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			usrMsg, errMsg := errPrintFunctions(response.StatusCode, err)
+			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
 	}
@@ -217,4 +207,21 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+func errPrintFunctions(errCode int, err error) (string, string) {
+	var usrMsg string
+	switch errCode {
+	case 400:
+		usrMsg = "Bad Request"
+	case 401:
+		usrMsg = "Unauthorized Token"
+	case 404:
+		usrMsg = "No Edge Functions found"
+	default:
+		usrMsg = err.Error()
+	}
+
+	errMsg := fmt.Sprintf("%d - %s", errCode, usrMsg)
+	return usrMsg, errMsg
 }
