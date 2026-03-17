@@ -436,7 +436,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 
 When generating a new resource or data source from OpenAPI:
 
-1. **Identify the correct SDK**: V4 (`edge-api`) or legacy (`edgeapplications`, etc.)
+1. **Identify the correct SDK**: V4 (`azion-api`) or legacy (`edgeapplications`, etc.)
 2. **Determine ID types**: `int64` or `string` based on SDK
 3. **Determine update method**: PUT (full update) or PATCH (partial update)
 4. **Create model structs**: With appropriate `tfsdk` tags
