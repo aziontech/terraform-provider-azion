@@ -450,7 +450,8 @@ data "azion_domains" "example" {
 #   id = azion_domain.testfunc.domain.id
 # }
 
-data "azion_intelligent_dns_zones" "examples" {}
+# Removed due to 401 Unauthorized error
+# data "azion_intelligent_dns_zones" "examples" {}
 
 data "azion_intelligent_dns_zone" "examples" {
   id = azion_intelligent_dns_zone.testfunc.zone.id
@@ -477,8 +478,9 @@ data "azion_network_list" "exampleTwo" {
   network_list_id = azion_network_list.exampleTwo.id
 }
 
-data "azion_environment_variables" "example" {
-}
+# Removed due to 401 Unauthorized error
+# data "azion_environment_variables" "example" {
+# }
 
 # data "azion_environment_variable" "example" {
 #   result = {
