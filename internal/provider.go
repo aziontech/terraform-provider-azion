@@ -101,14 +101,14 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionEdgeApplicationCacheSettings,
 		dataSourceAzionNetworkList,
 		dataSourceAzionNetworkLists,
-		dataSourceAzionEdgeFirewall,
-		dataSourceAzionEdgeFirewalls,
+		dataSourceAzionFirewall,
+		dataSourceAzionFirewalls,
 		dataSourceAzionVariable,
 		dataSourceAzionVariables,
 		dataSourceAzionWafRuleSet,
 		dataSourceAzionWafRuleSets,
-		dataSourceAzionEdgeFirewallEdgeFunctionsInstance,
-		dataSourceAzionEdgeFirewallEdgeFunctionInstance,
+		dataSourceAzionFirewallFunctionsInstance,
+		dataSourceAzionFirewallFunctionInstance,
 		dataSourceAzionWafDomains,
 	}
 }
@@ -127,10 +127,10 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewEdgeApplicationCacheSettingsResource,
 		NewDigitalCertificateResource,
 		NetworkListResource,
-		EdgeFirewallResource,
+		FirewallMainSettingResource,
 		EnvironmentVariableResource,
 		WafRuleSetResource,
-		NewEdgeFirewallEdgeFunctionsInstanceResource,
+		NewFirewallFunctionsInstanceResource,
 	}
 }
 

@@ -1,6 +1,6 @@
-resource "azion_edge_firewall_main_setting" "example" {
+resource "azion_firewall_main_setting" "example" {
   data = {
-    name   = "New EdgeFirewall in terraform"
+    name   = "New Firewall in terraform"
     active = true
     debug  = false
 

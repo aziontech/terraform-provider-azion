@@ -1,1 +1,1 @@
-terraform import azion_edge_firewall_main_setting.example edge_firewall_id
+terraform import azion_firewall_main_setting.example firewall_id

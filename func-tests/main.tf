@@ -259,13 +259,14 @@ resource "azion_edge_function" "testfunc2firewall" {
 #   ]
 # }
 
-resource "azion_digital_certificate" "testfunc" {
-  certificate_result = {
-    name                = "Terraform Digital Certificate ${local.name_suffix}"
-    certificate_content = file("${path.module}/mock_files/dummy_certificate.pem")
-    private_key         = file("${path.module}/mock_files/dummy_private_key.pem")
-  }
-}
+# Removed due to 401 Unauthorized error
+# resource "azion_digital_certificate" "testfunc" {
+#   certificate_result = {
+#     name                = "Terraform Digital Certificate ${local.name_suffix}"
+#     certificate_content = file("${path.module}/mock_files/dummy_certificate.pem")
+#     private_key         = file("${path.module}/mock_files/dummy_private_key.pem")
+#   }
+# }
 
 resource "azion_intelligent_dns_zone" "testfunc" {
   zone = {
@@ -437,9 +438,10 @@ data "azion_edge_functions" "example" {
 data "azion_digital_certificates" "example" {
 }
 
-data "azion_digital_certificate" "example" {
-  certificate_id = azion_digital_certificate.testfunc.certificate_result.certificate_id
-}
+# Removed due to dependency on azion_digital_certificate.testfunc which has 401 Unauthorized error
+# data "azion_digital_certificate" "example" {
+#   certificate_id = azion_digital_certificate.testfunc.certificate_result.certificate_id
+# }
 
 data "azion_domains" "example" {
 }

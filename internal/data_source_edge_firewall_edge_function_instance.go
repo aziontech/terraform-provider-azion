@@ -14,21 +14,21 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func dataSourceAzionEdgeFirewallEdgeFunctionInstance() datasource.DataSource {
-	return &EdgeFirewallEdgeFunctionInstanceDataSource{}
+func dataSourceAzionFirewallFunctionInstance() datasource.DataSource {
+	return &FirewallFunctionInstanceDataSource{}
 }
 
-type EdgeFirewallEdgeFunctionInstanceDataSource struct {
+type FirewallFunctionInstanceDataSource struct {
 	client *apiClient
 }
 
-type EdgeFirewallEdgeFunctionInstanceDataSourceModel struct {
-	ID             types.Int64                             `tfsdk:"id"`
-	EdgeFirewallID types.Int64                             `tfsdk:"edge_firewall_id"`
-	Data           EdgeFirewallEdgeFunctionInstanceResults `tfsdk:"data"`
+type FirewallFunctionInstanceDataSourceModel struct {
+	ID         types.Int64                  `tfsdk:"id"`
+	FirewallID types.Int64                  `tfsdk:"firewall_id"`
+	Data       FirewallFunctionInstanceData `tfsdk:"data"`
 }
 
-type EdgeFirewallEdgeFunctionInstanceResults struct {
+type FirewallFunctionInstanceData struct {
 	ID           types.Int64  `tfsdk:"id"`
 	Name         types.String `tfsdk:"name"`
 	Args         types.String `tfsdk:"args"`
@@ -38,57 +38,57 @@ type EdgeFirewallEdgeFunctionInstanceResults struct {
 	LastModified types.String `tfsdk:"last_modified"`
 }
 
-func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+func (f *FirewallFunctionInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
-	e.client = req.ProviderData.(*apiClient)
+	f.client = req.ProviderData.(*apiClient)
 }
 
-func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_firewall_edge_function_instance"
+func (f *FirewallFunctionInstanceDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_firewall_function_instance"
 }
 
-func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (f *FirewallFunctionInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int64Attribute{
-				Description: "Numeric identifier of the data source.",
-				Computed:    true,
+				Description: "ID of the firewall function instance to retrieve.",
+				Required:    true,
 			},
-			"edge_firewall_id": schema.Int64Attribute{
-				Description: "Identifier of the Edge Firewall",
+			"firewall_id": schema.Int64Attribute{
+				Description: "Identifier of the Firewall",
 				Required:    true,
 			},
 			"data": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
-						Description: "ID of the edge firewall edge function instance.",
+						Description: "ID of the firewall function instance.",
 						Computed:    true,
 					},
 					"name": schema.StringAttribute{
-						Description: "Name of the edge firewall edge function instance.",
+						Description: "Name of the firewall function instance.",
 						Computed:    true,
 					},
 					"args": schema.StringAttribute{
-						Description: "Arguments for the edge function instance.",
+						Description: "Arguments for the function instance.",
 						Computed:    true,
 					},
 					"function": schema.Int64Attribute{
-						Description: "ID of the Edge Function for Edge Firewall you wish to configure.",
+						Description: "ID of the Function for Firewall you wish to configure.",
 						Computed:    true,
 					},
 					"active": schema.BoolAttribute{
-						Description: "Whether the edge function instance is active.",
+						Description: "Whether the function instance is active.",
 						Computed:    true,
 					},
 					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the edge firewall edge function instance.",
+						Description: "Last editor of the firewall function instance.",
 						Computed:    true,
 					},
 					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the edge firewall edge function instance.",
+						Description: "Last modified timestamp of the firewall function instance.",
 						Computed:    true,
 					},
 				},
@@ -97,25 +97,29 @@ func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Schema(_ context.Context, _
 	}
 }
 
-func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var edgeFirewallID types.Int64
-	var edgeFunctionInstanceID types.Int64
+func (f *FirewallFunctionInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var firewallID types.Int64
+	var functionInstanceID types.Int64
 
-	diagsEdgeFirewallId := req.Config.GetAttribute(ctx, path.Root("edge_firewall_id"), &edgeFirewallID)
-	resp.Diagnostics.Append(diagsEdgeFirewallId...)
+	diagsFirewallId := req.Config.GetAttribute(ctx, path.Root("firewall_id"), &firewallID)
+	resp.Diagnostics.Append(diagsFirewallId...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	edgeFunctionInstanceID = types.Int64Value(0)
+	diagsFunctionInstanceId := req.Config.GetAttribute(ctx, path.Root("id"), &functionInstanceID)
+	resp.Diagnostics.Append(diagsFunctionInstanceId...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	EdgeFirewallFunctionsInstanceResponse, response, err := e.client.api.FirewallsFunctionAPI.
-		RetrieveFirewallFunction(ctx, edgeFirewallID.ValueInt64(), edgeFunctionInstanceID.ValueInt64()).Execute() //nolint
+	firewallFunctionInstanceResponse, response, err := f.client.api.FirewallsFunctionAPI.
+		RetrieveFirewallFunction(ctx, firewallID.ValueInt64(), functionInstanceID.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			EdgeFirewallFunctionsInstanceResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallFunctionInstanceResponse, *http.Response, error) {
-				return e.client.api.FirewallsFunctionAPI.
-					RetrieveFirewallFunction(ctx, edgeFirewallID.ValueInt64(), edgeFunctionInstanceID.ValueInt64()).Execute() //nolint
+			firewallFunctionInstanceResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallFunctionInstanceResponse, *http.Response, error) {
+				return f.client.api.FirewallsFunctionAPI.
+					RetrieveFirewallFunction(ctx, firewallID.ValueInt64(), functionInstanceID.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -146,7 +150,7 @@ func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Read(ctx context.Context, r
 		}
 	}
 
-	jsonArgsStr, err := utils.ConvertInterfaceToString(EdgeFirewallFunctionsInstanceResponse.Data.GetArgs())
+	jsonArgsStr, err := utils.ConvertInterfaceToString(firewallFunctionInstanceResponse.Data.GetArgs())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -154,23 +158,23 @@ func (e *EdgeFirewallEdgeFunctionInstanceDataSource) Read(ctx context.Context, r
 		)
 	}
 
-	GetEdgeFirewall := EdgeFirewallEdgeFunctionInstanceResults{
-		ID:           types.Int64Value(EdgeFirewallFunctionsInstanceResponse.Data.GetId()),
-		Name:         types.StringValue(EdgeFirewallFunctionsInstanceResponse.Data.GetName()),
+	data := FirewallFunctionInstanceData{
+		ID:           types.Int64Value(firewallFunctionInstanceResponse.Data.GetId()),
+		Name:         types.StringValue(firewallFunctionInstanceResponse.Data.GetName()),
 		Args:         types.StringValue(jsonArgsStr),
-		Function:     types.Int64Value(EdgeFirewallFunctionsInstanceResponse.Data.GetFunction()),
-		Active:       types.BoolValue(EdgeFirewallFunctionsInstanceResponse.Data.GetActive()),
-		LastEditor:   types.StringValue(EdgeFirewallFunctionsInstanceResponse.Data.GetLastEditor()),
-		LastModified: types.StringValue(EdgeFirewallFunctionsInstanceResponse.Data.GetLastModified().Format(time.RFC3339)),
+		Function:     types.Int64Value(firewallFunctionInstanceResponse.Data.GetFunction()),
+		Active:       types.BoolValue(firewallFunctionInstanceResponse.Data.GetActive()),
+		LastEditor:   types.StringValue(firewallFunctionInstanceResponse.Data.GetLastEditor()),
+		LastModified: types.StringValue(firewallFunctionInstanceResponse.Data.GetLastModified().Format(time.RFC3339)),
 	}
 
-	EdgeFirewallsState := EdgeFirewallEdgeFunctionInstanceDataSourceModel{
-		ID:             edgeFirewallID,
-		EdgeFirewallID: edgeFirewallID,
-		Data:           GetEdgeFirewall,
+	state := FirewallFunctionInstanceDataSourceModel{
+		ID:         functionInstanceID,
+		FirewallID: firewallID,
+		Data:       data,
 	}
 
-	diags := resp.State.Set(ctx, &EdgeFirewallsState)
+	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
