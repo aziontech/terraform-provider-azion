@@ -36,7 +36,7 @@ resource "azion_edge_firewall_rule_engine" "run_function_example" {
       {
         type = "run_function"
         attributes = {
-          value = 4305  # Function instance ID
+          value = 4305 # Function instance ID
         }
       }
     ]
@@ -180,7 +180,7 @@ resource "azion_edge_firewall_rule_engine" "complex_example" {
             variable    = "network"
             operator    = "is_not_in_list"
             conditional = "and"
-            argument    = "12345"  # Allowed network list ID
+            argument    = "12345" # Allowed network list ID
           }
         ]
       }
