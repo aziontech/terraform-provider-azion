@@ -103,6 +103,8 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionNetworkLists,
 		dataSourceAzionFirewall,
 		dataSourceAzionFirewalls,
+		dataSourceAzionFirewallRulesEngine,
+		dataSourceAzionFirewallRuleEngine,
 		dataSourceAzionVariable,
 		dataSourceAzionVariables,
 		dataSourceAzionWafRuleSet,
@@ -131,6 +133,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		EnvironmentVariableResource,
 		WafRuleSetResource,
 		NewFirewallFunctionsInstanceResource,
+		NewFirewallRuleEngineResource,
 	}
 }
 
