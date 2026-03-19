@@ -14,7 +14,7 @@ description: |-
 
 ```terraform
 resource "azion_firewall_functions_instance" "example" {
-  edge_firewall_id = 12464
+  firewall_id = 12464
   data = {
     name     = "Terraform Test"
     function = 9359
@@ -31,7 +31,7 @@ resource "azion_firewall_functions_instance" "example" {
 ### Required
 
 - `data` (Attributes) (see [below for nested schema](#nestedatt--data))
-- `edge_firewall_id` (Number) The edge firewall identifier.
+- `firewall_id` (Number) The firewall identifier.
 
 ### Read-Only
 
@@ -63,5 +63,5 @@ Read-Only:
 Import is supported using the following syntax:
 
 ```shell
-terraform import azion_firewall_functions_instance.example <edge_firewall_id>/<edge_function_instance_id>
+terraform import azion_firewall_functions_instance.example <firewall_id>/<function_instance_id>
 ```
