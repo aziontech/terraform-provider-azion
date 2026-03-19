@@ -1,3 +1,3 @@
-data "azion_edge_firewall_main_setting" "example" {
-  edge_firewall_id = 12464
+data "azion_firewall_main_setting" "example" {
+  firewall_id = 12464
 }

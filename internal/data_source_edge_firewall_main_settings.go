@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
+	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -14,44 +14,44 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func dataSourceAzionEdgeFirewalls() datasource.DataSource {
-	return &EdgeFirewallsDataSource{}
+func dataSourceAzionFirewalls() datasource.DataSource {
+	return &FirewallsDataSource{}
 }
 
-type EdgeFirewallsDataSource struct {
+type FirewallsDataSource struct {
 	client *apiClient
 }
 
-type EdgeFirewallsDataSourceModel struct {
-	Page     types.Int64            `tfsdk:"page"`
-	PageSize types.Int64            `tfsdk:"page_size"`
-	Counter  types.Int64            `tfsdk:"counter"`
-	Results  []EdgeFirewallsResults `tfsdk:"results"`
+type FirewallsDataSourceModel struct {
+	Page     types.Int64        `tfsdk:"page"`
+	PageSize types.Int64        `tfsdk:"page_size"`
+	Counter  types.Int64        `tfsdk:"counter"`
+	Results  []FirewallsResults `tfsdk:"results"`
 }
 
-type EdgeFirewallsResults struct {
-	ID             types.Int64         `tfsdk:"id"`
-	Name           types.String        `tfsdk:"name"`
-	Modules        EdgeFirewallModules `tfsdk:"modules"`
-	Debug          types.Bool          `tfsdk:"debug"`
-	Active         types.Bool          `tfsdk:"active"`
-	LastEditor     types.String        `tfsdk:"last_editor"`
-	LastModified   types.String        `tfsdk:"last_modified"`
-	ProductVersion types.String        `tfsdk:"product_version"`
+type FirewallsResults struct {
+	ID             types.Int64     `tfsdk:"id"`
+	Name           types.String    `tfsdk:"name"`
+	Modules        FirewallModules `tfsdk:"modules"`
+	Debug          types.Bool      `tfsdk:"debug"`
+	Active         types.Bool      `tfsdk:"active"`
+	LastEditor     types.String    `tfsdk:"last_editor"`
+	LastModified   types.String    `tfsdk:"last_modified"`
+	ProductVersion types.String    `tfsdk:"product_version"`
 }
 
-func (e *EdgeFirewallsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+func (f *FirewallsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
-	e.client = req.ProviderData.(*apiClient)
+	f.client = req.ProviderData.(*apiClient)
 }
 
-func (e *EdgeFirewallsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_firewall_main_settings"
+func (f *FirewallsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_firewall_main_settings"
 }
 
-func (e *EdgeFirewallsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (f *FirewallsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"page": schema.Int64Attribute{
@@ -151,7 +151,7 @@ func (e *EdgeFirewallsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 	}
 }
 
-func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (f *FirewallsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var Page types.Int64
 	var PageSize types.Int64
 
@@ -174,11 +174,11 @@ func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadR
 		PageSize = types.Int64Value(10)
 	}
 
-	EdgeFirewallsResponse, response, err := e.client.edgeApi.FirewallsAPI.ListFirewalls(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+	firewallsResponse, response, err := f.client.api.FirewallsAPI.ListFirewalls(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			EdgeFirewallsResponse, response, err = utils.RetryOn429(func() (*sdk.PaginatedFirewallList, *http.Response, error) {
-				return e.client.edgeApi.FirewallsAPI.ListFirewalls(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+			firewallsResponse, response, err = utils.RetryOn429(func() (*sdk.PaginatedFirewallList, *http.Response, error) {
+				return f.client.api.FirewallsAPI.ListFirewalls(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -209,15 +209,15 @@ func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadR
 		}
 	}
 
-	var edgeFirewallsResults []EdgeFirewallsResults
-	for _, results := range EdgeFirewallsResponse.Results {
+	var firewallsResults []FirewallsResults
+	for _, results := range firewallsResponse.Results {
 		mods := results.GetModules()
 		ddosProtection := mods.GetDdosProtection()
 		functions := mods.GetFunctions()
 		networkProtection := mods.GetNetworkProtection()
 		waf := mods.GetWaf()
 
-		modules := EdgeFirewallModules{
+		modules := FirewallModules{
 			DdosProtection: &DdosProtectionModule{
 				Enabled: types.BoolValue(ddosProtection.GetEnabled()),
 			},
@@ -232,7 +232,7 @@ func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadR
 			},
 		}
 
-		GetEdgeFirewalls := EdgeFirewallsResults{
+		firewallResult := FirewallsResults{
 			ID:             types.Int64Value(results.GetId()),
 			Name:           types.StringValue(results.GetName()),
 			Modules:        modules,
@@ -242,17 +242,17 @@ func (e *EdgeFirewallsDataSource) Read(ctx context.Context, req datasource.ReadR
 			LastModified:   types.StringValue(results.GetLastModified().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(results.GetProductVersion()),
 		}
-		edgeFirewallsResults = append(edgeFirewallsResults, GetEdgeFirewalls)
+		firewallsResults = append(firewallsResults, firewallResult)
 	}
 
-	EdgeFirewallsState := EdgeFirewallsDataSourceModel{
+	firewallsState := FirewallsDataSourceModel{
 		Page:     Page,
 		PageSize: PageSize,
-		Counter:  types.Int64Value(EdgeFirewallsResponse.GetCount()),
-		Results:  edgeFirewallsResults,
+		Counter:  types.Int64Value(firewallsResponse.GetCount()),
+		Results:  firewallsResults,
 	}
 
-	diags := resp.State.Set(ctx, &EdgeFirewallsState)
+	diags := resp.State.Set(ctx, &firewallsState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

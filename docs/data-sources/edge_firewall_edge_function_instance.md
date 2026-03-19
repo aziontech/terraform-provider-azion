@@ -14,10 +14,8 @@ description: |-
 
 ```terraform
 data "azion_edge_firewall_edge_function_instance" "example" {
-  edge_firewall_id = 1234567890
-  results = {
-    edge_function_instance_id = 123456
-  }
+  id          = 123456
+  firewall_id = 1234567890
 }
 ```
 
@@ -26,22 +24,22 @@ data "azion_edge_firewall_edge_function_instance" "example" {
 
 ### Required
 
-- `edge_firewall_id` (Number) Identifier of the Edge Firewall
+- `id` (Number) ID of the firewall function instance to retrieve.
+- `firewall_id` (Number) Identifier of the Firewall
 
 ### Read-Only
 
 - `data` (Attributes) (see [below for nested schema](#nestedatt--data))
-- `id` (String) Numeric identifier of the data source.
 
 <a id="nestedatt--data"></a>
 ### Nested Schema for `data`
 
 Read-Only:
 
-- `active` (Boolean) Whether the edge function instance is active.
-- `args` (String) Arguments for the edge function instance.
-- `function` (Number) ID of the Edge Function for Edge Firewall you wish to configure.
-- `id` (Number) ID of the edge firewall edge function instance.
-- `last_editor` (String) Last editor of the edge firewall edge function instance.
-- `last_modified` (String) Last modified timestamp of the edge firewall edge function instance.
-- `name` (String) Name of the edge firewall edge function instance.
+- `active` (Boolean) Whether the function instance is active.
+- `args` (String) Arguments for the function instance.
+- `function` (Number) ID of the Function for Firewall you wish to configure.
+- `id` (Number) ID of the firewall function instance.
+- `last_editor` (String) Last editor of the firewall function instance.
+- `last_modified` (String) Last modified timestamp of the firewall function instance.
+- `name` (String) Name of the firewall function instance.
