@@ -15,7 +15,7 @@ Use this data source to read a specific rules engine rule from a firewall.
 ```hcl
 data "azion_firewall_rule_engine" "example" {
   firewall_id = 12345
-  results {
+  results = {
     id = 67890
   }
 }
@@ -36,10 +36,11 @@ In addition to all arguments above, the following attributes are exported:
   * `name` - Name of the rules engine rule.
   * `active` - Whether the rule is active.
   * `criteria` - List of criteria groups for the rule.
-    * `conditional` - Conditional operator (if, and, or).
-    * `variable` - Variable to evaluate.
-    * `operator` - Comparison operator.
-    * `argument` - Argument for comparison.
+    * `entries` - List of criteria entries within the group.
+      * `conditional` - Conditional operator (if, and, or).
+      * `variable` - Variable to evaluate.
+      * `operator` - Comparison operator.
+      * `argument` - Argument for comparison.
   * `behaviors` - List of behaviors for the rule.
     * `type` - Type of behavior.
     * `attributes` - Behavior attributes.
