@@ -2,8 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -523,26 +521,60 @@ func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req res
 	applicationId := state.ApplicationID.ValueInt64()
 	cacheSettingId := state.CacheSetting.ID.ValueInt64()
 
-	// Use raw HTTP request to work around SDK validation issue with data wrapper
-	// The API returns {"data": {...}} but SDK expects CacheSetting directly
-	cacheSetting, err := retrieveCacheSettingRaw(ctx, r.client, applicationId, cacheSettingId)
+	// Call V4 API to retrieve cache setting
+	cacheSettingResponse, response, err := r.client.api.ApplicationsCacheSettingsAPI.
+		RetrieveCacheSetting(ctx, applicationId, cacheSettingId).
+		Execute()
 	if err != nil {
-		if err.Error() == "404" {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("Failed to retrieve cache setting", err.Error())
-		return
+		if response != nil && response.StatusCode == 429 {
+			cacheSettingResponse, response, err = utils.RetryOn429(func() (*azionapi.CacheSettingResponse, *http.Response, error) {
+				return r.client.api.ApplicationsCacheSettingsAPI.
+					RetrieveCacheSetting(ctx, applicationId, cacheSettingId).
+					Execute()
+			}, 5)
+
+			if response != nil {
+				defer response.Body.Close()
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+				return
+			}
+		} else {
+			if response != nil {
+				bodyBytes, errReadAll := io.ReadAll(response.Body)
+				if errReadAll != nil {
+					resp.Diagnostics.AddError(errReadAll.Error(), "err")
+				}
+				bodyString := string(bodyBytes)
+				resp.Diagnostics.AddError(err.Error(), bodyString)
+				response.Body.Close()
+			}
+			return
+		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 
-	// Debug: ensure we got a valid cache setting
-	if cacheSetting == nil {
-		resp.Diagnostics.AddError("Empty response", "cacheSetting is nil after successful API call")
+	// Debug: ensure we got a valid cache setting response
+	if cacheSettingResponse == nil {
+		resp.Diagnostics.AddError("Empty response", "cacheSettingResponse is nil after successful API call")
 		return
 	}
 
 	// Update state with response - Read should return the full API state
-	state.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSetting)
+	cacheSettingData, ok := cacheSettingResponse.GetDataOk()
+	if !ok || cacheSettingData == nil {
+		resp.Diagnostics.AddError("Empty response", "cacheSettingResponse has no data after successful API call")
+		return
+	}
+	state.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSettingData)
 	// Preserve top-level ID from state if not already set (it should come from req.State.Get())
 	// Only set it from CacheSetting.ID if state.ID is null/unknown
 	if state.ID.IsNull() || state.ID.IsUnknown() {
@@ -886,21 +918,63 @@ func (r *edgeApplicationCacheSettingsResource) ImportState(ctx context.Context, 
 	// Set the application ID
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("edge_application_id"), applicationId)...)
 
-	// Read the cache setting using raw HTTP to work around SDK validation issue
-	cacheSetting, err := retrieveCacheSettingRaw(ctx, r.client, applicationId, cacheSettingId)
+	// Read the cache setting using the V4 API
+	cacheSettingResponse, response, err := r.client.api.ApplicationsCacheSettingsAPI.
+		RetrieveCacheSetting(ctx, applicationId, cacheSettingId).
+		Execute()
 	if err != nil {
-		if err.Error() == "404" {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.Diagnostics.AddError("Cache setting not found", "")
 			return
 		}
-		resp.Diagnostics.AddError("Failed to retrieve cache setting", err.Error())
+		if response != nil && response.StatusCode == 429 {
+			cacheSettingResponse, response, err = utils.RetryOn429(func() (*azionapi.CacheSettingResponse, *http.Response, error) {
+				return r.client.api.ApplicationsCacheSettingsAPI.
+					RetrieveCacheSetting(ctx, applicationId, cacheSettingId).
+					Execute()
+			}, 5)
+
+			if response != nil {
+				defer response.Body.Close()
+			}
+
+			if err != nil {
+				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+				return
+			}
+		} else {
+			if response != nil {
+				bodyBytes, errReadAll := io.ReadAll(response.Body)
+				if errReadAll != nil {
+					resp.Diagnostics.AddError(errReadAll.Error(), "err")
+				}
+				bodyString := string(bodyBytes)
+				resp.Diagnostics.AddError(err.Error(), bodyString)
+				response.Body.Close()
+			}
+			return
+		}
+	}
+	if response != nil {
+		defer response.Body.Close()
+	}
+
+	// Ensure we got a valid response
+	if cacheSettingResponse == nil {
+		resp.Diagnostics.AddError("Empty response", "cacheSettingResponse is nil after successful API call")
+		return
+	}
+
+	cacheSettingData, ok := cacheSettingResponse.GetDataOk()
+	if !ok || cacheSettingData == nil {
+		resp.Diagnostics.AddError("Empty response", "cacheSettingResponse has no data after successful API call")
 		return
 	}
 
 	// Build state
 	state := EdgeApplicationCacheSettingsResourceModel{
 		ApplicationID: types.Int64Value(applicationId),
-		CacheSetting:  transformCacheSettingResponseToResourceModel(cacheSetting),
+		CacheSetting:  transformCacheSettingResponseToResourceModel(cacheSettingData),
 		ID:            types.Int64Value(cacheSettingId),
 	}
 
@@ -1191,67 +1265,4 @@ func transformCacheSettingResponseToResourceModel(cs *azionapi.CacheSetting) *Ca
 	}
 
 	return model
-}
-
-// retrieveCacheSettingRaw makes a raw HTTP request and manually parses the response
-// to work around SDK validation issues with the data wrapper.
-// The API returns {"data": {...}} but the SDK's RetrieveCacheSetting validation expects
-// the CacheSetting directly, causing "no value given for required property id" errors.
-func retrieveCacheSettingRaw(ctx context.Context, client *apiClient, applicationId, cacheSettingId int64) (*azionapi.CacheSetting, error) {
-	// Build the request URL - match the SDK's path pattern
-	// SDK uses: /workspace/applications/{application_id}/cache_settings/{cache_setting_id}
-	url := fmt.Sprintf("https://api.azion.com/v4/workspace/applications/%d/cache_settings/%d", applicationId, cacheSettingId)
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	// Set headers from the SDK config
-	for k, v := range client.apiConfig.DefaultHeader {
-		httpReq.Header.Set(k, v)
-	}
-	httpReq.Header.Set("User-Agent", client.apiConfig.UserAgent)
-	httpReq.Header.Set("Accept", "application/json; version=3")
-
-	// Get HTTP client from config, or use default
-	httpClient := client.apiConfig.HTTPClient
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
-
-	// Execute the request
-	httpResp, err := httpClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	defer httpResp.Body.Close()
-
-	// Read the response body
-	bodyBytes, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	// Check for error status codes
-	if httpResp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("404")
-	}
-	if httpResp.StatusCode == 429 {
-		// Retry logic could be added here if needed
-		return nil, fmt.Errorf("rate limited")
-	}
-	if httpResp.StatusCode >= 400 {
-		return nil, fmt.Errorf("API error: %s - %s", httpResp.Status, string(bodyBytes))
-	}
-
-	// Parse the response - the API returns {"data": {...}} wrapper
-	var wrapper struct {
-		Data azionapi.CacheSetting `json:"data"`
-	}
-	if err := json.Unmarshal(bodyBytes, &wrapper); err != nil {
-		return nil, fmt.Errorf("failed to parse response '%s': %w", string(bodyBytes), err)
-	}
-
-	return &wrapper.Data, nil
 }
