@@ -1,4 +1,4 @@
-resource "azion_edge_firewall_edge_functions_instance" "example" {
+resource "azion_firewall_functions_instance" "example" {
   edge_firewall_id = 12464
   data = {
     name     = "Terraform Test"
