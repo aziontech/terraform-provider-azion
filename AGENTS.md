@@ -9,10 +9,13 @@ In order to edit/update a data_source or resource, the agent should receive a .y
 Use these files ONLY when prompted to edit/update said data_sources and/or resources.
 For detailed documentation on specific packages, see the `agents/` folder:
 
-- **[agents/APPLICATIONS.md](agents/APPLICATIONS.md)** - Edge Applications (Main Settings)
+- **[agents/APPLICATIONS.md](agents/APPLICATIONS.md)** - Applications (Main Settings)
 - **[agents/CACHE_SETTINGS.md](agents/CACHE_SETTINGS.md)** - Cache Settings
-- **[agents/FUNCTIONS.md](agents/FUNCTIONS.md)** - Edge Functions
+- **[agents/FUNCTIONS.md](agents/FUNCTIONS.md)** - Functions
 - **[agents/RULES_ENGINE.md](agents/RULES_ENGINE.md)** - Rules Engine
+- **[agents/FIREWALL.md](agents/FIREWALL.md)** - Edge Firewall (Main Settings)
+- **[agents/FIREWALL_INSTANCE.md](agents/FIREWALL_INSTANCE.md)** - Edge Firewall Function Instances
+- **[agents/FIREWALL_RULES_ENGINE.md](agents/FIREWALL_RULES_ENGINE.md)** - Edge Firewall Rules Engine
 
 ---
 
