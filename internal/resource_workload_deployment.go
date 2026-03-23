@@ -203,10 +203,6 @@ func (r *workloadDeploymentResource) Create(ctx context.Context, req resource.Cr
 					WorkloadDeploymentRequest(*deploymentRequest).Execute()
 			}, 5)
 
-			if response != nil {
-				defer response.Body.Close()
-			}
-
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -229,6 +225,9 @@ func (r *workloadDeploymentResource) Create(ctx context.Context, req resource.Cr
 			)
 			return
 		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 
 	// Populate the state from the response
@@ -298,10 +297,6 @@ func (r *workloadDeploymentResource) Read(ctx context.Context, req resource.Read
 					RetrieveWorkloadDeployment(ctx, deploymentID, workloadID).Execute()
 			}, 5)
 
-			if response != nil {
-				defer response.Body.Close()
-			}
-
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -324,6 +319,9 @@ func (r *workloadDeploymentResource) Read(ctx context.Context, req resource.Read
 			)
 			return
 		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 
 	state.Deployment = populateDeploymentResults(deploymentResponse)
@@ -404,10 +402,6 @@ func (r *workloadDeploymentResource) Update(ctx context.Context, req resource.Up
 					PatchedWorkloadDeploymentRequest(*patchedRequest).Execute()
 			}, 5)
 
-			if response != nil {
-				defer response.Body.Close()
-			}
-
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -430,6 +424,9 @@ func (r *workloadDeploymentResource) Update(ctx context.Context, req resource.Up
 			)
 			return
 		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 
 	plan.Deployment = populateDeploymentResults(updateResponse)
@@ -480,10 +477,6 @@ func (r *workloadDeploymentResource) Delete(ctx context.Context, req resource.De
 					DeleteWorkloadDeployment(ctx, state.Deployment.ID.ValueInt64(), state.WorkloadID.ValueInt64()).Execute()
 			}, 5)
 
-			if response != nil {
-				defer response.Body.Close()
-			}
-
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -506,6 +499,9 @@ func (r *workloadDeploymentResource) Delete(ctx context.Context, req resource.De
 			)
 			return
 		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 }
 
@@ -548,10 +544,6 @@ func (r *workloadDeploymentResource) ImportState(ctx context.Context, req resour
 					RetrieveWorkloadDeployment(ctx, deploymentID, workloadID).Execute()
 			}, 5)
 
-			if response != nil {
-				defer response.Body.Close()
-			}
-
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -574,6 +566,9 @@ func (r *workloadDeploymentResource) ImportState(ctx context.Context, req resour
 			)
 			return
 		}
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 
 	state := WorkloadDeploymentResourceModel{
