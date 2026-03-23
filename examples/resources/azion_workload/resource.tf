@@ -1,7 +1,7 @@
 resource "azion_workload" "example" {
   workload = {
-    name          = "My Workload"
-    active        = true
+    name           = "My Workload"
+    active         = true
     infrastructure = 1
 
     tls = {
@@ -28,7 +28,7 @@ resource "azion_workload" "example" {
       }
     }
 
-    domains                    = ["example.com", "www.example.com"]
+    domains                      = ["example.com", "www.example.com"]
     workload_domain_allow_access = true
   }
 }
