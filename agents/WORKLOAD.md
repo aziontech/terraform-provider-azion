@@ -500,10 +500,10 @@ Provider produced inconsistent result after apply
 .workload.tls: was null, but now cty.ObjectVal(...)
 ```
 
-**Solution:** Only populate nested fields from API response if they were specified in the plan. Modify `populateWorkloadResults` to accept the plan:
+**Solution:** Only populate nested fields from API response if they were specified in the plan. Modify `populateWorkloadResults` to accept the plan and context:
 
 ```go
-func populateWorkloadResults(response *azionapi.WorkloadResponse, plan *workloadResourceResults) *workloadResourceResults {
+func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadResponse, plan *workloadResourceResults) *workloadResourceResults {
     result := &workloadResourceResults{
         // ... basic fields ...
     }
@@ -863,7 +863,7 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
     }
 
     // Populate state from response, passing plan to preserve optional nested field values
-    plan.Workload = populateWorkloadResults(createWorkload, plan.Workload)
+    plan.Workload = populateWorkloadResults(ctx, createWorkload, plan.Workload)
     plan.ID = types.StringValue(strconv.FormatInt(createWorkload.Data.Id, 10))
     plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -914,7 +914,7 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
     // ... error handling similar to Create
 
     // Populate state, passing plan to preserve optional nested field values
-    plan.Workload = populateWorkloadResults(updateWorkload, plan.Workload)
+    plan.Workload = populateWorkloadResults(ctx, updateWorkload, plan.Workload)
     plan.ID = types.StringValue(strconv.FormatInt(updateWorkload.Data.Id, 10))
     plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -956,7 +956,7 @@ func (r *workloadResource) Read(ctx context.Context, req resource.ReadRequest, r
     }
 
     // Pass existing state to preserve optional nested field values
-    state.Workload = populateWorkloadResults(getWorkload, state.Workload)
+    state.Workload = populateWorkloadResults(ctx, getWorkload, state.Workload)
     state.ID = types.StringValue(strconv.FormatInt(getWorkload.Data.Id, 10))
 
     diags = resp.State.Set(ctx, &state)
@@ -997,7 +997,7 @@ func (r *workloadResource) Delete(ctx context.Context, req resource.DeleteReques
 // populateWorkloadResults populates workload results from API response.
 // plan is used to preserve optional nested field values - if a nested field was null in the plan,
 // it stays null in the result to avoid "Provider produced inconsistent result after apply" errors.
-func populateWorkloadResults(response *azionapi.WorkloadResponse, plan *workloadResourceResults) *workloadResourceResults {
+func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadResponse, plan *workloadResourceResults) *workloadResourceResults {
     result := &workloadResourceResults{
         ID:             types.Int64Value(response.Data.Id),
         Name:           types.StringValue(response.Data.Name),
@@ -1047,25 +1047,25 @@ func populateWorkloadResults(response *azionapi.WorkloadResponse, plan *workload
         if response.Data.Protocols.Http != nil {
             httpModel := &HttpProtocolResourceModel{}
             if response.Data.Protocols.Http.Versions != nil {
-                versionsList, _ := types.ListValueFrom(context.Background(), types.StringType, response.Data.Protocols.Http.Versions)
+                versionsList, _ := types.ListValueFrom(ctx, types.StringType, response.Data.Protocols.Http.Versions)
                 httpModel.Versions = versionsList
             } else {
                 httpModel.Versions = types.ListNull(types.StringType)
             }
             if response.Data.Protocols.Http.HttpPorts != nil {
-                httpPortsList, _ := types.ListValueFrom(context.Background(), types.Int64Type, response.Data.Protocols.Http.HttpPorts)
+                httpPortsList, _ := types.ListValueFrom(ctx, types.Int64Type, response.Data.Protocols.Http.HttpPorts)
                 httpModel.HttpPorts = httpPortsList
             } else {
                 httpModel.HttpPorts = types.ListNull(types.Int64Type)
             }
             if response.Data.Protocols.Http.HttpsPorts != nil {
-                httpsPortsList, _ := types.ListValueFrom(context.Background(), types.Int64Type, response.Data.Protocols.Http.HttpsPorts)
+                httpsPortsList, _ := types.ListValueFrom(ctx, types.Int64Type, response.Data.Protocols.Http.HttpsPorts)
                 httpModel.HttpsPorts = httpsPortsList
             } else {
                 httpModel.HttpsPorts = types.ListNull(types.Int64Type)
             }
             if response.Data.Protocols.Http.QuicPorts != nil {
-                quicPortsList, _ := types.ListValueFrom(context.Background(), types.Int64Type, response.Data.Protocols.Http.QuicPorts)
+                quicPortsList, _ := types.ListValueFrom(ctx, types.Int64Type, response.Data.Protocols.Http.QuicPorts)
                 httpModel.QuicPorts = quicPortsList
             } else {
                 httpModel.QuicPorts = types.ListNull(types.Int64Type)
@@ -1095,7 +1095,7 @@ func populateWorkloadResults(response *azionapi.WorkloadResponse, plan *workload
                     }
                 }
                 if config.Crl != nil {
-                    crlList, _ := types.ListValueFrom(context.Background(), types.Int64Type, config.Crl)
+                    crlList, _ := types.ListValueFrom(ctx, types.Int64Type, config.Crl)
                     configModel.Crl = crlList
                 } else {
                     configModel.Crl = types.ListNull(types.Int64Type)
@@ -1114,7 +1114,7 @@ func populateWorkloadResults(response *azionapi.WorkloadResponse, plan *workload
 
     // Handle Domains
     if response.Data.Domains != nil {
-        domainsList, _ := types.ListValueFrom(context.Background(), types.StringType, response.Data.Domains)
+        domainsList, _ := types.ListValueFrom(ctx, types.StringType, response.Data.Domains)
         result.Domains = domainsList
     } else {
         result.Domains = types.ListNull(types.StringType)
