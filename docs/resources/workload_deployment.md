@@ -15,18 +15,16 @@ Provides a resource to manage workload deployments within Azion workloads.
 ```terraform
 resource "azion_workload_deployment" "example" {
   workload_id = 12345
-  
+
   deployment = {
     name    = "My Deployment"
     current = true
     active  = true
-    
+
     strategy = {
       type = "default"
       attributes = {
         application = 67890
-        firewall    = 11111
-        custom_page = 22222
       }
     }
   }
