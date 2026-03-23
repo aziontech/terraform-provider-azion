@@ -114,6 +114,8 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionWafDomains,
 		dataSourceAzionWorkload,
 		dataSourceAzionWorkloads,
+		dataSourceAzionWorkloadDeployment,
+		dataSourceAzionWorkloadDeployments,
 	}
 }
 
@@ -137,6 +139,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewFirewallFunctionsInstanceResource,
 		NewFirewallRuleEngineResource,
 		NewWorkloadResource,
+		NewWorkloadDeploymentResource,
 	}
 }
 
