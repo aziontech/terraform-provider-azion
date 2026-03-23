@@ -452,6 +452,48 @@ When generating a new resource or data source from OpenAPI:
 11. **Register in provider.go**: Add to DataSources() or Resources()
 12. **Generate documentation**: Create docs and examples
 13. **Update example/test files**: After any schema changes, update the corresponding files
+14. **Run linters**: After structural changes, run `golangci-lint run --config .golintci.yml ./internal/...`
+
+---
+
+## Running Linters After Structural Changes
+
+**IMPORTANT**: After making any structural changes to Go code (adding functions, modifying function signatures, adding struct fields, etc.), you MUST run the linters to ensure code quality:
+
+```bash
+# Run golangci-lint with the project configuration
+golangci-lint run --config .golintci.yml ./internal/...
+```
+
+### Key Linter Checks
+
+The project enforces these important linter rules:
+
+| Linter | Purpose | Common Fix |
+|--------|---------|------------|
+| `bodyclose` | Ensures HTTP response bodies are closed | Add `defer response.Body.Close()` after successful API calls |
+| `contextcheck` | Ensures context is passed through function calls | Add `ctx context.Context` as first parameter and pass it to nested calls |
+| `godot` | Ensures comments end with a period | Add `.` at end of comments |
+
+### Response Body Closure Pattern
+
+```go
+// After successful API response
+if response != nil {
+    defer response.Body.Close()
+}
+```
+
+### Context Propagation Pattern
+
+```go
+// Function signature with context
+func populateResults(ctx context.Context, response *api.Response, plan *model) *model {
+    // Use ctx instead of context.Background()
+    listValue, _ := types.ListValueFrom(ctx, types.StringType, data)
+    return result
+}
+```
 
 ---
 
