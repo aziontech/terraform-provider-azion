@@ -458,21 +458,74 @@ if response.StatusCode == 429 {
         return d.client.api.WorkloadDeploymentsAPI.RetrieveWorkloadDeployment(ctx, deploymentID, workloadID).Execute()
     }, 5)
 
-    if response != nil {
-        defer response.Body.Close()
+    if err != nil {
+        resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+        return
     }
 }
 ```
 
 ### 4. Not Closing Response Body
 
-Always close the response body after successful retry:
+**IMPORTANT**: The response body must be closed after successful API calls, not just inside retry blocks.
 
+**Correct Pattern for Data Sources**:
 ```go
+deploymentResponse, response, err := d.client.api.WorkloadDeploymentsAPI.
+    RetrieveWorkloadDeployment(ctx, deploymentID, workloadID).Execute()
+if err != nil {
+    if response.StatusCode == 429 {
+        deploymentResponse, response, err = utils.RetryOn429(func() (*azionapi.WorkloadDeploymentResponse, *http.Response, error) {
+            return d.client.api.WorkloadDeploymentsAPI.RetrieveWorkloadDeployment(ctx, deploymentID, workloadID).Execute()
+        }, 5)
+
+        if err != nil {
+            resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+            return
+        }
+    } else {
+        // Handle other errors
+        resp.Diagnostics.AddError(usrMsg, errMsg)
+        return
+    }
+}
+// Close response body after successful API call
 if response != nil {
     defer response.Body.Close()
 }
 ```
+
+**Correct Pattern for Resources**:
+```go
+createDeployment, response, err := r.client.api.WorkloadDeploymentsAPI.
+    CreateWorkloadDeployment(ctx, plan.WorkloadID.ValueInt64()).
+    WorkloadDeploymentRequest(*deploymentRequest).Execute()
+if err != nil {
+    if response.StatusCode == 429 {
+        createDeployment, response, err = utils.RetryOn429(func() (*azionapi.WorkloadDeploymentResponse, *http.Response, error) {
+            return r.client.api.WorkloadDeploymentsAPI.
+                CreateWorkloadDeployment(ctx, plan.WorkloadID.ValueInt64()).
+                WorkloadDeploymentRequest(*deploymentRequest).Execute()
+        }, 5)
+
+        if err != nil {
+            resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+            return
+        }
+    } else {
+        // Handle other errors
+        bodyBytes, _ := io.ReadAll(response.Body)
+        resp.Diagnostics.AddError(err.Error(), string(bodyBytes))
+        return
+    }
+}
+// Close response body after successful API call
+if response != nil {
+    defer response.Body.Close()
+}
+```
+
+The `defer response.Body.Close()` must be placed **after** the error handling block, so it only runs for successful responses.
 
 ---
 
