@@ -7,8 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/networklist"
-
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -41,13 +40,12 @@ type NetworkListResourceModel struct {
 }
 
 type NetworkListResourceResults struct {
-	ID             types.Int64  `tfsdk:"id"`
-	LastEditor     types.String `tfsdk:"last_editor"`
-	LastModified   types.String `tfsdk:"last_modified"`
-	ListType       types.String `tfsdk:"list_type"`
-	Name           types.String `tfsdk:"name"`
-	ItemsValuesStr types.Set    `tfsdk:"items_values_str"`
-	ItemsValuesInt types.List   `tfsdk:"items_values_int"`
+	ID           types.Int64  `tfsdk:"id"`
+	LastEditor   types.String `tfsdk:"last_editor"`
+	LastModified types.String `tfsdk:"last_modified"`
+	Type         types.String `tfsdk:"type"`
+	Name         types.String `tfsdk:"name"`
+	Items        types.Set    `tfsdk:"items"`
 }
 
 func (r *networkListResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -85,23 +83,18 @@ func (r *networkListResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Description: "Last modified timestamp of the network list.",
 						Computed:    true,
 					},
-					"list_type": schema.StringAttribute{
-						Description: "Type of the network list.",
+					"type": schema.StringAttribute{
+						Description: "Type of the network list. Can be: asn, countries, or ip_cidr.",
 						Required:    true,
 					},
 					"name": schema.StringAttribute{
 						Description: "Name of the network list.",
 						Required:    true,
 					},
-					"items_values_str": schema.SetAttribute{
+					"items": schema.SetAttribute{
 						Required:    true,
 						ElementType: types.StringType,
-						Description: "List of countries in the network list.",
-					},
-					"items_values_int": schema.ListAttribute{
-						Optional:    true,
-						ElementType: types.Int64Type,
-						Description: "List of countries in the network list.",
+						Description: "List of items in the network list. Contents depend on the type: country codes, IP addresses, or ASN numbers.",
 					},
 				},
 			},
@@ -124,32 +117,28 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	diagsInt := req.Plan.SetAttribute(ctx, path.Root("results").AtName("items_values_int"), types.ListNull(types.Int64Type))
-	resp.Diagnostics.Append(diagsInt...)
+	var items []string
+	diagsItems := plan.NetworkList.Items.ElementsAs(ctx, &items, false)
+	resp.Diagnostics.Append(diagsItems...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	networkListRequest := networklist.CreateNetworkListsRequest{
-		Name:     plan.NetworkList.Name.ValueStringPointer(),
-		ListType: plan.NetworkList.ListType.ValueStringPointer(),
+	networkListRequest := azionapi.NetworkListRequest{
+		Name:  plan.NetworkList.Name.ValueString(),
+		Type:  plan.NetworkList.Type.ValueString(),
+		Items: items,
 	}
 
-	requestItemsValue := plan.NetworkList.ItemsValuesStr.ElementsAs(ctx, &networkListRequest.ItemsValues, false)
-	resp.Diagnostics.Append(requestItemsValue...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	createNetworkListResponse, response, err := r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
+	createNetworkListResponse, response, err := r.client.api.NetworkListsAPI.CreateNetworkList(ctx).NetworkListRequest(networkListRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
-			createNetworkListResponse, response, err = utils.RetryOn429(func() (*networklist.NetworkListsResponse, *http.Response, error) {
-				return r.client.networkListApi.DefaultAPI.NetworkListsPost(ctx).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
+		if response != nil && response.StatusCode == 429 {
+			createNetworkListResponse, response, err = utils.RetryOn429(func() (*azionapi.NetworkListResponse, *http.Response, error) {
+				return r.client.api.NetworkListsAPI.CreateNetworkList(ctx).NetworkListRequest(networkListRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
@@ -160,38 +149,47 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
+			if response != nil && response.Body != nil {
+				bodyBytes, errReadAll := io.ReadAll(response.Body)
+				if errReadAll != nil {
+					resp.Diagnostics.AddError(
+						errReadAll.Error(),
+						"error reading response from API",
+					)
+				}
+				bodyString := string(bodyBytes)
 				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
+					err.Error(),
+					bodyString,
+				)
+			} else {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed",
 				)
 			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
 			return
 		}
 	}
 
-	plan.SchemaVersion = types.Int64Value(3)
+	plan.SchemaVersion = types.Int64Value(1)
+
+	data := createNetworkListResponse.GetData()
 	var sliceString []types.String
-	for _, itemsValuesStr := range createNetworkListResponse.Results.GetItemsValues() {
-		sliceString = append(sliceString, types.StringValue(itemsValuesStr))
-	}
-	plan.NetworkList = &NetworkListResourceResults{
-		ID:             types.Int64Value(createNetworkListResponse.Results.GetId()),
-		LastEditor:     types.StringValue(createNetworkListResponse.Results.GetLastEditor()),
-		LastModified:   types.StringValue(createNetworkListResponse.Results.GetLastModified()),
-		ListType:       types.StringValue(createNetworkListResponse.Results.GetListType()),
-		Name:           types.StringValue(createNetworkListResponse.Results.GetName()),
-		ItemsValuesStr: utils.SliceStringTypeToSet(sliceString),
-		ItemsValuesInt: types.ListNull(types.Int64Type),
+	for _, item := range data.GetItems() {
+		sliceString = append(sliceString, types.StringValue(item))
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(createNetworkListResponse.Results.GetId(), 10))
+	plan.NetworkList = &NetworkListResourceResults{
+		ID:           types.Int64Value(data.GetId()),
+		LastEditor:   types.StringValue(data.GetLastEditor()),
+		LastModified: types.StringValue(data.GetLastModified().Format(time.RFC3339)),
+		Type:         types.StringValue(data.GetType()),
+		Name:         types.StringValue(data.GetName()),
+		Items:        utils.SliceStringTypeToSet(sliceString),
+	}
+
+	plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -208,27 +206,35 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	var networkListId string
+
+	var networkListId int64
 	if state.ID.IsNull() {
-		networkListId = strconv.Itoa(int(state.NetworkList.ID.ValueInt64()))
+		networkListId = state.NetworkList.ID.ValueInt64()
 	} else {
-		networkListId = state.ID.ValueString()
+		id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid ID format",
+				err.Error(),
+			)
+			return
+		}
+		networkListId = id
 	}
 
-	getNetworkList, response, err := r.client.networkListApi.DefaultAPI.
-		NetworkListsUuidGet(ctx, networkListId).Execute() //nolint
+	getNetworkList, response, err := r.client.api.NetworkListsAPI.RetrieveNetworkList(ctx, networkListId).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
-			getNetworkList, response, err = utils.RetryOn429(func() (*networklist.NetworkListUuidResponse, *http.Response, error) {
-				return r.client.networkListApi.DefaultAPI.NetworkListsUuidGet(ctx, networkListId).Execute() //nolint
+		if response != nil && response.StatusCode == 429 {
+			getNetworkList, response, err = utils.RetryOn429(func() (*azionapi.NetworkListResponse, *http.Response, error) {
+				return r.client.api.NetworkListsAPI.RetrieveNetworkList(ctx, networkListId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
@@ -239,67 +245,52 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
+			if response != nil && response.Body != nil {
+				bodyBytes, errReadAll := io.ReadAll(response.Body)
+				if errReadAll != nil {
+					resp.Diagnostics.AddError(
+						errReadAll.Error(),
+						"error reading response from API",
+					)
+				}
+				bodyString := string(bodyBytes)
 				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
+					err.Error(),
+					bodyString,
+				)
+			} else {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed",
 				)
 			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
 			return
 		}
 	}
 
+	data := getNetworkList.GetData()
 	var sliceString []types.String
-	for _, itemsValuesStr := range getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetItemsValues() {
-		sliceString = append(sliceString, types.StringValue(itemsValuesStr))
-	}
-	var sliceInt []types.Int64
-	for _, itemsValuesInt := range getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetItemsValues() {
-		sliceInt = append(sliceInt, types.Int64Value(int64(itemsValuesInt)))
+	for _, item := range data.GetItems() {
+		sliceString = append(sliceString, types.StringValue(item))
 	}
 
-	if len(sliceString) != 0 {
-		networkListsState := NetworkListResourceModel{
-			SchemaVersion: types.Int64Value(getNetworkList.GetSchemaVersion()),
-			NetworkList: &NetworkListResourceResults{
-				LastEditor:     types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetLastEditor()),
-				LastModified:   types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetLastModified()),
-				ListType:       types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetListType()),
-				Name:           types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryString.GetName()),
-				ItemsValuesStr: utils.SliceStringTypeToSet(sliceString),
-				ItemsValuesInt: types.ListNull(types.Int64Type),
-			},
-			ID: types.StringValue(networkListId),
-		}
-		diags = resp.State.Set(ctx, &networkListsState)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	} else {
-		networkListsState := NetworkListResourceModel{
-			SchemaVersion: types.Int64Value(getNetworkList.GetSchemaVersion()),
-			NetworkList: &NetworkListResourceResults{
-				LastEditor:     types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetLastEditor()),
-				LastModified:   types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetLastModified()),
-				ListType:       types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetListType()),
-				Name:           types.StringValue(getNetworkList.GetResults().NetworkListUuidResponseEntryInt.GetName()),
-				ItemsValuesStr: types.SetValueMust(types.StringType, nil),
-				ItemsValuesInt: utils.SliceIntTypeToList(sliceInt),
-			},
-			ID: types.StringValue(networkListId),
-		}
-		diags = resp.State.Set(ctx, &networkListsState)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	networkListState := NetworkListResourceModel{
+		SchemaVersion: types.Int64Value(1),
+		NetworkList: &NetworkListResourceResults{
+			ID:           types.Int64Value(data.GetId()),
+			LastEditor:   types.StringValue(data.GetLastEditor()),
+			LastModified: types.StringValue(data.GetLastModified().Format(time.RFC3339)),
+			Type:         types.StringValue(data.GetType()),
+			Name:         types.StringValue(data.GetName()),
+			Items:        utils.SliceStringTypeToSet(sliceString),
+		},
+		ID: types.StringValue(strconv.FormatInt(data.GetId(), 10)),
+	}
+
+	diags = resp.State.Set(ctx, &networkListState)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }
 
@@ -318,33 +309,43 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	var networkListId string
+	var networkListId int64
 	if state.ID.IsNull() {
-		networkListId = strconv.Itoa(int(state.NetworkList.ID.ValueInt64()))
+		networkListId = state.NetworkList.ID.ValueInt64()
 	} else {
-		networkListId = state.ID.ValueString()
+		id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid ID format",
+				err.Error(),
+			)
+			return
+		}
+		networkListId = id
 	}
 
-	networkListRequest := networklist.CreateNetworkListsRequest{
-		Name:     plan.NetworkList.Name.ValueStringPointer(),
-		ListType: plan.NetworkList.ListType.ValueStringPointer(),
-	}
-
-	requestItemsValue := plan.NetworkList.ItemsValuesStr.ElementsAs(ctx, &networkListRequest.ItemsValues, false)
-	resp.Diagnostics.Append(requestItemsValue...)
+	var items []string
+	diagsItems := plan.NetworkList.Items.ElementsAs(ctx, &items, false)
+	resp.Diagnostics.Append(diagsItems...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	updateNetworkList, response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
+	networkListRequest := azionapi.NetworkListRequest{
+		Name:  plan.NetworkList.Name.ValueString(),
+		Type:  plan.NetworkList.Type.ValueString(),
+		Items: items,
+	}
+
+	updateNetworkList, response, err := r.client.api.NetworkListsAPI.UpdateNetworkList(ctx, networkListId).NetworkListRequest(networkListRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
-			updateNetworkList, response, err = utils.RetryOn429(func() (*networklist.NetworkListsResponse, *http.Response, error) {
-				return r.client.networkListApi.DefaultAPI.NetworkListsUuidPut(ctx, networkListId).CreateNetworkListsRequest(networkListRequest).Execute() //nolint
+		if response != nil && response.StatusCode == 429 {
+			updateNetworkList, response, err = utils.RetryOn429(func() (*azionapi.NetworkListResponse, *http.Response, error) {
+				return r.client.api.NetworkListsAPI.UpdateNetworkList(ctx, networkListId).NetworkListRequest(networkListRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
@@ -355,38 +356,47 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
+			if response != nil && response.Body != nil {
+				bodyBytes, errReadAll := io.ReadAll(response.Body)
+				if errReadAll != nil {
+					resp.Diagnostics.AddError(
+						errReadAll.Error(),
+						"error reading response from API",
+					)
+				}
+				bodyString := string(bodyBytes)
 				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
+					err.Error(),
+					bodyString,
+				)
+			} else {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed",
 				)
 			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
 			return
 		}
 	}
 
-	plan.SchemaVersion = types.Int64Value(3)
+	plan.SchemaVersion = types.Int64Value(1)
+
+	data := updateNetworkList.GetData()
 	var sliceString []types.String
-	for _, itemsValuesStr := range updateNetworkList.Results.GetItemsValues() {
-		sliceString = append(sliceString, types.StringValue(itemsValuesStr))
-	}
-	plan.NetworkList = &NetworkListResourceResults{
-		ID:             types.Int64Value(updateNetworkList.Results.GetId()),
-		LastEditor:     types.StringValue(updateNetworkList.Results.GetLastEditor()),
-		LastModified:   types.StringValue(updateNetworkList.Results.GetLastModified()),
-		ListType:       types.StringValue(updateNetworkList.Results.GetListType()),
-		Name:           types.StringValue(updateNetworkList.Results.GetName()),
-		ItemsValuesStr: utils.SliceStringTypeToSet(sliceString),
-		ItemsValuesInt: types.ListNull(types.Int64Type),
+	for _, item := range data.GetItems() {
+		sliceString = append(sliceString, types.StringValue(item))
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(updateNetworkList.Results.GetId(), 10))
+	plan.NetworkList = &NetworkListResourceResults{
+		ID:           types.Int64Value(data.GetId()),
+		LastEditor:   types.StringValue(data.GetLastEditor()),
+		LastModified: types.StringValue(data.GetLastModified().Format(time.RFC3339)),
+		Type:         types.StringValue(data.GetType()),
+		Name:         types.StringValue(data.GetName()),
+		Items:        utils.SliceStringTypeToSet(sliceString),
+	}
+
+	plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -404,22 +414,30 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	var networkListId string
+	var networkListId int64
 	if state.ID.IsNull() {
-		networkListId = strconv.Itoa(int(state.NetworkList.ID.ValueInt64()))
+		networkListId = state.NetworkList.ID.ValueInt64()
 	} else {
-		networkListId = state.ID.ValueString()
+		id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid ID format",
+				err.Error(),
+			)
+			return
+		}
+		networkListId = id
 	}
 
-	response, err := r.client.networkListApi.DefaultAPI.NetworkListsUuidDelete(ctx, networkListId).Execute() //nolint
+	_, response, err := r.client.api.NetworkListsAPI.DeleteNetworkList(ctx, networkListId).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
-			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
-				return r.client.networkListApi.DefaultAPI.NetworkListsUuidDelete(ctx, networkListId).Execute() //nolint
+		if response != nil && response.StatusCode == 429 {
+			_, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
+				return r.client.api.NetworkListsAPI.DeleteNetworkList(ctx, networkListId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
@@ -430,18 +448,25 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
+			if response != nil && response.Body != nil {
+				bodyBytes, errReadAll := io.ReadAll(response.Body)
+				if errReadAll != nil {
+					resp.Diagnostics.AddError(
+						errReadAll.Error(),
+						"error reading response from API",
+					)
+				}
+				bodyString := string(bodyBytes)
 				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
+					err.Error(),
+					bodyString,
+				)
+			} else {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"API request failed",
 				)
 			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
 			return
 		}
 	}

@@ -3,18 +3,18 @@
 page_title: "azion_network_list Data Source - terraform-provider-azion"
 subcategory: ""
 description: |-
-  
+  Provides a Network List data source.
 ---
 
 # azion_network_list (Data Source)
 
-
+Use this data source to read a specific Network List by its ID.
 
 ## Example Usage
 
 ```terraform
 data "azion_network_list" "example" {
-  network_list_id = "1235"
+  id = 1235
 }
 ```
 
@@ -23,25 +23,20 @@ data "azion_network_list" "example" {
 
 ### Required
 
-- `network_list_id` (String) The edge application identifier.
-
-### Optional
-
-- `id` (String) Identifier of the data source.
+- `id` (Number) Identifier of the network list.
 
 ### Read-Only
 
-- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number) Schema Version.
+- `results` (Attributes) The network list details. (see [below for nested schema](#nestedatt--results))
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
 
 Read-Only:
 
-- `items_values_int` (List of Number) List of countries in the network list.
-- `items_values_str` (List of String) List of countries in the network list.
+- `id` (Number) ID of the network list.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
-- `list_type` (String) Type of the network list.
+- `type` (String) Type of the network list. Can be: asn, countries, or ip_cidr.
 - `name` (String) Name of the network list.
+- `items` (List of String) List of items in the network list. Contents depend on the type: country codes, IP addresses, or ASN numbers.
