@@ -143,7 +143,7 @@ func (n *NetworkListDataSource) Read(ctx context.Context, req datasource.ReadReq
 		}
 	}
 
-	networkListState := populateNetworkListResult(ctx, networkListResponse.GetData())
+	networkListState := populateNetworkListResult(networkListResponse.GetData())
 	diags := resp.State.Set(ctx, &networkListState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -151,7 +151,7 @@ func (n *NetworkListDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 }
 
-func populateNetworkListResult(ctx context.Context, data azionapi.NetworkList) NetworkListDataSourceModel {
+func populateNetworkListResult(data azionapi.NetworkList) NetworkListDataSourceModel {
 	var itemsSlice []types.String
 	for _, item := range data.GetItems() {
 		itemsSlice = append(itemsSlice, types.StringValue(item))
