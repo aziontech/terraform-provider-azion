@@ -3,12 +3,12 @@
 page_title: "azion_network_lists Data Source - terraform-provider-azion"
 subcategory: ""
 description: |-
-  
+  Provides a Network Lists data source for listing multiple network lists.
 ---
 
 # azion_network_lists (Data Source)
 
-
+Use this data source to list multiple Network Lists with pagination.
 
 ## Example Usage
 
@@ -24,37 +24,32 @@ data "azion_network_lists" "example" {
 ### Optional
 
 - `id` (String) Identifier of the data source.
-- `page` (Number) The page number of Cache Settings.
+- `page` (Number) The page number of network lists.
 
 ### Read-Only
 
-- `counter` (Number) The total number of Cache Settings.
-- `links` (Attributes) (see [below for nested schema](#nestedatt--links))
-- `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number) Schema Version.
+- `counter` (Number) The total number of network lists.
 - `total_pages` (Number) The total number of pages.
+- `links` (Attributes) Pagination links. (see [below for nested schema](#nestedatt--links))
+- `results` (Attributes List) List of network lists. (see [below for nested schema](#nestedatt--results))
 
 <a id="nestedatt--links"></a>
 ### Nested Schema for `links`
 
 Read-Only:
 
-- `next` (String)
-- `previous` (String)
-
+- `next` (String) URL to the next page of results.
+- `previous` (String) URL to the previous page of results.
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
 
-Required:
-
-- `id` (Number) ID of the network list.
-
 Read-Only:
 
-- `country_list` (List of String) List of countries in the network list.
-- `ip_list` (List of String) List of IP addresses in the network list.
+- `id` (Number) ID of the network list.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
-- `list_type` (String) Type of the network list.
+- `type` (String) Type of the network list. Can be: asn, countries, or ip_cidr.
 - `name` (String) Name of the network list.
+
+**Note:** The plural data source returns a summary of network lists without the `items` field. Use the singular `azion_network_list` data source to get the full list of items in a network list.
