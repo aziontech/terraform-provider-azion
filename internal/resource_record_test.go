@@ -14,12 +14,12 @@ func TestAccResourceRecord(t *testing.T) {
 	//			// Create and Read testing
 	//			{
 	//				Config: providerConfig + `
-	//				resource "azion_intelligent_dns_records" "dev" {
-	//					zone_id = 2638
+	//				resource "azion_intelligent_dns_record" "dev" {
+	//					zone_id = "2638"
 	//					record = {
-	//					  record_type= "A"
-	//					  entry = "www"
-	//					  answers_list = [
+	//					  type = "A"
+	//					  name = "www"
+	//					  rdata = [
 	//						  "1.1.1.1",
 	//						  "8.8.8.8"
 	//					  ]
@@ -31,12 +31,12 @@ func TestAccResourceRecord(t *testing.T) {
 	// `,
 	//
 	//		Check: resource.ComposeAggregateTestCheckFunc(
-	//			resource.TestCheckResourceAttr("azion_intelligent_dns_records.dev", "schema_version", "3"),
+	//			resource.TestCheckResourceAttr("azion_intelligent_dns_record.dev", "zone_id", "2638"),
 	//		),
 	//	},
 	//	// ImportState testing
 	//	{
-	//		ResourceName:            "azion_intelligent_dns_records.dev",
+	//		ResourceName:            "azion_intelligent_dns_record.dev",
 	//		ImportState:             true,
 	//		ImportStateVerify:       true,
 	//		ImportStateVerifyIgnore: []string{"last_updated"},
@@ -44,12 +44,12 @@ func TestAccResourceRecord(t *testing.T) {
 	//	// Update and Read testing
 	//	{
 	//		Config: providerConfig + `
-	//		resource "azion_intelligent_dns_records" "dev" {
-	//			zone_id = 2638
+	//		resource "azion_intelligent_dns_record" "dev" {
+	//			zone_id = "2638"
 	//			record = {
-	//			  record_type= "A"
-	//			  entry = "ww2"
-	//			  answers_list = [
+	//			  type = "A"
+	//			  name = "ww2"
+	//			  rdata = [
 	//				"8.8.8.8",
 	//				"7.7.7.7"
 	//			  ]
@@ -61,7 +61,7 @@ func TestAccResourceRecord(t *testing.T) {
 	// `,
 	//
 	//				Check: resource.ComposeAggregateTestCheckFunc(
-	//					resource.TestCheckResourceAttr("azion_intelligent_dns_records.dev", "schema_version", "3"),
+	//					resource.TestCheckResourceAttr("azion_intelligent_dns_record.dev", "zone_id", "2638"),
 	//				),
 	//			},
 	//			// Delete testing automatically occurs in TestCase
