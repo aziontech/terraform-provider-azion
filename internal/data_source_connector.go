@@ -168,7 +168,7 @@ func (d *ConnectorDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 }
 
-func populateConnectorResults(ctx context.Context, connector azionapi.Connector) (ConnectorDataSourceModel, error) {
+func populateConnectorResults(_ context.Context, connector azionapi.Connector) (ConnectorDataSourceModel, error) {
 	connectorState := ConnectorDataSourceModel{}
 
 	// Get the actual connector instance.

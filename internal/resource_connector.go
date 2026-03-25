@@ -34,7 +34,7 @@ type connectorResource struct {
 	client *apiClient
 }
 
-// Main resource model
+// Main resource model.
 type connectorResourceModel struct {
 	Connector     *connectorResourceResults `tfsdk:"connector"`
 	ID            types.String              `tfsdk:"id"`
@@ -42,7 +42,7 @@ type connectorResourceModel struct {
 	SchemaVersion types.Int64               `tfsdk:"schema_version"`
 }
 
-// Connector results - all fields including type-specific attributes
+// Connector results - all fields including type-specific attributes.
 type connectorResourceResults struct {
 	ID             types.Int64             `tfsdk:"id"`
 	Name           types.String            `tfsdk:"name"`
@@ -55,20 +55,20 @@ type connectorResourceResults struct {
 	HTTPAttrs      *HTTPAttributesModel    `tfsdk:"http_attributes"`
 }
 
-// Storage connector attributes
+// Storage connector attributes.
 type StorageAttributesModel struct {
 	Bucket types.String `tfsdk:"bucket"`
 	Prefix types.String `tfsdk:"prefix"`
 }
 
-// HTTP connector attributes
+// HTTP connector attributes.
 type HTTPAttributesModel struct {
 	Addresses         []AddressModel `tfsdk:"addresses"`
 	ConnectionOptions types.Object   `tfsdk:"connection_options"`
 	Modules           types.Object   `tfsdk:"modules"`
 }
 
-// Address model for HTTP connectors
+// Address model for HTTP connectors.
 type AddressModel struct {
 	Address   types.String         `tfsdk:"address"`
 	Active    types.Bool           `tfsdk:"active"`
@@ -77,18 +77,18 @@ type AddressModel struct {
 	Modules   *AddressModulesModel `tfsdk:"modules"`
 }
 
-// Address modules
+// Address modules.
 type AddressModulesModel struct {
 	LoadBalancer *AddressLoadBalancerModel `tfsdk:"load_balancer"`
 }
 
-// Address load balancer module - uses server_role and weight
+// Address load balancer module - uses server_role and weight.
 type AddressLoadBalancerModel struct {
 	ServerRole types.String `tfsdk:"server_role"`
 	Weight     types.Int64  `tfsdk:"weight"`
 }
 
-// HTTP connection options
+// HTTP connection options.
 type HTTPConnectionOptionsModel struct {
 	DNSResolution     types.String `tfsdk:"dns_resolution"`
 	FollowingRedirect types.Bool   `tfsdk:"following_redirect"`
@@ -100,18 +100,18 @@ type HTTPConnectionOptionsModel struct {
 	TransportPolicy   types.String `tfsdk:"transport_policy"`
 }
 
-// HTTP modules
+// HTTP modules.
 type HTTPModulesModel struct {
 	LoadBalancer types.Object `tfsdk:"load_balancer"`
 	OriginShield types.Object `tfsdk:"origin_shield"`
 }
 
-// Load balancer module
+// Load balancer module.
 type LoadBalancerModuleModel struct {
 	Enabled types.Bool `tfsdk:"enabled"`
 }
 
-// Origin shield module
+// Origin shield module.
 type OriginShieldModuleModel struct {
 	Enabled types.Bool `tfsdk:"enabled"`
 }
@@ -1028,7 +1028,7 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 	}
 }
 
-// attrTypes returns the attribute types for HTTPConnectionOptionsModel
+// attrTypes returns the attribute types for HTTPConnectionOptionsModel.
 func (m HTTPConnectionOptionsModel) attrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"dns_resolution":      types.StringType,
@@ -1042,7 +1042,7 @@ func (m HTTPConnectionOptionsModel) attrTypes() map[string]attr.Type {
 	}
 }
 
-// attrTypes returns the attribute types for HTTPModulesModel
+// attrTypes returns the attribute types for HTTPModulesModel.
 func (m HTTPModulesModel) attrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"load_balancer": types.ObjectType{AttrTypes: LoadBalancerModuleModel{}.attrTypes()},
@@ -1050,14 +1050,14 @@ func (m HTTPModulesModel) attrTypes() map[string]attr.Type {
 	}
 }
 
-// attrTypes returns the attribute types for LoadBalancerModuleModel
+// attrTypes returns the attribute types for LoadBalancerModuleModel.
 func (m LoadBalancerModuleModel) attrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"enabled": types.BoolType,
 	}
 }
 
-// attrTypes returns the attribute types for OriginShieldModuleModel
+// attrTypes returns the attribute types for OriginShieldModuleModel.
 func (m OriginShieldModuleModel) attrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"enabled": types.BoolType,
@@ -1065,7 +1065,7 @@ func (m OriginShieldModuleModel) attrTypes() map[string]attr.Type {
 }
 
 // addConnectorAPIError adds an appropriate error to diagnostics based on the API response.
-func addConnectorAPIError(diagnostics *diag.Diagnostics, err error, response *http.Response, operation string) {
+func addConnectorAPIError(diagnostics *diag.Diagnostics, err error, response *http.Response, _ string) {
 	if response == nil {
 		diagnostics.AddError(err.Error(), "No response received")
 		return
