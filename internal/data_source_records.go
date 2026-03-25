@@ -231,6 +231,7 @@ func buildRecordsState(ctx context.Context, zoneId types.Int64, page types.Int64
 		Page:     page,
 		PageSize: pageSize,
 		Links:    &RecordsResponseLinks{},
+		Results:  []RecordDataSourceResult{}, // Initialize as empty slice to avoid null
 	}
 
 	// Set counter.

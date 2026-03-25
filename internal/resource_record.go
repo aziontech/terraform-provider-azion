@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -126,11 +127,11 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	zoneId, err := strconv.ParseInt(plan.ZoneId.ValueString(), 10, 64)
+	zoneId, err := strconv.ParseInt(strings.TrimSpace(plan.ZoneId.ValueString()), 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not convert Zone ID",
+			fmt.Sprintf("Could not convert Zone ID '%s' to integer. Ensure the value is a valid integer without leading/trailing whitespace.", plan.ZoneId.ValueString()),
 		)
 		return
 	}
@@ -181,6 +182,13 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 			}
 		} else {
 			usrMsg, errMsg := errorPrintRecord(httpResponse.StatusCode, err)
+			// Read response body for more error details
+			if httpResponse != nil && httpResponse.Body != nil {
+				bodyBytes, readErr := io.ReadAll(httpResponse.Body)
+				if readErr == nil && len(bodyBytes) > 0 {
+					errMsg = fmt.Sprintf("%s\nDetails: %s", errMsg, string(bodyBytes))
+				}
+			}
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
@@ -215,11 +223,11 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 	// Parse zone_id and record_id from state.
 	// Format: "zone_id/record_id" for import, or just "zone_id" for existing state.
 	valueFromCmd := strings.Split(state.ZoneId.ValueString(), "/")
-	zoneId, err := strconv.ParseInt(valueFromCmd[0], 10, 64)
+	zoneId, err := strconv.ParseInt(strings.TrimSpace(valueFromCmd[0]), 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not convert Zone ID",
+			fmt.Sprintf("Could not convert Zone ID '%s' to integer. Ensure the value is a valid integer without leading/trailing whitespace.", valueFromCmd[0]),
 		)
 		return
 	}
@@ -298,11 +306,11 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	zoneId, err := strconv.ParseInt(plan.ZoneId.ValueString(), 10, 64)
+	zoneId, err := strconv.ParseInt(strings.TrimSpace(plan.ZoneId.ValueString()), 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not convert Zone ID",
+			fmt.Sprintf("Could not convert Zone ID '%s' to integer. Ensure the value is a valid integer without leading/trailing whitespace.", plan.ZoneId.ValueString()),
 		)
 		return
 	}
@@ -384,11 +392,11 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	zoneId, err := strconv.ParseInt(state.ZoneId.ValueString(), 10, 64)
+	zoneId, err := strconv.ParseInt(strings.TrimSpace(state.ZoneId.ValueString()), 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
-			"Could not convert Zone ID",
+			fmt.Sprintf("Could not convert Zone ID '%s' to integer. Ensure the value is a valid integer without leading/trailing whitespace.", state.ZoneId.ValueString()),
 		)
 		return
 	}
