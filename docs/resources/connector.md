@@ -75,7 +75,7 @@ resource "azion_connector" "http_connector_full" {
       connection_options = {
         dns_resolution      = "both"
         following_redirect  = false
-        host                = "${host}"
+        host                = "$${host}"
         http_version_policy = "http1_1"
         path_prefix         = ""
         real_ip_header      = "X-Real-IP"
@@ -151,7 +151,7 @@ When `type = "http"`, include `http_attributes` inside the `connector` block:
   * `connection_options` - (Optional) HTTP connection options (Computed with API defaults):
     * `dns_resolution` - (Optional) DNS resolution strategy (`both` or `force_ipv4`).
     * `following_redirect` - (Optional) Whether to follow redirects.
-    * `host` - (Optional) Host header value. Use `${host}` for original host.
+    * `host` - (Optional) Host header value. Use `$${host}` for original host (escaped Terraform interpolation).
     * `http_version_policy` - (Optional) HTTP version policy.
     * `path_prefix` - (Optional) Path prefix for requests.
     * `real_ip_header` - (Optional) Header for real IP.

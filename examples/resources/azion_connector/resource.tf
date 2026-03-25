@@ -61,7 +61,7 @@ resource "azion_connector" "http_connector_full" {
       connection_options = {
         dns_resolution      = "both"
         following_redirect  = false
-        host                = "${host}"
+        host                = "$${host}"
         http_version_policy = "http1_1"
         path_prefix         = ""
         real_ip_header      = "X-Real-IP"
