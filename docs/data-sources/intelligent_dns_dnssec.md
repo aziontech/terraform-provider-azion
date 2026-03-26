@@ -27,24 +27,24 @@ data "azion_intelligent_dns_dnssec" "examples" {
 
 ### Optional
 
-- `dns_sec` (Attributes) (see [below for nested schema](#nestedatt--dns_sec))
+- `dnssec` (Attributes) (see [below for nested schema](#nestedatt--dnssec))
 - `schema_version` (Number) Schema Version.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
 
-<a id="nestedatt--dns_sec"></a>
-### Nested Schema for `dns_sec`
+<a id="nestedatt--dnssec"></a>
+### Nested Schema for `dnssec`
 
 Optional:
 
-- `delegation_signer` (Attributes) Zone DNSSEC delegation-signer. (see [below for nested schema](#nestedatt--dns_sec--delegation_signer))
+- `delegation_signer` (Attributes) Zone DNSSEC delegation-signer. (see [below for nested schema](#nestedatt--dnssec--delegation_signer))
 - `is_enabled` (Boolean) Zone DNSSEC flags for enabled.
 - `status` (String) The status of the Zone DNSSEC.
 
-<a id="nestedatt--dns_sec--delegation_signer"></a>
-### Nested Schema for `dns_sec.delegation_signer`
+<a id="nestedatt--dnssec--delegation_signer"></a>
+### Nested Schema for `dnssec.delegation_signer`
 
 Optional:
 
@@ -53,11 +53,11 @@ Optional:
 
 Read-Only:
 
-- `algorithmtype` (Attributes) Digest algorithm use for Zone DNSSEC. (see [below for nested schema](#nestedatt--dns_sec--delegation_signer--algorithmtype))
-- `digesttype` (Attributes) Digest Type for Zone DNSSEC. (see [below for nested schema](#nestedatt--dns_sec--delegation_signer--digesttype))
+- `algorithmtype` (Attributes) Digest algorithm use for Zone DNSSEC. (see [below for nested schema](#nestedatt--dnssec--delegation_signer--algorithmtype))
+- `digesttype` (Attributes) Digest Type for Zone DNSSEC. (see [below for nested schema](#nestedatt--dnssec--delegation_signer--digesttype))
 
-<a id="nestedatt--dns_sec--delegation_signer--algorithmtype"></a>
-### Nested Schema for `dns_sec.delegation_signer.algorithmtype`
+<a id="nestedatt--dnssec--delegation_signer--algorithmtype"></a>
+### Nested Schema for `dnssec.delegation_signer.algorithmtype`
 
 Read-Only:
 
@@ -65,8 +65,8 @@ Read-Only:
 - `slug` (String) The Slug of this algorithm.
 
 
-<a id="nestedatt--dns_sec--delegation_signer--digesttype"></a>
-### Nested Schema for `dns_sec.delegation_signer.digesttype`
+<a id="nestedatt--dnssec--delegation_signer--digesttype"></a>
+### Nested Schema for `dnssec.delegation_signer.digesttype`
 
 Read-Only:
 
