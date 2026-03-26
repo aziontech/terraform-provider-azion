@@ -135,6 +135,10 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		}
 	}
 
+	if response != nil {
+		defer response.Body.Close()
+	}
+
 	zoneData := zoneResponse.GetData()
 
 	// Convert nameservers to Terraform List

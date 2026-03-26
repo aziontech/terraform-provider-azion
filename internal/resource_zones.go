@@ -155,6 +155,10 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		}
 	}
 
+	if response != nil {
+		defer response.Body.Close()
+	}
+
 	zoneData := zoneResponse.GetData()
 
 	// Convert nameservers to Terraform List
@@ -236,6 +240,10 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
+	}
+
+	if response != nil {
+		defer response.Body.Close()
 	}
 
 	zoneData := zoneResponse.GetData()
@@ -321,6 +329,10 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		}
 	}
 
+	if response != nil {
+		defer response.Body.Close()
+	}
+
 	zoneData := zoneResponse.GetData()
 
 	// Convert nameservers to Terraform List
@@ -397,6 +409,10 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
+	}
+
+	if response != nil {
+		defer response.Body.Close()
 	}
 }
 

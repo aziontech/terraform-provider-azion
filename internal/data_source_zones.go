@@ -186,6 +186,10 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		}
 	}
 
+	if response != nil {
+		defer response.Body.Close()
+	}
+
 	zoneState := ZonesDataSourceModel{
 		Page:     types.Int64Value(Page.ValueInt64()),
 		PageSize: types.Int64Value(PageSize.ValueInt64()),
