@@ -4,8 +4,9 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -40,11 +41,20 @@ type CertificateResultsModel struct {
 	SubjectName        []types.String `tfsdk:"subject_name"`
 	Validity           types.String   `tfsdk:"validity"`
 	Status             types.String   `tfsdk:"status"`
-	CertificateType    types.String   `tfsdk:"certificate_type"`
+	StatusDetail       types.String   `tfsdk:"status_detail"`
+	Type               types.String   `tfsdk:"certificate_type"`
 	Managed            types.Bool     `tfsdk:"managed"`
 	CSR                types.String   `tfsdk:"csr"`
+	Challenge          types.String   `tfsdk:"challenge"`
+	Authority          types.String   `tfsdk:"authority"`
+	KeyAlgorithm       types.String   `tfsdk:"key_algorithm"`
+	Active             types.Bool     `tfsdk:"active"`
+	ProductVersion     types.String   `tfsdk:"product_version"`
+	LastEditor         types.String   `tfsdk:"last_editor"`
+	LastModified       types.String   `tfsdk:"last_modified"`
+	RenewedAt          types.String   `tfsdk:"renewed_at"`
 	CertificateContent types.String   `tfsdk:"certificate_content"`
-	AzionInformation   types.String   `tfsdk:"azion_information"`
+	PrivateKey         types.String   `tfsdk:"private_key"`
 }
 
 func (c *CertificateDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -78,47 +88,83 @@ func (c *CertificateDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "Identifier of the certificate.",
-						Required:    true,
+						Computed:    true,
 					},
 					"name": schema.StringAttribute{
 						Description: "Name of the certificate.",
-						Required:    true,
+						Computed:    true,
 					},
 					"issuer": schema.StringAttribute{
 						Description: "Issuer of the certificate.",
-						Optional:    true,
+						Computed:    true,
 					},
 					"subject_name": schema.ListAttribute{
 						Description: "Subject name of the certificate.",
-						Optional:    true,
+						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"validity": schema.StringAttribute{
 						Description: "Validity of the certificate.",
-						Optional:    true,
+						Computed:    true,
 					},
 					"status": schema.StringAttribute{
 						Description: "Status of the certificate.",
-						Optional:    true,
+						Computed:    true,
+					},
+					"status_detail": schema.StringAttribute{
+						Description: "Status detail of the certificate.",
+						Computed:    true,
 					},
 					"certificate_type": schema.StringAttribute{
 						Description: "Type of the certificate.",
-						Optional:    true,
+						Computed:    true,
 					},
 					"managed": schema.BoolAttribute{
 						Description: "Whether the certificate is managed.",
-						Optional:    true,
+						Computed:    true,
 					},
 					"csr": schema.StringAttribute{
 						Description: "Certificate Signing Request (CSR).",
-						Optional:    true,
+						Computed:    true,
+					},
+					"challenge": schema.StringAttribute{
+						Description: "Challenge type for the certificate.",
+						Computed:    true,
+					},
+					"authority": schema.StringAttribute{
+						Description: "Certificate authority.",
+						Computed:    true,
+					},
+					"key_algorithm": schema.StringAttribute{
+						Description: "Key algorithm used for the certificate.",
+						Computed:    true,
+					},
+					"active": schema.BoolAttribute{
+						Description: "Whether the certificate is active.",
+						Computed:    true,
+					},
+					"product_version": schema.StringAttribute{
+						Description: "Product version of the certificate.",
+						Computed:    true,
+					},
+					"last_editor": schema.StringAttribute{
+						Description: "Last editor of the certificate.",
+						Computed:    true,
+					},
+					"last_modified": schema.StringAttribute{
+						Description: "Last modified timestamp of the certificate.",
+						Computed:    true,
+					},
+					"renewed_at": schema.StringAttribute{
+						Description: "Renewal timestamp of the certificate.",
+						Computed:    true,
 					},
 					"certificate_content": schema.StringAttribute{
 						Description: "The content of the certificate.",
-						Optional:    true,
+						Computed:    true,
 					},
-					"azion_information": schema.StringAttribute{
-						Description: "Information of the digital certificate.",
+					"private_key": schema.StringAttribute{
+						Description: "The private key of the certificate.",
 						Computed:    true,
 					},
 				},
@@ -135,15 +181,15 @@ func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	certificateResponse, response, err := c.client.digitalCertificatesApi.RetrieveDigitalCertificateByIDApi.GetCertificate(ctx, getCertificateID.ValueInt64()).Execute() //nolint
+	certificateResponse, response, err := c.client.api.DigitalCertificatesCertificatesAPI.RetrieveCertificate(ctx, getCertificateID.ValueInt64()).Execute()
 	if err != nil {
 		if response.StatusCode == 429 {
-			certificateResponse, response, err = utils.RetryOn429(func() (*digital_certificates.DC200, *http.Response, error) {
-				return c.client.digitalCertificatesApi.RetrieveDigitalCertificateByIDApi.GetCertificate(ctx, getCertificateID.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			certificateResponse, response, err = utils.RetryOn429(func() (*azionapi.CertificateResponse, *http.Response, error) {
+				return c.client.api.DigitalCertificatesCertificatesAPI.RetrieveCertificate(ctx, getCertificateID.ValueInt64()).Execute()
+			}, 5)
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
@@ -168,34 +214,70 @@ func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadReq
 			)
 			return
 		}
+	} else {
+		if response != nil {
+			defer response.Body.Close()
+		}
 	}
 
-	var GetSubjectName []types.String
-	for _, subjectName := range certificateResponse.Results.GetSubjectName() {
-		GetSubjectName = append(GetSubjectName, types.StringValue(subjectName))
-	}
-
-	certificateState := CertificateDataSourceModel{
-		CertificateID: getCertificateID,
-		SchemaVersion: types.Int64Value(int64(*certificateResponse.SchemaVersion)),
-		Results: &CertificateResultsModel{
-			ID:                 types.Int64Value(int64(certificateResponse.Results.GetId())),
-			Name:               types.StringValue(certificateResponse.Results.GetName()),
-			Issuer:             types.StringValue(certificateResponse.Results.GetIssuer()),
-			SubjectName:        GetSubjectName,
-			Validity:           types.StringValue(certificateResponse.Results.GetValidity()),
-			Status:             types.StringValue(certificateResponse.Results.GetStatus()),
-			CertificateType:    types.StringValue(certificateResponse.Results.GetCertificateType()),
-			Managed:            types.BoolValue(certificateResponse.Results.GetManaged()),
-			CSR:                types.StringValue(certificateResponse.Results.GetCsr()),
-			CertificateContent: types.StringValue(certificateResponse.Results.GetCertificateContent()),
-			AzionInformation:   types.StringValue(certificateResponse.Results.GetAzionInformation()),
-		},
-	}
+	// Populate the results from the API response
+	certificateState := populateCertificateResults(certificateResponse.GetData(), getCertificateID)
 	certificateState.ID = types.StringValue("Get By ID Digital Certificate")
 	diags = resp.State.Set(ctx, &certificateState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+// populateCertificateResults transforms API response data to Terraform state model.
+func populateCertificateResults(cert azionapi.Certificate, certificateID types.Int64) CertificateDataSourceModel {
+	var subjectNameList []types.String
+	for _, subjectName := range cert.GetSubjectName() {
+		subjectNameList = append(subjectNameList, types.StringValue(subjectName))
+	}
+
+	var renewedAt string
+	if cert.RenewedAt.IsSet() && cert.RenewedAt.Get() != nil {
+		renewedAt = (*cert.RenewedAt.Get()).Format(time.RFC3339)
+	}
+
+	result := CertificateDataSourceModel{
+		CertificateID: certificateID,
+		SchemaVersion: types.Int64Value(1),
+		Results: &CertificateResultsModel{
+			ID:             types.Int64Value(cert.GetId()),
+			Name:           types.StringValue(cert.GetName()),
+			Issuer:         types.StringValue(cert.GetIssuer()),
+			SubjectName:    subjectNameList,
+			Validity:       types.StringValue(cert.GetValidity()),
+			Status:         types.StringValue(cert.GetStatus()),
+			StatusDetail:   types.StringValue(cert.GetStatusDetail()),
+			Type:           types.StringValue(cert.GetType()),
+			Managed:        types.BoolValue(cert.GetManaged()),
+			CSR:            types.StringValue(cert.GetCsr()),
+			Challenge:      types.StringValue(cert.GetChallenge()),
+			Authority:      types.StringValue(cert.GetAuthority()),
+			KeyAlgorithm:   types.StringValue(cert.GetKeyAlgorithm()),
+			ProductVersion: types.StringValue(cert.GetProductVersion()),
+			LastEditor:     types.StringValue(cert.GetLastEditor()),
+			LastModified:   types.StringValue(cert.GetLastModified().Format(time.RFC3339)),
+			RenewedAt:      types.StringValue(renewedAt),
+		},
+	}
+
+	// Handle optional fields
+	if cert.Active != nil {
+		result.Results.Active = types.BoolValue(*cert.Active)
+	}
+
+	if cert.HasCertificate() {
+		result.Results.CertificateContent = types.StringValue(cert.GetCertificate())
+	}
+
+	if cert.HasPrivateKey() {
+		result.Results.PrivateKey = types.StringValue(cert.GetPrivateKey())
+	}
+
+	return result
 }

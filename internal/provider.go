@@ -133,7 +133,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewEdgeApplicationEdgeFunctionsInstanceResource,
 		NewEdgeApplicationRulesEngineResource,
 		NewEdgeApplicationCacheSettingsResource,
-		NewDigitalCertificateResource,
+		NewCertificateResource,
 		NetworkListResource,
 		FirewallMainSettingResource,
 		EnvironmentVariableResource,

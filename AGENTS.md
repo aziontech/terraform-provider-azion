@@ -452,7 +452,7 @@ When generating a new resource or data source from OpenAPI:
 11. **Register in provider.go**: Add to DataSources() or Resources()
 12. **Generate documentation**: Create docs and examples
 13. **Update example/test files**: After any schema changes, update the corresponding files
-14. **Run linters**: After structural changes, run `golangci-lint run --config .golintci.yml ./internal/...`
+14. **Run linters**: After any change, run `golangci-lint run --config .golintci.yml ./internal/...`
 
 ---
 
