@@ -15,7 +15,7 @@ description: |-
 ```terraform
 resource "azion_intelligent_dns_dnssec" "examples" {
   zone_id = "12345"
-  dns_sec = {
+  dnssec = {
     is_enabled = true
   }
 }
@@ -26,7 +26,7 @@ resource "azion_intelligent_dns_dnssec" "examples" {
 
 ### Required
 
-- `dns_sec` (Attributes) (see [below for nested schema](#nestedatt--dns_sec))
+- `dnssec` (Attributes) (see [below for nested schema](#nestedatt--dnssec))
 - `zone_id` (String) The zone identifier to target for the resource.
 
 ### Read-Only
@@ -34,8 +34,8 @@ resource "azion_intelligent_dns_dnssec" "examples" {
 - `last_updated` (String) Timestamp of the last Terraform update of the order.
 - `schema_version` (Number) Schema Version.
 
-<a id="nestedatt--dns_sec"></a>
-### Nested Schema for `dns_sec`
+<a id="nestedatt--dnssec"></a>
+### Nested Schema for `dnssec`
 
 Required:
 
