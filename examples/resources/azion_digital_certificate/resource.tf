@@ -37,12 +37,12 @@ resource "azion_digital_certificate" "example" {
 }
 
 # Example using local files for certificate and private key
-# This requires you to have the certificate.pem and private_key.pem files in the same directory
+# This requires you to have the dummy_certificate.pem and dummy_private_key.pem files in the same directory
 resource "azion_digital_certificate" "from_file" {
   results = {
     name                = "My Certificate from File"
-    certificate_content = file("${path.module}/certificate.pem")
-    private_key         = file("${path.module}/private_key.pem")
+    certificate_content = file("${path.module}/dummy_certificate.pem")
+    private_key         = file("${path.module}/dummy_private_key.pem")
   }
 }
 

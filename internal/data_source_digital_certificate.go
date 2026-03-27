@@ -214,10 +214,14 @@ func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadReq
 			)
 			return
 		}
+	} else {
+		if response != nil {
+			defer response.Body.Close()
+		}
 	}
 
 	// Populate the results from the API response
-	certificateState := populateCertificateResults(ctx, certificateResponse.GetData(), getCertificateID)
+	certificateState := populateCertificateResults(certificateResponse.GetData(), getCertificateID)
 	certificateState.ID = types.StringValue("Get By ID Digital Certificate")
 	diags = resp.State.Set(ctx, &certificateState)
 	resp.Diagnostics.Append(diags...)
@@ -227,7 +231,7 @@ func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadReq
 }
 
 // populateCertificateResults transforms API response data to Terraform state model.
-func populateCertificateResults(ctx context.Context, cert azionapi.Certificate, certificateID types.Int64) CertificateDataSourceModel {
+func populateCertificateResults(cert azionapi.Certificate, certificateID types.Int64) CertificateDataSourceModel {
 	var subjectNameList []types.String
 	for _, subjectName := range cert.GetSubjectName() {
 		subjectNameList = append(subjectNameList, types.StringValue(subjectName))

@@ -225,9 +225,13 @@ func (d *DigitalCertificatesDataSource) Read(ctx context.Context, req datasource
 			)
 			return
 		}
+	} else {
+		if response != nil {
+			defer response.Body.Close()
+		}
 	}
 
-	state := populateCertificatesListResults(ctx, certificatesResponse)
+	state := populateCertificatesListResults(certificatesResponse)
 	state.ID = types.StringValue("Get All Digital Certificates")
 	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -237,7 +241,7 @@ func (d *DigitalCertificatesDataSource) Read(ctx context.Context, req datasource
 }
 
 // populateCertificatesListResults transforms API response data to Terraform state model.
-func populateCertificatesListResults(ctx context.Context, list *azionapi.PaginatedCertificateList) DigitalCertificatesDataSourceModel {
+func populateCertificatesListResults(list *azionapi.PaginatedCertificateList) DigitalCertificatesDataSourceModel {
 	var previous, next string
 	if list.HasPrevious() {
 		previous = list.GetPrevious()

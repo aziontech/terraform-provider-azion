@@ -245,6 +245,10 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 			)
 			return
 		}
+	} else {
+		if response != nil {
+			defer response.Body.Close()
+		}
 	}
 
 	// Populate the state from the API response.
@@ -316,6 +320,10 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 				bodyString,
 			)
 			return
+		}
+	} else {
+		if response != nil {
+			defer response.Body.Close()
 		}
 	}
 
@@ -401,6 +409,10 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 			)
 			return
 		}
+	} else {
+		if response != nil {
+			defer response.Body.Close()
+		}
 	}
 
 	// Populate the state from the API response.
@@ -468,6 +480,10 @@ func (r *certificateResource) Delete(ctx context.Context, req resource.DeleteReq
 				bodyString,
 			)
 			return
+		}
+	} else {
+		if response != nil {
+			defer response.Body.Close()
 		}
 	}
 }
