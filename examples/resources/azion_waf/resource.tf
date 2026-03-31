@@ -9,9 +9,8 @@ resource "azion_waf" "example" {
 # Create a WAF with full engine settings
 resource "azion_waf" "full_example" {
   result = {
-    name            = "My Full WAF"
-    active          = true
-    product_version = "v1.0"
+    name   = "My Full WAF"
+    active = true
 
     engine_settings = {
       engine_version = "2021-Q3"
