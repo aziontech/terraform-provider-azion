@@ -154,14 +154,7 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Build the conditions request.
-	conditions, err := buildWAFExceptionConditionsRequest(plan.Result.Conditions)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error building conditions",
-			err.Error(),
-		)
-		return
-	}
+	conditions := buildWAFExceptionConditionsRequest(plan.Result.Conditions)
 
 	// Build the WAF exception request.
 	wafRuleRequest := azionapi.NewWAFRuleRequest(plan.Result.Name.ValueString(), conditions)
@@ -344,14 +337,7 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	// Build the conditions request.
-	conditions, err := buildWAFExceptionConditionsRequest(plan.Result.Conditions)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error building conditions",
-			err.Error(),
-		)
-		return
-	}
+	conditions := buildWAFExceptionConditionsRequest(plan.Result.Conditions)
 
 	// Build the WAF exception request.
 	wafRuleRequest := azionapi.NewWAFRuleRequest(plan.Result.Name.ValueString(), conditions)
@@ -582,7 +568,7 @@ func transformWAFExceptionConditionsForResource(conditions []azionapi.WAFExcepti
 }
 
 // buildWAFExceptionConditionsRequest builds SDK conditions from Terraform models.
-func buildWAFExceptionConditionsRequest(conditions []WafExceptionConditionModel) ([]azionapi.WAFExceptionConditionRequest, error) {
+func buildWAFExceptionConditionsRequest(conditions []WafExceptionConditionModel) []azionapi.WAFExceptionConditionRequest {
 	var result []azionapi.WAFExceptionConditionRequest
 
 	for _, c := range conditions {
@@ -607,5 +593,5 @@ func buildWAFExceptionConditionsRequest(conditions []WafExceptionConditionModel)
 		}
 	}
 
-	return result, nil
+	return result
 }
