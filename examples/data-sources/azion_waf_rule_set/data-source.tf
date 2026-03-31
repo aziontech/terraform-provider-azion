@@ -1,5 +1,4 @@
 data "azion_waf_rule_set" "example" {
-  result = {
-    waf_id = 6105
-  }
+  waf_id       = 6105
+  exception_id = 1234
 }

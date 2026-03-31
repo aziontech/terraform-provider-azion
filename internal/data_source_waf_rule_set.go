@@ -4,8 +4,9 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/waf"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -27,33 +28,34 @@ type WafRuleSetDataSource struct {
 }
 
 type WafRuleSetDataSourceModel struct {
-	SchemaVersion types.Int64        `tfsdk:"schema_version"`
-	ID            types.String       `tfsdk:"id"`
-	Results       *WafRuleSetResults `tfsdk:"result"`
+	ID          types.String               `tfsdk:"id"`
+	WafID       types.Int64                `tfsdk:"waf_id"`
+	ExceptionID types.Int64                `tfsdk:"exception_id"`
+	Results     *WafRuleSetResultDataModel `tfsdk:"results"`
 }
 
-type WafRuleSetResults struct {
-	ID                             types.Int64    `tfsdk:"waf_id"`
-	Name                           types.String   `tfsdk:"name"`
-	Mode                           types.String   `tfsdk:"mode"`
-	Active                         types.Bool     `tfsdk:"active"`
-	SQLInjection                   types.Bool     `tfsdk:"sql_injection"`
-	SQLInjectionSensitivity        types.String   `tfsdk:"sql_injection_sensitivity"`
-	RemoteFileInclusion            types.Bool     `tfsdk:"remote_file_inclusion"`
-	RemoteFileInclusionSensitivity types.String   `tfsdk:"remote_file_inclusion_sensitivity"`
-	DirectoryTraversal             types.Bool     `tfsdk:"directory_traversal"`
-	DirectoryTraversalSensitivity  types.String   `tfsdk:"directory_traversal_sensitivity"`
-	CrossSiteScripting             types.Bool     `tfsdk:"cross_site_scripting"`
-	CrossSiteScriptingSensitivity  types.String   `tfsdk:"cross_site_scripting_sensitivity"`
-	EvadingTricks                  types.Bool     `tfsdk:"evading_tricks"`
-	EvadingTricksSensitivity       types.String   `tfsdk:"evading_tricks_sensitivity"`
-	FileUpload                     types.Bool     `tfsdk:"file_upload"`
-	FileUploadSensitivity          types.String   `tfsdk:"file_upload_sensitivity"`
-	UnwantedAccess                 types.Bool     `tfsdk:"unwanted_access"`
-	UnwantedAccessSensitivity      types.String   `tfsdk:"unwanted_access_sensitivity"`
-	IdentifiedAttack               types.Bool     `tfsdk:"identified_attack"`
-	IdentifiedAttackSensitivity    types.String   `tfsdk:"identified_attack_sensitivity"`
-	BypassAddresses                []types.String `tfsdk:"bypass_addresses"`
+type WafRuleSetResultDataModel struct {
+	ID           types.Int64                  `tfsdk:"id"`
+	RuleID       types.Int64                  `tfsdk:"rule_id"`
+	Name         types.String                 `tfsdk:"name"`
+	Path         types.String                 `tfsdk:"path"`
+	Conditions   []WafExceptionConditionModel `tfsdk:"conditions"`
+	Operator     types.String                 `tfsdk:"operator"`
+	Active       types.Bool                   `tfsdk:"active"`
+	LastEditor   types.String                 `tfsdk:"last_editor"`
+	LastModified types.String                 `tfsdk:"last_modified"`
+}
+
+// WafExceptionConditionModel represents a polymorphic condition.
+type WafExceptionConditionModel struct {
+	// Common field for all condition types
+	Match types.String `tfsdk:"match"`
+	// For specific condition on name
+	Name types.String `tfsdk:"name"`
+	// For specific condition on value
+	Value types.String `tfsdk:"value"`
+	// Type indicator: "generic", "specific_on_name", or "specific_on_value"
+	ConditionType types.String `tfsdk:"condition_type"`
 }
 
 func (o *WafRuleSetDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -74,97 +76,72 @@ func (o *WafRuleSetDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Description: "Identifier of the data source.",
 				Computed:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
+			"waf_id": schema.Int64Attribute{
+				Description: "The WAF identifier.",
+				Required:    true,
 			},
-			"result": schema.SingleNestedAttribute{
-				Required: true,
+			"exception_id": schema.Int64Attribute{
+				Description: "The WAF exception (rule set) identifier.",
+				Required:    true,
+			},
+			"results": schema.SingleNestedAttribute{
+				Computed: true,
 				Attributes: map[string]schema.Attribute{
-					"waf_id": schema.Int64Attribute{
-						Description: "The WAF identifier.",
-						Required:    true,
-					},
-					"name": schema.StringAttribute{
-						Description: "Name of the WAF configuration.",
+					"id": schema.Int64Attribute{
+						Description: "The ID of the WAF exception.",
 						Computed:    true,
 					},
-					"mode": schema.StringAttribute{
-						Description: "WAF mode (e.g., counting).",
+					"rule_id": schema.Int64Attribute{
+						Description: "The rule ID that this exception applies to. 0 means all rules.",
+						Computed:    true,
+					},
+					"name": schema.StringAttribute{
+						Description: "Name of the WAF exception.",
+						Computed:    true,
+					},
+					"path": schema.StringAttribute{
+						Description: "Path pattern for the exception.",
+						Computed:    true,
+					},
+					"conditions": schema.ListNestedAttribute{
+						Description: "Conditions for the WAF exception.",
+						Computed:    true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"match": schema.StringAttribute{
+									Description: "The match type for the condition.",
+									Computed:    true,
+								},
+								"name": schema.StringAttribute{
+									Description: "The name for specific condition on name.",
+									Computed:    true,
+								},
+								"value": schema.StringAttribute{
+									Description: "The value for specific condition on value.",
+									Computed:    true,
+								},
+								"condition_type": schema.StringAttribute{
+									Description: "Type of condition: generic, specific_on_name, or specific_on_value.",
+									Computed:    true,
+								},
+							},
+						},
+					},
+					"operator": schema.StringAttribute{
+						Description: "The operator for the exception (regex or contains).",
 						Computed:    true,
 					},
 					"active": schema.BoolAttribute{
-						Description: "Whether the WAF is active.",
+						Description: "Whether the exception is active.",
 						Computed:    true,
 					},
-					"sql_injection": schema.BoolAttribute{
-						Description: "Enable SQL injection protection.",
+					"last_editor": schema.StringAttribute{
+						Description: "Last editor of the exception.",
 						Computed:    true,
 					},
-					"sql_injection_sensitivity": schema.StringAttribute{
-						Description: "Sensitivity level for SQL injection protection.",
+					"last_modified": schema.StringAttribute{
+						Description: "Last modified timestamp.",
 						Computed:    true,
-					},
-					"remote_file_inclusion": schema.BoolAttribute{
-						Description: "Enable remote file inclusion protection.",
-						Computed:    true,
-					},
-					"remote_file_inclusion_sensitivity": schema.StringAttribute{
-						Description: "Sensitivity level for remote file inclusion protection.",
-						Computed:    true,
-					},
-					"directory_traversal": schema.BoolAttribute{
-						Description: "Enable directory traversal protection.",
-						Computed:    true,
-					},
-					"directory_traversal_sensitivity": schema.StringAttribute{
-						Description: "Sensitivity level for directory traversal protection.",
-						Computed:    true,
-					},
-					"cross_site_scripting": schema.BoolAttribute{
-						Description: "Enable cross-site scripting protection.",
-						Computed:    true,
-					},
-					"cross_site_scripting_sensitivity": schema.StringAttribute{
-						Description: "Sensitivity level for cross-site scripting protection.",
-						Computed:    true,
-					},
-					"evading_tricks": schema.BoolAttribute{
-						Description: "Enable evading tricks protection.",
-						Computed:    true,
-					},
-					"evading_tricks_sensitivity": schema.StringAttribute{
-						Description: "Sensitivity level for evading tricks protection.",
-						Computed:    true,
-					},
-					"file_upload": schema.BoolAttribute{
-						Description: "Enable file upload protection.",
-						Computed:    true,
-					},
-					"file_upload_sensitivity": schema.StringAttribute{
-						Description: "Sensitivity level for file upload protection.",
-						Computed:    true,
-					},
-					"unwanted_access": schema.BoolAttribute{
-						Description: "Enable protection against unwanted access.",
-						Computed:    true,
-					},
-					"unwanted_access_sensitivity": schema.StringAttribute{
-						Description: "Sensitivity level for protection against unwanted access.",
-						Computed:    true,
-					},
-					"identified_attack": schema.BoolAttribute{
-						Description: "Enable protection against identified attacks.",
-						Computed:    true,
-					},
-					"identified_attack_sensitivity": schema.StringAttribute{
-						Description: "Sensitivity level for protection against identified attacks.",
-						Computed:    true,
-					},
-					"bypass_addresses": schema.ListAttribute{
-						Description: "List of bypass addresses.",
-						Computed:    true,
-						ElementType: types.StringType,
 					},
 				},
 			},
@@ -173,23 +150,29 @@ func (o *WafRuleSetDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 }
 
 func (o *WafRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var wafRuleSetID types.Int64
+	var wafID, exceptionID types.Int64
 
-	diagsPhase := req.Config.GetAttribute(ctx, path.Root("result").AtName("waf_id"), &wafRuleSetID)
-	resp.Diagnostics.Append(diagsPhase...)
+	diagsWafID := req.Config.GetAttribute(ctx, path.Root("waf_id"), &wafID)
+	resp.Diagnostics.Append(diagsWafID...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	wafResponse, response, err := o.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID.ValueInt64()).Execute() //nolint
+	diagsExceptionID := req.Config.GetAttribute(ctx, path.Root("exception_id"), &exceptionID)
+	resp.Diagnostics.Append(diagsExceptionID...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	exceptionResponse, response, err := o.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID.ValueInt64(), wafID.ValueInt64()).Execute()
 	if err != nil {
 		if response.StatusCode == 429 {
-			wafResponse, response, err = utils.RetryOn429(func() (*waf.WAFSingle200, *http.Response, error) {
-				return o.client.wafApi.WAFAPI.GetWAFRuleset(ctx, wafRuleSetID.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			exceptionResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFRuleResponse, *http.Response, error) {
+				return o.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID.ValueInt64(), wafID.ValueInt64()).Execute()
+			}, 5)
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
@@ -216,43 +199,105 @@ func (o *WafRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		}
 	}
 
-	var sliceAddresses []types.String
-	for _, Addresses := range wafResponse.Results.GetBypassAddresses() {
-		sliceAddresses = append(sliceAddresses, types.StringValue(Addresses))
-	}
-	wafResults := &WafRuleSetResults{
-		ID:                             types.Int64Value(wafResponse.Results.GetId()),
-		Name:                           types.StringValue(wafResponse.Results.GetName()),
-		Mode:                           types.StringValue(wafResponse.Results.GetMode()),
-		Active:                         types.BoolValue(wafResponse.Results.GetActive()),
-		BypassAddresses:                sliceAddresses,
-		SQLInjection:                   types.BoolValue(wafResponse.Results.GetSqlInjection()),
-		SQLInjectionSensitivity:        types.StringValue(string(wafResponse.Results.GetSqlInjectionSensitivity())),
-		RemoteFileInclusion:            types.BoolValue(wafResponse.Results.GetRemoteFileInclusion()),
-		RemoteFileInclusionSensitivity: types.StringValue(string(wafResponse.Results.GetRemoteFileInclusionSensitivity())),
-		DirectoryTraversal:             types.BoolValue(wafResponse.Results.GetDirectoryTraversal()),
-		DirectoryTraversalSensitivity:  types.StringValue(string(wafResponse.Results.GetDirectoryTraversalSensitivity())),
-		CrossSiteScripting:             types.BoolValue(wafResponse.Results.GetCrossSiteScripting()),
-		CrossSiteScriptingSensitivity:  types.StringValue(string(wafResponse.Results.GetCrossSiteScriptingSensitivity())),
-		EvadingTricks:                  types.BoolValue(wafResponse.Results.GetEvadingTricks()),
-		EvadingTricksSensitivity:       types.StringValue(string(wafResponse.Results.GetEvadingTricksSensitivity())),
-		FileUpload:                     types.BoolValue(wafResponse.Results.GetFileUpload()),
-		FileUploadSensitivity:          types.StringValue(string(wafResponse.Results.GetFileUploadSensitivity())),
-		UnwantedAccess:                 types.BoolValue(wafResponse.Results.GetUnwantedAccess()),
-		UnwantedAccessSensitivity:      types.StringValue(string(wafResponse.Results.GetUnwantedAccessSensitivity())),
-		IdentifiedAttack:               types.BoolValue(wafResponse.Results.GetIdentifiedAttack()),
-		IdentifiedAttackSensitivity:    types.StringValue(string(wafResponse.Results.GetIdentifiedAttackSensitivity())),
+	if response != nil {
+		defer response.Body.Close()
 	}
 
-	wafRuleSetState := WafRuleSetDataSourceModel{
-		SchemaVersion: types.Int64Value(int64(wafResponse.GetSchemaVersion())),
-		Results:       wafResults,
+	// Transform the response to the model
+	results := transformWAFRuleToResultModel(exceptionResponse.GetData())
+
+	state := WafRuleSetDataSourceModel{
+		ID:          types.StringValue("Get WAF Rule Set By ID"),
+		WafID:       wafID,
+		ExceptionID: exceptionID,
+		Results:     results,
 	}
 
-	wafRuleSetState.ID = types.StringValue("Get By ID Waf Rule Set")
-	diags := resp.State.Set(ctx, &wafRuleSetState)
+	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+// transformWAFRuleToResultModel transforms an SDK WAFRule to a Terraform model.
+func transformWAFRuleToResultModel(rule azionapi.WAFRule) *WafRuleSetResultDataModel {
+	result := &WafRuleSetResultDataModel{
+		ID:           types.Int64Value(rule.GetId()),
+		Name:         types.StringValue(rule.GetName()),
+		LastEditor:   types.StringValue(rule.GetLastEditor()),
+		LastModified: types.StringValue(rule.GetLastModified().Format(time.RFC3339)),
+	}
+
+	// Optional rule_id
+	if rule.HasRuleId() {
+		result.RuleID = types.Int64Value(rule.GetRuleId())
+	} else {
+		result.RuleID = types.Int64Null()
+	}
+
+	// Optional path
+	if rule.HasPath() {
+		result.Path = types.StringValue(rule.GetPath())
+	} else {
+		result.Path = types.StringNull()
+	}
+
+	// Optional operator
+	if rule.HasOperator() {
+		result.Operator = types.StringValue(rule.GetOperator())
+	} else {
+		result.Operator = types.StringNull()
+	}
+
+	// Optional active
+	if rule.HasActive() {
+		result.Active = types.BoolValue(rule.GetActive())
+	} else {
+		result.Active = types.BoolNull()
+	}
+
+	// Transform conditions
+	conditions := rule.GetConditions()
+	result.Conditions = transformWAFExceptionConditions(conditions)
+
+	return result
+}
+
+// transformWAFExceptionConditions transforms SDK conditions to Terraform models.
+func transformWAFExceptionConditions(conditions []azionapi.WAFExceptionCondition) []WafExceptionConditionModel {
+	var result []WafExceptionConditionModel
+
+	for _, cond := range conditions {
+		actualInstance := cond.GetActualInstance()
+		if actualInstance == nil {
+			continue
+		}
+
+		model := WafExceptionConditionModel{}
+
+		switch c := actualInstance.(type) {
+		case *azionapi.WAFExceptionGenericCondition:
+			model.Match = types.StringValue(c.GetMatch())
+			model.Name = types.StringNull()
+			model.Value = types.StringNull()
+			model.ConditionType = types.StringValue("generic")
+
+		case *azionapi.WAFExceptionSpecificConditionOnName:
+			model.Match = types.StringValue(c.GetMatch())
+			model.Name = types.StringValue(c.GetName())
+			model.Value = types.StringNull()
+			model.ConditionType = types.StringValue("specific_on_name")
+
+		case *azionapi.WAFExceptionSpecificConditionOnValue:
+			model.Match = types.StringValue(c.GetMatch())
+			model.Name = types.StringNull()
+			model.Value = types.StringValue(c.GetValue())
+			model.ConditionType = types.StringValue("specific_on_value")
+		}
+
+		result = append(result, model)
+	}
+
+	return result
 }
