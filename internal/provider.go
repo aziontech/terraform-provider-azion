@@ -120,6 +120,8 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionWorkloadDeployments,
 		dataSourceAzionConnector,
 		dataSourceAzionConnectors,
+		dataSourceAzionCustomPage,
+		dataSourceAzionCustomPages,
 	}
 }
 
@@ -146,6 +148,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewWorkloadResource,
 		NewWorkloadDeploymentResource,
 		NewConnectorResource,
+		NewCustomPageResource,
 	}
 }
 
