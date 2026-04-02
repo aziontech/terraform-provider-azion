@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -36,6 +37,7 @@ type CustomPagesResults struct {
 	Name           types.String             `tfsdk:"name"`
 	LastEditor     types.String             `tfsdk:"last_editor"`
 	LastModified   types.String             `tfsdk:"last_modified"`
+	CreatedAt      types.String             `tfsdk:"created_at"`
 	Active         types.Bool               `tfsdk:"active"`
 	ProductVersion types.String             `tfsdk:"product_version"`
 	Pages          []CustomPagesPageResults `tfsdk:"pages"`
@@ -98,6 +100,10 @@ func (d *CustomPagesDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						},
 						"last_modified": schema.StringAttribute{
 							Description: "Last modified timestamp of the custom page.",
+							Computed:    true,
+						},
+						"created_at": schema.StringAttribute{
+							Description: "The creation timestamp of the custom page.",
 							Computed:    true,
 						},
 						"active": schema.BoolAttribute{
@@ -194,7 +200,8 @@ func (d *CustomPagesDataSource) Read(ctx context.Context, req datasource.ReadReq
 			ID:             types.Int64Value(resultCustomPage.Id),
 			Name:           types.StringValue(resultCustomPage.Name),
 			LastEditor:     types.StringValue(resultCustomPage.LastEditor),
-			LastModified:   types.StringValue(resultCustomPage.LastModified.String()),
+			LastModified:   types.StringValue(resultCustomPage.LastModified.Format(time.RFC3339)),
+			CreatedAt:      types.StringValue(resultCustomPage.CreatedAt.Format(time.RFC3339)),
 			ProductVersion: types.StringValue(resultCustomPage.ProductVersion),
 		}
 

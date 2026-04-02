@@ -53,6 +53,7 @@ type RulesEngineResourceResults struct {
 	Order        types.Int64                        `tfsdk:"order"`
 	LastEditor   types.String                       `tfsdk:"last_editor"`
 	LastModified types.String                       `tfsdk:"last_modified"`
+	CreatedAt    types.String                       `tfsdk:"created_at"`
 }
 
 type RulesEngineBehaviorResourceModel struct {
@@ -210,6 +211,10 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 					},
 					"last_modified": schema.StringAttribute{
 						Description: "The last modified timestamp.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp.",
 						Computed:    true,
 					},
 				},
@@ -904,6 +909,8 @@ func transformRuleToResultsModel(rule azionapi.RequestPhaseRule, phase string) *
 	if rule.LastModified.IsSet() && rule.LastModified.Get() != nil {
 		result.LastModified = types.StringValue(rule.LastModified.Get().Format(time.RFC3339))
 	}
+	// CreatedAt
+	result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))
 
 	// Transform criteria
 	for _, criterionGroup := range rule.Criteria {
@@ -974,6 +981,8 @@ func transformRuleToResultsModelFromResponse(rule azionapi.ResponsePhaseRule, ph
 	if rule.LastModified.IsSet() && rule.LastModified.Get() != nil {
 		result.LastModified = types.StringValue(rule.LastModified.Get().Format(time.RFC3339))
 	}
+	// CreatedAt
+	result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))
 
 	// Transform criteria
 	for _, criterionGroup := range rule.Criteria {

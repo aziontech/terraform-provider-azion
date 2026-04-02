@@ -46,6 +46,7 @@ type CacheSettingResourceModel struct {
 	Name         types.String                       `tfsdk:"name"`
 	BrowserCache *BrowserCacheResourceModel         `tfsdk:"browser_cache"`
 	Modules      *CacheSettingsModulesResourceModel `tfsdk:"modules"`
+	CreatedAt    types.String                       `tfsdk:"created_at"`
 }
 
 type BrowserCacheResourceModel struct {
@@ -255,6 +256,10 @@ func (r *edgeApplicationCacheSettingsResource) Schema(_ context.Context, _ resou
 								},
 							},
 						},
+					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp.",
+						Computed:    true,
 					},
 				},
 			},
@@ -1125,6 +1130,11 @@ func transformCacheSettingResponseToResourceModel(cs *azionapi.CacheSetting) *Ca
 	model := &CacheSettingResourceModel{
 		ID:   types.Int64Value(cs.GetId()),
 		Name: types.StringValue(cs.GetName()),
+	}
+
+	// CreatedAt - handle NullableTime
+	if cs.CreatedAt.IsSet() && cs.CreatedAt.Get() != nil {
+		model.CreatedAt = types.StringValue(cs.GetCreatedAt().Format(time.RFC3339))
 	}
 
 	// Browser Cache

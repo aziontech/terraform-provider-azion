@@ -43,6 +43,7 @@ type customPageResourceResults struct {
 	Name           types.String                    `tfsdk:"name"`
 	LastEditor     types.String                    `tfsdk:"last_editor"`
 	LastModified   types.String                    `tfsdk:"last_modified"`
+	CreatedAt      types.String                    `tfsdk:"created_at"`
 	Active         types.Bool                      `tfsdk:"active"`
 	ProductVersion types.String                    `tfsdk:"product_version"`
 	Pages          []customPageResourcePageResults `tfsdk:"pages"`
@@ -100,6 +101,10 @@ func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					},
 					"last_modified": schema.StringAttribute{
 						Description: "Last modified timestamp of the custom page.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp of the custom page.",
 						Computed:    true,
 					},
 					"active": schema.BoolAttribute{
@@ -262,6 +267,7 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 		Name:           types.StringValue(createCustomPage.Data.Name),
 		LastEditor:     types.StringValue(createCustomPage.Data.LastEditor),
 		LastModified:   types.StringValue(createCustomPage.Data.LastModified.Format(time.RFC3339)),
+		CreatedAt:      types.StringValue(createCustomPage.Data.CreatedAt.Format(time.RFC3339)),
 		ProductVersion: types.StringValue(createCustomPage.Data.ProductVersion),
 	}
 
@@ -373,6 +379,7 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 		Name:           types.StringValue(getCustomPage.Data.Name),
 		LastEditor:     types.StringValue(getCustomPage.Data.LastEditor),
 		LastModified:   types.StringValue(getCustomPage.Data.LastModified.Format(time.RFC3339)),
+		CreatedAt:      types.StringValue(getCustomPage.Data.CreatedAt.Format(time.RFC3339)),
 		ProductVersion: types.StringValue(getCustomPage.Data.ProductVersion),
 	}
 
@@ -530,6 +537,7 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 		Name:           types.StringValue(updateCustomPage.Data.Name),
 		LastEditor:     types.StringValue(updateCustomPage.Data.LastEditor),
 		LastModified:   types.StringValue(updateCustomPage.Data.LastModified.Format(time.RFC3339)),
+		CreatedAt:      types.StringValue(updateCustomPage.Data.CreatedAt.Format(time.RFC3339)),
 		ProductVersion: types.StringValue(updateCustomPage.Data.ProductVersion),
 	}
 

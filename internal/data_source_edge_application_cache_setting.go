@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -39,6 +40,7 @@ type CacheSettingModel struct {
 	Name         types.String               `tfsdk:"name"`
 	BrowserCache *BrowserCacheModuleModel   `tfsdk:"browser_cache"`
 	Modules      *CacheSettingsModulesModel `tfsdk:"modules"`
+	CreatedAt    types.String               `tfsdk:"created_at"`
 }
 
 type BrowserCacheModuleModel struct {
@@ -238,6 +240,10 @@ func (d *CacheSettingDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							},
 						},
 					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp of the cache setting.",
+						Computed:    true,
+					},
 				},
 			},
 		},
@@ -353,6 +359,11 @@ func transformCacheSettingToModel(cs *azionapi.CacheSetting) *CacheSettingModel 
 	model := &CacheSettingModel{
 		ID:   types.Int64Value(cs.GetId()),
 		Name: types.StringValue(cs.GetName()),
+	}
+
+	// CreatedAt - handle NullableTime
+	if cs.CreatedAt.IsSet() && cs.CreatedAt.Get() != nil {
+		model.CreatedAt = types.StringValue(cs.GetCreatedAt().Format(time.RFC3339))
 	}
 
 	// Browser Cache

@@ -51,6 +51,7 @@ type FirewallFunctionInstanceResourceData struct {
 	Active       types.Bool   `tfsdk:"active"`
 	LastEditor   types.String `tfsdk:"last_editor"`
 	LastModified types.String `tfsdk:"last_modified"`
+	CreatedAt    types.String `tfsdk:"created_at"`
 }
 
 func (r *FirewallFunctionsInstanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -111,6 +112,10 @@ func (r *FirewallFunctionsInstanceResource) Schema(_ context.Context, _ resource
 					},
 					"last_modified": schema.StringAttribute{
 						Description: "Last modified timestamp of the firewall function instance.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp of the firewall function instance.",
 						Computed:    true,
 					},
 				},
@@ -231,6 +236,7 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 		Active:       types.BoolValue(functionInstanceResponse.Data.GetActive()),
 		LastEditor:   types.StringValue(functionInstanceResponse.Data.GetLastEditor()),
 		LastModified: types.StringValue(functionInstanceResponse.Data.GetLastModified().Format(time.RFC850)),
+		CreatedAt:    types.StringValue(functionInstanceResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	plan.State = types.StringValue(functionInstanceResponse.GetState())
@@ -336,6 +342,7 @@ func (r *FirewallFunctionsInstanceResource) Read(ctx context.Context, req resour
 			Args:         types.StringValue(jsonArgsStr),
 			Function:     types.Int64Value(functionInstanceResponse.Data.GetFunction()),
 			Active:       types.BoolValue(functionInstanceResponse.Data.GetActive()),
+			CreatedAt:    types.StringValue(functionInstanceResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		},
 	}
 
@@ -459,6 +466,7 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 		Args:         types.StringValue(jsonArgsStr),
 		ID:           types.Int64Value(updateResponse.Data.GetId()),
 		Active:       types.BoolValue(updateResponse.Data.GetActive()),
+		CreatedAt:    types.StringValue(updateResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	plan.State = types.StringValue(updateResponse.GetState())

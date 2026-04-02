@@ -38,6 +38,7 @@ type WorkloadsResults struct {
 	Active                    types.Bool         `tfsdk:"active"`
 	LastEditor                types.String       `tfsdk:"last_editor"`
 	LastModified              types.String       `tfsdk:"last_modified"`
+	CreatedAt                 types.String       `tfsdk:"created_at"`
 	Infrastructure            types.Int64        `tfsdk:"infrastructure"`
 	Tls                       *TLSWorkloadsModel `tfsdk:"tls"`
 	Protocols                 *ProtocolsModel    `tfsdk:"protocols"`
@@ -98,6 +99,10 @@ func (d *WorkloadsDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 						},
 						"last_modified": schema.StringAttribute{
 							Description: "Last modified timestamp of the workload.",
+							Computed:    true,
+						},
+						"created_at": schema.StringAttribute{
+							Description: "Creation timestamp of the workload.",
 							Computed:    true,
 						},
 						"infrastructure": schema.Int64Attribute{
@@ -245,6 +250,7 @@ func (d *WorkloadsDataSource) Read(ctx context.Context, req datasource.ReadReque
 			Name:           types.StringValue(resultWorkload.Name),
 			LastEditor:     types.StringValue(resultWorkload.LastEditor),
 			LastModified:   types.StringValue(resultWorkload.LastModified.Format(time.RFC850)),
+			CreatedAt:      types.StringValue(resultWorkload.CreatedAt.Format(time.RFC3339)),
 			ProductVersion: types.StringValue(resultWorkload.ProductVersion),
 			WorkloadDomain: types.StringValue(resultWorkload.WorkloadDomain),
 		}

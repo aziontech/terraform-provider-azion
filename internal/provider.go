@@ -122,6 +122,8 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionConnectors,
 		dataSourceAzionCustomPage,
 		dataSourceAzionCustomPages,
+		dataSourceAzionApplicationDeviceGroup,
+		dataSourceAzionApplicationDeviceGroups,
 	}
 }
 
@@ -149,6 +151,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewWorkloadDeploymentResource,
 		NewConnectorResource,
 		NewCustomPageResource,
+		NewApplicationDeviceGroupResource,
 	}
 }
 

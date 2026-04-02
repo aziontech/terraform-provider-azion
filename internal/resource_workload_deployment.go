@@ -46,6 +46,7 @@ type WorkloadDeploymentResourceResults struct {
 	Strategy     *DeploymentStrategyResourceModel `tfsdk:"strategy"`
 	LastEditor   types.String                     `tfsdk:"last_editor"`
 	LastModified types.String                     `tfsdk:"last_modified"`
+	CreatedAt    types.String                     `tfsdk:"created_at"`
 }
 
 type DeploymentStrategyResourceModel struct {
@@ -135,6 +136,10 @@ func (r *workloadDeploymentResource) Schema(_ context.Context, _ resource.Schema
 					},
 					"last_modified": schema.StringAttribute{
 						Description: "Last modified timestamp of the deployment.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "Creation timestamp of the deployment.",
 						Computed:    true,
 					},
 				},
@@ -591,6 +596,7 @@ func populateDeploymentResults(response *azionapi.WorkloadDeploymentResponse) *W
 		Name:         types.StringValue(response.Data.Name),
 		LastEditor:   types.StringValue(response.Data.LastEditor),
 		LastModified: types.StringValue(response.Data.LastModified.Format(time.RFC850)),
+		CreatedAt:    types.StringValue(response.Data.CreatedAt.Format(time.RFC3339)),
 	}
 
 	// Set optional fields

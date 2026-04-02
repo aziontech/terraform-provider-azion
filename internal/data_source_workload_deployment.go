@@ -43,6 +43,7 @@ type WorkloadDeploymentResultsModel struct {
 	Strategy     *DeploymentStrategyModel `tfsdk:"strategy"`
 	LastEditor   types.String             `tfsdk:"last_editor"`
 	LastModified types.String             `tfsdk:"last_modified"`
+	CreatedAt    types.String             `tfsdk:"created_at"`
 }
 
 type DeploymentStrategyModel struct {
@@ -137,6 +138,10 @@ func (d *WorkloadDeploymentDataSource) Schema(_ context.Context, _ datasource.Sc
 						Description: "Last modified timestamp of the deployment.",
 						Computed:    true,
 					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp of the deployment.",
+						Computed:    true,
+					},
 				},
 			},
 		},
@@ -210,6 +215,7 @@ func (d *WorkloadDeploymentDataSource) Read(ctx context.Context, req datasource.
 			Name:         types.StringValue(deploymentResponse.Data.Name),
 			LastEditor:   types.StringValue(deploymentResponse.Data.LastEditor),
 			LastModified: types.StringValue(deploymentResponse.Data.LastModified.Format(time.RFC850)),
+			CreatedAt:    types.StringValue(deploymentResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		},
 	}
 
