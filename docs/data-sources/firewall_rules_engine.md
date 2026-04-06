@@ -61,3 +61,4 @@ In addition to all arguments above, the following attributes are exported:
   * `order` - Order of the rule.
   * `last_editor` - Last editor of the rule.
   * `last_modified` - Last modified timestamp.
+  * `created_at` - Creation timestamp.

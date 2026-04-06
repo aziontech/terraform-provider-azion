@@ -122,6 +122,7 @@ terraform import azion_connector.example 12345
   * `type` - (Required) Type of the connector. Must be one of: `http` or `storage`.
   * `active` - (Optional) Status of the connector. Default is `true`.
   * `id` - (Computed) The connector identifier.
+  * `created_at` - (Computed) The creation timestamp of the connector.
   * `last_editor` - (Computed) The last editor of the connector.
   * `last_modified` - (Computed) Last modified timestamp of the connector.
   * `product_version` - (Computed) Product version of the connector.

@@ -12,6 +12,8 @@ description: |-
 
 ## Example Usage
 
+### Basic Rule with No-Args Behaviors
+
 ```terraform
 resource "azion_edge_application_rule_engine" "example" {
   edge_application_id = 1234567890
@@ -21,22 +23,10 @@ resource "azion_edge_application_rule_engine" "example" {
     description = "My rule engine"
     behaviors = [
       {
-        name = "deliver"
-        "target_object" : {}
+        type = "deliver"
       },
       {
-        name = "run_function"
-        target_object : {
-          target = "4305"
-        }
-      },
-      {
-        name = "capture_match_groups"
-        "target_object" : {
-          "regex" : "2379",
-          "captured_array" : "Terraform",
-          "subject" : "$${device_group}"
-        }
+        type = "bypass_cache"
       }
     ]
     criteria = [
@@ -46,7 +36,115 @@ resource "azion_edge_application_rule_engine" "example" {
             variable    = "$${uri}"
             operator    = "is_equal"
             conditional = "if"
-            input_value = "/"
+            argument    = "/"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Rule with Behavior Arguments
+
+```terraform
+resource "azion_edge_application_rule_engine" "example_with_args" {
+  edge_application_id = 1234567890
+  results = {
+    name        = "Add Header Example"
+    phase       = "request"
+    active      = true
+    description = "Rule with behavior that has arguments"
+
+    behaviors = [
+      {
+        type = "add_request_header"
+        attributes = {
+          value = "X-Custom-Header: MyValue"
+        }
+      }
+    ]
+
+    criteria = [
+      {
+        entries = [
+          {
+            variable    = "$${uri}"
+            operator    = "starts_with"
+            conditional = "if"
+            argument    = "/api/"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Rule with Capture Match Groups
+
+```terraform
+resource "azion_edge_application_rule_engine" "example_capture" {
+  edge_application_id = 1234567890
+  results = {
+    name        = "Capture Match Groups Example"
+    phase       = "request"
+    description = "Rule with capture_match_groups behavior"
+
+    behaviors = [
+      {
+        type = "capture_match_groups"
+        capture_attributes = {
+          subject        = "$${uri}"
+          regex          = "/api/([a-z]+)"
+          captured_array = "api_paths"
+        }
+      }
+    ]
+
+    criteria = [
+      {
+        entries = [
+          {
+            variable    = "$${uri}"
+            operator    = "matches"
+            conditional = "if"
+            argument    = "^/api/"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Response Phase Rule
+
+```terraform
+resource "azion_edge_application_rule_engine" "example_response" {
+  edge_application_id = 1234567890
+  results = {
+    name        = "Response Phase Example"
+    phase       = "response"
+    description = "Response phase rule"
+
+    behaviors = [
+      {
+        type = "add_response_header"
+        attributes = {
+          value = "X-Response-Processed: true"
+        }
+      }
+    ]
+
+    criteria = [
+      {
+        entries = [
+          {
+            variable    = "$${status}"
+            operator    = "is_equal"
+            conditional = "if"
+            argument    = "200"
           }
         ]
       }
@@ -74,19 +172,22 @@ resource "azion_edge_application_rule_engine" "example" {
 
 Required:
 
-- `behaviors` (Attributes List) (see [below for nested schema](#nestedatt--results--behaviors))
-- `criteria` (Attributes List) (see [below for nested schema](#nestedatt--results--criteria))
+- `behaviors` (Attributes List) Behaviors for the rule. (see [below for nested schema](#nestedatt--results--behaviors))
+- `criteria` (Attributes List) Criteria for the rule. (see [below for nested schema](#nestedatt--results--criteria))
 - `name` (String) The name of the rules engine rule.
-- `phase` (String) The phase in which the rule is executed (e.g., default, request, response).
+- `phase` (String) The phase in which the rule is executed (request or response).
 
 Optional:
 
+- `active` (Boolean) Whether the rule is active.
 - `description` (String) The description of the rules engine rule.
 
 Read-Only:
 
+- `created_at` (String) The creation timestamp.
 - `id` (Number) The ID of the rules engine rule.
-- `is_active` (Boolean) The status of the rules engine rule.
+- `last_editor` (String) The last editor of the rule.
+- `last_modified` (String) The last modified timestamp.
 - `order` (Number) The order of the rule in the rules engine.
 
 <a id="nestedatt--results--behaviors"></a>
@@ -94,27 +195,35 @@ Read-Only:
 
 Required:
 
-- `name` (String) The name of the behavior.
-- `target_object` (Attributes) (see [below for nested schema](#nestedatt--results--behaviors--target_object))
-
-<a id="nestedatt--results--behaviors--target_object"></a>
-### Nested Schema for `results.behaviors.target_object`
+- `type` (String) The type of behavior (e.g., deliver, bypass_cache, add_request_header, capture_match_groups).
 
 Optional:
 
-- `captured_array` (String) The name of the behavior.
-- `regex` (String) The target of the behavior.
-- `subject` (String) The target of the behavior.
-- `target` (String) The target of the behavior.
+- `attributes` (Attributes) Behavior attributes for behaviors that require arguments. (see [below for nested schema](#nestedatt--results--behaviors--attributes))
+- `capture_attributes` (Attributes) Capture attributes for capture_match_groups behavior. (see [below for nested schema](#nestedatt--results--behaviors--capture_attributes))
 
+<a id="nestedatt--results--behaviors--attributes"></a>
+### Nested Schema for `results.behaviors.attributes`
 
+Required:
+
+- `value` (String) Value for the behavior.
+
+<a id="nestedatt--results--behaviors--capture_attributes"></a>
+### Nested Schema for `results.behaviors.capture_attributes`
+
+Required:
+
+- `captured_array` (String) Captured array name.
+- `regex` (String) Regex pattern.
+- `subject` (String) Subject for capture.
 
 <a id="nestedatt--results--criteria"></a>
 ### Nested Schema for `results.criteria`
 
 Required:
 
-- `entries` (Attributes List) (see [below for nested schema](#nestedatt--results--criteria--entries))
+- `entries` (Attributes List) List of criteria entries. (see [below for nested schema](#nestedatt--results--criteria--entries))
 
 <a id="nestedatt--results--criteria--entries"></a>
 ### Nested Schema for `results.criteria.entries`
@@ -122,14 +231,16 @@ Required:
 Required:
 
 - `conditional` (String) The conditional operator used in the rule's criteria (e.g., if, and, or).
-- `input_value` (String) The input value used in the rule's criteria.
 - `operator` (String) The operator used in the rule's criteria.
 - `variable` (String) The variable used in the rule's criteria.
+
+Optional:
+
+- `argument` (String) The argument used in the rule's criteria.
 
 ## Import
 
 Import is supported using the following syntax:
 
 ```shell
-terraform import azion_edge_application_rule_engine.example <edge_application_id>/<phase>/<RuleID>
-```
+terraform import azion_edge_application_rule_engine.example <edge_application_id>/<phase>/<rule_id>

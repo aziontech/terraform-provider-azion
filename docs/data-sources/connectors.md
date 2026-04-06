@@ -62,6 +62,7 @@ Read-Only:
 
 - `active` (Boolean) Status of the connector.
 - `attributes` (String) Attributes of the connector as JSON string. Structure varies by type.
+- `created_at` (String) The creation timestamp of the connector.
 - `id` (Number) The connector identifier.
 - `last_editor` (String) The last editor of the connector.
 - `last_modified` (String) Last modified timestamp of the connector.

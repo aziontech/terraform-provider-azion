@@ -75,6 +75,7 @@ Required:
 
 Read-Only:
 
+- `created_at` (String) Creation timestamp of the network list.
 - `id` (Number) Identification of this entry.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.

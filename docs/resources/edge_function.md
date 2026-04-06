@@ -29,24 +29,24 @@ resource "local_file" "content_file" {
 
 resource "azion_edge_function" "example1" {
   edge_function = {
-    name           = "Function Terraform Example"
-    code           = trimspace(local_file.content_file.content)
-    language       = "javascript"
-    initiator_type = "edge_application"
-    json_args      = jsonencode({ "key" = "Value" })
-    active         = true
+    name                 = "Function Terraform Example"
+    code                 = trimspace(local_file.content_file.content)
+    active               = true
+    default_args         = jsonencode({ "key" = "Value" })
+    execution_environment = "default"
+    runtime              = "nodejs20.x"
   }
 }
 
 
 resource "azion_edge_function" "example2" {
   edge_function = {
-    name           = "Function Terraform Example"
-    code           = trimspace(file("${path.module}/example.txt"))
-    language       = "javascript"
-    initiator_type = "edge_application"
-    json_args      = jsonencode({ "key" = "Value" })
-    active         = true
+    name                 = "Function Terraform Example"
+    code                 = trimspace(file("${path.module}/example.txt"))
+    active               = true
+    default_args         = jsonencode({ "key" = "Value" })
+    execution_environment = "default"
+    runtime              = "nodejs20.x"
   }
 }
 ```
@@ -94,4 +94,3 @@ Import is supported using the following syntax:
 
 ```shell
 terraform import azion_edge_function.example edge_function_id
-```

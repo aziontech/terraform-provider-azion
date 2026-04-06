@@ -71,6 +71,7 @@ Optional:
 
 Read-Only:
 
+- `created_at` (String) The creation timestamp of the custom page.
 - `id` (Number) The custom page identifier.
 - `last_editor` (String) The last editor of the custom page.
 - `last_modified` (String) Last modified timestamp of the custom page.

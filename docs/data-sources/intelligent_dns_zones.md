@@ -26,11 +26,10 @@ data "azion_intelligent_dns_zones" "examples" {}
 
 ### Read-Only
 
-- `counter` (Number) The total number of zones.
 - `id` (String) Numeric identifier of the data source.
 - `links` (Attributes) (see [below for nested schema](#nestedatt--links))
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
-- `schema_version` (Number) Schema Version.
+- `total_count` (Number) The total number of zones.
 - `total_pages` (Number) The total number of pages.
 
 <a id="nestedatt--links"></a>
@@ -47,7 +46,9 @@ Read-Only:
 
 Read-Only:
 
+- `active` (Boolean) Status of the zone.
 - `domain` (String) Domain name attributed by Azion to this configuration.
-- `is_active` (Boolean) Status of the zone.
-- `name` (String) The name of the zone. Must provide only one of zone_id, name.
+- `name` (String) The name of the zone.
+- `nameservers` (List of String) List of nameservers for the zone.
+- `product_version` (String) Product version of the zone.
 - `zone_id` (Number) The zone identifier to target for the resource.

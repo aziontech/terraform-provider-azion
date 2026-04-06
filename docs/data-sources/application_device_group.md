@@ -51,6 +51,7 @@ output "device_group_name" {
 
 Read-Only:
 
+- `created_at` (String) The creation timestamp of the device group.
 - `id` (Number) The device group identifier.
 - `name` (String) Name of the device group.
 - `user_agent` (String) Regular expression pattern to identify user agents.

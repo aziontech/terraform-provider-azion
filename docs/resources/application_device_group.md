@@ -94,4 +94,6 @@ Required:
 
 Read-Only:
 
+- `created_at` (String) The creation timestamp of the device group.
 - `id` (Number) The device group identifier.
+- `last_modified` (String) The last modified timestamp of the device group.

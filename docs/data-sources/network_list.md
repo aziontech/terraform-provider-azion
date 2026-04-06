@@ -34,9 +34,10 @@ data "azion_network_list" "example" {
 
 Read-Only:
 
+- `created_at` (String) Creation timestamp of the network list.
 - `id` (Number) ID of the network list.
+- `items` (List of String) List of items in the network list. Contents depend on the type: country codes, IP addresses, or ASN numbers.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
-- `type` (String) Type of the network list. Can be: asn, countries, or ip_cidr.
 - `name` (String) Name of the network list.
-- `items` (List of String) List of items in the network list. Contents depend on the type: country codes, IP addresses, or ASN numbers.
+- `type` (String) Type of the network list. Can be: asn, countries, or ip_cidr.

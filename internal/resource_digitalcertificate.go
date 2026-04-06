@@ -75,7 +75,7 @@ func (r *certificateResource) Metadata(_ context.Context, req resource.MetadataR
 	resp.TypeName = req.ProviderTypeName + "_digital_certificate"
 }
 
-// schema for digital certificate
+// Schema for digital certificate.
 func (r *certificateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Provides a digital certificate resource. This resource allows you to create, update, and delete digital certificates.\n\n" +
