@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
@@ -34,11 +35,14 @@ type EdgeFunctionInstanceDataSourceModel struct {
 }
 
 type EdgeFunctionInstanceResponse struct {
-	ID         types.Int64  `tfsdk:"id"`
-	FunctionID types.Int64  `tfsdk:"function_id"`
-	Name       types.String `tfsdk:"name"`
-	Args       types.String `tfsdk:"args"`
-	Active     types.Bool   `tfsdk:"active"`
+	ID           types.Int64  `tfsdk:"id"`
+	FunctionID   types.Int64  `tfsdk:"function_id"`
+	Name         types.String `tfsdk:"name"`
+	Args         types.String `tfsdk:"args"`
+	Active       types.Bool   `tfsdk:"active"`
+	LastEditor   types.String `tfsdk:"last_editor"`
+	LastModified types.String `tfsdk:"last_modified"`
+	CreatedAt    types.String `tfsdk:"created_at"`
 }
 
 func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -84,6 +88,18 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Schema(_ context.Context
 					},
 					"active": schema.BoolAttribute{
 						Description: "Active status of the function instance.",
+						Computed:    true,
+					},
+					"last_editor": schema.StringAttribute{
+						Description: "Last editor of the function instance.",
+						Computed:    true,
+					},
+					"last_modified": schema.StringAttribute{
+						Description: "Last modified timestamp of the function instance.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp of the function instance.",
 						Computed:    true,
 					},
 				},
@@ -151,11 +167,14 @@ func (d *EdgeApplicationEdgeFunctionInstanceDataSource) Read(ctx context.Context
 	edgeApplicationsEdgeFunctionsInstanceState := EdgeFunctionInstanceDataSourceModel{
 		ApplicationID: EdgeApplicationId,
 		Data: EdgeFunctionInstanceResponse{
-			ID:         types.Int64Value(functionInstancesResponse.Data.GetId()),
-			FunctionID: types.Int64Value(functionInstancesResponse.Data.GetFunction()),
-			Name:       types.StringValue(functionInstancesResponse.Data.GetName()),
-			Args:       types.StringValue(jsonArgsStr),
-			Active:     types.BoolValue(functionInstancesResponse.Data.GetActive()),
+			ID:           types.Int64Value(functionInstancesResponse.Data.GetId()),
+			FunctionID:   types.Int64Value(functionInstancesResponse.Data.GetFunction()),
+			Name:         types.StringValue(functionInstancesResponse.Data.GetName()),
+			Args:         types.StringValue(jsonArgsStr),
+			Active:       types.BoolValue(functionInstancesResponse.Data.GetActive()),
+			LastEditor:   types.StringValue(functionInstancesResponse.Data.GetLastEditor()),
+			LastModified: types.StringValue(functionInstancesResponse.Data.GetLastModified().Format(time.RFC3339)),
+			CreatedAt:    types.StringValue(functionInstancesResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		},
 	}
 

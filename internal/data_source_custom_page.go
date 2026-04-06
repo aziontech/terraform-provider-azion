@@ -38,6 +38,7 @@ type CustomPageResults struct {
 	Name           types.String            `tfsdk:"name"`
 	LastEditor     types.String            `tfsdk:"last_editor"`
 	LastModified   types.String            `tfsdk:"last_modified"`
+	CreatedAt      types.String            `tfsdk:"created_at"`
 	Active         types.Bool              `tfsdk:"active"`
 	ProductVersion types.String            `tfsdk:"product_version"`
 	Pages          []CustomPagePageResults `tfsdk:"pages"`
@@ -95,6 +96,10 @@ func (d *CustomPageDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 					},
 					"last_modified": schema.StringAttribute{
 						Description: "Last modified timestamp of the custom page.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp of the custom page.",
 						Computed:    true,
 					},
 					"active": schema.BoolAttribute{
@@ -204,6 +209,7 @@ func (d *CustomPageDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			Name:           types.StringValue(customPageResponse.Data.Name),
 			LastEditor:     types.StringValue(customPageResponse.Data.LastEditor),
 			LastModified:   types.StringValue(customPageResponse.Data.LastModified.Format(time.RFC3339)),
+			CreatedAt:      types.StringValue(customPageResponse.Data.CreatedAt.Format(time.RFC3339)),
 			ProductVersion: types.StringValue(customPageResponse.Data.ProductVersion),
 		},
 	}

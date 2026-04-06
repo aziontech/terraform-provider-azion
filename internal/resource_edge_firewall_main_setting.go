@@ -53,6 +53,7 @@ type FirewallResourceResults struct {
 	Active         types.Bool               `tfsdk:"active"`
 	LastEditor     types.String             `tfsdk:"last_editor"`
 	LastModified   types.String             `tfsdk:"last_modified"`
+	CreatedAt      types.String             `tfsdk:"created_at"`
 	ProductVersion types.String             `tfsdk:"product_version"`
 }
 
@@ -146,6 +147,10 @@ func (r *firewallResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 					"last_modified": schema.StringAttribute{
 						Description: "Last modified timestamp of the firewall rule set.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "Creation timestamp of the firewall rule set.",
 						Computed:    true,
 					},
 					"product_version": schema.StringAttribute{
@@ -276,6 +281,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 		Active:         types.BoolValue(firewallResponse.Data.GetActive()),
 		LastEditor:     types.StringValue(firewallResponse.Data.GetLastEditor()),
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
+		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
 	}
 
@@ -382,6 +388,7 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 		ID:             types.Int64Value(firewallResponse.Data.GetId()),
 		LastEditor:     types.StringValue(firewallResponse.Data.GetLastEditor()),
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
+		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		Name:           types.StringValue(firewallResponse.Data.GetName()),
 		Active:         types.BoolValue(firewallResponse.Data.GetActive()),
 		Debug:          types.BoolValue(firewallResponse.Data.GetDebug()),
@@ -524,6 +531,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 		ID:             types.Int64Value(firewallResponse.Data.GetId()),
 		LastEditor:     types.StringValue(firewallResponse.Data.GetLastEditor()),
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
+		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		Name:           types.StringValue(firewallResponse.Data.GetName()),
 		Active:         types.BoolValue(firewallResponse.Data.GetActive()),
 		Debug:          types.BoolValue(firewallResponse.Data.GetDebug()),

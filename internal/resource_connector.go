@@ -48,6 +48,7 @@ type connectorResourceResults struct {
 	Name           types.String            `tfsdk:"name"`
 	LastEditor     types.String            `tfsdk:"last_editor"`
 	LastModified   types.String            `tfsdk:"last_modified"`
+	CreatedAt      types.String            `tfsdk:"created_at"`
 	ProductVersion types.String            `tfsdk:"product_version"`
 	Active         types.Bool              `tfsdk:"active"`
 	Type           types.String            `tfsdk:"type"`
@@ -154,6 +155,10 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 					},
 					"last_modified": schema.StringAttribute{
 						Description: "Last modified timestamp of the connector.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp of the connector.",
 						Computed:    true,
 					},
 					"product_version": schema.StringAttribute{
@@ -898,6 +903,7 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 		model.Name = types.StringValue(c.Name)
 		model.LastEditor = types.StringValue(c.LastEditor)
 		model.LastModified = types.StringValue(c.LastModified.Format(time.RFC850))
+		model.CreatedAt = types.StringValue(c.CreatedAt.Format(time.RFC850))
 		model.ProductVersion = types.StringValue(c.ProductVersion)
 		model.Type = types.StringValue(c.Type)
 		model.Active = types.BoolPointerValue(c.Active)
@@ -918,6 +924,7 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 		model.Name = types.StringValue(c.Name)
 		model.LastEditor = types.StringValue(c.LastEditor)
 		model.LastModified = types.StringValue(c.LastModified.Format(time.RFC850))
+		model.CreatedAt = types.StringValue(c.CreatedAt.Format(time.RFC850))
 		model.ProductVersion = types.StringValue(c.ProductVersion)
 		model.Type = types.StringValue(c.Type)
 		model.Active = types.BoolPointerValue(c.Active)

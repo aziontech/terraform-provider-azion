@@ -39,6 +39,7 @@ type ConnectorResults struct {
 	Name           types.String `tfsdk:"name"`
 	LastEditor     types.String `tfsdk:"last_editor"`
 	LastModified   types.String `tfsdk:"last_modified"`
+	CreatedAt      types.String `tfsdk:"created_at"`
 	ProductVersion types.String `tfsdk:"product_version"`
 	Active         types.Bool   `tfsdk:"active"`
 	Type           types.String `tfsdk:"type"`
@@ -80,6 +81,10 @@ func (d *ConnectorDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 					},
 					"last_modified": schema.StringAttribute{
 						Description: "Last modified timestamp of the connector.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp of the connector.",
 						Computed:    true,
 					},
 					"product_version": schema.StringAttribute{
@@ -186,6 +191,7 @@ func populateConnectorResults(_ context.Context, connector azionapi.Connector) (
 			Name:           types.StringValue(c.Name),
 			LastEditor:     types.StringValue(c.LastEditor),
 			LastModified:   types.StringValue(c.LastModified.Format(time.RFC850)),
+			CreatedAt:      types.StringValue(c.CreatedAt.Format(time.RFC850)),
 			ProductVersion: types.StringValue(c.ProductVersion),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),
@@ -205,6 +211,7 @@ func populateConnectorResults(_ context.Context, connector azionapi.Connector) (
 			Name:           types.StringValue(c.Name),
 			LastEditor:     types.StringValue(c.LastEditor),
 			LastModified:   types.StringValue(c.LastModified.Format(time.RFC850)),
+			CreatedAt:      types.StringValue(c.CreatedAt.Format(time.RFC850)),
 			ProductVersion: types.StringValue(c.ProductVersion),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),

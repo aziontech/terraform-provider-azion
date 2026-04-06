@@ -51,6 +51,7 @@ type FirewallRuleEngineResultResource struct {
 	Order        types.Int64                     `tfsdk:"order"`
 	LastEditor   types.String                    `tfsdk:"last_editor"`
 	LastModified types.String                    `tfsdk:"last_modified"`
+	CreatedAt    types.String                    `tfsdk:"created_at"`
 }
 
 type FirewallCriteriaResourceModel struct {
@@ -227,6 +228,10 @@ func (r *firewallRuleEngineResource) Schema(_ context.Context, _ resource.Schema
 					},
 					"last_modified": schema.StringAttribute{
 						Description: "Last modified timestamp.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "Creation timestamp.",
 						Computed:    true,
 					},
 				},
@@ -698,6 +703,7 @@ func transformFirewallRuleToResultModel(rule azionapi.FirewallRule) *FirewallRul
 	}
 	result.LastEditor = types.StringValue(rule.GetLastEditor())
 	result.LastModified = types.StringValue(rule.GetLastModified().Format(time.RFC3339))
+	result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))
 
 	// Transform criteria
 	for _, criterionGroup := range rule.Criteria {

@@ -43,6 +43,7 @@ type EdgeFunctionsInstanceResponse struct {
 	Active       types.Bool   `tfsdk:"active"`
 	LastEditor   types.String `tfsdk:"last_editor"`
 	LastModified types.String `tfsdk:"last_modified"`
+	CreatedAt    types.String `tfsdk:"created_at"`
 }
 
 func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -101,6 +102,10 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Schema(_ context.Contex
 						},
 						"last_modified": schema.StringAttribute{
 							Description: "Last modified timestamp of the function instance.",
+							Computed:    true,
+						},
+						"created_at": schema.StringAttribute{
+							Description: "The creation timestamp of the function instance.",
 							Computed:    true,
 						},
 					},
@@ -195,6 +200,7 @@ func (d *EdgeApplicationsEdgeFunctionInstanceDataSource) Read(ctx context.Contex
 			Active:       types.BoolValue(resultEdgeApplication.GetActive()),
 			LastEditor:   types.StringValue(resultEdgeApplication.GetLastEditor()),
 			LastModified: types.StringValue(resultEdgeApplication.GetLastModified().Format(time.RFC3339)),
+			CreatedAt:    types.StringValue(resultEdgeApplication.GetCreatedAt().Format(time.RFC3339)),
 		})
 	}
 

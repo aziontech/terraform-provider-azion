@@ -40,6 +40,7 @@ type FirewallFunctionInstanceResults struct {
 	Active       types.Bool   `tfsdk:"active"`
 	LastEditor   types.String `tfsdk:"last_editor"`
 	LastModified types.String `tfsdk:"last_modified"`
+	CreatedAt    types.String `tfsdk:"created_at"`
 }
 
 func (f *FirewallFunctionsInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -110,6 +111,10 @@ func (f *FirewallFunctionsInstanceDataSource) Schema(_ context.Context, _ dataso
 						},
 						"last_modified": schema.StringAttribute{
 							Description: "Last modified timestamp of the firewall function instance.",
+							Computed:    true,
+						},
+						"created_at": schema.StringAttribute{
+							Description: "The creation timestamp of the firewall function instance.",
 							Computed:    true,
 						},
 					},
@@ -208,6 +213,7 @@ func (f *FirewallFunctionsInstanceDataSource) Read(ctx context.Context, req data
 			Active:       types.BoolValue(result.GetActive()),
 			LastEditor:   types.StringValue(result.GetLastEditor()),
 			LastModified: types.StringValue(result.GetLastModified().Format(time.RFC3339)),
+			CreatedAt:    types.StringValue(result.GetCreatedAt().Format(time.RFC3339)),
 		}
 		functionInstancesResults = append(functionInstancesResults, functionInstance)
 	}

@@ -45,6 +45,7 @@ type NetworkListsResults struct {
 	ID           types.Int64  `tfsdk:"id"`
 	LastEditor   types.String `tfsdk:"last_editor"`
 	LastModified types.String `tfsdk:"last_modified"`
+	CreatedAt    types.String `tfsdk:"created_at"`
 	Type         types.String `tfsdk:"type"`
 	Name         types.String `tfsdk:"name"`
 }
@@ -104,6 +105,10 @@ func (n *NetworkListsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						},
 						"last_modified": schema.StringAttribute{
 							Description: "Last modified timestamp of the network list.",
+							Computed:    true,
+						},
+						"created_at": schema.StringAttribute{
+							Description: "Creation timestamp of the network list.",
 							Computed:    true,
 						},
 						"type": schema.StringAttribute{
@@ -187,6 +192,7 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 			ID:           types.Int64Value(nl.GetId()),
 			LastEditor:   types.StringValue(nl.GetLastEditor()),
 			LastModified: types.StringValue(nl.GetLastModified().Format(time.RFC3339)),
+			CreatedAt:    types.StringValue(nl.GetCreatedAt().Format(time.RFC3339)),
 			Type:         types.StringValue(nl.GetType()),
 			Name:         types.StringValue(nl.GetName()),
 		}

@@ -60,6 +60,7 @@ type FirewallResults struct {
 	LastEditor     types.String    `tfsdk:"last_editor"`
 	LastModified   types.String    `tfsdk:"last_modified"`
 	ProductVersion types.String    `tfsdk:"product_version"`
+	CreatedAt      types.String    `tfsdk:"created_at"`
 }
 
 func (f *FirewallDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -161,6 +162,10 @@ func (f *FirewallDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: "Product version of the firewall rule set.",
 						Computed:    true,
 					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp of the firewall.",
+						Computed:    true,
+					},
 				},
 			},
 		},
@@ -240,6 +245,7 @@ func (f *FirewallDataSource) Read(ctx context.Context, req datasource.ReadReques
 		LastEditor:     types.StringValue(firewallResponse.Data.GetLastEditor()),
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
+		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	firewallState := FirewallDataSourceModel{

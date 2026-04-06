@@ -98,6 +98,10 @@ func (d *CacheSettingsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 							Description: "Name of the cache setting.",
 							Computed:    true,
 						},
+						"created_at": schema.StringAttribute{
+							Description: "The creation timestamp of the cache setting.",
+							Computed:    true,
+						},
 						"browser_cache": schema.SingleNestedAttribute{
 							Description: "Browser cache settings.",
 							Computed:    true,

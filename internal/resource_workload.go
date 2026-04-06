@@ -44,6 +44,7 @@ type workloadResourceResults struct {
 	Active                    types.Bool                `tfsdk:"active"`
 	LastEditor                types.String              `tfsdk:"last_editor"`
 	LastModified              types.String              `tfsdk:"last_modified"`
+	CreatedAt                 types.String              `tfsdk:"created_at"`
 	Infrastructure            types.Int64               `tfsdk:"infrastructure"`
 	Tls                       *TLSWorkloadResourceModel `tfsdk:"tls"`
 	Protocols                 *ProtocolsResourceModel   `tfsdk:"protocols"`
@@ -122,6 +123,10 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 					"last_modified": schema.StringAttribute{
 						Description: "Last modified timestamp of the workload.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "Creation timestamp of the workload.",
 						Computed:    true,
 					},
 					"infrastructure": schema.Int64Attribute{
@@ -736,6 +741,7 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 		Name:           types.StringValue(response.Data.Name),
 		LastEditor:     types.StringValue(response.Data.LastEditor),
 		LastModified:   types.StringValue(response.Data.LastModified.Format(time.RFC850)),
+		CreatedAt:      types.StringValue(response.Data.CreatedAt.Format(time.RFC3339)),
 		ProductVersion: types.StringValue(response.Data.ProductVersion),
 		WorkloadDomain: types.StringValue(response.Data.WorkloadDomain),
 	}
