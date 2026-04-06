@@ -31,6 +31,7 @@ This data source has no arguments.
   * `active` - Status of the workload.
   * `last_editor` - The last editor of the workload.
   * `last_modified` - Last modified timestamp of the workload.
+  * `created_at` - Creation timestamp of the workload.
   * `infrastructure` - Infrastructure type: 1 for Production (All Locations), 2 for Staging.
   * `tls` - TLS configuration for the workload.
     * `certificate` - Certificate ID for TLS.

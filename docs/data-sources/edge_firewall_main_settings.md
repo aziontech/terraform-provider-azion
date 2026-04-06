@@ -38,6 +38,7 @@ data "azion_firewall_main_settings" "example" {
 Read-Only:
 
 - `active` (Boolean) Whether the firewall rule set is active.
+- `created_at` (String) The creation timestamp of the firewall.
 - `debug` (Boolean) Whether debug is enabled for the rule set.
 - `id` (Number) ID of the firewall rule set.
 - `last_editor` (String) Last editor of the firewall rule set.

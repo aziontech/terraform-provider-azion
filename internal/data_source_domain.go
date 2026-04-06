@@ -59,8 +59,8 @@ func (d *DomainDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Identifier of the data source.",
-				Optional:    true,
+				Description: "Identifier of the domain to read.",
+				Required:    true,
 			},
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema Version.",
@@ -70,8 +70,8 @@ func (d *DomainDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"domain_id": schema.Int64Attribute{
-						Description: "The domain identifier to target for the resource.",
-						Required:    true,
+						Description: "The domain identifier.",
+						Computed:    true,
 					},
 					"name": schema.StringAttribute{
 						Computed:    true,

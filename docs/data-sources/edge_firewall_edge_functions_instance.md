@@ -46,6 +46,7 @@ Read-Only:
 
 - `active` (Boolean) Whether the function instance is active.
 - `args` (String) Arguments for the function instance.
+- `created_at` (String) The creation timestamp of the firewall function instance.
 - `function` (Number) ID of the Function for Firewall you wish to configure.
 - `id` (Number) ID of the firewall function instance.
 - `last_editor` (String) Last editor of the firewall function instance.

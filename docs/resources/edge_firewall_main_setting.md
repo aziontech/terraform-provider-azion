@@ -63,6 +63,7 @@ Optional:
 
 Read-Only:
 
+- `created_at` (String) Creation timestamp of the firewall rule set.
 - `id` (Number) ID of the firewall rule set.
 - `last_editor` (String) Last editor of the firewall rule set.
 - `last_modified` (String) Last modified timestamp of the firewall rule set.
@@ -115,4 +116,3 @@ Import is supported using the following syntax:
 
 ```shell
 terraform import azion_firewall_main_setting.example firewall_id
-```

@@ -39,8 +39,10 @@ output "certificate_names" {
 
 Read-Only:
 
+- `active` (Boolean) Whether the certificate is active.
 - `authority` (String) Certificate authority.
 - `certificate_type` (String) Type of the digital certificate.
+- `challenge` (String) Challenge type for the certificate.
 - `id` (Number) Identifier of the digital certificate.
 - `issuer` (String) Issuer of the digital certificate.
 - `key_algorithm` (String) Key algorithm used for the certificate.

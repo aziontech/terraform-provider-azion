@@ -43,6 +43,9 @@ Required:
 Read-Only:
 
 - `active` (Boolean) Active status of the function instance.
-- `args` (String) Code of the function.
-- `edge_function_id` (Number) The function identifier.
+- `args` (String) Arguments of the function instance.
+- `created_at` (String) Creation timestamp of the function instance.
+- `edge_function_id` (Number) The edge function identifier.
+- `last_editor` (String) Last editor of the function instance.
+- `last_modified` (String) Last modified timestamp of the function instance.
 - `name` (String) Name of the function.

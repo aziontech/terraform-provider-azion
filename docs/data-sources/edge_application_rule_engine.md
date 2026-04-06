@@ -33,7 +33,6 @@ data "azion_edge_application_rule_engine" "example" {
 ### Read-Only
 
 - `id` (String) Identifier of the data source.
-- `schema_version` (Number) Schema Version.
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
@@ -41,53 +40,50 @@ data "azion_edge_application_rule_engine" "example" {
 Required:
 
 - `id` (Number) The ID of the rules engine rule.
-- `phase` (String) The phase in which the rule is executed (e.g., default, request, response).
+- `phase` (String) The phase in which the rule is executed (request or response).
 
 Read-Only:
 
-- `behaviors` (Attributes List) (see [below for nested schema](#nestedatt--results--behaviors))
-- `criteria` (Attributes List) (see [below for nested schema](#nestedatt--results--criteria))
-- `description` (String) The description of the rules engine rule.
-- `is_active` (Boolean) The status of the rules engine rule.
+- `active` (Boolean) Whether the rule is active.
+- `behaviors` (Attributes List) Behaviors for the rule. (see [below for nested schema](#nestedatt--results--behaviors))
+- `criteria` (Attributes List) Criteria for the rule. (see [below for nested schema](#nestedatt--results--criteria))
+- `description` (String) Description of the rule.
+- `last_editor` (String) Last editor of the rule.
+- `last_modified` (String) Last modified timestamp.
 - `name` (String) The name of the rules engine rule.
-- `order` (Number) The order of the rule in the rules engine.
+- `order` (Number) Order of the rule.
 
 <a id="nestedatt--results--behaviors"></a>
 ### Nested Schema for `results.behaviors`
 
-Required:
+Read-Only:
 
-- `target_object` (Attributes) (see [below for nested schema](#nestedatt--results--behaviors--target_object))
+- `attributes` (Attributes) Behavior attributes (for behaviors with args). (see [below for nested schema](#nestedatt--results--behaviors--attributes))
+- `capture_attributes` (Attributes) Capture attributes (for capture_match_groups). (see [below for nested schema](#nestedatt--results--behaviors--capture_attributes))
+- `type` (String) Type of behavior.
+
+<a id="nestedatt--results--behaviors--attributes"></a>
+### Nested Schema for `results.behaviors.attributes`
 
 Read-Only:
 
-- `name` (String) The name of the behavior.
+- `value` (String) Value for the behavior.
 
-<a id="nestedatt--results--behaviors--target_object"></a>
-### Nested Schema for `results.behaviors.target_object`
+<a id="nestedatt--results--behaviors--capture_attributes"></a>
+### Nested Schema for `results.behaviors.capture_attributes`
 
 Read-Only:
 
-- `captured_array` (String) The name of the behavior.
-- `regex` (String) The target of the behavior.
-- `subject` (String) The target of the behavior.
-- `target` (String) The target of the behavior.
-
-
+- `captured_array` (String) Captured array name.
+- `regex` (String) Regex pattern.
+- `subject` (String) Subject for capture.
 
 <a id="nestedatt--results--criteria"></a>
 ### Nested Schema for `results.criteria`
 
 Read-Only:
 
-- `entries` (Attributes List) (see [below for nested schema](#nestedatt--results--criteria--entries))
-
-<a id="nestedatt--results--criteria--entries"></a>
-### Nested Schema for `results.criteria.entries`
-
-Read-Only:
-
-- `conditional` (String) The conditional operator used in the rule's criteria (e.g., if, and, or).
-- `input_value` (String) The input value used in the rule's criteria.
-- `operator` (String) The operator used in the rule's criteria.
-- `variable` (String) The variable used in the rule's criteria.
+- `argument` (String) Argument for comparison.
+- `conditional` (String) Conditional operator (if, and, or).
+- `operator` (String) Comparison operator.
+- `variable` (String) Variable to evaluate.

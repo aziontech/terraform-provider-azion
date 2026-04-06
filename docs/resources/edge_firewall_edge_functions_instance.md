@@ -37,26 +37,27 @@ resource "azion_firewall_functions_instance" "example" {
 
 - `id` (String) The ID of this resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
-- `state` (String) State of the edge function instance.
+- `state` (String) State of the function instance.
 
 <a id="nestedatt--data"></a>
 ### Nested Schema for `data`
 
 Required:
 
-- `function` (Number) The edge function identifier.
+- `function` (Number) The function identifier.
 - `name` (String) Name of the function.
 
 Optional:
 
-- `active` (Boolean) Whether the edge function instance is active.
+- `active` (Boolean) Whether the function instance is active.
 - `args` (String) JSON arguments of the function.
 
 Read-Only:
 
-- `id` (Number) The edge function instance identifier.
-- `last_editor` (String) Last editor of the edge firewall edge functions instance.
-- `last_modified` (String) Last modified timestamp of the edge firewall edge functions instance.
+- `created_at` (String) The creation timestamp of the firewall function instance.
+- `id` (Number) The function instance identifier.
+- `last_editor` (String) Last editor of the firewall function instance.
+- `last_modified` (String) Last modified timestamp of the firewall function instance.
 
 ## Import
 
@@ -64,4 +65,3 @@ Import is supported using the following syntax:
 
 ```shell
 terraform import azion_firewall_functions_instance.example <firewall_id>/<function_instance_id>
-```

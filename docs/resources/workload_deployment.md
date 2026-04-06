@@ -63,3 +63,4 @@ The following attributes are exported:
   * `id` - The deployment identifier (computed).
   * `last_editor` - The last editor of the deployment.
   * `last_modified` - Last modified timestamp of the deployment.
+  * `created_at` - Creation timestamp of the deployment.

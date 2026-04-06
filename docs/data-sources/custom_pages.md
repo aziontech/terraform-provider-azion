@@ -31,6 +31,7 @@ data "azion_custom_pages" "example" {
 
 Read-Only:
 
+- `created_at` (String) The creation timestamp of the custom page.
 - `id` (Number) The custom page identifier.
 - `name` (String) Name of the custom page.
 - `last_editor` (String) The last editor of the custom page.

@@ -248,6 +248,7 @@ Optional:
 
 Read-Only:
 
+- `created_at` (String) Creation timestamp.
 - `id` (Int64) The ID of the rule.
 - `last_editor` (String) Last editor of the rule.
 - `last_modified` (String) Last modified timestamp.
