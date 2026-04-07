@@ -280,9 +280,9 @@ resource "azion_intelligent_dns_zone" "testfunc" {
 resource "azion_intelligent_dns_record" "testfunc" {
   zone_id = azion_intelligent_dns_zone.testfunc.zone.id
   record = {
-    record_type = "A"
-    entry       = "site"
-    answers_list = [
+    type = "A"
+    name = "site"
+    rdata = [
       "8.8.8.8"
     ]
     policy      = "weighted"
