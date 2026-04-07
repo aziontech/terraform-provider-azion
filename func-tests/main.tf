@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     azion = {
-      source  = "aziontech/azion"
-      version = ">= 1.33.0"
+      source  = "github.com/aziontech/azion"
+      version = "0.1.0"
     }
   }
 }
@@ -157,30 +157,23 @@ locals {
 
 resource "azion_function" "testfunc" {
   function = {
-    name           = "Terraform Function ${local.name_suffix}"
-    code           = file("${path.module}/mock_files/dummy_script.txt")
-    language       = "javascript"
-    initiator_type = "edge_application"
-    json_args = jsonencode(
-      { "key" = "Value",
-        "key" = "example"
-    })
-    active = true
+    name                 = "Terraform Function ${local.name_suffix}"
+    code                 = trimspace(file("${path.module}/mock_files/dummy_script.txt"))
+    active               = true
+    default_args         = jsonencode({ "key" = "Value" })
+    execution_environment = "default"
+    runtime              = "nodejs20.x"
   }
 }
 
 resource "azion_function" "testfunc2firewall" {
   function = {
-    name                 = "Terraform Function 2 Firewall ${local.name_suffix}"
-    code                 = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
-    language             = "javascript"
-    initiator_type       = "edge_firewall"
+    name                  = "Terraform Function 2 Firewall ${local.name_suffix}"
+    code                  = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
+    active                = true
+    default_args          = jsonencode({ "key" = "Value" })
     execution_environment = "firewall"
-    json_args = jsonencode(
-      { "key" = "Value",
-        "key" = "example"
-    })
-    active = true
+    runtime               = "nodejs20.x"
   }
 }
 
