@@ -161,8 +161,8 @@ resource "azion_function" "testfunc" {
     code                  = trimspace(file("${path.module}/mock_files/dummy_script.txt"))
     active                = true
     default_args          = jsonencode({ "key" = "Value" })
-    execution_environment = "default"
-    runtime               = "nodejs20.x"
+    execution_environment = "application"
+    runtime               = "azion_js"
   }
 }
 
@@ -173,7 +173,7 @@ resource "azion_function" "testfunc2firewall" {
     active                = true
     default_args          = jsonencode({ "key" = "Value" })
     execution_environment = "firewall"
-    runtime               = "nodejs20.x"
+    runtime               = "azion_js"
   }
 }
 

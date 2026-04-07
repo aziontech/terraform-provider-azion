@@ -5,7 +5,7 @@ resource "azion_function" "example" {
     code                  = "console.log('Hello World');"
     active                = true
     default_args          = jsonencode({ "key" = "Value" })
-    execution_environment = "default"
-    runtime               = "nodejs20.x"
+    execution_environment = "application"
+    runtime               = "azion_js"
   }
 }

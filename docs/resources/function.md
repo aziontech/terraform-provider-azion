@@ -33,8 +33,8 @@ resource "azion_function" "example1" {
     code                 = trimspace(local_file.content_file.content)
     active               = true
     default_args         = jsonencode({ "key" = "Value" })
-    execution_environment = "default"
-    runtime              = "nodejs20.x"
+    execution_environment = "application"
+    runtime              = "azion_js"
   }
 }
 
@@ -45,8 +45,8 @@ resource "azion_function" "example2" {
     code                 = trimspace(file("${path.module}/example.txt"))
     active               = true
     default_args         = jsonencode({ "key" = "Value" })
-    execution_environment = "default"
-    runtime              = "nodejs20.x"
+    execution_environment = "application"
+    runtime              = "azion_js"
   }
 }
 ```
