@@ -373,6 +373,8 @@ type EdgeFunctionsDataSourceModel struct {
 }
 
 // Results struct - represents each item in the list
+// Note: The "code" field is NOT included in the list response from the API.
+// Use the singular data source (azion_function) to retrieve the code.
 type EdgeFunctionsResults struct {
     ID                   types.Int64  `tfsdk:"id"`
     Name                 types.String `tfsdk:"name"`
@@ -382,7 +384,6 @@ type EdgeFunctionsResults struct {
     Active               types.Bool   `tfsdk:"active"`
     Runtime              types.String `tfsdk:"runtime"`
     ExecutionEnvironment types.String `tfsdk:"execution_environment"`
-    Code                 types.String `tfsdk:"code"`
     DefaultArgs          types.String `tfsdk:"default_args"`
     ReferenceCount       types.Int64  `tfsdk:"reference_count"`
     Version              types.String `tfsdk:"version"`
@@ -448,10 +449,6 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
                         },
                         "execution_environment": schema.StringAttribute{
                             Description: "Execution environment of the function.",
-                            Computed:    true,
-                        },
-                        "code": schema.StringAttribute{
-                            Description: "Code of the function.",
                             Computed:    true,
                         },
                         "default_args": schema.StringAttribute{
@@ -529,7 +526,6 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
         result := EdgeFunctionsResults{
             ID:             types.Int64Value(resultEdgeFunctions.Id),
             Name:           types.StringValue(resultEdgeFunctions.Name),
-            Code:           types.StringValue(resultEdgeFunctions.Code),
             DefaultArgs:    types.StringValue(defaultArgsStr),
             Active:         types.BoolValue(*resultEdgeFunctions.Active),
             LastEditor:     types.StringValue(resultEdgeFunctions.LastEditor),

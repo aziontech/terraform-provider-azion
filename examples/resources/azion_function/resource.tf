@@ -1,6 +1,6 @@
 # Example with inline code
-resource "azion_edge_function" "example" {
-  edge_function = {
+resource "azion_function" "example" {
+  function = {
     name                  = "Function Terraform Example"
     code                  = "console.log('Hello World');"
     active                = true

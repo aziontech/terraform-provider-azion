@@ -15,19 +15,19 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &EdgeApplicationsDataSource{}
-	_ datasource.DataSourceWithConfigure = &EdgeApplicationsDataSource{}
+	_ datasource.DataSource              = &ApplicationsDataSource{}
+	_ datasource.DataSourceWithConfigure = &ApplicationsDataSource{}
 )
 
-func dataSourceAzionEdgeApplications() datasource.DataSource {
-	return &EdgeApplicationsDataSource{}
+func dataSourceAzionApplications() datasource.DataSource {
+	return &ApplicationsDataSource{}
 }
 
-type EdgeApplicationsDataSource struct {
+type ApplicationsDataSource struct {
 	client *apiClient
 }
 
-type EdgeApplicationsDataSourceModel struct {
+type ApplicationsDataSourceModel struct {
 	TotalCount types.Int64       `tfsdk:"total_count"`
 	Page       types.Int64       `tfsdk:"page"`
 	PageSize   types.Int64       `tfsdk:"page_size"`
@@ -35,7 +35,7 @@ type EdgeApplicationsDataSourceModel struct {
 	ID         types.String      `tfsdk:"id"`
 }
 
-type EdgeApplicationsResult struct {
+type ApplicationsResult struct {
 	ApplicationID types.Int64          `tfsdk:"application_id"`
 	Name          types.String         `tfsdk:"name"`
 	Active        types.Bool           `tfsdk:"active"`
@@ -51,18 +51,18 @@ type ApplicationOrigins struct {
 	OriginID   types.String `tfsdk:"origin_id"`
 }
 
-func (e *EdgeApplicationsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+func (e *ApplicationsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	e.client = req.ProviderData.(*apiClient)
 }
 
-func (e *EdgeApplicationsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_applications_main_settings"
+func (e *ApplicationsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_applications_main_settings"
 }
 
-func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (e *ApplicationsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -158,7 +158,7 @@ func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.Sche
 	}
 }
 
-func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (e *ApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var Page types.Int64
 	var PageSize types.Int64
 	diagsPage := req.Config.GetAttribute(ctx, path.Root("page"), &Page)
@@ -215,7 +215,7 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 		}
 	}
 
-	appState := EdgeApplicationsDataSourceModel{
+	appState := ApplicationsDataSourceModel{
 		Page:       Page,
 		PageSize:   PageSize,
 		TotalCount: types.Int64Value(*appResponse.Count),
@@ -232,7 +232,7 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 			Cache: &CacheModule{
 				Enabled: types.BoolValue(cache.GetEnabled()),
 			},
-			Functions: &EdgeFunctionModule{
+			Functions: &FunctionModule{
 				Enabled: types.BoolValue(functions.GetEnabled()),
 			},
 			ApplicationAccelerator: &ApplicationAcceleratorModule{
@@ -253,7 +253,7 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 			Debug:          types.BoolValue(resultApplication.GetDebug()),
 		})
 	}
-	appState.ID = types.StringValue("Get All Edge Application")
+	appState.ID = types.StringValue("Get All Application")
 	diags := resp.State.Set(ctx, &appState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

@@ -22,26 +22,26 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &edgeApplicationResource{}
-	_ resource.ResourceWithConfigure   = &edgeApplicationResource{}
-	_ resource.ResourceWithImportState = &edgeApplicationResource{}
+	_ resource.Resource                = &applicationResource{}
+	_ resource.ResourceWithConfigure   = &applicationResource{}
+	_ resource.ResourceWithImportState = &applicationResource{}
 )
 
-func NewEdgeApplicationMainSettingsResource() resource.Resource {
-	return &edgeApplicationResource{}
+func NewApplicationMainSettingsResource() resource.Resource {
+	return &applicationResource{}
 }
 
-type edgeApplicationResource struct {
+type applicationResource struct {
 	client *apiClient
 }
 
-type EdgeApplicationResourceModel struct {
-	EdgeApplication *EdgeApplicationResults `tfsdk:"edge_application"`
-	ID              types.String            `tfsdk:"id"`
-	LastUpdated     types.String            `tfsdk:"last_updated"`
+type ApplicationResourceModel struct {
+	Application *ApplicationResults `tfsdk:"application"`
+	ID          types.String        `tfsdk:"id"`
+	LastUpdated types.String        `tfsdk:"last_updated"`
 }
 
-type EdgeApplicationResults struct {
+type ApplicationResults struct {
 	ApplicationID  types.Int64         `tfsdk:"application_id"`
 	Name           types.String        `tfsdk:"name"`
 	Modules        *ApplicationModules `tfsdk:"modules"`
@@ -50,11 +50,11 @@ type EdgeApplicationResults struct {
 	ProductVersion types.String        `tfsdk:"product_version"`
 }
 
-func (r *edgeApplicationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_main_setting"
+func (r *applicationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_application_main_setting"
 }
 
-func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -67,28 +67,28 @@ func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaReq
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"edge_application": schema.SingleNestedAttribute{
+			"application": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"application_id": schema.Int64Attribute{
-						Description: "The Edge Application identifier.",
+						Description: "The Application identifier.",
 						Computed:    true,
 					},
 					"name": schema.StringAttribute{
-						Description: "The name of the Edge Application.",
+						Description: "The name of the Application.",
 						Required:    true,
 					},
 					"active": schema.BoolAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
-						Description: "Indicates whether the Edge Application is active.",
+						Description: "Indicates whether the Application is active.",
 					},
 					"debug": schema.BoolAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(false),
-						Description: "Indicates whether debug rules are enabled for the Edge Application.",
+						Description: "Indicates whether debug rules are enabled for the Application.",
 					},
 					"product_version": schema.StringAttribute{
 						Computed:    true,
@@ -129,7 +129,7 @@ func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaReq
 	}
 }
 
-func (r *edgeApplicationResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *applicationResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -138,8 +138,8 @@ func (r *edgeApplicationResource) Configure(_ context.Context, req resource.Conf
 
 var mutex sync.Mutex
 
-func (r *edgeApplicationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan EdgeApplicationResourceModel
+func (r *applicationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan ApplicationResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 
@@ -150,26 +150,26 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	edgeApplication := sdk.ApplicationRequest{
-		Name:   plan.EdgeApplication.Name.ValueString(),
-		Active: plan.EdgeApplication.Active.ValueBoolPointer(),
-		Debug:  plan.EdgeApplication.Debug.ValueBoolPointer(),
+	application := sdk.ApplicationRequest{
+		Name:   plan.Application.Name.ValueString(),
+		Active: plan.Application.Active.ValueBoolPointer(),
+		Debug:  plan.Application.Debug.ValueBoolPointer(),
 	}
 
-	modsPlan := plan.EdgeApplication.Modules
+	modsPlan := plan.Application.Modules
 	modsRequest := transformModuleIntoRequest(modsPlan)
 
-	edgeApplication.Modules = &modsRequest
+	application.Modules = &modsRequest
 
-	createEdgeApplication, response, err := r.client.api.
+	createApplication, response, err := r.client.api.
 		ApplicationsAPI.CreateApplication(ctx).
-		ApplicationRequest(edgeApplication).Execute() //nolint
+		ApplicationRequest(application).Execute() //nolint
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
-			createEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
+			createApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
 				return r.client.api.
 					ApplicationsAPI.CreateApplication(ctx).
-					ApplicationRequest(edgeApplication).Execute() //nolint
+					ApplicationRequest(application).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -200,47 +200,47 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 		}
 	}
 
-	edgeAppResults := &EdgeApplicationResults{
-		ApplicationID:  types.Int64Value(createEdgeApplication.Data.GetId()),
-		Name:           types.StringValue(createEdgeApplication.Data.GetName()),
-		Active:         types.BoolValue(createEdgeApplication.Data.GetActive()),
-		Debug:          types.BoolValue(createEdgeApplication.Data.GetDebug()),
-		ProductVersion: types.StringValue(createEdgeApplication.Data.GetProductVersion()),
-		Modules:        plan.EdgeApplication.Modules,
+	appResults := &ApplicationResults{
+		ApplicationID:  types.Int64Value(createApplication.Data.GetId()),
+		Name:           types.StringValue(createApplication.Data.GetName()),
+		Active:         types.BoolValue(createApplication.Data.GetActive()),
+		Debug:          types.BoolValue(createApplication.Data.GetDebug()),
+		ProductVersion: types.StringValue(createApplication.Data.GetProductVersion()),
+		Modules:        plan.Application.Modules,
 	}
 
 	// Only update modules from API response if the plan had modules specified
 	// This prevents Terraform from seeing an inconsistency when modules was null in plan
-	if plan.EdgeApplication.Modules != nil && createEdgeApplication.Data.Modules != nil {
-		modulesResp := createEdgeApplication.Data.GetModules()
+	if plan.Application.Modules != nil && createApplication.Data.Modules != nil {
+		modulesResp := createApplication.Data.GetModules()
 		modules := ApplicationModules{}
 
 		// Only populate modules that were specified in the plan
-		if plan.EdgeApplication.Modules.Cache != nil && modulesResp.Cache != nil {
+		if plan.Application.Modules.Cache != nil && modulesResp.Cache != nil {
 			modules.Cache = &CacheModule{
 				Enabled: types.BoolValue(modulesResp.Cache.GetEnabled()),
 			}
 		}
-		if plan.EdgeApplication.Modules.Functions != nil && modulesResp.Functions != nil {
-			modules.Functions = &EdgeFunctionModule{
+		if plan.Application.Modules.Functions != nil && modulesResp.Functions != nil {
+			modules.Functions = &FunctionModule{
 				Enabled: types.BoolValue(modulesResp.Functions.GetEnabled()),
 			}
 		}
-		if plan.EdgeApplication.Modules.ApplicationAccelerator != nil && modulesResp.ApplicationAccelerator != nil {
+		if plan.Application.Modules.ApplicationAccelerator != nil && modulesResp.ApplicationAccelerator != nil {
 			modules.ApplicationAccelerator = &ApplicationAcceleratorModule{
 				Enabled: types.BoolValue(modulesResp.ApplicationAccelerator.GetEnabled()),
 			}
 		}
-		if plan.EdgeApplication.Modules.ImageProcessor != nil && modulesResp.ImageProcessor != nil {
+		if plan.Application.Modules.ImageProcessor != nil && modulesResp.ImageProcessor != nil {
 			modules.ImageProcessor = &ImageProcessorModule{
 				Enabled: types.BoolValue(modulesResp.ImageProcessor.GetEnabled()),
 			}
 		}
-		edgeAppResults.Modules = &modules
+		appResults.Modules = &modules
 	}
 
-	plan.EdgeApplication = edgeAppResults
-	plan.ID = types.StringValue(fmt.Sprintf("%d", createEdgeApplication.Data.GetId()))
+	plan.Application = appResults
+	plan.ID = types.StringValue(fmt.Sprintf("%d", createApplication.Data.GetId()))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -250,8 +250,8 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 	}
 }
 
-func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state EdgeApplicationResourceModel
+func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state ApplicationResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -259,7 +259,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	idInt64, _ := strconv.ParseInt(state.ID.ValueString(), 10, 64)
-	stateEdgeApplication, response, err := r.client.api.
+	stateApplication, response, err := r.client.api.
 		ApplicationsAPI.
 		RetrieveApplication(ctx, idInt64).Execute() //nolint
 	if err != nil {
@@ -268,7 +268,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 			return
 		}
 		if response != nil && response.StatusCode == 429 {
-			stateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
+			stateApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
 				return r.client.api.ApplicationsAPI.RetrieveApplication(ctx, idInt64).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -300,25 +300,25 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 		}
 	}
 
-	state.EdgeApplication = &EdgeApplicationResults{
-		ApplicationID:  types.Int64Value(stateEdgeApplication.Data.GetId()),
-		Name:           types.StringValue(stateEdgeApplication.Data.GetName()),
-		Active:         types.BoolValue(stateEdgeApplication.Data.GetActive()),
-		Debug:          types.BoolValue(stateEdgeApplication.Data.GetDebug()),
-		ProductVersion: types.StringValue(stateEdgeApplication.Data.GetProductVersion()),
+	state.Application = &ApplicationResults{
+		ApplicationID:  types.Int64Value(stateApplication.Data.GetId()),
+		Name:           types.StringValue(stateApplication.Data.GetName()),
+		Active:         types.BoolValue(stateApplication.Data.GetActive()),
+		Debug:          types.BoolValue(stateApplication.Data.GetDebug()),
+		ProductVersion: types.StringValue(stateApplication.Data.GetProductVersion()),
 	}
-	state.ID = types.StringValue(fmt.Sprintf("%d", stateEdgeApplication.Data.GetId()))
+	state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
 
 	modelPlan := ApplicationModules{}
-	if stateEdgeApplication.Data.Modules != nil {
-		modelState := stateEdgeApplication.Data.GetModules()
+	if stateApplication.Data.Modules != nil {
+		modelState := stateApplication.Data.GetModules()
 		if modelState.Cache != nil {
 			modelPlan.Cache = &CacheModule{
 				Enabled: types.BoolValue(modelState.Cache.GetEnabled()),
 			}
 		}
 		if modelState.Functions != nil {
-			modelPlan.Functions = &EdgeFunctionModule{
+			modelPlan.Functions = &FunctionModule{
 				Enabled: types.BoolValue(modelState.Functions.GetEnabled()),
 			}
 		}
@@ -333,7 +333,7 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 			}
 		}
 	}
-	state.EdgeApplication.Modules = &modelPlan
+	state.Application.Modules = &modelPlan
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -342,36 +342,36 @@ func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadReq
 	}
 }
 
-func (r *edgeApplicationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan EdgeApplicationResourceModel
+func (r *applicationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan ApplicationResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	edgeApplication := sdk.ApplicationRequest{
-		Name:   plan.EdgeApplication.Name.ValueString(),
-		Debug:  plan.EdgeApplication.Debug.ValueBoolPointer(),
-		Active: plan.EdgeApplication.Active.ValueBoolPointer(),
+	application := sdk.ApplicationRequest{
+		Name:   plan.Application.Name.ValueString(),
+		Debug:  plan.Application.Debug.ValueBoolPointer(),
+		Active: plan.Application.Active.ValueBoolPointer(),
 	}
 
-	modsPlan := plan.EdgeApplication.Modules
+	modsPlan := plan.Application.Modules
 	modsRequest := transformModuleIntoRequest(modsPlan)
-	edgeApplication.Modules = &modsRequest
+	application.Modules = &modsRequest
 
 	idInt64, _ := strconv.ParseInt(plan.ID.ValueString(), 10, 64)
-	updateEdgeApplication, response, err := r.client.api.
+	updateApplication, response, err := r.client.api.
 		ApplicationsAPI.
 		UpdateApplication(ctx, idInt64).
-		ApplicationRequest(edgeApplication).Execute() //nolint
+		ApplicationRequest(application).Execute() //nolint
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
-			updateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
+			updateApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
 				return r.client.api.
 					ApplicationsAPI.
 					UpdateApplication(ctx, idInt64).
-					ApplicationRequest(edgeApplication).Execute() //nolint
+					ApplicationRequest(application).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -402,16 +402,16 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 		}
 	}
 
-	plan.EdgeApplication = &EdgeApplicationResults{
-		ApplicationID:  types.Int64Value(updateEdgeApplication.Data.GetId()),
-		Name:           types.StringValue(updateEdgeApplication.Data.GetName()),
-		Active:         types.BoolValue(updateEdgeApplication.Data.GetActive()),
-		Debug:          types.BoolValue(updateEdgeApplication.Data.GetDebug()),
-		ProductVersion: types.StringValue(updateEdgeApplication.Data.GetProductVersion()),
+	plan.Application = &ApplicationResults{
+		ApplicationID:  types.Int64Value(updateApplication.Data.GetId()),
+		Name:           types.StringValue(updateApplication.Data.GetName()),
+		Active:         types.BoolValue(updateApplication.Data.GetActive()),
+		Debug:          types.BoolValue(updateApplication.Data.GetDebug()),
+		ProductVersion: types.StringValue(updateApplication.Data.GetProductVersion()),
 		Modules:        modsPlan,
 	}
 
-	plan.ID = types.StringValue(fmt.Sprintf("%d", updateEdgeApplication.Data.GetId()))
+	plan.ID = types.StringValue(fmt.Sprintf("%d", updateApplication.Data.GetId()))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -421,8 +421,8 @@ func (r *edgeApplicationResource) Update(ctx context.Context, req resource.Updat
 	}
 }
 
-func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state EdgeApplicationResourceModel
+func (r *applicationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state ApplicationResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -467,7 +467,7 @@ func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.Delet
 	}
 }
 
-func (r *edgeApplicationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *applicationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 

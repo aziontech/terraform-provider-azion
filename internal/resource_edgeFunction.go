@@ -33,9 +33,9 @@ type edgeFunctionResource struct {
 }
 
 type edgeFunctionResourceModel struct {
-	EdgeFunction *edgeFunctionResourceResults `tfsdk:"edge_function"`
-	ID           types.String                 `tfsdk:"id"`
-	LastUpdated  types.String                 `tfsdk:"last_updated"`
+	Function    *edgeFunctionResourceResults `tfsdk:"function"`
+	ID          types.String                 `tfsdk:"id"`
+	LastUpdated types.String                 `tfsdk:"last_updated"`
 }
 
 type edgeFunctionResourceResults struct {
@@ -55,7 +55,7 @@ type edgeFunctionResourceResults struct {
 }
 
 func (r *edgeFunctionResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_function"
+	resp.TypeName = req.ProviderTypeName + "_function"
 }
 
 func (r *edgeFunctionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -76,7 +76,7 @@ func (r *edgeFunctionResource) Schema(_ context.Context, _ resource.SchemaReques
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"edge_function": schema.SingleNestedAttribute{
+			"function": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
@@ -157,25 +157,25 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	edgeFunction := azionapi.FunctionsRequest{
-		Name: plan.EdgeFunction.Name.ValueString(),
-		Code: plan.EdgeFunction.Code.ValueString(),
+		Name: plan.Function.Name.ValueString(),
+		Code: plan.Function.Code.ValueString(),
 	}
 
 	// Only include optional fields if they are set
-	if !plan.EdgeFunction.Active.IsNull() && !plan.EdgeFunction.Active.IsUnknown() {
-		edgeFunction.SetActive(plan.EdgeFunction.Active.ValueBool())
+	if !plan.Function.Active.IsNull() && !plan.Function.Active.IsUnknown() {
+		edgeFunction.SetActive(plan.Function.Active.ValueBool())
 	}
 
-	if !plan.EdgeFunction.ExecutionEnvironment.IsNull() && !plan.EdgeFunction.ExecutionEnvironment.IsUnknown() {
-		edgeFunction.SetExecutionEnvironment(plan.EdgeFunction.ExecutionEnvironment.ValueString())
+	if !plan.Function.ExecutionEnvironment.IsNull() && !plan.Function.ExecutionEnvironment.IsUnknown() {
+		edgeFunction.SetExecutionEnvironment(plan.Function.ExecutionEnvironment.ValueString())
 	}
 
-	if !plan.EdgeFunction.Runtime.IsNull() && !plan.EdgeFunction.Runtime.IsUnknown() {
-		edgeFunction.SetRuntime(plan.EdgeFunction.Runtime.ValueString())
+	if !plan.Function.Runtime.IsNull() && !plan.Function.Runtime.IsUnknown() {
+		edgeFunction.SetRuntime(plan.Function.Runtime.ValueString())
 	}
 
-	if !plan.EdgeFunction.DefaultArgs.IsNull() && !plan.EdgeFunction.DefaultArgs.IsUnknown() {
-		planJsonArgs, err := utils.ConvertStringToInterface(plan.EdgeFunction.DefaultArgs.ValueString())
+	if !plan.Function.DefaultArgs.IsNull() && !plan.Function.DefaultArgs.IsUnknown() {
+		planJsonArgs, err := utils.ConvertStringToInterface(plan.Function.DefaultArgs.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
@@ -232,7 +232,7 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	plan.EdgeFunction = &edgeFunctionResourceResults{
+	plan.Function = &edgeFunctionResourceResults{
 		ID:                   types.Int64Value(createEdgeFunction.Data.Id),
 		Name:                 types.StringValue(createEdgeFunction.Data.Name),
 		Code:                 types.StringValue(createEdgeFunction.Data.Code),
@@ -248,7 +248,7 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	if createEdgeFunction.Data.Runtime != nil {
-		plan.EdgeFunction.Runtime = types.StringValue(*createEdgeFunction.Data.Runtime)
+		plan.Function.Runtime = types.StringValue(*createEdgeFunction.Data.Runtime)
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(createEdgeFunction.Data.Id, 10))
@@ -271,14 +271,14 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 
 	var edgeFunctionId int64
 	var err error
-	if state.EdgeFunction != nil {
-		edgeFunctionId = state.EdgeFunction.ID.ValueInt64()
+	if state.Function != nil {
+		edgeFunctionId = state.Function.ID.ValueInt64()
 	} else {
 		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
-				"Could not convert Edge Function ID",
+				"Could not convert Function ID",
 			)
 			return
 		}
@@ -334,7 +334,7 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	state.EdgeFunction = &edgeFunctionResourceResults{
+	state.Function = &edgeFunctionResourceResults{
 		ID:                   types.Int64Value(getEdgeFunction.Data.Id),
 		Name:                 types.StringValue(getEdgeFunction.Data.Name),
 		Code:                 types.StringValue(getEdgeFunction.Data.Code),
@@ -350,7 +350,7 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	if getEdgeFunction.Data.Runtime != nil {
-		state.EdgeFunction.Runtime = types.StringValue(*getEdgeFunction.Data.Runtime)
+		state.Function.Runtime = types.StringValue(*getEdgeFunction.Data.Runtime)
 	}
 	state.ID = types.StringValue(strconv.FormatInt(getEdgeFunction.Data.Id, 10))
 
@@ -379,28 +379,28 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 	updateEdgeFunctionRequest := azionapi.PatchedFunctionsRequest{}
 
 	// Only include optional fields if they are set
-	if !plan.EdgeFunction.Name.IsNull() && !plan.EdgeFunction.Name.IsUnknown() {
-		updateEdgeFunctionRequest.SetName(plan.EdgeFunction.Name.ValueString())
+	if !plan.Function.Name.IsNull() && !plan.Function.Name.IsUnknown() {
+		updateEdgeFunctionRequest.SetName(plan.Function.Name.ValueString())
 	}
 
-	if !plan.EdgeFunction.Code.IsNull() && !plan.EdgeFunction.Code.IsUnknown() {
-		updateEdgeFunctionRequest.SetCode(plan.EdgeFunction.Code.ValueString())
+	if !plan.Function.Code.IsNull() && !plan.Function.Code.IsUnknown() {
+		updateEdgeFunctionRequest.SetCode(plan.Function.Code.ValueString())
 	}
 
-	if !plan.EdgeFunction.Active.IsNull() && !plan.EdgeFunction.Active.IsUnknown() {
-		updateEdgeFunctionRequest.SetActive(plan.EdgeFunction.Active.ValueBool())
+	if !plan.Function.Active.IsNull() && !plan.Function.Active.IsUnknown() {
+		updateEdgeFunctionRequest.SetActive(plan.Function.Active.ValueBool())
 	}
 
-	if !plan.EdgeFunction.ExecutionEnvironment.IsNull() && !plan.EdgeFunction.ExecutionEnvironment.IsUnknown() {
-		updateEdgeFunctionRequest.SetExecutionEnvironment(plan.EdgeFunction.ExecutionEnvironment.ValueString())
+	if !plan.Function.ExecutionEnvironment.IsNull() && !plan.Function.ExecutionEnvironment.IsUnknown() {
+		updateEdgeFunctionRequest.SetExecutionEnvironment(plan.Function.ExecutionEnvironment.ValueString())
 	}
 
-	if !plan.EdgeFunction.Runtime.IsNull() && !plan.EdgeFunction.Runtime.IsUnknown() {
-		updateEdgeFunctionRequest.SetRuntime(plan.EdgeFunction.Runtime.ValueString())
+	if !plan.Function.Runtime.IsNull() && !plan.Function.Runtime.IsUnknown() {
+		updateEdgeFunctionRequest.SetRuntime(plan.Function.Runtime.ValueString())
 	}
 
-	if !plan.EdgeFunction.DefaultArgs.IsNull() && !plan.EdgeFunction.DefaultArgs.IsUnknown() {
-		requestJsonArgs, err := utils.ConvertStringToInterface(plan.EdgeFunction.DefaultArgs.ValueString())
+	if !plan.Function.DefaultArgs.IsNull() && !plan.Function.DefaultArgs.IsUnknown() {
+		requestJsonArgs, err := utils.ConvertStringToInterface(plan.Function.DefaultArgs.ValueString())
 		if err != nil {
 			resp.Diagnostics.AddError(
 				err.Error(),
@@ -414,13 +414,13 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 	var edgeFunctionId int64
 	var err error
 	if state.ID.IsNull() {
-		edgeFunctionId = state.EdgeFunction.ID.ValueInt64()
+		edgeFunctionId = state.Function.ID.ValueInt64()
 	} else {
 		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
-				"Could not convert edgeFunctionId to int",
+				"Could not convert Function ID",
 			)
 			return
 		}
@@ -472,7 +472,7 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	plan.EdgeFunction = &edgeFunctionResourceResults{
+	plan.Function = &edgeFunctionResourceResults{
 		ID:                   types.Int64Value(updateEdgeFunction.Data.Id),
 		Name:                 types.StringValue(updateEdgeFunction.Data.Name),
 		Code:                 types.StringValue(updateEdgeFunction.Data.Code),
@@ -488,7 +488,7 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	if updateEdgeFunction.Data.Runtime != nil {
-		plan.EdgeFunction.Runtime = types.StringValue(*updateEdgeFunction.Data.Runtime)
+		plan.Function.Runtime = types.StringValue(*updateEdgeFunction.Data.Runtime)
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(updateEdgeFunction.Data.Id, 10))
@@ -511,14 +511,14 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	var edgeFunctionId int64
 	var err error
-	if state.EdgeFunction != nil {
-		edgeFunctionId = state.EdgeFunction.ID.ValueInt64()
+	if state.Function != nil {
+		edgeFunctionId = state.Function.ID.ValueInt64()
 	} else {
 		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
-				"Could not convert Edge Function ID",
+				"Could not convert Function ID",
 			)
 			return
 		}

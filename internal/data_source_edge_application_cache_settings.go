@@ -18,7 +18,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &CacheSettingsDataSource{}
 )
 
-func dataSourceAzionEdgeApplicationCacheSettings() datasource.DataSource {
+func dataSourceAzionApplicationCacheSettings() datasource.DataSource {
 	return &CacheSettingsDataSource{}
 }
 
@@ -27,7 +27,7 @@ type CacheSettingsDataSource struct {
 }
 
 type CacheSettingsDataSourceModel struct {
-	ApplicationID types.Int64         `tfsdk:"edge_application_id"`
+	ApplicationID types.Int64         `tfsdk:"application_id"`
 	Counter       types.Int64         `tfsdk:"counter"`
 	Page          types.Int64         `tfsdk:"page"`
 	PageSize      types.Int64         `tfsdk:"page_size"`
@@ -45,7 +45,7 @@ func (d *CacheSettingsDataSource) Configure(_ context.Context, req datasource.Co
 }
 
 func (d *CacheSettingsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_cache_settings"
+	resp.TypeName = req.ProviderTypeName + "_application_cache_settings"
 }
 
 func (d *CacheSettingsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -55,8 +55,8 @@ func (d *CacheSettingsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Description: "Identifier of the data source.",
 				Computed:    true,
 			},
-			"edge_application_id": schema.Int64Attribute{
-				Description: "Numeric identifier of the Edge Application.",
+			"application_id": schema.Int64Attribute{
+				Description: "Numeric identifier of the Application.",
 				Required:    true,
 			},
 			"counter": schema.Int64Attribute{
@@ -223,7 +223,7 @@ func (d *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 	var page types.Int64
 	var pageSize types.Int64
 
-	diags := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &applicationID)
+	diags := req.Config.GetAttribute(ctx, path.Root("application_id"), &applicationID)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

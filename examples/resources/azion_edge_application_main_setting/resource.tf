@@ -1,5 +1,5 @@
-resource "azion_edge_application_main_setting" "example" {
-  edge_application = {
+resource "azion_application_main_setting" "example" {
+  application = {
     name   = "Terraform Examples"
     active = true
     debug  = false
@@ -21,7 +21,7 @@ resource "azion_edge_application_main_setting" "example" {
 }
 
 resource "azion_edge_application_origin" "example" {
-  edge_application_id = azion_edge_application_main_setting.example.edge_application.application_id
+  edge_application_id = azion_application_main_setting.example.application.application_id
   origin = {
     name        = "Terraform Main Settings Example"
     origin_type = "single_origin"
@@ -34,12 +34,12 @@ resource "azion_edge_application_origin" "example" {
     host_header            = "$${host}"
   }
   depends_on = [
-    azion_edge_application_main_setting.example
+    azion_application_main_setting.example
   ]
 }
 
-resource "azion_edge_application_cache_setting" "example" {
-  edge_application_id = azion_edge_application_main_setting.example.edge_application.application_id
+resource "azion_application_cache_setting" "example" {
+  application_id = azion_application_main_setting.example.application.application_id
   cache_setting = {
     name = "Terraform Main Settings Example"
     browser_cache = {
@@ -57,7 +57,7 @@ resource "azion_edge_application_cache_setting" "example" {
     }
   }
   depends_on = [
-    azion_edge_application_main_setting.example,
+    azion_application_main_setting.example,
     azion_edge_application_origin.example
   ]
 }

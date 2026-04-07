@@ -62,8 +62,8 @@ locals {
 #   ]
 # }
 
-# resource "azion_edge_application_cache_setting" "testfunc" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# resource "azion_application_cache_setting" "testfunc" {
+#   application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   cache_setting = {
 #     name = "Terraform Cache Setting ${local.name_suffix}"
 #     browser_cache = {
@@ -86,7 +86,7 @@ locals {
 #   ]
 # }
 
-# resource "azion_edge_application_rule_engine" "testfunc" {
+# resource "azion_application_rule_engine" "testfunc" {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   results = {
 #     name        = "Default Rule"
@@ -113,11 +113,11 @@ locals {
 #   depends_on = [
 #     azion_edge_application_main_setting.testfunc,
 #     azion_edge_application_origin.testfunc,
-#     azion_edge_application_cache_setting.testfunc
+#     azion_application_cache_setting.testfunc
 #   ]
 # }
 # 
-# resource "azion_edge_application_rule_engine" "testfunc2" {
+# resource "azion_application_rule_engine" "testfunc2" {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   results = {
 #     name        = "Terraform Rule Engine test-func"
@@ -155,9 +155,9 @@ locals {
 #   ]
 # }
 
-resource "azion_edge_function" "testfunc" {
-  edge_function = {
-    name           = "Terraform Edge Function ${local.name_suffix}"
+resource "azion_function" "testfunc" {
+  function = {
+    name           = "Terraform Function ${local.name_suffix}"
     code           = file("${path.module}/mock_files/dummy_script.txt")
     language       = "javascript"
     initiator_type = "edge_application"
@@ -169,9 +169,9 @@ resource "azion_edge_function" "testfunc" {
   }
 }
 
-resource "azion_edge_function" "testfunc2firewall" {
-  edge_function = {
-    name                 = "Terraform Edge Function 2 Firewall ${local.name_suffix}"
+resource "azion_function" "testfunc2firewall" {
+  function = {
+    name                 = "Terraform Function 2 Firewall ${local.name_suffix}"
     code                 = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
     language             = "javascript"
     initiator_type       = "edge_firewall"
@@ -381,37 +381,37 @@ resource "azion_network_list" "exampleTwo" {
 #   }
 # }
 
-# data "azion_edge_application_cache_settings" "example" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# data "azion_application_cache_settings" "example" {
+#   application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 # }
 
-# data "azion_edge_application_cache_setting" "example" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# data "azion_application_cache_setting" "example" {
+#   application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   results = {
-#     cache_setting_id = azion_edge_application_cache_setting.testfunc.cache_settings.cache_setting_id
+#     id = azion_application_cache_setting.testfunc.cache_setting.id
 #   }
 # }
 
-# data "azion_edge_application_rules_engine" "example" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# data "azion_application_rules_engine" "example" {
+#   application_id = azion_application_main_setting.testfunc.application.application_id
 #   results = [{
 #     phase = "request"
 #   }]
 # }
 
-# # data "azion_edge_application_rule_engine" "example" {
-# #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# # data "azion_application_rule_engine" "example" {
+# #   application_id = azion_application_main_setting.testfunc.application.application_id
 # #   results = {
 # #     phase = "request"
-# #     id    = azion_edge_application_rule_engine.testfunc.results.id
+# #     id    = azion_application_rule_engine.testfunc.results.id
 # #   }
 # # }
 # 
-data "azion_edge_functions" "example" {
+data "azion_functions" "example" {
 }
 
-# data "azion_edge_function" "example" {
-#   id = azion_edge_function.testfunc2firewall.edge_function.id
+# data "azion_function" "example" {
+#   id = azion_function.testfunc2firewall.function.id
 # }
 
 # data "azion_edge_application_edge_functions_instance" "example" {

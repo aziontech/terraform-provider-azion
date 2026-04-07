@@ -20,22 +20,22 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &edgeApplicationCacheSettingsResource{}
-	_ resource.ResourceWithConfigure   = &edgeApplicationCacheSettingsResource{}
-	_ resource.ResourceWithImportState = &edgeApplicationCacheSettingsResource{}
+	_ resource.Resource                = &applicationCacheSettingsResource{}
+	_ resource.ResourceWithConfigure   = &applicationCacheSettingsResource{}
+	_ resource.ResourceWithImportState = &applicationCacheSettingsResource{}
 )
 
-func NewEdgeApplicationCacheSettingsResource() resource.Resource {
-	return &edgeApplicationCacheSettingsResource{}
+func NewApplicationCacheSettingsResource() resource.Resource {
+	return &applicationCacheSettingsResource{}
 }
 
-type edgeApplicationCacheSettingsResource struct {
+type applicationCacheSettingsResource struct {
 	client *apiClient
 }
 
 // Resource model matching V4 API structure.
-type EdgeApplicationCacheSettingsResourceModel struct {
-	ApplicationID types.Int64                `tfsdk:"edge_application_id"`
+type ApplicationCacheSettingsResourceModel struct {
+	ApplicationID types.Int64                `tfsdk:"application_id"`
 	CacheSetting  *CacheSettingResourceModel `tfsdk:"cache_setting"`
 	ID            types.Int64                `tfsdk:"id"`
 	LastUpdated   types.String               `tfsdk:"last_updated"`
@@ -104,11 +104,11 @@ type LargeFileCacheResourceModel struct {
 	Offset  types.Int64 `tfsdk:"offset"`
 }
 
-func (r *edgeApplicationCacheSettingsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_cache_setting"
+func (r *applicationCacheSettingsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_application_cache_setting"
 }
 
-func (r *edgeApplicationCacheSettingsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int64Attribute{
@@ -118,8 +118,8 @@ func (r *edgeApplicationCacheSettingsResource) Schema(_ context.Context, _ resou
 					int64planmodifier.UseStateForUnknown(),
 				},
 			},
-			"edge_application_id": schema.Int64Attribute{
-				Description: "Numeric identifier of the Edge Application.",
+			"application_id": schema.Int64Attribute{
+				Description: "Numeric identifier of the Application.",
 				Required:    true,
 			},
 			"last_updated": schema.StringAttribute{
@@ -267,15 +267,15 @@ func (r *edgeApplicationCacheSettingsResource) Schema(_ context.Context, _ resou
 	}
 }
 
-func (r *edgeApplicationCacheSettingsResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *applicationCacheSettingsResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	r.client = req.ProviderData.(*apiClient)
 }
 
-func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan EdgeApplicationCacheSettingsResourceModel
+func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan ApplicationCacheSettingsResourceModel
 	var applicationID types.Int64
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -283,8 +283,8 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 		return
 	}
 
-	diagsEdgeApplicationID := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &applicationID)
-	resp.Diagnostics.Append(diagsEdgeApplicationID...)
+	diagsApplicationID := req.Config.GetAttribute(ctx, path.Root("application_id"), &applicationID)
+	resp.Diagnostics.Append(diagsApplicationID...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -515,8 +515,8 @@ func (r *edgeApplicationCacheSettingsResource) Create(ctx context.Context, req r
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state EdgeApplicationCacheSettingsResourceModel
+func (r *applicationCacheSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state ApplicationCacheSettingsResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -592,8 +592,8 @@ func (r *edgeApplicationCacheSettingsResource) Read(ctx context.Context, req res
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan EdgeApplicationCacheSettingsResourceModel
+func (r *applicationCacheSettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan ApplicationCacheSettingsResourceModel
 	var applicationID types.Int64
 	var cacheID types.Int64
 	diags := req.Plan.Get(ctx, &plan)
@@ -602,7 +602,7 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 		return
 	}
 
-	var state EdgeApplicationCacheSettingsResourceModel
+	var state ApplicationCacheSettingsResourceModel
 	diagsOrigin := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diagsOrigin...)
 	if resp.Diagnostics.HasError() {
@@ -851,8 +851,8 @@ func (r *edgeApplicationCacheSettingsResource) Update(ctx context.Context, req r
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r *edgeApplicationCacheSettingsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state EdgeApplicationCacheSettingsResourceModel
+func (r *applicationCacheSettingsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state ApplicationCacheSettingsResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -897,7 +897,7 @@ func (r *edgeApplicationCacheSettingsResource) Delete(ctx context.Context, req r
 	}
 }
 
-func (r *edgeApplicationCacheSettingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *applicationCacheSettingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Expected format: {application_id}/{cache_setting_id}
 	parts := strings.Split(req.ID, "/")
 	if len(parts) != 2 {
@@ -921,7 +921,7 @@ func (r *edgeApplicationCacheSettingsResource) ImportState(ctx context.Context, 
 	}
 
 	// Set the application ID
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("edge_application_id"), applicationId)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("application_id"), applicationId)...)
 
 	// Read the cache setting using the V4 API
 	cacheSettingResponse, response, err := r.client.api.ApplicationsCacheSettingsAPI.
@@ -977,7 +977,7 @@ func (r *edgeApplicationCacheSettingsResource) ImportState(ctx context.Context, 
 	}
 
 	// Build state
-	state := EdgeApplicationCacheSettingsResourceModel{
+	state := ApplicationCacheSettingsResourceModel{
 		ApplicationID: types.Int64Value(applicationId),
 		CacheSetting:  transformCacheSettingResponseToResourceModel(cacheSettingData),
 		ID:            types.Int64Value(cacheSettingId),

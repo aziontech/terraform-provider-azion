@@ -1,5 +1,5 @@
-resource "azion_edge_application_cache_setting" "example" {
-  edge_application_id = 1234567890
+resource "azion_application_cache_setting" "example" {
+  application_id = 1234567890
   cache_setting = {
     name = "Terraform Cache Setting Example"
     browser_cache = {
@@ -19,19 +19,14 @@ resource "azion_edge_application_cache_setting" "example" {
         }
       }
       application_accelerator = {
-        cache_vary_by_method = ["GET", "HEAD"]
         cache_vary_by_querystring = {
-          behavior     = "allowlist"
-          fields       = ["page", "size"]
-          sort_enabled = true
+          behavior = "ignore"
         }
         cache_vary_by_cookies = {
-          behavior     = "allowlist"
-          cookie_names = ["session", "user_id"]
+          behavior = "ignore"
         }
         cache_vary_by_devices = {
-          behavior     = "ignore"
-          device_group = []
+          behavior = "ignore"
         }
       }
     }
