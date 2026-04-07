@@ -264,7 +264,7 @@ resource "azion_function" "testfunc2firewall" {
 resource "azion_intelligent_dns_zone" "testfunc" {
   zone = {
     domain : "terraformtest-func-${local.timestamp}.qa",
-    is_active : true,
+    active : true,
     name : "example"
   }
 }
@@ -295,9 +295,9 @@ resource "azion_intelligent_dns_record" "testfunc" {
 
 resource "azion_network_list" "exampleOne" {
   results = {
-    name      = "NetworkList Terraform ${local.name_suffix} Countries"
-    list_type = "countries"
-    items_values_str = [
+    name = "NetworkList Terraform ${local.name_suffix} Countries"
+    type = "countries"
+    items = [
       "BR",
       "US",
       "AG"
@@ -307,9 +307,9 @@ resource "azion_network_list" "exampleOne" {
 
 resource "azion_network_list" "exampleTwo" {
   results = {
-    name      = "NetworkList Terraform ${local.name_suffix} ip_cidr"
-    list_type = "ip_cidr"
-    items_values_str = [
+    name = "NetworkList Terraform ${local.name_suffix} ip_cidr"
+    type = "ip_cidr"
+    items = [
       "192.168.0.1",
       "192.168.0.2",
       "192.168.0.3"
@@ -464,11 +464,11 @@ data "azion_network_lists" "example" {
 }
 
 data "azion_network_list" "exampleOne" {
-  network_list_id = azion_network_list.exampleOne.id
+  id = azion_network_list.exampleOne.results.id
 }
 
 data "azion_network_list" "exampleTwo" {
-  network_list_id = azion_network_list.exampleTwo.id
+  id = azion_network_list.exampleTwo.results.id
 }
 
 # Removed due to 401 Unauthorized error
