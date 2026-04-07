@@ -20,7 +20,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &CacheSettingDataSource{}
 )
 
-func dataSourceAzionEdgeApplicationCacheSetting() datasource.DataSource {
+func dataSourceAzionApplicationCacheSetting() datasource.DataSource {
 	return &CacheSettingDataSource{}
 }
 
@@ -29,7 +29,7 @@ type CacheSettingDataSource struct {
 }
 
 type CacheSettingDataSourceModel struct {
-	ApplicationID types.Int64        `tfsdk:"edge_application_id"`
+	ApplicationID types.Int64        `tfsdk:"application_id"`
 	Results       *CacheSettingModel `tfsdk:"results"`
 	ID            types.Int64        `tfsdk:"id"`
 }
@@ -106,7 +106,7 @@ func (d *CacheSettingDataSource) Configure(_ context.Context, req datasource.Con
 }
 
 func (d *CacheSettingDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_cache_setting"
+	resp.TypeName = req.ProviderTypeName + "_application_cache_setting"
 }
 
 func (d *CacheSettingDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -116,8 +116,8 @@ func (d *CacheSettingDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Description: "Identifier of the data source.",
 				Computed:    true,
 			},
-			"edge_application_id": schema.Int64Attribute{
-				Description: "Numeric identifier of the Edge Application.",
+			"application_id": schema.Int64Attribute{
+				Description: "Numeric identifier of the Application.",
 				Required:    true,
 			},
 			"results": schema.SingleNestedAttribute{
@@ -254,7 +254,7 @@ func (d *CacheSettingDataSource) Read(ctx context.Context, req datasource.ReadRe
 	var applicationID types.Int64
 	var cacheSettingID types.Int64
 
-	diags := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &applicationID)
+	diags := req.Config.GetAttribute(ctx, path.Root("application_id"), &applicationID)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

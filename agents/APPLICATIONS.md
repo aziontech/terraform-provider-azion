@@ -5,32 +5,48 @@ This document provides specific guidance for implementing Applications resources
 ## Table of Contents
 
 1. [SDK Selection](#sdk-selection)
-2. [Application Main Settings](#application-main-settings)
-3. [Application Origins](#application-origins)
-4. [Application Cache Settings](#application-cache-settings)
-5. [Application Rules Engine](#application-rules-engine)
-6. [Data Source Implementation](#data-source-implementation)
+2. [V4 API Structure](#v4-api-structure)
+   - [Response Types](#response-types)
+   - [Module Structure](#module-structure)
+3. [Data Source Implementation](#data-source-implementation)
    - [Singular Data Source (Read by ID)](#singular-data-source-read-by-id)
-   - [Plural Data Source (List Multiple Resources)](#plural-data-source-list-multiple-resources)
+   - [Plural Data Source (List Multiple)](#plural-data-source-list-multiple)
    - [Key Differences: Singular vs Plural Data Sources](#key-differences-singular-vs-plural-data-sources)
-7. [Resource Implementation](#resource-implementation)
-8. [Schema Definition Patterns](#schema-definition-patterns)
-9. [Transform Functions](#transform-functions)
-10. [Common Issues](#common-issues)
+4. [Resource Implementation](#resource-implementation)
+   - [Resource Schema Definition](#resource-schema-definition)
+   - [Create Method](#create-method)
+   - [Read Method](#read-method)
+   - [Update Method (PUT)](#update-method-put)
+   - [Delete Method](#delete-method)
+   - [ImportState Method](#importstate-method)
+5. [Transform Functions](#transform-functions)
+6. [Common Issues](#common-issues)
+7. [Provider Registration](#provider-registration)
 
 ---
 
 ## SDK Selection
 
-Applications use the **V4 SDK (`azion-api`)** for Main Settings data sources:
+Applications use the **V4 SDK (`azion-api`)** for Main Settings:
 
 | Resource | SDK Package | Client Field | Base URL |
 |----------|-------------|--------------|----------|
-| Application Main Settings (Data Source) | `azion-api` (v4) | `api.ApplicationsAPI` | `https://api.azion.com/v4` |
+| Application Main Settings (Singular Data Source) | `azion-api` (v4) | `api.ApplicationsAPI` | `https://api.azion.com/v4` |
 | Application Main Settings (Plural Data Source) | `azion-api` (v4) | `api.ApplicationsAPI` | `https://api.azion.com/v4` |
 | Application Main Settings (Resource) | `azion-api` (v4) | `api.ApplicationsAPI` | `https://api.azion.com/v4` |
 
 > **Note:** Origins, Cache Settings, and Rules Engine are documented separately in their respective agent files.
+
+### API Methods
+
+```go
+// V4 SDK Pattern
+r.client.api.ApplicationsAPI.RetrieveApplication(ctx, applicationId).Execute()
+r.client.api.ApplicationsAPI.ListApplications(ctx).Page(page).PageSize(pageSize).Execute()
+r.client.api.ApplicationsAPI.CreateApplication(ctx).ApplicationRequest(request).Execute()
+r.client.api.ApplicationsAPI.UpdateApplication(ctx, applicationId).ApplicationRequest(request).Execute()
+r.client.api.ApplicationsAPI.DeleteApplication(ctx, applicationId).Execute()
+```
 
 ### Key SDK Features
 
@@ -52,10 +68,6 @@ type apiClient struct {
     apiConfig *azionapi.Configuration
     api       *azionapi.APIClient
     
-    // Legacy V4 SDK (azionapi-v4-go-sdk-dev/edge-api) - kept for backward compatibility
-    edgeConfig *edgeapi.Configuration
-    edgeApi    *edgeapi.APIClient
-    
     // Legacy SDKs (azionapi-go-sdk) - deprecated
     edgeApplicationsApi *edgeapplications.APIClient
     // ... more SDK clients
@@ -64,95 +76,70 @@ type apiClient struct {
 
 ---
 
-## Application Main Settings
+## V4 API Structure
 
-### V4 SDK Pattern
-
-The main settings data sources use the V4 SDK:
+### Response Types
 
 ```go
-// Singular Data Source - Read by ID
-e.client.api.ApplicationsAPI.RetrieveApplication(ctx, idInt64).Execute()
+// Single application response
+ApplicationResponse {
+    State *string
+    Data  Application
+}
 
-// Plural Data Source - List with pagination
-e.client.api.ApplicationsAPI.ListApplications(ctx).Page(page).PageSize(pageSize).Execute()
+// Application model
+Application {
+    Id             int64
+    Name           string
+    LastEditor     string
+    LastModified   time.Time
+    ProductVersion string
+    Active         bool
+    Debug          bool
+    Modules        *ApplicationModules
+}
 
-// Resource - Create
-r.client.api.ApplicationsAPI.CreateApplication(ctx).ApplicationRequest(edgeApplication).Execute()
-
-// Resource - Read
-r.client.api.ApplicationsAPI.RetrieveApplication(ctx, idInt64).Execute()
-
-// Resource - Update (PUT)
-r.client.api.ApplicationsAPI.UpdateApplication(ctx, idInt64).ApplicationRequest(edgeApplication).Execute()
-
-// Resource - Delete
-r.client.api.ApplicationsAPI.DeleteApplication(ctx, idInt64).Execute()
-```
-
-### Model Structs for Data Sources
-
-#### Singular Data Source Model
-
-```go
-type EdgeApplicationDataSourceModel struct {
-    SchemaVersion types.Int64      `tfsdk:"schema_version"`
-    Data          *ApplicationData `tfsdk:"data"`
-    ID            types.String     `tfsdk:"id"`
+// List response
+PaginatedApplicationList {
+    Count      *int64
+    TotalPages *int64
+    Page       *int64
+    PageSize   *int64
+    Next       NullableString
+    Previous   NullableString
+    Results    []Application
 }
 ```
 
-#### Plural Data Source Model
+### Module Structure
 
 ```go
-type EdgeApplicationsDataSourceModel struct {
-    TotalCount types.Int64       `tfsdk:"total_count"`
-    Page       types.Int64       `tfsdk:"page"`
-    PageSize   types.Int64       `tfsdk:"page_size"`
-    Results    []ApplicationData `tfsdk:"results"`
-    ID         types.String      `tfsdk:"id"`
-}
-```
-
-#### ApplicationData Struct (shared between singular and plural)
-
-```go
-type ApplicationData struct {
-    Id             types.Int64         `tfsdk:"id"`
-    Name           types.String        `tfsdk:"name"`
-    LastEditor     types.String        `tfsdk:"last_editor"`
-    LastModified   types.String        `tfsdk:"last_modified"` // RFC3339 as string
-    Modules        *ApplicationModules `tfsdk:"modules"`
-    Active         types.Bool          `tfsdk:"active"`
-    Debug          types.Bool          `tfsdk:"debug"`
-    ProductVersion types.String        `tfsdk:"product_version"`
-}
-```
-
-#### ApplicationModules Struct
-
-```go
-type ApplicationModules struct {
-    Cache                  *CacheModule                  `tfsdk:"edge_cache"`
-    Functions              *EdgeFunctionModule           `tfsdk:"functions"`
-    ApplicationAccelerator *ApplicationAcceleratorModule `tfsdk:"application_accelerator"`
-    ImageProcessor         *ImageProcessorModule         `tfsdk:"image_processor"`
+// Application Modules (container)
+ApplicationModules {
+    Cache                  *CacheModule
+    Functions              *FunctionModule
+    ApplicationAccelerator *ApplicationAcceleratorModule
+    ImageProcessor         *ImageProcessorModule
 }
 
-type CacheModule struct {
-    Enabled types.Bool `tfsdk:"enabled"`
+// Cache Module
+CacheModule {
+    Enabled *bool
 }
 
-type EdgeFunctionModule struct {
-    Enabled types.Bool `tfsdk:"enabled"`
+// Function Module
+FunctionModule {
+    Enabled *bool
 }
 
-type ApplicationAcceleratorModule struct {
-    Enabled types.Bool `tfsdk:"enabled"`
+// Application Accelerator Module
+ApplicationAcceleratorModule {
+    Enabled *bool
 }
 
-type ImageProcessorModule struct {
-    Enabled types.Bool `tfsdk:"enabled"`
+// Image Processor Module
+ImageProcessorModule {
+    Enabled *bool
 }
 ```
 
@@ -162,7 +149,9 @@ type ImageProcessorModule struct {
 
 ### Singular Data Source (Read by ID)
 
-For reading a single resource by its identifier:
+For reading a single application by its identifier:
+
+File: `internal/data_source_edge_application_main_settings.go`
 
 ```go
 package provider
@@ -198,7 +187,7 @@ type EdgeApplicationDataSource struct {
     client *apiClient
 }
 
-// Model struct - represents Terraform state
+// Model struct - represents Terraform state for singular data source
 type EdgeApplicationDataSourceModel struct {
     SchemaVersion types.Int64      `tfsdk:"schema_version"`
     Data          *ApplicationData `tfsdk:"data"`
@@ -251,14 +240,14 @@ func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.Schem
         Attributes: map[string]schema.Attribute{
             "id": schema.StringAttribute{
                 Description: "Identifier of the data source.",
-                Required:    true,  // User must provide the ID to look up
+                Required:    true, // User must provide the ID to look up
             },
             "schema_version": schema.Int64Attribute{
                 Description: "Schema Version.",
                 Computed:    true,
             },
             "data": schema.SingleNestedAttribute{
-                Computed: true,  // Filled by the Read operation
+                Computed: true, // Filled by the Read operation
                 Attributes: map[string]schema.Attribute{
                     "id": schema.Int64Attribute{
                         Description: "The Application identifier.",
@@ -441,11 +430,13 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 }
 ```
 
-### Plural Data Source (List Multiple Resources)
+---
 
-For listing multiple resources with pagination support:
+### Plural Data Source (List Multiple)
 
-#### Complete Plural Data Source Structure
+For listing multiple applications with pagination support:
+
+File: `internal/data_source_edge_applications_main_settings.go`
 
 ```go
 package provider
@@ -490,45 +481,20 @@ type EdgeApplicationsDataSourceModel struct {
 }
 
 // ApplicationData struct - represents each item in the results list
-type ApplicationData struct {
-    Id             types.Int64         `tfsdk:"id"`
-    Name           types.String        `tfsdk:"name"`
-    LastEditor     types.String        `tfsdk:"last_editor"`
-    LastModified   types.String        `tfsdk:"last_modified"`
-    Modules        *ApplicationModules `tfsdk:"modules"`
-    Active         types.Bool          `tfsdk:"active"`
-    Debug          types.Bool          `tfsdk:"debug"`
-    ProductVersion types.String        `tfsdk:"product_version"`
-}
+// (shared with singular data source, defined above)
 
-// Note: ApplicationModules, CacheModule, EdgeFunctionModule, ApplicationAcceleratorModule,
-// and ImageProcessorModule are shared between singular and plural data sources.
-// They are defined in the singular data source file.
-```
-
-#### Metadata Method
-
-```go
+// Metadata - sets the data source type name (note plural naming)
 func (e *EdgeApplicationsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-    // Note: plural naming convention
     resp.TypeName = req.ProviderTypeName + "_edge_applications_main_settings"
 }
-```
 
-#### Schema Method
-
-The plural data source schema differs from singular in key ways:
-- `id` is **Computed** (not Required) - set after reading
-- Includes pagination fields (`page`, `page_size`) as **Optional**
-- Uses `ListNestedAttribute` for results instead of `SingleNestedAttribute`
-
-```go
+// Schema - defines the Terraform schema for plural data source
 func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
     resp.Schema = schema.Schema{
         Attributes: map[string]schema.Attribute{
             "id": schema.StringAttribute{
                 Description: "Identifier of the data source.",
-                Computed:    true,  // Computed, not Required
+                Computed:    true, // Computed, not Required
             },
             "total_count": schema.Int64Attribute{
                 Description: "The total number of edge applications.",
@@ -536,11 +502,11 @@ func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.Sche
             },
             "page": schema.Int64Attribute{
                 Description: "The page number of edge applications.",
-                Optional:    true,  // User can specify pagination
+                Optional:    true, // User can specify pagination
             },
             "page_size": schema.Int64Attribute{
                 Description: "The Page Size number of edge applications.",
-                Optional:    true,  // User can specify page size
+                Optional:    true, // User can specify page size
             },
             "results": schema.ListNestedAttribute{
                 Computed: true,
@@ -610,26 +576,16 @@ func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.Sche
         },
     }
 }
-```
 
-#### Configure Method
-
-Same as singular data source:
-
-```go
+// Configure - receives the API client from the provider
 func (e *EdgeApplicationsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
     if req.ProviderData == nil {
         return
     }
     e.client = req.ProviderData.(*apiClient)
 }
-```
 
-#### Read Method
-
-The plural Read method handles pagination and builds a list of results:
-
-```go
+// Read - performs the API call and updates state
 func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
     // 1. Get optional pagination parameters from config
     var Page types.Int64
@@ -752,59 +708,172 @@ func (e *EdgeApplicationsDataSource) Read(ctx context.Context, req datasource.Re
 }
 ```
 
-#### Key Differences: Singular vs Plural Data Sources
+---
 
-| Aspect | Singular (`azion_edge_application_main_settings`) | Plural (`azion_edge_applications_main_settings`) |
-|--------|--------------------------------------------------|-------------------------------------------------|
-| **ID Field** | Required (user provides ID to look up) | Computed (set after reading) |
-| **Schema Root** | `data` (SingleNestedAttribute) | `results` (ListNestedAttribute) |
-| **Pagination** | Not applicable | `page`, `page_size` (Optional) |
+### Key Differences: Singular vs Plural Data Sources
+
+| Aspect | Singular Data Source | Plural Data Source |
+|--------|---------------------|-------------------|
+| **File Name** | `data_source_edge_application_main_settings.go` | `data_source_edge_applications_main_settings.go` |
+| **Type Name** | `azion_edge_application_main_settings` | `azion_edge_applications_main_settings` |
+| **ID Field** | `Required` (user provides ID to look up) | `Computed` (set after reading) |
+| **Results** | `SingleNestedAttribute` (single object) | `ListNestedAttribute` (array of objects) |
+| **Pagination** | No pagination fields | Has `page`, `page_size` (Optional) |
 | **Count Field** | Not applicable | `total_count` (Computed) |
 | **API Method** | `RetrieveApplication(ctx, id)` | `ListApplications(ctx).Page().PageSize()` |
 | **Response Type** | `*sdk.ApplicationResponse` | `*sdk.PaginatedApplicationList` |
 | **State ID Value** | `"Get Application By ID"` | `"Get All Edge Application"` |
-| **Results Structure** | Single object | Slice of objects |
-
-#### File Naming Convention
-
-| Type | File Name | Data Source Name |
-|------|-----------|------------------|
-| Singular | `data_source_edge_application_main_settings.go` | `azion_edge_application_main_settings` |
-| Plural | `data_source_edge_applications_main_settings.go` | `azion_edge_applications_main_settings` |
-
-Note the plural form adds an "s" after "application" in both the filename and data source name.
 
 ---
 
-## Schema Definition Patterns for Data Sources
+## Resource Implementation
 
-### Singular Data Source Schema Pattern
+File: `internal/resource_edge_application_main_setting.go`
 
 ```go
-func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+package provider
+
+import (
+    "context"
+    "fmt"
+    "io"
+    "net/http"
+    "strconv"
+    "sync"
+    "time"
+
+    sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
+    "github.com/aziontech/terraform-provider-azion/internal/utils"
+    "github.com/hashicorp/terraform-plugin-framework/path"
+    "github.com/hashicorp/terraform-plugin-framework/resource"
+    "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+    "github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+    "github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+    "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+    "github.com/hashicorp/terraform-plugin-framework/types"
+)
+
+// Interface assertions
+var (
+    _ resource.Resource                = &edgeApplicationResource{}
+    _ resource.ResourceWithConfigure   = &edgeApplicationResource{}
+    _ resource.ResourceWithImportState = &edgeApplicationResource{}
+)
+
+// Constructor function
+func NewEdgeApplicationMainSettingsResource() resource.Resource {
+    return &edgeApplicationResource{}
+}
+
+// Resource struct - holds the client
+type edgeApplicationResource struct {
+    client *apiClient
+}
+
+// Resource Model - represents Terraform state
+type EdgeApplicationResourceModel struct {
+    EdgeApplication *EdgeApplicationResults `tfsdk:"edge_application"`
+    ID              types.String            `tfsdk:"id"`
+    LastUpdated     types.String            `tfsdk:"last_updated"`
+}
+
+type EdgeApplicationResults struct {
+    ApplicationID  types.Int64         `tfsdk:"application_id"`
+    Name           types.String        `tfsdk:"name"`
+    Modules        *ApplicationModules `tfsdk:"modules"`
+    Active         types.Bool          `tfsdk:"active"`
+    Debug          types.Bool          `tfsdk:"debug"`
+    ProductVersion types.String        `tfsdk:"product_version"`
+}
+
+// Metadata - sets the resource type name
+func (r *edgeApplicationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+    resp.TypeName = req.ProviderTypeName + "_edge_application_main_setting"
+}
+
+// Configure - receives the API client from the provider
+func (r *edgeApplicationResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+    if req.ProviderData == nil {
+        return
+    }
+    r.client = req.ProviderData.(*apiClient)
+}
+```
+
+---
+
+## Resource Schema Definition
+
+```go
+func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
     resp.Schema = schema.Schema{
         Attributes: map[string]schema.Attribute{
             "id": schema.StringAttribute{
-                Description: "Identifier of the data source.",
-                Required:    true,  // User must provide the ID to look up
+                Computed: true,
+                PlanModifiers: []planmodifier.String{
+                    stringplanmodifier.UseStateForUnknown(),
+                },
             },
-            "schema_version": schema.Int64Attribute{
-                Description: "Schema Version.",
+            "last_updated": schema.StringAttribute{
+                Description: "Timestamp of the last Terraform update of the resource.",
                 Computed:    true,
             },
-            "data": schema.SingleNestedAttribute{
-                Computed: true,  // Filled by the Read operation
+            "edge_application": schema.SingleNestedAttribute{
+                Required: true,
                 Attributes: map[string]schema.Attribute{
-                    // All fields are Computed for data sources
-                    "id": schema.Int64Attribute{
-                        Description: "The Application identifier.",
+                    "application_id": schema.Int64Attribute{
+                        Description: "The Edge Application identifier.",
                         Computed:    true,
                     },
                     "name": schema.StringAttribute{
-                        Description: "The name of the Application.",
-                        Computed:    true,
+                        Description: "The name of the Edge Application.",
+                        Required:    true,
                     },
-                    // ... more computed attributes
+                    "active": schema.BoolAttribute{
+                        Optional:    true,
+                        Computed:    true,
+                        Default:     booldefault.StaticBool(true),
+                        Description: "Indicates whether the Edge Application is active.",
+                    },
+                    "debug": schema.BoolAttribute{
+                        Optional:    true,
+                        Computed:    true,
+                        Default:     booldefault.StaticBool(false),
+                        Description: "Indicates whether debug rules are enabled for the Edge Application.",
+                    },
+                    "product_version": schema.StringAttribute{
+                        Computed:    true,
+                        Description: "The product version.",
+                    },
+                    "modules": schema.SingleNestedAttribute{
+                        Optional: true,
+                        Attributes: map[string]schema.Attribute{
+                            "edge_cache": schema.SingleNestedAttribute{
+                                Optional: true,
+                                Attributes: map[string]schema.Attribute{
+                                    "enabled": schema.BoolAttribute{Optional: true},
+                                },
+                            },
+                            "functions": schema.SingleNestedAttribute{
+                                Optional: true,
+                                Attributes: map[string]schema.Attribute{
+                                    "enabled": schema.BoolAttribute{Optional: true},
+                                },
+                            },
+                            "application_accelerator": schema.SingleNestedAttribute{
+                                Optional: true,
+                                Attributes: map[string]schema.Attribute{
+                                    "enabled": schema.BoolAttribute{Optional: true},
+                                },
+                            },
+                            "image_processor": schema.SingleNestedAttribute{
+                                Optional: true,
+                                Attributes: map[string]schema.Attribute{
+                                    "enabled": schema.BoolAttribute{Optional: true},
+                                },
+                            },
+                        },
+                    },
                 },
             },
         },
@@ -812,38 +881,478 @@ func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.Schem
 }
 ```
 
-### Plural Data Source Schema Pattern
+---
+
+## Create Method
 
 ```go
-func (e *EdgeApplicationsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-    resp.Schema = schema.Schema{
-        Attributes: map[string]schema.Attribute{
-            "id": schema.StringAttribute{
-                Description: "Identifier of the data source.",
-                Computed:    true,  // Computed, not Required
-            },
-            "total_count": schema.Int64Attribute{
-                Description: "The total number of edge applications.",
-                Computed:    true,
-            },
-            "page": schema.Int64Attribute{
-                Description: "The page number of edge applications.",
-                Optional:    true,  // User can specify pagination
-            },
-            "page_size": schema.Int64Attribute{
-                Description: "The Page Size number of edge applications.",
-                Optional:    true,  // User can specify page size
-            },
-            "results": schema.ListNestedAttribute{
-                Computed: true,
-                NestedObject: schema.NestedAttributeObject{
-                    Attributes: map[string]schema.Attribute{
-                        // All fields are Computed for data sources
-                    },
-                },
-            },
-        },
+var mutex sync.Mutex
+
+func (r *edgeApplicationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+    var plan EdgeApplicationResourceModel
+    diags := req.Plan.Get(ctx, &plan)
+    resp.Diagnostics.Append(diags...)
+
+    // Use mutex for thread safety
+    mutex.Lock()
+    defer mutex.Unlock()
+
+    if resp.Diagnostics.HasError() {
+        return
     }
+
+    // Build the SDK request object using ValueBoolPointer for optional fields
+    edgeApplication := sdk.ApplicationRequest{
+        Name:   plan.EdgeApplication.Name.ValueString(),
+        Active: plan.EdgeApplication.Active.ValueBoolPointer(),
+        Debug:  plan.EdgeApplication.Debug.ValueBoolPointer(),
+    }
+
+    // Transform modules into request format
+    modsPlan := plan.EdgeApplication.Modules
+    modsRequest := transformModuleIntoRequest(modsPlan)
+    edgeApplication.Modules = &modsRequest
+
+    // Make the API call using r.client.api (V4 SDK)
+    createEdgeApplication, response, err := r.client.api.
+        ApplicationsAPI.CreateApplication(ctx).
+        ApplicationRequest(edgeApplication).Execute()
+
+    // Handle errors with 429 retry logic
+    if err != nil {
+        if response != nil && response.StatusCode == 429 {
+            createEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
+                return r.client.api.
+                    ApplicationsAPI.CreateApplication(ctx).
+                    ApplicationRequest(edgeApplication).Execute()
+            }, 5) // Maximum 5 retries
+
+            if response != nil {
+                defer response.Body.Close()
+            }
+
+            if err != nil {
+                resp.Diagnostics.AddError(
+                    err.Error(),
+                    "API request failed after too many retries",
+                )
+                return
+            }
+        } else {
+            bodyBytes, errReadAll := io.ReadAll(response.Body)
+            if errReadAll != nil {
+                resp.Diagnostics.AddError(
+                    errReadAll.Error(),
+                    "err",
+                )
+            }
+            bodyString := string(bodyBytes)
+            resp.Diagnostics.AddError(
+                err.Error(),
+                bodyString,
+            )
+            return
+        }
+    }
+
+    // Build the state from response using GetData() methods
+    edgeAppResults := &EdgeApplicationResults{
+        ApplicationID:  types.Int64Value(createEdgeApplication.Data.GetId()),
+        Name:           types.StringValue(createEdgeApplication.Data.GetName()),
+        Active:         types.BoolValue(createEdgeApplication.Data.GetActive()),
+        Debug:          types.BoolValue(createEdgeApplication.Data.GetDebug()),
+        ProductVersion: types.StringValue(createEdgeApplication.Data.GetProductVersion()),
+        Modules:        plan.EdgeApplication.Modules,
+    }
+
+    // Only update modules from API response if the plan had modules specified
+    // This prevents Terraform from seeing an inconsistency when modules was null in plan
+    if plan.EdgeApplication.Modules != nil && createEdgeApplication.Data.Modules != nil {
+        modulesResp := createEdgeApplication.Data.GetModules()
+        modules := ApplicationModules{}
+
+        // Only populate modules that were specified in the plan
+        if plan.EdgeApplication.Modules.Cache != nil && modulesResp.Cache != nil {
+            modules.Cache = &CacheModule{
+                Enabled: types.BoolValue(modulesResp.Cache.GetEnabled()),
+            }
+        }
+        if plan.EdgeApplication.Modules.Functions != nil && modulesResp.Functions != nil {
+            modules.Functions = &EdgeFunctionModule{
+                Enabled: types.BoolValue(modulesResp.Functions.GetEnabled()),
+            }
+        }
+        if plan.EdgeApplication.Modules.ApplicationAccelerator != nil && modulesResp.ApplicationAccelerator != nil {
+            modules.ApplicationAccelerator = &ApplicationAcceleratorModule{
+                Enabled: types.BoolValue(modulesResp.ApplicationAccelerator.GetEnabled()),
+            }
+        }
+        if plan.EdgeApplication.Modules.ImageProcessor != nil && modulesResp.ImageProcessor != nil {
+            modules.ImageProcessor = &ImageProcessorModule{
+                Enabled: types.BoolValue(modulesResp.ImageProcessor.GetEnabled()),
+            }
+        }
+        edgeAppResults.Modules = &modules
+    }
+
+    plan.EdgeApplication = edgeAppResults
+    plan.ID = types.StringValue(fmt.Sprintf("%d", createEdgeApplication.Data.GetId()))
+    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+
+    diags = resp.State.Set(ctx, plan)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+}
+```
+
+---
+
+## Read Method
+
+```go
+func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+    var state EdgeApplicationResourceModel
+    diags := req.State.Get(ctx, &state)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
+    // Parse ID from state
+    idInt64, _ := strconv.ParseInt(state.ID.ValueString(), 10, 64)
+
+    // Call retrieve API using r.client.api (V4 SDK)
+    stateEdgeApplication, response, err := r.client.api.
+        ApplicationsAPI.
+        RetrieveApplication(ctx, idInt64).Execute()
+
+    // Handle 404 - resource was deleted outside Terraform
+    if err != nil {
+        if response != nil && response.StatusCode == http.StatusNotFound {
+            resp.State.RemoveResource(ctx)
+            return
+        }
+        if response != nil && response.StatusCode == 429 {
+            stateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
+                return r.client.api.ApplicationsAPI.RetrieveApplication(ctx, idInt64).Execute()
+            }, 5) // Maximum 5 retries
+
+            if response != nil {
+                defer response.Body.Close()
+            }
+
+            if err != nil {
+                resp.Diagnostics.AddError(
+                    err.Error(),
+                    "API request failed after too many retries",
+                )
+                return
+            }
+        } else {
+            bodyBytes, errReadAll := io.ReadAll(response.Body)
+            if errReadAll != nil {
+                resp.Diagnostics.AddError(
+                    errReadAll.Error(),
+                    "err",
+                )
+            }
+            bodyString := string(bodyBytes)
+            resp.Diagnostics.AddError(
+                err.Error(),
+                bodyString,
+            )
+            return
+        }
+    }
+
+    // Update state from response
+    state.EdgeApplication = &EdgeApplicationResults{
+        ApplicationID:  types.Int64Value(stateEdgeApplication.Data.GetId()),
+        Name:           types.StringValue(stateEdgeApplication.Data.GetName()),
+        Active:         types.BoolValue(stateEdgeApplication.Data.GetActive()),
+        Debug:          types.BoolValue(stateEdgeApplication.Data.GetDebug()),
+        ProductVersion: types.StringValue(stateEdgeApplication.Data.GetProductVersion()),
+    }
+    state.ID = types.StringValue(fmt.Sprintf("%d", stateEdgeApplication.Data.GetId()))
+
+    // Handle modules from response
+    modelPlan := ApplicationModules{}
+    if stateEdgeApplication.Data.Modules != nil {
+        modelState := stateEdgeApplication.Data.GetModules()
+        if modelState.Cache != nil {
+            modelPlan.Cache = &CacheModule{
+                Enabled: types.BoolValue(modelState.Cache.GetEnabled()),
+            }
+        }
+        if modelState.Functions != nil {
+            modelPlan.Functions = &EdgeFunctionModule{
+                Enabled: types.BoolValue(modelState.Functions.GetEnabled()),
+            }
+        }
+        if modelState.ApplicationAccelerator != nil {
+            modelPlan.ApplicationAccelerator = &ApplicationAcceleratorModule{
+                Enabled: types.BoolValue(modelState.ApplicationAccelerator.GetEnabled()),
+            }
+        }
+        if modelState.ImageProcessor != nil {
+            modelPlan.ImageProcessor = &ImageProcessorModule{
+                Enabled: types.BoolValue(modelState.ImageProcessor.GetEnabled()),
+            }
+        }
+    }
+    state.EdgeApplication.Modules = &modelPlan
+
+    diags = resp.State.Set(ctx, &state)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+}
+```
+
+---
+
+## Update Method (PUT)
+
+Applications Main Settings uses PUT for full updates:
+
+```go
+func (r *edgeApplicationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+    var plan EdgeApplicationResourceModel
+    diags := req.Plan.Get(ctx, &plan)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
+    // Build full request object using ValueBoolPointer for optional fields
+    edgeApplication := sdk.ApplicationRequest{
+        Name:   plan.EdgeApplication.Name.ValueString(),
+        Debug:  plan.EdgeApplication.Debug.ValueBoolPointer(),
+        Active: plan.EdgeApplication.Active.ValueBoolPointer(),
+    }
+
+    // Transform modules into request format
+    modsPlan := plan.EdgeApplication.Modules
+    modsRequest := transformModuleIntoRequest(modsPlan)
+    edgeApplication.Modules = &modsRequest
+
+    // Parse ID from plan
+    idInt64, _ := strconv.ParseInt(plan.ID.ValueString(), 10, 64)
+
+    // PUT request using r.client.api (V4 SDK)
+    updateEdgeApplication, response, err := r.client.api.
+        ApplicationsAPI.
+        UpdateApplication(ctx, idInt64).
+        ApplicationRequest(edgeApplication).Execute()
+
+    // Handle errors with 429 retry logic
+    if err != nil {
+        if response != nil && response.StatusCode == 429 {
+            updateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
+                return r.client.api.
+                    ApplicationsAPI.
+                    UpdateApplication(ctx, idInt64).
+                    ApplicationRequest(edgeApplication).Execute()
+            }, 5) // Maximum 5 retries
+
+            if response != nil {
+                defer response.Body.Close()
+            }
+
+            if err != nil {
+                resp.Diagnostics.AddError(
+                    err.Error(),
+                    "API request failed after too many retries",
+                )
+                return
+            }
+        } else {
+            bodyBytes, errReadAll := io.ReadAll(response.Body)
+            if errReadAll != nil {
+                resp.Diagnostics.AddError(
+                    errReadAll.Error(),
+                    "err",
+                )
+            }
+            bodyString := string(bodyBytes)
+            resp.Diagnostics.AddError(
+                err.Error(),
+                bodyString,
+            )
+            return
+        }
+    }
+
+    // Update state from response
+    plan.EdgeApplication = &EdgeApplicationResults{
+        ApplicationID:  types.Int64Value(updateEdgeApplication.Data.GetId()),
+        Name:           types.StringValue(updateEdgeApplication.Data.GetName()),
+        Active:         types.BoolValue(updateEdgeApplication.Data.GetActive()),
+        Debug:          types.BoolValue(updateEdgeApplication.Data.GetDebug()),
+        ProductVersion: types.StringValue(updateEdgeApplication.Data.GetProductVersion()),
+        Modules:        modsPlan,
+    }
+
+    plan.ID = types.StringValue(fmt.Sprintf("%d", updateEdgeApplication.Data.GetId()))
+    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+
+    diags = resp.State.Set(ctx, plan)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+}
+```
+
+---
+
+## Delete Method
+
+```go
+func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+    var state EdgeApplicationResourceModel
+    diags := req.State.Get(ctx, &state)
+    resp.Diagnostics.Append(diags...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
+    // Parse ID from state
+    idInt64, _ := strconv.ParseInt(state.ID.ValueString(), 10, 64)
+
+    // Call delete API using r.client.api (V4 SDK)
+    _, response, err := r.client.api.ApplicationsAPI.
+        DeleteApplication(ctx, idInt64).Execute()
+
+    // Handle errors with 429 retry logic
+    if err != nil {
+        if response != nil && response.StatusCode == 429 {
+            _, response, err = utils.RetryOn429(func() (*sdk.DeleteResponse, *http.Response, error) {
+                return r.client.api.ApplicationsAPI.DeleteApplication(ctx, idInt64).Execute()
+            }, 5) // Maximum 5 retries
+
+            if response != nil {
+                defer response.Body.Close()
+            }
+
+            if err != nil {
+                resp.Diagnostics.AddError(
+                    err.Error(),
+                    "API request failed after too many retries",
+                )
+                return
+            }
+        } else {
+            bodyBytes, errReadAll := io.ReadAll(response.Body)
+            if errReadAll != nil {
+                resp.Diagnostics.AddError(
+                    errReadAll.Error(),
+                    "err",
+                )
+            }
+            bodyString := string(bodyBytes)
+            resp.Diagnostics.AddError(
+                err.Error(),
+                bodyString,
+            )
+            return
+        }
+    }
+
+    // No need to set state - resource is deleted
+}
+```
+
+---
+
+## ImportState Method
+
+```go
+func (r *edgeApplicationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+    resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+```
+
+For resources with parent-child relationships, import may need special handling:
+
+```go
+func (r *applicationOriginResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+    // Parse composite ID: "applicationID,originKey"
+    idParts := strings.Split(req.ID, ",")
+    if len(idParts) != 2 {
+        resp.Diagnostics.AddError("Invalid import ID", "Expected format: applicationID,originKey")
+        return
+    }
+    
+    appID, err := strconv.ParseInt(idParts[0], 10, 64)
+    if err != nil {
+        resp.Diagnostics.AddError("Invalid application ID", "Could not parse application ID")
+        return
+    }
+    
+    resp.Diagnostics.Append(resp.State.Set(ctx, &OriginResourceModel{
+        ApplicationID: types.Int64Value(appID),
+        ID:            types.StringValue(req.ID),
+        Results: &OriginResults{
+            OriginKey: types.StringValue(idParts[1]),
+        },
+    })...)
+}
+```
+
+---
+
+## Transform Functions
+
+### transformModuleIntoRequest
+
+This function transforms the Terraform plan modules into the SDK request format:
+
+```go
+func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationModulesRequest {
+    modsRequest := sdk.ApplicationModulesRequest{}
+    if modsPlan != nil {
+        cachePlan := modsPlan.Cache
+        if cachePlan != nil && !cachePlan.Enabled.IsNull() {
+            enabled := cachePlan.Enabled
+            cacheReq := sdk.CacheModuleRequest{
+                Enabled: enabled.ValueBoolPointer(),
+            }
+            modsRequest.SetCache(cacheReq)
+        }
+
+        functionsPlan := modsPlan.Functions
+        if functionsPlan != nil && !functionsPlan.Enabled.IsNull() {
+            enabled := functionsPlan.Enabled
+            functionsReq := sdk.FunctionModuleRequest{
+                Enabled: enabled.ValueBoolPointer(),
+            }
+            modsRequest.SetFunctions(functionsReq)
+        }
+
+        applicationAcceleratorPlan := modsPlan.ApplicationAccelerator
+        if applicationAcceleratorPlan != nil && !applicationAcceleratorPlan.Enabled.IsNull() {
+            enabled := applicationAcceleratorPlan.Enabled
+            appAccReq := sdk.ApplicationAcceleratorModuleRequest{
+                Enabled: enabled.ValueBoolPointer(),
+            }
+            modsRequest.SetApplicationAccelerator(appAccReq)
+        }
+
+        imageProcessorPlan := modsPlan.ImageProcessor
+        if imageProcessorPlan != nil && !imageProcessorPlan.Enabled.IsNull() {
+            enabled := imageProcessorPlan.Enabled
+            imgProcReq := sdk.ImageProcessorModuleRequest{
+                Enabled: enabled.ValueBoolPointer(),
+            }
+            modsRequest.SetImageProcessor(imgProcReq)
+        }
+    }
+
+    return modsRequest
 }
 ```
 
@@ -887,9 +1396,10 @@ These fields exist in other parts of the API (e.g., `HttpProtocol` schema has `h
 
 4. **Remove unused imports** - If you remove fields that required special imports, clean up the imports
 
----
+### Parent-Child Resource Pattern
 
 For resources that belong to a parent (e.g., origin belongs to application):
+
 ```go
 type OriginDataSourceModel struct {
     SchemaVersion types.Int64   `tfsdk:"schema_version"`
@@ -897,6 +1407,7 @@ type OriginDataSourceModel struct {
     ApplicationID types.Int64   `tfsdk:"application_id"`  // Parent ID
     Results       OriginResults `tfsdk:"origin"`
 }
+
 func (o *OriginDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
     // Get both parent ID and resource key
     var applicationID types.Int64
@@ -917,686 +1428,27 @@ func (o *OriginDataSource) Read(ctx context.Context, req datasource.ReadRequest,
         ).Execute()
 }
 ```
+
 ---
-## Resource Implementation
 
-### Complete Resource Structure
+## Provider Registration
 
-```go
-package provider
-
-import (
-	"context"
-	"fmt"
-	"io"
-	"net/http"
-	"strconv"
-	"sync"
-	"time"
-
-	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
-	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-)
-
-// Ensure the implementation satisfies the expected interfaces.
-var (
-	_ resource.Resource                = &edgeApplicationResource{}
-	_ resource.ResourceWithConfigure   = &edgeApplicationResource{}
-	_ resource.ResourceWithImportState = &edgeApplicationResource{}
-)
-
-func NewEdgeApplicationMainSettingsResource() resource.Resource {
-	return &edgeApplicationResource{}
-}
-
-type edgeApplicationResource struct {
-	client *apiClient
-}
-
-type EdgeApplicationResourceModel struct {
-	EdgeApplication *EdgeApplicationResults `tfsdk:"edge_application"`
-	ID              types.String            `tfsdk:"id"`
-	LastUpdated     types.String            `tfsdk:"last_updated"`
-}
-
-type EdgeApplicationResults struct {
-	ApplicationID  types.Int64         `tfsdk:"application_id"`
-	Name           types.String        `tfsdk:"name"`
-	Modules        *ApplicationModules `tfsdk:"modules"`
-	Active         types.Bool          `tfsdk:"active"`
-	Debug          types.Bool          `tfsdk:"debug"`
-	ProductVersion types.String        `tfsdk:"product_version"`
-}
-
-func (r *edgeApplicationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_main_setting"
-}
-
-func (r *edgeApplicationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
-			"edge_application": schema.SingleNestedAttribute{
-				Required: true,
-				Attributes: map[string]schema.Attribute{
-					"application_id": schema.Int64Attribute{
-						Description: "The Edge Application identifier.",
-						Computed:    true,
-					},
-					"name": schema.StringAttribute{
-						Description: "The name of the Edge Application.",
-						Required:    true,
-					},
-					"active": schema.BoolAttribute{
-						Optional:    true,
-						Computed:    true,
-						Default:     booldefault.StaticBool(true),
-						Description: "Indicates whether the Edge Application is active.",
-					},
-					"debug": schema.BoolAttribute{
-						Optional:    true,
-						Computed:    true,
-						Default:     booldefault.StaticBool(false),
-						Description: "Indicates whether debug rules are enabled for the Edge Application.",
-					},
-					"product_version": schema.StringAttribute{
-						Computed:    true,
-						Description: "The product version.",
-					},
-					"modules": schema.SingleNestedAttribute{
-						Optional: true,
-						Attributes: map[string]schema.Attribute{
-							"edge_cache": schema.SingleNestedAttribute{
-								Optional: true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{Optional: true},
-								},
-							},
-							"functions": schema.SingleNestedAttribute{
-								Optional: true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{Optional: true},
-								},
-							},
-							"application_accelerator": schema.SingleNestedAttribute{
-								Optional: true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{Optional: true},
-								},
-							},
-							"image_processor": schema.SingleNestedAttribute{
-								Optional: true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{Optional: true},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func (r *edgeApplicationResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	r.client = req.ProviderData.(*apiClient)
-}
-```
-
-### Create Method Pattern
+Register in `internal/provider.go`:
 
 ```go
-var mutex sync.Mutex
-
-func (r *edgeApplicationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan EdgeApplicationResourceModel
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-
-	// Use mutex for thread safety
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Build the SDK request object using ValueBoolPointer for optional fields
-	edgeApplication := sdk.ApplicationRequest{
-		Name:   plan.EdgeApplication.Name.ValueString(),
-		Active: plan.EdgeApplication.Active.ValueBoolPointer(),
-		Debug:  plan.EdgeApplication.Debug.ValueBoolPointer(),
-	}
-
-	// Transform modules into request format
-	modsPlan := plan.EdgeApplication.Modules
-	modsRequest := transformModuleIntoRequest(modsPlan)
-	edgeApplication.Modules = &modsRequest
-
-	// Make the API call using r.client.api (V4 SDK)
-	createEdgeApplication, response, err := r.client.api.
-		ApplicationsAPI.CreateApplication(ctx).
-		ApplicationRequest(edgeApplication).Execute()
-
-	// Handle errors with 429 retry logic
-	if err != nil {
-		if response != nil && response.StatusCode == 429 {
-			createEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
-				return r.client.api.
-					ApplicationsAPI.CreateApplication(ctx).
-					ApplicationRequest(edgeApplication).Execute()
-			}, 5) // Maximum 5 retries
-
-			if response != nil {
-				defer response.Body.Close()
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
-			return
-		}
-	}
-
-	// Build the state from response using GetData() methods
-	edgeAppResults := &EdgeApplicationResults{
-		ApplicationID:  types.Int64Value(createEdgeApplication.Data.GetId()),
-		Name:           types.StringValue(createEdgeApplication.Data.GetName()),
-		Active:         types.BoolValue(createEdgeApplication.Data.GetActive()),
-		Debug:          types.BoolValue(createEdgeApplication.Data.GetDebug()),
-		ProductVersion: types.StringValue(createEdgeApplication.Data.GetProductVersion()),
-		Modules:        plan.EdgeApplication.Modules,
-	}
-
-	// Only update modules from API response if the plan had modules specified
-	// This prevents Terraform from seeing an inconsistency when modules was null in plan
-	if plan.EdgeApplication.Modules != nil && createEdgeApplication.Data.Modules != nil {
-		modulesResp := createEdgeApplication.Data.GetModules()
-		modules := ApplicationModules{}
-
-		// Only populate modules that were specified in the plan
-		if plan.EdgeApplication.Modules.Cache != nil && modulesResp.Cache != nil {
-			modules.Cache = &CacheModule{
-				Enabled: types.BoolValue(modulesResp.Cache.GetEnabled()),
-			}
-		}
-		if plan.EdgeApplication.Modules.Functions != nil && modulesResp.Functions != nil {
-			modules.Functions = &EdgeFunctionModule{
-				Enabled: types.BoolValue(modulesResp.Functions.GetEnabled()),
-			}
-		}
-		if plan.EdgeApplication.Modules.ApplicationAccelerator != nil && modulesResp.ApplicationAccelerator != nil {
-			modules.ApplicationAccelerator = &ApplicationAcceleratorModule{
-				Enabled: types.BoolValue(modulesResp.ApplicationAccelerator.GetEnabled()),
-			}
-		}
-		if plan.EdgeApplication.Modules.ImageProcessor != nil && modulesResp.ImageProcessor != nil {
-			modules.ImageProcessor = &ImageProcessorModule{
-				Enabled: types.BoolValue(modulesResp.ImageProcessor.GetEnabled()),
-			}
-		}
-		edgeAppResults.Modules = &modules
-	}
-
-	plan.EdgeApplication = edgeAppResults
-	plan.ID = types.StringValue(fmt.Sprintf("%d", createEdgeApplication.Data.GetId()))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
-
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-}
-```
-
-### Read Method Pattern
-
-```go
-func (r *edgeApplicationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state EdgeApplicationResourceModel
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Parse ID from state
-	idInt64, _ := strconv.ParseInt(state.ID.ValueString(), 10, 64)
-
-	// Call retrieve API using r.client.api (V4 SDK)
-	stateEdgeApplication, response, err := r.client.api.
-		ApplicationsAPI.
-		RetrieveApplication(ctx, idInt64).Execute()
-
-	// Handle 404 - resource was deleted outside Terraform
-	if err != nil {
-		if response != nil && response.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		if response != nil && response.StatusCode == 429 {
-			stateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
-				return r.client.api.ApplicationsAPI.RetrieveApplication(ctx, idInt64).Execute()
-			}, 5) // Maximum 5 retries
-
-			if response != nil {
-				defer response.Body.Close()
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
-			return
-		}
-	}
-
-	// Update state from response
-	state.EdgeApplication = &EdgeApplicationResults{
-		ApplicationID:  types.Int64Value(stateEdgeApplication.Data.GetId()),
-		Name:           types.StringValue(stateEdgeApplication.Data.GetName()),
-		Active:         types.BoolValue(stateEdgeApplication.Data.GetActive()),
-		Debug:          types.BoolValue(stateEdgeApplication.Data.GetDebug()),
-		ProductVersion: types.StringValue(stateEdgeApplication.Data.GetProductVersion()),
-	}
-	state.ID = types.StringValue(fmt.Sprintf("%d", stateEdgeApplication.Data.GetId()))
-
-	// Handle modules from response
-	modelPlan := ApplicationModules{}
-	if stateEdgeApplication.Data.Modules != nil {
-		modelState := stateEdgeApplication.Data.GetModules()
-		if modelState.Cache != nil {
-			modelPlan.Cache = &CacheModule{
-				Enabled: types.BoolValue(modelState.Cache.GetEnabled()),
-			}
-		}
-		if modelState.Functions != nil {
-			modelPlan.Functions = &EdgeFunctionModule{
-				Enabled: types.BoolValue(modelState.Functions.GetEnabled()),
-			}
-		}
-		if modelState.ApplicationAccelerator != nil {
-			modelPlan.ApplicationAccelerator = &ApplicationAcceleratorModule{
-				Enabled: types.BoolValue(modelState.ApplicationAccelerator.GetEnabled()),
-			}
-		}
-		if modelState.ImageProcessor != nil {
-			modelPlan.ImageProcessor = &ImageProcessorModule{
-				Enabled: types.BoolValue(modelState.ImageProcessor.GetEnabled()),
-			}
-		}
-	}
-	state.EdgeApplication.Modules = &modelPlan
-
-	diags = resp.State.Set(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-}
-```
-
-### Update Method (PUT - Full Update)
-
-Applications Main Settings uses PUT for full updates:
-
-```go
-func (r *edgeApplicationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan EdgeApplicationResourceModel
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Build full request object using ValueBoolPointer for optional fields
-	edgeApplication := sdk.ApplicationRequest{
-		Name:   plan.EdgeApplication.Name.ValueString(),
-		Debug:  plan.EdgeApplication.Debug.ValueBoolPointer(),
-		Active: plan.EdgeApplication.Active.ValueBoolPointer(),
-	}
-
-	// Transform modules into request format
-	modsPlan := plan.EdgeApplication.Modules
-	modsRequest := transformModuleIntoRequest(modsPlan)
-	edgeApplication.Modules = &modsRequest
-
-	// Parse ID from plan
-	idInt64, _ := strconv.ParseInt(plan.ID.ValueString(), 10, 64)
-
-	// PUT request using r.client.api (V4 SDK)
-	updateEdgeApplication, response, err := r.client.api.
-		ApplicationsAPI.
-		UpdateApplication(ctx, idInt64).
-		ApplicationRequest(edgeApplication).Execute()
-
-	// Handle errors with 429 retry logic
-	if err != nil {
-		if response != nil && response.StatusCode == 429 {
-			updateEdgeApplication, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
-				return r.client.api.
-					ApplicationsAPI.
-					UpdateApplication(ctx, idInt64).
-					ApplicationRequest(edgeApplication).Execute()
-			}, 5) // Maximum 5 retries
-
-			if response != nil {
-				defer response.Body.Close()
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
-			return
-		}
-	}
-
-	// Update state from response
-	plan.EdgeApplication = &EdgeApplicationResults{
-		ApplicationID:  types.Int64Value(updateEdgeApplication.Data.GetId()),
-		Name:           types.StringValue(updateEdgeApplication.Data.GetName()),
-		Active:         types.BoolValue(updateEdgeApplication.Data.GetActive()),
-		Debug:          types.BoolValue(updateEdgeApplication.Data.GetDebug()),
-		ProductVersion: types.StringValue(updateEdgeApplication.Data.GetProductVersion()),
-		Modules:        modsPlan,
-	}
-
-	plan.ID = types.StringValue(fmt.Sprintf("%d", updateEdgeApplication.Data.GetId()))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
-
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-}
-```
-
-### Delete Method Pattern
-
-```go
-func (r *edgeApplicationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state EdgeApplicationResourceModel
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Parse ID from state
-	idInt64, _ := strconv.ParseInt(state.ID.ValueString(), 10, 64)
-
-	// Call delete API using r.client.api (V4 SDK)
-	_, response, err := r.client.api.ApplicationsAPI.
-		DeleteApplication(ctx, idInt64).Execute()
-
-	// Handle errors with 429 retry logic
-	if err != nil {
-		if response != nil && response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*sdk.DeleteResponse, *http.Response, error) {
-				return r.client.api.ApplicationsAPI.DeleteApplication(ctx, idInt64).Execute()
-			}, 5) // Maximum 5 retries
-
-			if response != nil {
-				defer response.Body.Close()
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
-			return
-		}
-	}
-
-	// No need to set state - resource is deleted
-}
-```
-
-### ImportState Method Pattern
-
-```go
-func (r *edgeApplicationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
-}
-```
-
-For resources with parent-child relationships, import may need special handling:
-
-```go
-func (r *applicationOriginResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-    // Parse composite ID: "applicationID,originKey"
-    idParts := strings.Split(req.ID, ",")
-    if len(idParts) != 2 {
-        resp.Diagnostics.AddError("Invalid import ID", "Expected format: applicationID,originKey")
-        return
+func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataSource {
+    return []func() datasource.DataSource{
+        dataSourceAzionEdgeApplication,
+        dataSourceAzionEdgeApplications,
+        // ... other data sources
     }
-    
-    appID, err := strconv.ParseInt(idParts[0], 10, 64)
-    if err != nil {
-        resp.Diagnostics.AddError("Invalid application ID", "Could not parse application ID")
-        return
+}
+
+func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource {
+    return []func() resource.Resource{
+        NewEdgeApplicationMainSettingsResource,
+        // ... other resources
     }
-    
-    resp.Diagnostics.Append(resp.State.Set(ctx, &OriginResourceModel{
-        ApplicationID: types.Int64Value(appID),
-        ID:            types.StringValue(req.ID),
-        Results: &OriginResults{
-            OriginKey: types.StringValue(idParts[1]),
-        },
-    })...)
-}
-```
-
----
-
-## Transform Functions
-
-### transformModuleIntoRequest
-
-This function transforms the Terraform plan modules into the SDK request format:
-
-```go
-func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationModulesRequest {
-	modsRequest := sdk.ApplicationModulesRequest{}
-	if modsPlan != nil {
-		cachePlan := modsPlan.Cache
-		if cachePlan != nil && !cachePlan.Enabled.IsNull() {
-			enabled := cachePlan.Enabled
-			cacheReq := sdk.CacheModuleRequest{
-				Enabled: enabled.ValueBoolPointer(),
-			}
-			modsRequest.SetCache(cacheReq)
-		}
-
-		functionsPlan := modsPlan.Functions
-		if functionsPlan != nil && !functionsPlan.Enabled.IsNull() {
-			enabled := functionsPlan.Enabled
-			functionsReq := sdk.FunctionModuleRequest{
-				Enabled: enabled.ValueBoolPointer(),
-			}
-			modsRequest.SetFunctions(functionsReq)
-		}
-
-		applicationAcceleratorPlan := modsPlan.ApplicationAccelerator
-		if applicationAcceleratorPlan != nil && !applicationAcceleratorPlan.Enabled.IsNull() {
-			enabled := applicationAcceleratorPlan.Enabled
-			appAccReq := sdk.ApplicationAcceleratorModuleRequest{
-				Enabled: enabled.ValueBoolPointer(),
-			}
-			modsRequest.SetApplicationAccelerator(appAccReq)
-		}
-
-		imageProcessorPlan := modsPlan.ImageProcessor
-		if imageProcessorPlan != nil && !imageProcessorPlan.Enabled.IsNull() {
-			enabled := imageProcessorPlan.Enabled
-			imgProcReq := sdk.ImageProcessorModuleRequest{
-				Enabled: enabled.ValueBoolPointer(),
-			}
-			modsRequest.SetImageProcessor(imgProcReq)
-		}
-	}
-
-	return modsRequest
-}
-```
-
----
-
-## Key Implementation Notes
-
-### SDK Import and Client Access
-
-1. **Import Path**: Use `github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api` (not `edge-api`)
-2. **Client Access**: Use `r.client.api` (not `r.client.edgeApi`)
-
-### Response Types
-
-| Operation | Response Type |
-|-----------|---------------|
-| Create | `*sdk.ApplicationResponse` |
-| Read | `*sdk.ApplicationResponse` |
-| Update | `*sdk.ApplicationResponse` |
-| Delete | `*sdk.DeleteResponse` |
-| List | `*sdk.PaginatedApplicationList` |
-
-### Accessing Response Data
-
-Use the `Data` field and `Get*()` methods:
-
-```go
-// Access ID
-createEdgeApplication.Data.GetId()
-
-// Access name
-createEdgeApplication.Data.GetName()
-
-// Access boolean fields
-createEdgeApplication.Data.GetActive()
-createEdgeApplication.Data.GetDebug()
-
-// Access nested modules
-modules := createEdgeApplication.Data.GetModules()
-modules.Cache.GetEnabled()
-```
-
-### Schema Defaults
-
-The resource schema includes default values for boolean fields:
-
-```go
-"active": schema.BoolAttribute{
-    Optional: true,
-    Computed: true,
-    Default:  booldefault.StaticBool(true),
-},
-"debug": schema.BoolAttribute{
-    Optional: true,
-    Computed: true,
-    Default:  booldefault.StaticBool(false),
-},
-```
-
-This requires importing `github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault`.
-
-### Thread Safety
-
-The Create method uses a mutex for thread safety:
-
-```go
-var mutex sync.Mutex
-
-func (r *edgeApplicationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-    // ...
-    mutex.Lock()
-    defer mutex.Unlock()
-    // ...
 }
 ```
 
@@ -1604,16 +1456,19 @@ func (r *edgeApplicationResource) Create(ctx context.Context, req resource.Creat
 
 ## Summary Checklist
 
-When generating Applications resources or data sources:
+When implementing or updating Applications resources and data sources:
 
-1. **Identify the correct SDK**: V4 (`azion-api`) for Main Settings
+1. **Use the correct SDK**: V4 (`azion-api` package)
 2. **Use correct client access**: `r.client.api` (not `r.client.edgeApi`)
 3. **Determine ID types**: `int64` for V4 SDK
-4. **Create model structs**: With appropriate `tfsdk` tags
-5. **Implement schema**: Include default values for `active` and `debug`
-6. **Implement all methods**: Create, Read, Update, Delete, ImportState (for resources)
-7. **Handle 429 errors**: Use `utils.RetryOn429`
-8. **Handle optional fields**: Use `ValueBoolPointer()` for boolean pointers
-9. **Transform nested objects**: Use helper functions for modules
-10. **Register in provider.go**: Add to DataSources() or Resources()
-11. **Generate documentation**: Create docs and examples
+4. **Determine update method**: PUT (full update) for Applications Main Settings
+5. **Create model structs**: With appropriate `tfsdk` tags
+6. **Implement schema**: Include default values for `active` and `debug`
+7. **Implement all methods**: Create, Read, Update, Delete, ImportState (for resources)
+8. **Handle 429 errors**: Use `utils.RetryOn429`
+9. **Handle optional fields**: Use `ValueBoolPointer()` for boolean pointers
+10. **Transform nested objects**: Use helper functions for modules
+11. **Register in provider.go**: Add to DataSources() or Resources()
+12. **Generate documentation**: Create docs and examples
+13. **Update example/test files**: After any schema changes, update the corresponding files
+14. **Run linters**: After any change, run `golangci-lint run --config .golintci.yml ./internal/...`

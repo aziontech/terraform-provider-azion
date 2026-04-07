@@ -20,7 +20,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &RuleEngineDataSource{}
 )
 
-func dataSourceAzionEdgeApplicationRuleEngine() datasource.DataSource {
+func dataSourceAzionApplicationRuleEngine() datasource.DataSource {
 	return &RuleEngineDataSource{}
 }
 
@@ -30,7 +30,7 @@ type RuleEngineDataSource struct {
 
 type RuleEngineDataSourceModel struct {
 	ID            types.String          `tfsdk:"id"`
-	ApplicationID types.Int64           `tfsdk:"edge_application_id"`
+	ApplicationID types.Int64           `tfsdk:"application_id"`
 	Results       RuleEngineResultModel `tfsdk:"results"`
 }
 
@@ -78,7 +78,7 @@ func (r *RuleEngineDataSource) Configure(_ context.Context, req datasource.Confi
 }
 
 func (r *RuleEngineDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_rule_engine"
+	resp.TypeName = req.ProviderTypeName + "_application_rule_engine"
 }
 
 func (r *RuleEngineDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -88,8 +88,8 @@ func (r *RuleEngineDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Description: "Identifier of the data source.",
 				Computed:    true,
 			},
-			"edge_application_id": schema.Int64Attribute{
-				Description: "The edge application identifier.",
+			"application_id": schema.Int64Attribute{
+				Description: "The application identifier.",
 				Required:    true,
 			},
 			"results": schema.SingleNestedAttribute{
@@ -202,7 +202,7 @@ func (r *RuleEngineDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	var ruleID types.Int64
 	var phase types.String
 
-	diagsApplicationID := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &applicationID)
+	diagsApplicationID := req.Config.GetAttribute(ctx, path.Root("application_id"), &applicationID)
 	resp.Diagnostics.Append(diagsApplicationID...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -278,7 +278,7 @@ func (r *RuleEngineDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		ApplicationID: applicationID,
 		Results:       result,
 	}
-	state.ID = types.StringValue("Get By ID Edge Application Rule Engine")
+	state.ID = types.StringValue("Get By ID Application Rule Engine")
 
 	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

@@ -1,18 +1,18 @@
 ---
 subcategory: ""
 description: |-
-  Provides an Edge Application Cache Setting resource using the V4 API.
+  Provides an Application Cache Setting resource using the V4 API.
 ---
 
-# azion_edge_application_cache_setting (Resource)
+# azion_application_cache_setting (Resource)
 
-Creates and manages an Edge Application Cache Setting using the Azion V4 API.
+Creates and manages an Application Cache Setting using the Azion V4 API.
 
 ## Example Usage
 
 ```terraform
-resource "azion_edge_application_cache_setting" "example" {
-  edge_application_id = 1234567890
+resource "azion_application_cache_setting" "example" {
+  application_id = 1234567890
   cache_setting = {
     name = "Terraform Cache Setting Example"
     browser_cache = {
@@ -53,7 +53,7 @@ resource "azion_edge_application_cache_setting" "example" {
 ### Required
 
 - `cache_setting` (Attributes) Cache setting configuration. (see [below for nested schema](#nestedatt--cache_setting))
-- `edge_application_id` (Number) Numeric identifier of the Edge Application.
+- `application_id` (Number) Numeric identifier of the Application.
 
 ### Read-Only
 
@@ -166,5 +166,4 @@ Optional:
 Import is supported using the following syntax:
 
 ```shell
-terraform import azion_edge_application_cache_setting.example <edge_application_id>/<cache_setting_id>
-```
+terraform import azion_application_cache_setting.example <application_id>/<cache_setting_id>

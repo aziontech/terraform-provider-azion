@@ -1,18 +1,18 @@
 ---
 subcategory: ""
 description: |-
-  Provides an Edge Application Cache Setting data source using the V4 API.
+  Provides an Application Cache Setting data source using the V4 API.
 ---
 
-# azion_edge_application_cache_setting (Data Source)
+# azion_application_cache_setting (Data Source)
 
-Provides a data source to read an Edge Application Cache Setting using the Azion V4 API.
+Provides a data source to read an Application Cache Setting using the Azion V4 API.
 
 ## Example Usage
 
 ```terraform
-data "azion_edge_application_cache_setting" "example" {
-  edge_application_id = 1234567890
+data "azion_application_cache_setting" "example" {
+  application_id = 1234567890
   results = {
     id = 123456
   }
@@ -24,7 +24,7 @@ data "azion_edge_application_cache_setting" "example" {
 
 ### Required
 
-- `edge_application_id` (Number) Numeric identifier of the Edge Application.
+- `application_id` (Number) Numeric identifier of the Application.
 - `results` (Attributes) Cache setting lookup parameters. (see [below for nested schema](#nestedatt--results))
 
 ### Read-Only

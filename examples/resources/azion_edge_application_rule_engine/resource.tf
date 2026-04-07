@@ -1,6 +1,6 @@
 # Example 1: Request phase rule with no-args behavior
-resource "azion_edge_application_rule_engine" "example" {
-  edge_application_id = 1234567890
+resource "azion_application_rule_engine" "example" {
+  application_id = 1234567890
   results = {
     name        = "Terraform Example"
     phase       = "request"
@@ -29,8 +29,8 @@ resource "azion_edge_application_rule_engine" "example" {
 }
 
 # Example 2: Request phase rule with behavior that has arguments
-resource "azion_edge_application_rule_engine" "example_with_args" {
-  edge_application_id = 1234567890
+resource "azion_application_rule_engine" "example_with_args" {
+  application_id = 1234567890
   results = {
     name        = "Add Header Example"
     phase       = "request"
@@ -62,8 +62,8 @@ resource "azion_edge_application_rule_engine" "example_with_args" {
 }
 
 # Example 3: Request phase rule with capture_match_groups behavior
-resource "azion_edge_application_rule_engine" "example_capture" {
-  edge_application_id = 1234567890
+resource "azion_application_rule_engine" "example_capture" {
+  application_id = 1234567890
   results = {
     name        = "Capture Match Groups Example"
     phase       = "request"
@@ -96,8 +96,8 @@ resource "azion_edge_application_rule_engine" "example_capture" {
 }
 
 # Example 4: Response phase rule
-resource "azion_edge_application_rule_engine" "example_response" {
-  edge_application_id = 1234567890
+resource "azion_application_rule_engine" "example_response" {
+  application_id = 1234567890
   results = {
     name        = "Response Phase Example"
     phase       = "response"

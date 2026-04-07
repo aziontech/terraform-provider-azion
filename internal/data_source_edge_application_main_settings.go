@@ -16,19 +16,19 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &EdgeApplicationDataSource{}
-	_ datasource.DataSourceWithConfigure = &EdgeApplicationDataSource{}
+	_ datasource.DataSource              = &ApplicationDataSource{}
+	_ datasource.DataSourceWithConfigure = &ApplicationDataSource{}
 )
 
-func dataSourceAzionEdgeApplication() datasource.DataSource {
-	return &EdgeApplicationDataSource{}
+func dataSourceAzionApplication() datasource.DataSource {
+	return &ApplicationDataSource{}
 }
 
-type EdgeApplicationDataSource struct {
+type ApplicationDataSource struct {
 	client *apiClient
 }
 
-type EdgeApplicationDataSourceModel struct {
+type ApplicationDataSourceModel struct {
 	SchemaVersion types.Int64      `tfsdk:"schema_version"`
 	Data          *ApplicationData `tfsdk:"data"`
 	ID            types.String     `tfsdk:"id"`
@@ -48,7 +48,7 @@ type ApplicationData struct {
 
 type ApplicationModules struct {
 	Cache                  *CacheModule                  `tfsdk:"edge_cache"`
-	Functions              *EdgeFunctionModule           `tfsdk:"functions"`
+	Functions              *FunctionModule               `tfsdk:"functions"`
 	ApplicationAccelerator *ApplicationAcceleratorModule `tfsdk:"application_accelerator"`
 	ImageProcessor         *ImageProcessorModule         `tfsdk:"image_processor"`
 }
@@ -57,7 +57,7 @@ type CacheModule struct {
 	Enabled types.Bool `tfsdk:"enabled"`
 }
 
-type EdgeFunctionModule struct {
+type FunctionModule struct {
 	Enabled types.Bool `tfsdk:"enabled"`
 }
 
@@ -69,18 +69,18 @@ type ImageProcessorModule struct {
 	Enabled types.Bool `tfsdk:"enabled"`
 }
 
-func (e *EdgeApplicationDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+func (e *ApplicationDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	e.client = req.ProviderData.(*apiClient)
 }
 
-func (e *EdgeApplicationDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_main_settings"
+func (e *ApplicationDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_application_main_settings"
 }
 
-func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (e *ApplicationDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -157,15 +157,15 @@ func (e *EdgeApplicationDataSource) Schema(_ context.Context, _ datasource.Schem
 	}
 }
 
-func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var getEdgeApplicationId types.String
-	diags := req.Config.GetAttribute(ctx, path.Root("id"), &getEdgeApplicationId)
+func (e *ApplicationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var getApplicationId types.String
+	diags := req.Config.GetAttribute(ctx, path.Root("id"), &getApplicationId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if getEdgeApplicationId.ValueString() == "" {
+	if getApplicationId.ValueString() == "" {
 		resp.Diagnostics.AddError(
 			"Application ID error ",
 			"empty application ID",
@@ -173,7 +173,7 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	edgeApplicationId, err := strconv.ParseInt(getEdgeApplicationId.ValueString(), 10, 64)
+	applicationId, err := strconv.ParseInt(getApplicationId.ValueString(), 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Application ID error ",
@@ -182,11 +182,11 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	applicationsResponse, response, err := e.client.api.ApplicationsAPI.RetrieveApplication(ctx, edgeApplicationId).Execute() //nolint
+	applicationsResponse, response, err := e.client.api.ApplicationsAPI.RetrieveApplication(ctx, applicationId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
 			applicationsResponse, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
-				return e.client.api.ApplicationsAPI.RetrieveApplication(ctx, edgeApplicationId).Execute() //nolint
+				return e.client.api.ApplicationsAPI.RetrieveApplication(ctx, applicationId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -227,7 +227,7 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 		Cache: &CacheModule{
 			Enabled: types.BoolValue(cache.GetEnabled()),
 		},
-		Functions: &EdgeFunctionModule{
+		Functions: &FunctionModule{
 			Enabled: types.BoolValue(functions.GetEnabled()),
 		},
 		ApplicationAccelerator: &ApplicationAcceleratorModule{
@@ -239,7 +239,7 @@ func (e *EdgeApplicationDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	// Populate only safe fields to avoid SDK getter mismatches; leave others null.
-	state := EdgeApplicationDataSourceModel{
+	state := ApplicationDataSourceModel{
 		SchemaVersion: types.Int64Null(),
 		Data: &ApplicationData{
 			Id:             types.Int64Value(applicationsResponse.Data.GetId()),

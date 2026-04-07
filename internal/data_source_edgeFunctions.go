@@ -17,7 +17,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &EdgeFunctionsDataSource{}
 )
 
-func dataSourceAzionEdgeFunctions() datasource.DataSource {
+func dataSourceAzionFunctions() datasource.DataSource {
 	return &EdgeFunctionsDataSource{}
 }
 
@@ -45,7 +45,6 @@ type EdgeFunctionsResults struct {
 	Active               types.Bool   `tfsdk:"active"`
 	Runtime              types.String `tfsdk:"runtime"`
 	ExecutionEnvironment types.String `tfsdk:"execution_environment"`
-	Code                 types.String `tfsdk:"code"`
 	DefaultArgs          types.String `tfsdk:"default_args"`
 	ReferenceCount       types.Int64  `tfsdk:"reference_count"`
 	Version              types.String `tfsdk:"version"`
@@ -60,7 +59,7 @@ func (d *EdgeFunctionsDataSource) Configure(_ context.Context, req datasource.Co
 }
 
 func (d *EdgeFunctionsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_functions"
+	resp.TypeName = req.ProviderTypeName + "_functions"
 }
 
 func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -71,7 +70,7 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Computed:    true,
 			},
 			"counter": schema.Int64Attribute{
-				Description: "The total count of edge functions.",
+				Description: "The total count of functions.",
 				Computed:    true,
 			},
 			"results": schema.ListNestedAttribute{
@@ -110,10 +109,6 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 							Description: "Execution environment of the function.",
 							Computed:    true,
 						},
-						"code": schema.StringAttribute{
-							Description: "Code of the function.",
-							Computed:    true,
-						},
 						"default_args": schema.StringAttribute{
 							Description: "Default arguments of the function as JSON.",
 							Computed:    true,
@@ -141,7 +136,7 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 	functionsResponse, response, err := d.client.api.FunctionsAPI.ListFunctions(ctx).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			functionsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedFunctionsList, *http.Response, error) {
+			functionsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedEdgeFunctionList, *http.Response, error) {
 				return d.client.api.FunctionsAPI.ListFunctions(ctx).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -184,7 +179,6 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 		result := EdgeFunctionsResults{
 			ID:             types.Int64Value(resultEdgeFunctions.Id),
 			Name:           types.StringValue(resultEdgeFunctions.Name),
-			Code:           types.StringValue(resultEdgeFunctions.Code),
 			DefaultArgs:    types.StringValue(defaultArgsStr),
 			Active:         types.BoolValue(*resultEdgeFunctions.Active),
 			LastEditor:     types.StringValue(resultEdgeFunctions.LastEditor),
@@ -198,10 +192,17 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 		if resultEdgeFunctions.Runtime != nil {
 			result.Runtime = types.StringValue(*resultEdgeFunctions.Runtime)
 		}
+		if resultEdgeFunctions.ExecutionEnvironment != nil {
+			result.ExecutionEnvironment = types.StringValue(*resultEdgeFunctions.ExecutionEnvironment)
+		}
+		// LastModified is always returned but check if it's non-zero
+		if !resultEdgeFunctions.LastModified.IsZero() {
+			result.LastModified = types.StringValue(resultEdgeFunctions.LastModified.String())
+		}
 
 		edgeFunctionsState.Results = append(edgeFunctionsState.Results, result)
 	}
-	edgeFunctionsState.ID = types.StringValue("Get All Edge Functions")
+	edgeFunctionsState.ID = types.StringValue("Get All Functions")
 	diags := resp.State.Set(ctx, &edgeFunctionsState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -217,7 +218,7 @@ func errPrintFunctions(errCode int, err error) (string, string) {
 	case 401:
 		usrMsg = "Unauthorized Token"
 	case 404:
-		usrMsg = "No Edge Functions found"
+		usrMsg = "No Functions found"
 	default:
 		usrMsg = err.Error()
 	}

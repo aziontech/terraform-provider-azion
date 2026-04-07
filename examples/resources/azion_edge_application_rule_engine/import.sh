@@ -1,1 +1,1 @@
-terraform import azion_edge_application_rule_engine.example <edge_application_id>/<phase>/<RuleID>
+terraform import azion_application_rule_engine.example <application_id>/<phase>/<RuleID>

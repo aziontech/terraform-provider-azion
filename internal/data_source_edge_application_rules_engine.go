@@ -20,7 +20,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &RulesEngineDataSource{}
 )
 
-func dataSourceAzionEdgeApplicationRulesEngine() datasource.DataSource {
+func dataSourceAzionApplicationRulesEngine() datasource.DataSource {
 	return &RulesEngineDataSource{}
 }
 
@@ -30,7 +30,7 @@ type RulesEngineDataSource struct {
 
 type RulesEngineDataSourceModel struct {
 	ID            types.String             `tfsdk:"id"`
-	ApplicationID types.Int64              `tfsdk:"edge_application_id"`
+	ApplicationID types.Int64              `tfsdk:"application_id"`
 	Counter       types.Int64              `tfsdk:"counter"`
 	TotalPages    types.Int64              `tfsdk:"total_pages"`
 	Page          types.Int64              `tfsdk:"page"`
@@ -88,7 +88,7 @@ func (r *RulesEngineDataSource) Configure(_ context.Context, req datasource.Conf
 }
 
 func (r *RulesEngineDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_rules_engine"
+	resp.TypeName = req.ProviderTypeName + "_application_rules_engine"
 }
 
 func (r *RulesEngineDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -98,8 +98,8 @@ func (r *RulesEngineDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Description: "Identifier of the data source.",
 				Computed:    true,
 			},
-			"edge_application_id": schema.Int64Attribute{
-				Description: "The edge application identifier.",
+			"application_id": schema.Int64Attribute{
+				Description: "The application identifier.",
 				Required:    true,
 			},
 			"counter": schema.Int64Attribute{
@@ -242,7 +242,7 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 	var page types.Int64
 	var pageSize types.Int64
 
-	diagsApplicationID := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &applicationID)
+	diagsApplicationID := req.Config.GetAttribute(ctx, path.Root("application_id"), &applicationID)
 	resp.Diagnostics.Append(diagsApplicationID...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -329,7 +329,7 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	result.ApplicationID = applicationID
-	result.ID = types.StringValue("Get All Edge Application Rules Engine")
+	result.ID = types.StringValue("Get All Application Rules Engine")
 
 	diags := resp.State.Set(ctx, &result)
 	resp.Diagnostics.Append(diags...)

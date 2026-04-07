@@ -26,7 +26,7 @@ var (
 	_ resource.ResourceWithImportState = &rulesEngineResource{}
 )
 
-func NewEdgeApplicationRulesEngineResource() resource.Resource {
+func NewApplicationRulesEngineResource() resource.Resource {
 	return &rulesEngineResource{}
 }
 
@@ -38,7 +38,7 @@ type RulesEngineResourceModel struct {
 	SchemaVersion types.Int64                 `tfsdk:"schema_version"`
 	RulesEngine   *RulesEngineResourceResults `tfsdk:"results"`
 	ID            types.String                `tfsdk:"id"`
-	ApplicationID types.Int64                 `tfsdk:"edge_application_id"`
+	ApplicationID types.Int64                 `tfsdk:"application_id"`
 	LastUpdated   types.String                `tfsdk:"last_updated"`
 }
 
@@ -84,7 +84,7 @@ type RulesEngineResourceCriteria struct {
 }
 
 func (r *rulesEngineResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_rule_engine"
+	resp.TypeName = req.ProviderTypeName + "_application_rule_engine"
 }
 
 func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -96,8 +96,8 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"edge_application_id": schema.Int64Attribute{
-				Description: "The edge application identifier.",
+			"application_id": schema.Int64Attribute{
+				Description: "The application identifier.",
 				Required:    true,
 			},
 			"schema_version": schema.Int64Attribute{
@@ -232,7 +232,7 @@ func (r *rulesEngineResource) Configure(_ context.Context, req resource.Configur
 
 func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan RulesEngineResourceModel
-	var edgeApplicationID types.Int64
+	var applicationID types.Int64
 	var phase types.String
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -240,8 +240,8 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	diagsEdgeApplicationID := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &edgeApplicationID)
-	resp.Diagnostics.Append(diagsEdgeApplicationID...)
+	diagsApplicationID := req.Config.GetAttribute(ctx, path.Root("application_id"), &applicationID)
+	resp.Diagnostics.Append(diagsApplicationID...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -269,13 +269,13 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 
 		// Find the Default Rule ID - it's in the request phase
 		rulesResponse, response, err := r.client.api.ApplicationsRequestRulesAPI.
-			ListApplicationRequestRules(ctx, edgeApplicationID.ValueInt64()).
+			ListApplicationRequestRules(ctx, applicationID.ValueInt64()).
 			Page(1).PageSize(2).Execute()
 		if err != nil {
 			if response.StatusCode == 429 {
 				rulesResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedRequestPhaseRuleList, *http.Response, error) {
 					return r.client.api.ApplicationsRequestRulesAPI.
-						ListApplicationRequestRules(ctx, edgeApplicationID.ValueInt64()).
+						ListApplicationRequestRules(ctx, applicationID.ValueInt64()).
 						Page(1).PageSize(2).Execute()
 				}, 5)
 
@@ -343,7 +343,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		updateResponse, response, err := r.client.api.ApplicationsRequestRulesAPI.
-			UpdateApplicationRequestRule(ctx, edgeApplicationID.ValueInt64(), ruleID).
+			UpdateApplicationRequestRule(ctx, applicationID.ValueInt64(), ruleID).
 			RequestPhaseRuleRequest(*ruleRequest).
 			Execute()
 		if response != nil {
@@ -354,7 +354,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			return
 		}
 
-		plan = buildStateFromResponse(updateResponse.Data, edgeApplicationID, types.StringValue("default"))
+		plan = buildStateFromResponse(updateResponse.Data, applicationID, types.StringValue("default"))
 	} else {
 		// Create new rule for request or response phase
 		var rulesEngineResponse *azionapi.RequestPhaseRuleResponse
@@ -377,7 +377,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			}
 
 			rulesEngineResponse, response, err = r.client.api.ApplicationsRequestRulesAPI.
-				CreateApplicationRequestRule(ctx, edgeApplicationID.ValueInt64()).
+				CreateApplicationRequestRule(ctx, applicationID.ValueInt64()).
 				RequestPhaseRuleRequest(*ruleRequest).
 				Execute()
 			if response != nil {
@@ -400,7 +400,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 
 			var responseRulesEngineResponse *azionapi.ResponsePhaseRuleResponse
 			responseRulesEngineResponse, response, err = r.client.api.ApplicationsResponseRulesAPI.
-				CreateApplicationResponseRule(ctx, edgeApplicationID.ValueInt64()).
+				CreateApplicationResponseRule(ctx, applicationID.ValueInt64()).
 				ResponsePhaseRuleRequest(*responseRuleRequest).
 				Execute()
 			if response != nil {
@@ -425,7 +425,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			return
 		}
 
-		plan = buildStateFromResponse(rulesEngineResponse.Data, edgeApplicationID, phase)
+		plan = buildStateFromResponse(rulesEngineResponse.Data, applicationID, phase)
 	}
 
 	diags = resp.State.Set(ctx, &plan)
@@ -443,22 +443,22 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	var edgeApplicationID int64
+	var applicationID int64
 	var ruleID int64
 	var phase string
 	valueFromCmd := strings.Split(state.ID.ValueString(), "/")
 	if len(valueFromCmd) == 3 {
-		edgeApplicationID = int64(utils.AtoiNoError(valueFromCmd[0], resp))
+		applicationID = int64(utils.AtoiNoError(valueFromCmd[0], resp))
 		phase = valueFromCmd[1]
 		ruleID = int64(utils.AtoiNoError(valueFromCmd[2], resp))
 	} else if len(valueFromCmd) == 1 {
-		edgeApplicationID = state.ApplicationID.ValueInt64()
+		applicationID = state.ApplicationID.ValueInt64()
 		ruleID = state.RulesEngine.ID.ValueInt64()
 		phase = state.RulesEngine.Phase.ValueString()
 	} else {
 		resp.Diagnostics.AddError(
 			"Parameters error",
-			"you need to pass <edgeApplicationID>/<phase>/<ruleEngineID>",
+			"you need to pass <applicationID>/<phase>/<ruleEngineID>",
 		)
 		return
 	}
@@ -481,7 +481,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 
 	if apiPhase == "request" {
 		ruleResponse, response, err := r.client.api.ApplicationsRequestRulesAPI.
-			RetrieveApplicationRequestRule(ctx, edgeApplicationID, ruleID).
+			RetrieveApplicationRequestRule(ctx, applicationID, ruleID).
 			Execute()
 		if response != nil {
 			defer response.Body.Close()
@@ -497,7 +497,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		result = transformRuleToResultsModelFromResponse(ruleResponse.Data, phase)
 	} else if apiPhase == "response" {
 		ruleResponse, response, err := r.client.api.ApplicationsResponseRulesAPI.
-			RetrieveApplicationResponseRule(ctx, edgeApplicationID, ruleID).
+			RetrieveApplicationResponseRule(ctx, applicationID, ruleID).
 			Execute()
 		if response != nil {
 			defer response.Body.Close()
@@ -513,7 +513,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		result = transformRuleToResultsModelFromResponse(ruleResponse.Data, phase)
 	}
 
-	state.ApplicationID = types.Int64Value(edgeApplicationID)
+	state.ApplicationID = types.Int64Value(applicationID)
 	state.RulesEngine = result
 
 	diags = resp.State.Set(ctx, &state)
@@ -525,7 +525,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 
 func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan RulesEngineResourceModel
-	var edgeApplicationID types.Int64
+	var applicationID types.Int64
 	var ruleID types.Int64
 	var phase types.String
 	diags := req.Plan.Get(ctx, &plan)
@@ -555,9 +555,9 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	if plan.ApplicationID.IsNull() {
-		edgeApplicationID = state.ApplicationID
+		applicationID = state.ApplicationID
 	} else {
-		edgeApplicationID = plan.ApplicationID
+		applicationID = plan.ApplicationID
 	}
 
 	if plan.RulesEngine.ID.IsNull() || plan.RulesEngine.ID.ValueInt64() == 0 {
@@ -606,7 +606,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 
 		rulesEngineResponse, response, err = r.client.api.ApplicationsRequestRulesAPI.
-			UpdateApplicationRequestRule(ctx, edgeApplicationID.ValueInt64(), ruleID.ValueInt64()).
+			UpdateApplicationRequestRule(ctx, applicationID.ValueInt64(), ruleID.ValueInt64()).
 			RequestPhaseRuleRequest(*ruleRequest).
 			Execute()
 		if response != nil {
@@ -629,7 +629,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 
 		var responseRulesEngineResponse *azionapi.ResponsePhaseRuleResponse
 		responseRulesEngineResponse, response, err = r.client.api.ApplicationsResponseRulesAPI.
-			UpdateApplicationResponseRule(ctx, edgeApplicationID.ValueInt64(), ruleID.ValueInt64()).
+			UpdateApplicationResponseRule(ctx, applicationID.ValueInt64(), ruleID.ValueInt64()).
 			ResponsePhaseRuleRequest(*responseRuleRequest).
 			Execute()
 		if response != nil {
@@ -647,7 +647,7 @@ func (r *rulesEngineResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	plan = buildStateFromResponse(rulesEngineResponse.Data, edgeApplicationID, phase)
+	plan = buildStateFromResponse(rulesEngineResponse.Data, applicationID, phase)
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -666,8 +666,8 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	if state.ApplicationID.IsNull() {
 		resp.Diagnostics.AddError(
-			"Edge Application ID error",
-			"Edge Application ID cannot be null",
+			"Application ID error",
+			"Application ID cannot be null",
 		)
 		return
 	}
@@ -753,7 +753,7 @@ func (r *rulesEngineResource) ImportState(ctx context.Context, req resource.Impo
 	if len(parts) != 3 {
 		resp.Diagnostics.AddError(
 			"Invalid import format",
-			"Expected format: {edge_application_id}/{phase}/{rule_id}",
+			"Expected format: {application_id}/{phase}/{rule_id}",
 		)
 		return
 	}

@@ -20,7 +20,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &EdgeFunctionDataSource{}
 )
 
-func dataSourceAzionEdgeFunction() datasource.DataSource {
+func dataSourceAzionFunction() datasource.DataSource {
 	return &EdgeFunctionDataSource{}
 }
 
@@ -62,7 +62,7 @@ func (d *EdgeFunctionDataSource) Configure(_ context.Context, req datasource.Con
 }
 
 func (d *EdgeFunctionDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_function"
+	resp.TypeName = req.ProviderTypeName + "_function"
 }
 
 func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -210,7 +210,7 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		EdgeFunctionState.Data.Runtime = types.StringValue(*functionsResponse.Data.Runtime)
 	}
 
-	EdgeFunctionState.ID = types.StringValue("Get By Id Edge Function")
+	EdgeFunctionState.ID = types.StringValue("Get By Id Function")
 	diags = resp.State.Set(ctx, &EdgeFunctionState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -226,7 +226,7 @@ func errPrint(errCode int, err error) (string, string) {
 	case 401:
 		usrMsg = "Unauthorized Token"
 	case 404:
-		usrMsg = "No Edge Function found"
+		usrMsg = "No Function found"
 	default:
 		usrMsg = err.Error()
 	}

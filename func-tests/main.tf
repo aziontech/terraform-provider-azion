@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     azion = {
-      source  = "aziontech/azion"
-      version = ">= 1.33.0"
+      source  = "github.com/aziontech/azion"
+      version = "0.1.0"
     }
   }
 }
@@ -15,7 +15,7 @@ variable "edge_functions_module" {
 
 # ---------------------- LOCALS ----------------------
 locals {
-  timestamp = formatdate("YYYY-MM-DD-hhmm", timestamp())
+  timestamp   = formatdate("YYYY-MM-DD-hhmm", timestamp())
   name_suffix = "test-func-${local.timestamp}"
 }
 
@@ -62,8 +62,8 @@ locals {
 #   ]
 # }
 
-# resource "azion_edge_application_cache_setting" "testfunc" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# resource "azion_application_cache_setting" "testfunc" {
+#   application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   cache_setting = {
 #     name = "Terraform Cache Setting ${local.name_suffix}"
 #     browser_cache = {
@@ -86,7 +86,7 @@ locals {
 #   ]
 # }
 
-# resource "azion_edge_application_rule_engine" "testfunc" {
+# resource "azion_application_rule_engine" "testfunc" {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   results = {
 #     name        = "Default Rule"
@@ -113,11 +113,11 @@ locals {
 #   depends_on = [
 #     azion_edge_application_main_setting.testfunc,
 #     azion_edge_application_origin.testfunc,
-#     azion_edge_application_cache_setting.testfunc
+#     azion_application_cache_setting.testfunc
 #   ]
 # }
 # 
-# resource "azion_edge_application_rule_engine" "testfunc2" {
+# resource "azion_application_rule_engine" "testfunc2" {
 #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   results = {
 #     name        = "Terraform Rule Engine test-func"
@@ -155,32 +155,25 @@ locals {
 #   ]
 # }
 
-resource "azion_edge_function" "testfunc" {
-  edge_function = {
-    name           = "Terraform Edge Function ${local.name_suffix}"
-    code           = file("${path.module}/mock_files/dummy_script.txt")
-    language       = "javascript"
-    initiator_type = "edge_application"
-    json_args = jsonencode(
-      { "key" = "Value",
-        "key" = "example"
-    })
-    active = true
+resource "azion_function" "testfunc" {
+  function = {
+    name                  = "Terraform Function ${local.name_suffix}"
+    code                  = trimspace(file("${path.module}/mock_files/dummy_script.txt"))
+    active                = true
+    default_args          = jsonencode({ "key" = "Value" })
+    execution_environment = "application"
+    runtime               = "azion_js"
   }
 }
 
-resource "azion_edge_function" "testfunc2firewall" {
-  edge_function = {
-    name                 = "Terraform Edge Function 2 Firewall ${local.name_suffix}"
-    code                 = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
-    language             = "javascript"
-    initiator_type       = "edge_firewall"
+resource "azion_function" "testfunc2firewall" {
+  function = {
+    name                  = "Terraform Function 2 Firewall ${local.name_suffix}"
+    code                  = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
+    active                = true
+    default_args          = jsonencode({ "key" = "Value" })
     execution_environment = "firewall"
-    json_args = jsonencode(
-      { "key" = "Value",
-        "key" = "example"
-    })
-    active = true
+    runtime               = "azion_js"
   }
 }
 
@@ -271,7 +264,7 @@ resource "azion_edge_function" "testfunc2firewall" {
 resource "azion_intelligent_dns_zone" "testfunc" {
   zone = {
     domain : "terraformtest-func-${local.timestamp}.qa",
-    is_active : true,
+    active : true,
     name : "example"
   }
 }
@@ -287,9 +280,9 @@ resource "azion_intelligent_dns_zone" "testfunc" {
 resource "azion_intelligent_dns_record" "testfunc" {
   zone_id = azion_intelligent_dns_zone.testfunc.zone.id
   record = {
-    record_type = "A"
-    entry       = "site"
-    answers_list = [
+    type = "A"
+    name = "site"
+    rdata = [
       "8.8.8.8"
     ]
     policy      = "weighted"
@@ -302,9 +295,9 @@ resource "azion_intelligent_dns_record" "testfunc" {
 
 resource "azion_network_list" "exampleOne" {
   results = {
-    name      = "NetworkList Terraform ${local.name_suffix} Countries"
-    list_type = "countries"
-    items_values_str = [
+    name = "NetworkList Terraform ${local.name_suffix} Countries"
+    type = "countries"
+    items = [
       "BR",
       "US",
       "AG"
@@ -314,9 +307,9 @@ resource "azion_network_list" "exampleOne" {
 
 resource "azion_network_list" "exampleTwo" {
   results = {
-    name      = "NetworkList Terraform ${local.name_suffix} ip_cidr"
-    list_type = "ip_cidr"
-    items_values_str = [
+    name = "NetworkList Terraform ${local.name_suffix} ip_cidr"
+    type = "ip_cidr"
+    items = [
       "192.168.0.1",
       "192.168.0.2",
       "192.168.0.3"
@@ -381,37 +374,37 @@ resource "azion_network_list" "exampleTwo" {
 #   }
 # }
 
-# data "azion_edge_application_cache_settings" "example" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# data "azion_application_cache_settings" "example" {
+#   application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 # }
 
-# data "azion_edge_application_cache_setting" "example" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# data "azion_application_cache_setting" "example" {
+#   application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
 #   results = {
-#     cache_setting_id = azion_edge_application_cache_setting.testfunc.cache_settings.cache_setting_id
+#     id = azion_application_cache_setting.testfunc.cache_setting.id
 #   }
 # }
 
-# data "azion_edge_application_rules_engine" "example" {
-#   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# data "azion_application_rules_engine" "example" {
+#   application_id = azion_application_main_setting.testfunc.application.application_id
 #   results = [{
 #     phase = "request"
 #   }]
 # }
 
-# # data "azion_edge_application_rule_engine" "example" {
-# #   edge_application_id = azion_edge_application_main_setting.testfunc.edge_application.application_id
+# # data "azion_application_rule_engine" "example" {
+# #   application_id = azion_application_main_setting.testfunc.application.application_id
 # #   results = {
 # #     phase = "request"
-# #     id    = azion_edge_application_rule_engine.testfunc.results.id
+# #     id    = azion_application_rule_engine.testfunc.results.id
 # #   }
 # # }
 # 
-data "azion_edge_functions" "example" {
+data "azion_functions" "example" {
 }
 
-# data "azion_edge_function" "example" {
-#   id = azion_edge_function.testfunc2firewall.edge_function.id
+# data "azion_function" "example" {
+#   id = azion_function.testfunc2firewall.function.id
 # }
 
 # data "azion_edge_application_edge_functions_instance" "example" {
@@ -471,11 +464,11 @@ data "azion_network_lists" "example" {
 }
 
 data "azion_network_list" "exampleOne" {
-  network_list_id = azion_network_list.exampleOne.id
+  id = azion_network_list.exampleOne.results.id
 }
 
 data "azion_network_list" "exampleTwo" {
-  network_list_id = azion_network_list.exampleTwo.id
+  id = azion_network_list.exampleTwo.results.id
 }
 
 # Removed due to 401 Unauthorized error
