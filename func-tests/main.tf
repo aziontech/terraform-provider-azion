@@ -15,7 +15,7 @@ variable "edge_functions_module" {
 
 # ---------------------- LOCALS ----------------------
 locals {
-  timestamp = formatdate("YYYY-MM-DD-hhmm", timestamp())
+  timestamp   = formatdate("YYYY-MM-DD-hhmm", timestamp())
   name_suffix = "test-func-${local.timestamp}"
 }
 
@@ -157,12 +157,12 @@ locals {
 
 resource "azion_function" "testfunc" {
   function = {
-    name                 = "Terraform Function ${local.name_suffix}"
-    code                 = trimspace(file("${path.module}/mock_files/dummy_script.txt"))
-    active               = true
-    default_args         = jsonencode({ "key" = "Value" })
+    name                  = "Terraform Function ${local.name_suffix}"
+    code                  = trimspace(file("${path.module}/mock_files/dummy_script.txt"))
+    active                = true
+    default_args          = jsonencode({ "key" = "Value" })
     execution_environment = "default"
-    runtime              = "nodejs20.x"
+    runtime               = "nodejs20.x"
   }
 }
 
