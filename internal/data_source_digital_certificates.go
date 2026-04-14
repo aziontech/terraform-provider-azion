@@ -58,7 +58,6 @@ type CertificatesResultModel struct {
 	Active         types.Bool     `tfsdk:"active"`
 	ProductVersion types.String   `tfsdk:"product_version"`
 	LastEditor     types.String   `tfsdk:"last_editor"`
-	CreatedAt      types.String   `tfsdk:"created_at"`
 	LastModified   types.String   `tfsdk:"last_modified"`
 	RenewedAt      types.String   `tfsdk:"renewed_at"`
 }
@@ -177,10 +176,6 @@ func (d *DigitalCertificatesDataSource) Schema(_ context.Context, _ datasource.S
 							Description: "Last editor of the certificate.",
 							Computed:    true,
 						},
-						"created_at": schema.StringAttribute{
-							Description: "Creation timestamp of the certificate.",
-							Computed:    true,
-						},
 						"last_modified": schema.StringAttribute{
 							Description: "Last modified timestamp of the certificate.",
 							Computed:    true,
@@ -267,11 +262,6 @@ func populateCertificatesListResults(list *azionapi.PaginatedCertificateList) Di
 			renewedAt = (*cert.RenewedAt.Get()).Format(time.RFC3339)
 		}
 
-		var createdAt string
-		if cert.CreatedAt.IsSet() && cert.CreatedAt.Get() != nil {
-			createdAt = (*cert.CreatedAt.Get()).Format(time.RFC3339)
-		}
-
 		certInfo := CertificatesResultModel{
 			ID:             types.Int64Value(cert.GetId()),
 			Name:           types.StringValue(cert.GetName()),
@@ -287,7 +277,6 @@ func populateCertificatesListResults(list *azionapi.PaginatedCertificateList) Di
 			KeyAlgorithm:   types.StringValue(cert.GetKeyAlgorithm()),
 			ProductVersion: types.StringValue(cert.GetProductVersion()),
 			LastEditor:     types.StringValue(cert.GetLastEditor()),
-			CreatedAt:      types.StringValue(createdAt),
 			LastModified:   types.StringValue(cert.GetLastModified().Format(time.RFC3339)),
 			RenewedAt:      types.StringValue(renewedAt),
 		}
