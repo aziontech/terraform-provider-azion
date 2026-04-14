@@ -316,7 +316,7 @@ func transformWAFExceptionConditions(conditions []azionapi.WAFExceptionCondition
 
 ```go
 // buildWAFExceptionConditionsRequest builds SDK conditions from Terraform models.
-func buildWAFExceptionConditionsRequest(conditions []WafExceptionConditionModel) ([]azionapi.WAFExceptionConditionRequest, error) {
+func buildWAFExceptionConditionsRequest(conditions []WafExceptionConditionModel) []azionapi.WAFExceptionConditionRequest {
     var result []azionapi.WAFExceptionConditionRequest
 
     for _, c := range conditions {
@@ -341,7 +341,7 @@ func buildWAFExceptionConditionsRequest(conditions []WafExceptionConditionModel)
         }
     }
 
-    return result, nil
+    return result
 }
 ```
 
@@ -576,11 +576,7 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
     }
 
     // Build the conditions request.
-    conditions, err := buildWAFExceptionConditionsRequest(plan.Result.Conditions)
-    if err != nil {
-        resp.Diagnostics.AddError("Error building conditions", err.Error())
-        return
-    }
+    conditions := buildWAFExceptionConditionsRequest(plan.Result.Conditions)
 
     // Build the WAF exception request.
     wafRuleRequest := azionapi.NewWAFRuleRequest(plan.Result.Name.ValueString(), conditions)
@@ -808,11 +804,7 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
     }
 
     // Build the conditions request.
-    conditions, err := buildWAFExceptionConditionsRequest(plan.Result.Conditions)
-    if err != nil {
-        resp.Diagnostics.AddError("Error building conditions", err.Error())
-        return
-    }
+    conditions := buildWAFExceptionConditionsRequest(plan.Result.Conditions)
 
     // Build the WAF exception request.
     wafRuleRequest := azionapi.NewWAFRuleRequest(plan.Result.Name.ValueString(), conditions)
@@ -942,7 +934,7 @@ func (r *wafRuleSetResource) ImportState(ctx context.Context, req resource.Impor
 }
 ```
 
-Note: The import format should be `waf_id:exception_id` to properly identify the resource.
+**Note**: The import uses just the `exception_id`. The `waf_id` must be provided in the Terraform configuration for the imported resource to be properly managed.
 
 ---
 

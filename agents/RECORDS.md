@@ -182,7 +182,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
     }
 
     // Build the state from the response.
-    recordsState := buildRecordsState(ctx, zoneId, page, pageSize, recordsResponse)
+    recordsState := buildRecordsState(zoneId, page, pageSize, recordsResponse)
 
     // Set the state.
     diags := resp.State.Set(ctx, &recordsState)
@@ -596,12 +596,13 @@ if httpResp.StatusCode == 429 {
 
 ```go
 // buildRecordsState constructs the state model from the API response.
-func buildRecordsState(ctx context.Context, zoneId types.Int64, page types.Int64, pageSize types.Int64, response *azionapi.PaginatedRecordList) RecordsDataSourceModel {
+func buildRecordsState(zoneId types.Int64, page types.Int64, pageSize types.Int64, response *azionapi.PaginatedRecordList) RecordsDataSourceModel {
     state := RecordsDataSourceModel{
         ZoneId:   zoneId,
         Page:     page,
         PageSize: pageSize,
         Links:    &RecordsResponseLinks{},
+        Results:  []RecordDataSourceResult{}, // Initialize as empty slice to avoid null
     }
 
     // Set counter.

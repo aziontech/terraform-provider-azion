@@ -28,16 +28,16 @@ data "azion_workload_deployment" "example" {
 
 * `id` - Identifier of the data source.
 * `data` - The deployment data.
-  * `id` - The deployment identifier (Int64).
+  * `id` - The deployment identifier.
   * `name` - Name of the deployment.
   * `current` - Whether this is the current deployment.
   * `active` - Status of the deployment.
   * `strategy` - Deployment strategy configuration.
     * `type` - Type of deployment strategy.
     * `attributes` - Strategy attributes.
-      * `application` - Application ID for the deployment (Int64).
-      * `firewall` - Firewall ID for the deployment (Int64).
-      * `custom_page` - Custom page ID for the deployment (Int64).
+      * `application` - Application ID for the deployment.
+      * `firewall` - Firewall ID for the deployment.
+      * `custom_page` - Custom page ID for the deployment.
   * `last_editor` - The last editor of the deployment.
   * `last_modified` - Last modified timestamp of the deployment.
   * `created_at` - Creation timestamp of the deployment.

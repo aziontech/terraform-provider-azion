@@ -45,21 +45,55 @@ client.api.FirewallsRulesEngineAPI
 
 ```go
 type FirewallRuleEngineDataSourceModel struct {
-    ID         types.String                  `tfsdk:"id"`
-    FirewallID types.Int64                   `tfsdk:"firewall_id"`
-    Results    FirewallRuleEngineResultModel `tfsdk:"results"`
+    ID         types.String                       `tfsdk:"id"`
+    FirewallID types.Int64                        `tfsdk:"firewall_id"`
+    Results    *FirewallRuleEngineResultDataModel `tfsdk:"results"`
 }
 
-type FirewallRuleEngineResultModel struct {
-    ID           types.Int64                `tfsdk:"id"`
-    Name         types.String               `tfsdk:"name"`
-    Active       types.Bool                 `tfsdk:"active"`
-    Criteria     [][]FirewallCriterionModel `tfsdk:"criteria"`
-    Behaviors    []FirewallBehaviorModel    `tfsdk:"behaviors"`
-    Description  types.String               `tfsdk:"description"`
-    Order        types.Int64                `tfsdk:"order"`
-    LastEditor   types.String               `tfsdk:"last_editor"`
-    LastModified types.String               `tfsdk:"last_modified"`
+type FirewallRuleEngineResultDataModel struct {
+    ID           types.Int64                 `tfsdk:"id"`
+    Name         types.String                `tfsdk:"name"`
+    Active       types.Bool                  `tfsdk:"active"`
+    Criteria     []FirewallCriteriaDataModel `tfsdk:"criteria"`
+    Behaviors    []FirewallBehaviorDataModel `tfsdk:"behaviors"`
+    Description  types.String                `tfsdk:"description"`
+    Order        types.Int64                 `tfsdk:"order"`
+    LastEditor   types.String                `tfsdk:"last_editor"`
+    LastModified types.String                `tfsdk:"last_modified"`
+    CreatedAt    types.String                `tfsdk:"created_at"`
+}
+
+type FirewallCriteriaDataModel struct {
+    Entries []FirewallCriteriaEntryDataModel `tfsdk:"entries"`
+}
+
+type FirewallCriteriaEntryDataModel struct {
+    Conditional types.String `tfsdk:"conditional"`
+    Variable    types.String `tfsdk:"variable"`
+    Operator    types.String `tfsdk:"operator"`
+    Argument    types.String `tfsdk:"argument"`
+}
+
+type FirewallBehaviorDataModel struct {
+    Type       types.String                    `tfsdk:"type"`
+    Attributes *FirewallBehaviorAttrsDataModel `tfsdk:"attributes"`
+}
+
+type FirewallBehaviorAttrsDataModel struct {
+    // For run_function behavior
+    Value types.Int64 `tfsdk:"value"`
+    // For set_custom_response behavior
+    StatusCode  types.Int64  `tfsdk:"status_code"`
+    ContentType types.String `tfsdk:"content_type"`
+    ContentBody types.String `tfsdk:"content_body"`
+    // For set_waf behavior
+    WafId types.Int64  `tfsdk:"waf_id"`
+    Mode  types.String `tfsdk:"mode"`
+    // For set_rate_limit behavior
+    Type             types.String `tfsdk:"type"`
+    LimitBy          types.String `tfsdk:"limit_by"`
+    AverageRateLimit types.Int64  `tfsdk:"average_rate_limit"`
+    MaximumBurstSize types.Int64  `tfsdk:"maximum_burst_size"`
 }
 ```
 
@@ -76,7 +110,22 @@ type FirewallRulesEngineDataSourceModel struct {
     Links      *LinksModel                      `tfsdk:"links"`
     Results    []FirewallRulesEngineResultModel `tfsdk:"results"`
 }
+
+type FirewallRulesEngineResultModel struct {
+    ID           types.Int64                 `tfsdk:"id"`
+    Name         types.String                `tfsdk:"name"`
+    Active       types.Bool                  `tfsdk:"active"`
+    Criteria     []FirewallCriteriaDataModel `tfsdk:"criteria"`
+    Behaviors    []FirewallBehaviorDataModel `tfsdk:"behaviors"`
+    Description  types.String                `tfsdk:"description"`
+    Order        types.Int64                 `tfsdk:"order"`
+    LastEditor   types.String                `tfsdk:"last_editor"`
+    LastModified types.String                `tfsdk:"last_modified"`
+    CreatedAt    types.String                `tfsdk:"created_at"`
+}
 ```
+
+Note: The plural data source reuses the same `FirewallCriteriaDataModel`, `FirewallCriteriaEntryDataModel`, `FirewallBehaviorDataModel`, and `FirewallBehaviorAttrsDataModel` types defined in the singular data source section.
 
 ---
 
@@ -104,6 +153,7 @@ type FirewallRuleEngineResultResource struct {
     Order        types.Int64                         `tfsdk:"order"`
     LastEditor   types.String                        `tfsdk:"last_editor"`
     LastModified types.String                        `tfsdk:"last_modified"`
+    CreatedAt    types.String                        `tfsdk:"created_at"`
 }
 ```
 
@@ -485,6 +535,7 @@ func transformFirewallRuleToResultModel(rule azionapi.FirewallRule) *FirewallRul
     }
     result.LastEditor = types.StringValue(rule.GetLastEditor())
     result.LastModified = types.StringValue(rule.GetLastModified().Format(time.RFC3339))
+    result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))
 
     // Transform criteria
     for _, criterionGroup := range rule.Criteria {

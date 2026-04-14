@@ -35,7 +35,7 @@ data "azion_firewall_functions_instance" "example" {
 ### Read-Only
 
 - `counter` (Number) The total number of firewall function instances.
-- `id` (String) Numeric identifier of the data source.
+- `id` (Number) Numeric identifier of the data source.
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
 - `total_pages` (Number) The total number of pages.
 

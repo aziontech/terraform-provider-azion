@@ -41,7 +41,7 @@ Custom Pages use the **V4 SDK (`azion-api`)** for all resources and data sources
 | Update Pattern | `.UpdateCustomPage(ctx, id).CustomPageRequest(req).Execute()` |
 | Retrieve Pattern | `.RetrieveCustomPage(ctx, customPageId).Execute()` |
 | List Method | `.ListCustomPages(ctx).Execute()` |
-| Delete Method | `.DestroyCustomPage(ctx, customPageId).Execute()` |
+| Delete Method | `.DeleteCustomPage(ctx, customPageId).Execute()` |
 
 ### Client Configuration
 
@@ -115,6 +115,7 @@ type CustomPageResults struct {
     Name           types.String            `tfsdk:"name"`
     LastEditor     types.String            `tfsdk:"last_editor"`
     LastModified   types.String            `tfsdk:"last_modified"`
+    CreatedAt      types.String            `tfsdk:"created_at"`
     Active         types.Bool              `tfsdk:"active"`
     ProductVersion types.String            `tfsdk:"product_version"`
     Pages          []CustomPagePageResults `tfsdk:"pages"`
@@ -166,6 +167,10 @@ func (d *CustomPageDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
                     },
                     "last_modified": schema.StringAttribute{
                         Description: "Last modified timestamp of the custom page.",
+                        Computed:    true,
+                    },
+                    "created_at": schema.StringAttribute{
+                        Description: "The creation timestamp of the custom page.",
                         Computed:    true,
                     },
                     "active": schema.BoolAttribute{
@@ -279,6 +284,7 @@ func (d *CustomPageDataSource) Read(ctx context.Context, req datasource.ReadRequ
             Name:           types.StringValue(customPageResponse.Data.Name),
             LastEditor:     types.StringValue(customPageResponse.Data.LastEditor),
             LastModified:   types.StringValue(customPageResponse.Data.LastModified.Format(time.RFC3339)),
+            CreatedAt:      types.StringValue(customPageResponse.Data.CreatedAt.Format(time.RFC3339)),
             ProductVersion: types.StringValue(customPageResponse.Data.ProductVersion),
         },
     }
@@ -376,6 +382,7 @@ type CustomPagesResults struct {
     Name           types.String             `tfsdk:"name"`
     LastEditor     types.String             `tfsdk:"last_editor"`
     LastModified   types.String             `tfsdk:"last_modified"`
+    CreatedAt      types.String             `tfsdk:"created_at"`
     Active         types.Bool               `tfsdk:"active"`
     ProductVersion types.String             `tfsdk:"product_version"`
     Pages          []CustomPagesPageResults `tfsdk:"pages"`
@@ -420,7 +427,8 @@ func (d *CustomPagesDataSource) Read(ctx context.Context, req datasource.ReadReq
             ID:             types.Int64Value(resultCustomPage.Id),
             Name:           types.StringValue(resultCustomPage.Name),
             LastEditor:     types.StringValue(resultCustomPage.LastEditor),
-            LastModified:   types.StringValue(resultCustomPage.LastModified.String()),
+            LastModified:   types.StringValue(resultCustomPage.LastModified.Format(time.RFC3339)),
+            CreatedAt:      types.StringValue(resultCustomPage.CreatedAt.Format(time.RFC3339)),
             ProductVersion: types.StringValue(resultCustomPage.ProductVersion),
         }
 
@@ -475,8 +483,8 @@ The resource should implement:
 ### Create Method Pattern
 
 ```go
-func (r *CustomPageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-    var plan CustomPageResourceModel
+func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+    var plan customPageResourceModel
     diags := req.Plan.Get(ctx, &plan)
     resp.Diagnostics.Append(diags...)
     if resp.Diagnostics.HasError() {
@@ -484,23 +492,50 @@ func (r *CustomPageResource) Create(ctx context.Context, req resource.CreateRequ
     }
 
     // Build request from plan
-    createRequest := azionapi.CustomPageRequest{
-        Name:           plan.Name.ValueString(),
-        ProductVersion: plan.ProductVersion.ValueString(),
-        // ... build pages
+    customPageRequest := azionapi.CustomPageRequest{
+        Name: plan.CustomPage.Name.ValueString(),
     }
+
+    // Set optional active field
+    if !plan.CustomPage.Active.IsNull() && !plan.CustomPage.Active.IsUnknown() {
+        customPageRequest.SetActive(plan.CustomPage.Active.ValueBool())
+    }
+
+    // Build pages
+    var pages []azionapi.PageRequestBase
+    for _, page := range plan.CustomPage.Pages {
+        pageRequest := azionapi.PageRequestBase{
+            Code: page.Code.ValueString(),
+            Page: azionapi.PageConnectorRequest{
+                Type: page.Page.Type.ValueString(),
+                Attributes: azionapi.PageConnectorAttributesRequest{
+                    Connector: page.Page.Attributes.Connector.ValueInt64(),
+                },
+            },
+        }
+        // Set optional fields (TTL, URI, CustomStatusCode)...
+        pages = append(pages, pageRequest)
+    }
+    customPageRequest.SetPages(pages)
 
     // Execute create
     createResponse, response, err := r.client.api.CustomPagesAPI.
         CreateCustomPage(ctx).
-        CustomPageRequest(createRequest).
+        CustomPageRequest(customPageRequest).
         Execute()
-    
+
     // Handle errors and 429 retries...
-    
+
     // Set state with response data
-    plan.ID = types.Int64Value(createResponse.Data.Id)
-    // ... set other fields from response
+    plan.CustomPage = &customPageResourceResults{
+        ID:             types.Int64Value(createResponse.Data.Id),
+        Name:           types.StringValue(createResponse.Data.Name),
+        LastEditor:     types.StringValue(createResponse.Data.LastEditor),
+        LastModified:   types.StringValue(createResponse.Data.LastModified.Format(time.RFC3339)),
+        CreatedAt:      types.StringValue(createResponse.Data.CreatedAt.Format(time.RFC3339)),
+        ProductVersion: types.StringValue(createResponse.Data.ProductVersion),
+    }
+    // ... handle Active and Pages from response
 }
 ```
 
@@ -509,27 +544,48 @@ func (r *CustomPageResource) Create(ctx context.Context, req resource.CreateRequ
 Custom Pages use PUT (full update) method:
 
 ```go
-func (r *CustomPageResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-    var plan CustomPageResourceModel
+func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+    var plan customPageResourceModel
     diags := req.Plan.Get(ctx, &plan)
     resp.Diagnostics.Append(diags...)
     if resp.Diagnostics.HasError() {
         return
     }
 
+    var state customPageResourceModel
+    diagsState := req.State.Get(ctx, &state)
+    resp.Diagnostics.Append(diagsState...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
     // Build request
-    updateRequest := azionapi.CustomPageRequest{
-        Name:           plan.Name.ValueString(),
-        ProductVersion: plan.ProductVersion.ValueString(),
-        // ... build pages
+    customPageRequest := azionapi.CustomPageRequest{
+        Name: plan.CustomPage.Name.ValueString(),
+    }
+
+    // Set optional active field
+    if !plan.CustomPage.Active.IsNull() && !plan.CustomPage.Active.IsUnknown() {
+        customPageRequest.SetActive(plan.CustomPage.Active.ValueBool())
+    }
+
+    // Build pages...
+    customPageRequest.SetPages(pages)
+
+    // Get the custom page ID from state
+    var customPageId int64
+    if state.ID.IsNull() {
+        customPageId = state.CustomPage.ID.ValueInt64()
+    } else {
+        customPageId, _ = strconv.ParseInt(state.ID.ValueString(), 10, 64)
     }
 
     // Execute update (PUT)
     updateResponse, response, err := r.client.api.CustomPagesAPI.
-        UpdateCustomPage(ctx, plan.ID.ValueInt64()).
-        CustomPageRequest(updateRequest).
+        UpdateCustomPage(ctx, customPageId).
+        CustomPageRequest(customPageRequest).
         Execute()
-    
+
     // Handle errors...
 }
 ```
@@ -537,20 +593,25 @@ func (r *CustomPageResource) Update(ctx context.Context, req resource.UpdateRequ
 ### Delete Method Pattern
 
 ```go
-func (r *CustomPageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-    var state CustomPageResourceModel
+func (r *customPageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+    var state customPageResourceModel
     diags := req.State.Get(ctx, &state)
     resp.Diagnostics.Append(diags...)
     if resp.Diagnostics.HasError() {
         return
     }
 
-    customPageId := state.CustomPage.ID.ValueInt64()
+    var customPageId int64
+    if state.CustomPage != nil {
+        customPageId = state.CustomPage.ID.ValueInt64()
+    } else {
+        customPageId, _ = strconv.ParseInt(state.ID.ValueString(), 10, 64)
+    }
 
     _, response, err := r.client.api.CustomPagesAPI.
         DeleteCustomPage(ctx, customPageId).
         Execute()
-    
+
     // Handle errors and 429 retries...
 }
 ```
@@ -558,7 +619,7 @@ func (r *CustomPageResource) Delete(ctx context.Context, req resource.DeleteRequ
 ### ImportState Method Pattern
 
 ```go
-func (r *CustomPageResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *customPageResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
     resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 ```
@@ -692,6 +753,10 @@ func (r *CustomPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
                         Description: "Last modified timestamp of the custom page.",
                         Computed:    true,
                     },
+                    "created_at": schema.StringAttribute{
+                        Description: "The creation timestamp of the custom page.",
+                        Computed:    true,
+                    },
                     "product_version": schema.StringAttribute{
                         Description: "Product version of the custom page.",
                         Computed:    true,
@@ -717,6 +782,7 @@ func (r *CustomPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 | `pages` | Computed | Computed | Required | Computed |
 | `last_editor` | Computed | Computed | Computed | Computed |
 | `last_modified` | Computed | Computed | Computed | Computed |
+| `created_at` | Computed | Computed | Computed | Computed |
 | `product_version` | Computed | Computed | Computed | Computed |
 
 ### Nested Object Patterns
@@ -828,6 +894,7 @@ type CustomPage struct {
     Name           string      `json:"name"`
     LastEditor     string      `json:"last_editor"`
     LastModified   time.Time   `json:"last_modified"`
+    CreatedAt      time.Time   `json:"created_at"`
     Active         *bool       `json:"active,omitempty"`
     ProductVersion string      `json:"product_version"`
     Pages          []PageBase  `json:"pages"`

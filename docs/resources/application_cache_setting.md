@@ -75,6 +75,7 @@ Optional:
 Read-Only:
 
 - `id` (Number) Cache setting identifier.
+- `created_at` (String) The creation timestamp.
 
 <a id="nestedatt--cache_setting--browser_cache"></a>
 ### Nested Schema for `browser_cache`

@@ -12,6 +12,8 @@ Creates a WAF exception (rule set) resource. WAF exceptions allow you to bypass 
 
 ## Example Usage
 
+### Generic Condition Example
+
 ```terraform
 resource "azion_waf_rule_set" "example" {
   waf_id = 12345
@@ -23,8 +25,48 @@ resource "azion_waf_rule_set" "example" {
     rule_id  = 0
     conditions = [
       {
-        match          = "example\\.com"
+        match          = "any_url"
         condition_type = "generic"
+      }
+    ]
+  }
+}
+```
+
+### Specific Condition on Name Example
+
+```terraform
+resource "azion_waf_rule_set" "header_example" {
+  waf_id = 12345
+  result = {
+    name     = "Header Exception"
+    active   = true
+    rule_id  = 0
+    conditions = [
+      {
+        match          = "specific_http_header_name"
+        name           = "X-Custom-Header"
+        condition_type = "specific_on_name"
+      }
+    ]
+  }
+}
+```
+
+### Specific Condition on Value Example
+
+```terraform
+resource "azion_waf_rule_set" "value_example" {
+  waf_id = 12345
+  result = {
+    name     = "Query String Exception"
+    active   = true
+    rule_id  = 0
+    conditions = [
+      {
+        match          = "specific_query_string_value"
+        value          = "trusted_value"
+        condition_type = "specific_on_value"
       }
     ]
   }
@@ -78,10 +120,44 @@ Optional:
 - `name` (String) The name for specific condition on name.
 - `value` (String) The value for specific condition on value.
 
+## Condition Match Types
+
+### Generic Condition Match Types
+
+When `condition_type = "generic"`, the following match types are valid:
+
+- `any_http_header_name` - Any HTTP header name
+- `any_http_header_value` - Any HTTP header value
+- `any_query_string_name` - Any query string parameter name
+- `any_query_string_value` - Any query string parameter value
+- `any_url` - Any URL
+- `body_form_field_name` - Body form field name
+- `body_form_field_value` - Body form field value
+- `file_extension` - File extension
+- `raw_body` - Raw request body
+
+### Specific Condition on Name Match Types
+
+When `condition_type = "specific_on_name"`, the `name` field is required and the following match types are valid:
+
+- `specific_body_form_field_name` - Specific body form field name
+- `specific_http_header_name` - Specific HTTP header name
+- `specific_query_string_name` - Specific query string name
+
+### Specific Condition on Value Match Types
+
+When `condition_type = "specific_on_value"`, the `value` field is required and the following match types are valid:
+
+- `specific_body_form_field_value` - Specific body form field value
+- `specific_http_header_value` - Specific HTTP header value
+- `specific_query_string_value` - Specific query string value
+
 ## Import
 
 Import is supported using the following syntax:
 
 ```shell
-terraform import azion_waf_rule_set.example "waf_id:exception_id"
+terraform import azion_waf_rule_set.example <exception_id>
 ```
+
+**Note**: The `waf_id` must be provided in the Terraform configuration for the imported resource to be properly managed.

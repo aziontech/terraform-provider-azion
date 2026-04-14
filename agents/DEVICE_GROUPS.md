@@ -137,6 +137,7 @@ import (
     "fmt"
     "net/http"
     "strconv"
+    "time"
 
     azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
     "github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -169,6 +170,7 @@ type ApplicationDeviceGroupData struct {
     ID        types.Int64  `tfsdk:"id"`
     Name      types.String `tfsdk:"name"`
     UserAgent types.String `tfsdk:"user_agent"`
+    CreatedAt types.String `tfsdk:"created_at"`
 }
 
 func (d *ApplicationDeviceGroupDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -206,6 +208,10 @@ func (d *ApplicationDeviceGroupDataSource) Schema(_ context.Context, _ datasourc
                     },
                     "user_agent": schema.StringAttribute{
                         Description: "Regular expression pattern to identify user agents.",
+                        Computed:    true,
+                    },
+                    "created_at": schema.StringAttribute{
+                        Description: "The creation timestamp of the device group.",
                         Computed:    true,
                     },
                 },
@@ -281,13 +287,16 @@ func (d *ApplicationDeviceGroupDataSource) Read(ctx context.Context, req datasou
 }
 
 func populateApplicationDeviceGroupResults(_ context.Context, deviceGroup azionapi.DeviceGroup) ApplicationDeviceGroupDataSourceModel {
-    return ApplicationDeviceGroupDataSourceModel{
-        Data: ApplicationDeviceGroupData{
-            ID:        types.Int64Value(deviceGroup.GetId()),
-            Name:      types.StringValue(deviceGroup.GetName()),
-            UserAgent: types.StringValue(deviceGroup.GetUserAgent()),
-        },
+    data := ApplicationDeviceGroupData{
+        ID:        types.Int64Value(deviceGroup.GetId()),
+        Name:      types.StringValue(deviceGroup.GetName()),
+        UserAgent: types.StringValue(deviceGroup.GetUserAgent()),
     }
+    // Handle CreatedAt if it's set
+    if deviceGroup.CreatedAt.IsSet() && deviceGroup.CreatedAt.Get() != nil {
+        data.CreatedAt = types.StringValue(deviceGroup.GetCreatedAt().Format(time.RFC3339))
+    }
+    return ApplicationDeviceGroupDataSourceModel{Data: data}
 }
 
 // errPrintApplicationDeviceGroup returns user-friendly error messages for device group operations.
@@ -324,6 +333,7 @@ import (
     "context"
     "fmt"
     "net/http"
+    "time"
 
     azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
     "github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -358,6 +368,7 @@ type ApplicationDeviceGroupsResults struct {
     ID        types.Int64  `tfsdk:"id"`
     Name      types.String `tfsdk:"name"`
     UserAgent types.String `tfsdk:"user_agent"`
+    CreatedAt types.String `tfsdk:"created_at"`
 }
 
 func (d *ApplicationDeviceGroupsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -404,6 +415,10 @@ func (d *ApplicationDeviceGroupsDataSource) Schema(_ context.Context, _ datasour
                         },
                         "user_agent": schema.StringAttribute{
                             Description: "Regular expression pattern to identify user agents.",
+                            Computed:    true,
+                        },
+                        "created_at": schema.StringAttribute{
+                            Description: "The creation timestamp of the device group.",
                             Computed:    true,
                         },
                     },
@@ -479,11 +494,16 @@ func (d *ApplicationDeviceGroupsDataSource) Read(ctx context.Context, req dataso
 }
 
 func populateApplicationDeviceGroupsResults(_ context.Context, deviceGroup azionapi.DeviceGroup) ApplicationDeviceGroupsResults {
-    return ApplicationDeviceGroupsResults{
+    result := ApplicationDeviceGroupsResults{
         ID:        types.Int64Value(deviceGroup.GetId()),
         Name:      types.StringValue(deviceGroup.GetName()),
         UserAgent: types.StringValue(deviceGroup.GetUserAgent()),
     }
+    // Handle CreatedAt if it's set
+    if deviceGroup.CreatedAt.IsSet() && deviceGroup.CreatedAt.Get() != nil {
+        result.CreatedAt = types.StringValue(deviceGroup.GetCreatedAt().Format(time.RFC3339))
+    }
+    return result
 }
 
 // errPrintApplicationDeviceGroups returns user-friendly error messages for device groups operations.
@@ -577,9 +597,11 @@ type applicationDeviceGroupResourceModel struct {
 
 // Device group results - all fields.
 type deviceGroupResourceResults struct {
-    ID        types.Int64  `tfsdk:"id"`
-    Name      types.String `tfsdk:"name"`
-    UserAgent types.String `tfsdk:"user_agent"`
+    ID           types.Int64  `tfsdk:"id"`
+    Name         types.String `tfsdk:"name"`
+    UserAgent    types.String `tfsdk:"user_agent"`
+    CreatedAt    types.String `tfsdk:"created_at"`
+    LastModified types.String `tfsdk:"last_modified"`
 }
 ```
 
@@ -643,6 +665,10 @@ func (r *applicationDeviceGroupResource) Create(ctx context.Context, req resourc
         ID:        types.Int64Value(data.GetId()),
         Name:      types.StringValue(data.GetName()),
         UserAgent: types.StringValue(data.GetUserAgent()),
+    }
+    // Handle CreatedAt if it's set
+    if data.CreatedAt.IsSet() && data.CreatedAt.Get() != nil {
+        plan.DeviceGroup.CreatedAt = types.StringValue(data.GetCreatedAt().Format(time.RFC3339))
     }
     plan.SchemaVersion = types.Int64Value(1)
     plan.ID = types.StringValue(fmt.Sprintf("%d:%d", plan.ApplicationID.ValueInt64(), data.GetId()))
@@ -719,6 +745,10 @@ func (r *applicationDeviceGroupResource) Read(ctx context.Context, req resource.
         ID:        types.Int64Value(data.GetId()),
         Name:      types.StringValue(data.GetName()),
         UserAgent: types.StringValue(data.GetUserAgent()),
+    }
+    // Handle CreatedAt if it's set
+    if data.CreatedAt.IsSet() && data.CreatedAt.Get() != nil {
+        state.DeviceGroup.CreatedAt = types.StringValue(data.GetCreatedAt().Format(time.RFC3339))
     }
     state.SchemaVersion = types.Int64Value(1)
 
@@ -805,6 +835,10 @@ func (r *applicationDeviceGroupResource) Update(ctx context.Context, req resourc
         ID:        types.Int64Value(data.GetId()),
         Name:      types.StringValue(data.GetName()),
         UserAgent: types.StringValue(data.GetUserAgent()),
+    }
+    // Handle CreatedAt if it's set
+    if data.CreatedAt.IsSet() && data.CreatedAt.Get() != nil {
+        plan.DeviceGroup.CreatedAt = types.StringValue(data.GetCreatedAt().Format(time.RFC3339))
     }
     plan.SchemaVersion = types.Int64Value(1)
     plan.ID = types.StringValue(fmt.Sprintf("%d:%d", applicationID, data.GetId()))
@@ -915,6 +949,8 @@ func (r *applicationDeviceGroupResource) ImportState(ctx context.Context, req re
 | `device_group.id` | N/A | N/A | Computed |
 | `device_group.name` | Computed | Computed | Required |
 | `device_group.user_agent` | Computed | Computed | Required |
+| `device_group.created_at` | Computed | Computed | Computed |
+| `device_group.last_modified` | N/A | N/A | Computed |
 | `last_updated` | N/A | N/A | Computed |
 | `schema_version` | N/A | N/A | Computed |
 
@@ -956,6 +992,14 @@ func (r *applicationDeviceGroupResource) Schema(_ context.Context, _ resource.Sc
                     "user_agent": schema.StringAttribute{
                         Description: "Regular expression pattern to identify user agents.",
                         Required:    true,
+                    },
+                    "created_at": schema.StringAttribute{
+                        Description: "The creation timestamp of the device group.",
+                        Computed:    true,
+                    },
+                    "last_modified": schema.StringAttribute{
+                        Description: "The last modified timestamp of the device group.",
+                        Computed:    true,
                     },
                 },
             },
@@ -1275,6 +1319,7 @@ When generating or updating Application Device Group data sources or resources:
 | `id` | `int64` | Unique identifier |
 | `name` | `string` | Device group name |
 | `user_agent` | `string` | Regular expression pattern to match user agents |
+| `created_at` | `time.Time` | Creation timestamp of the device group |
 
 ### DeviceGroupRequest Fields
 

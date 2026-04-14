@@ -100,6 +100,7 @@ type WorkloadResults struct {
     Active                    types.Bool         `tfsdk:"active"`
     LastEditor                types.String       `tfsdk:"last_editor"`
     LastModified              types.String       `tfsdk:"last_modified"`
+    CreatedAt                 types.String       `tfsdk:"created_at"`
     Infrastructure            types.Int64        `tfsdk:"infrastructure"`
     Tls                       *TLSWorkloadModel  `tfsdk:"tls"`
     Protocols                 *ProtocolsModel    `tfsdk:"protocols"`
@@ -151,6 +152,29 @@ type WorkloadsDataSourceModel struct {
     Counter types.Int64        `tfsdk:"counter"`
     Results []WorkloadsResults `tfsdk:"results"`
     ID      types.String       `tfsdk:"id"`
+}
+
+type WorkloadsResults struct {
+    ID                        types.Int64        `tfsdk:"id"`
+    Name                      types.String       `tfsdk:"name"`
+    Active                    types.Bool         `tfsdk:"active"`
+    LastEditor                types.String       `tfsdk:"last_editor"`
+    LastModified              types.String       `tfsdk:"last_modified"`
+    CreatedAt                 types.String       `tfsdk:"created_at"`
+    Infrastructure            types.Int64        `tfsdk:"infrastructure"`
+    Tls                       *TLSWorkloadsModel `tfsdk:"tls"`
+    Protocols                 *ProtocolsModel    `tfsdk:"protocols"`
+    Mtls                      *MTLSModel         `tfsdk:"mtls"`
+    Domains                   types.List         `tfsdk:"domains"`
+    WorkloadDomainAllowAccess types.Bool         `tfsdk:"workload_domain_allow_access"`
+    WorkloadDomain            types.String       `tfsdk:"workload_domain"`
+    ProductVersion            types.String       `tfsdk:"product_version"`
+}
+
+type TLSWorkloadsModel struct {
+    Certificate    types.Int64  `tfsdk:"certificate"`
+    Ciphers        types.Int64  `tfsdk:"ciphers"`
+    MinimumVersion types.String `tfsdk:"minimum_version"`
 }
 ```
 
@@ -673,6 +697,7 @@ type workloadResourceResults struct {
     Active                    types.Bool                `tfsdk:"active"`
     LastEditor                types.String              `tfsdk:"last_editor"`
     LastModified              types.String              `tfsdk:"last_modified"`
+    CreatedAt                 types.String              `tfsdk:"created_at"`
     Infrastructure            types.Int64               `tfsdk:"infrastructure"`
     Tls                       *TLSWorkloadResourceModel `tfsdk:"tls"`
     Protocols                 *ProtocolsResourceModel   `tfsdk:"protocols"`

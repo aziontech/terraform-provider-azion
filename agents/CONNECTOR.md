@@ -96,6 +96,7 @@ type connectorResourceResults struct {
     Name           types.String            `tfsdk:"name"`
     LastEditor     types.String            `tfsdk:"last_editor"`
     LastModified   types.String            `tfsdk:"last_modified"`
+    CreatedAt      types.String            `tfsdk:"created_at"`
     ProductVersion types.String            `tfsdk:"product_version"`
     Active         types.Bool              `tfsdk:"active"`
     Type           types.String            `tfsdk:"type"`
@@ -374,6 +375,7 @@ type ConnectorResults struct {
     Name           types.String `tfsdk:"name"`
     LastEditor     types.String `tfsdk:"last_editor"`
     LastModified   types.String `tfsdk:"last_modified"`
+    CreatedAt      types.String `tfsdk:"created_at"`
     ProductVersion types.String `tfsdk:"product_version"`
     Active         types.Bool   `tfsdk:"active"`
     Type           types.String `tfsdk:"type"`

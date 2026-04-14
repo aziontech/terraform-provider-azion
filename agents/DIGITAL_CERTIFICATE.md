@@ -119,7 +119,7 @@ type CertificateResultsModel struct {
     ID                 types.Int64    `tfsdk:"id"`
     Name               types.String   `tfsdk:"name"`
     Issuer             types.String   `tfsdk:"issuer"`
-    SubjectName        types.List     `tfsdk:"subject_name"`
+    SubjectName        []types.String `tfsdk:"subject_name"`
     Validity           types.String   `tfsdk:"validity"`
     Status             types.String   `tfsdk:"status"`
     StatusDetail       types.String   `tfsdk:"status_detail"`
@@ -282,7 +282,7 @@ type CertificatesResultModel struct {
     ID             types.Int64    `tfsdk:"id"`
     Name           types.String   `tfsdk:"name"`
     Issuer             types.String   `tfsdk:"issuer"`
-    SubjectName        types.List     `tfsdk:"subject_name"`
+    SubjectName        []types.String `tfsdk:"subject_name"`
     Validity           types.String   `tfsdk:"validity"`
     Status         types.String   `tfsdk:"status"`
     StatusDetail   types.String   `tfsdk:"status_detail"`

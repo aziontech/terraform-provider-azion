@@ -100,7 +100,7 @@ func (d *ConnectorsDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 							Computed:    true,
 						},
 						"type": schema.StringAttribute{
-							Description: "Type of the connector (http, storage, live_ingest).",
+							Description: "Type of the connector (http, storage).",
 							Computed:    true,
 						},
 						"attributes": schema.StringAttribute{

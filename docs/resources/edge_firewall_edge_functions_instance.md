@@ -65,3 +65,4 @@ Import is supported using the following syntax:
 
 ```shell
 terraform import azion_firewall_functions_instance.example <firewall_id>/<function_instance_id>
+```

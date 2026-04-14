@@ -112,6 +112,7 @@ type NetworkListResult struct {
     ID           types.Int64  `tfsdk:"id"`
     LastEditor   types.String `tfsdk:"last_editor"`
     LastModified types.String `tfsdk:"last_modified"`
+    CreatedAt    types.String `tfsdk:"created_at"`
     Type         types.String `tfsdk:"type"`
     Name         types.String `tfsdk:"name"`
     Items        types.List   `tfsdk:"items"`
@@ -153,6 +154,10 @@ func (n *NetworkListDataSource) Schema(_ context.Context, _ datasource.SchemaReq
                         Description: "Last modified timestamp of the network list.",
                         Computed:    true,
                     },
+                    "created_at": schema.StringAttribute{
+                        Description: "Creation timestamp of the network list.",
+                        Computed:    true,
+                    },
                     "type": schema.StringAttribute{
                         Description: "Type of the network list. Can be: asn, countries, or ip_cidr.",
                         Computed:    true,
@@ -164,7 +169,7 @@ func (n *NetworkListDataSource) Schema(_ context.Context, _ datasource.SchemaReq
                     "items": schema.ListAttribute{
                         Computed:    true,
                         ElementType: types.StringType,
-                        Description: "List of items in the network list.",
+                        Description: "List of items in the network list. Contents depend on the type: country codes, IP addresses, or ASN numbers.",
                     },
                 },
             },
@@ -211,13 +216,13 @@ func (n *NetworkListDataSource) Read(ctx context.Context, req datasource.ReadReq
     }
 
     // Populate the state
-    networkListState := populateNetworkListResult(ctx, networkListResponse.GetData())
+    networkListState := populateNetworkListResult(networkListResponse.GetData())
     diags := resp.State.Set(ctx, &networkListState)
     resp.Diagnostics.Append(diags...)
 }
 
 // Helper function to populate the result
-func populateNetworkListResult(ctx context.Context, data azionapi.NetworkList) NetworkListDataSourceModel {
+func populateNetworkListResult(data azionapi.NetworkList) NetworkListDataSourceModel {
     var itemsSlice []types.String
     for _, item := range data.GetItems() {
         itemsSlice = append(itemsSlice, types.StringValue(item))
@@ -229,6 +234,7 @@ func populateNetworkListResult(ctx context.Context, data azionapi.NetworkList) N
             ID:           types.Int64Value(data.GetId()),
             LastEditor:   types.StringValue(data.GetLastEditor()),
             LastModified: types.StringValue(data.GetLastModified().Format(time.RFC3339)),
+            CreatedAt:    types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
             Type:         types.StringValue(data.GetType()),
             Name:         types.StringValue(data.GetName()),
             Items:        utils.SliceStringTypeToList(itemsSlice),
@@ -294,6 +300,7 @@ type NetworkListsResults struct {
     ID           types.Int64  `tfsdk:"id"`
     LastEditor   types.String `tfsdk:"last_editor"`
     LastModified types.String `tfsdk:"last_modified"`
+    CreatedAt    types.String `tfsdk:"created_at"`
     Type         types.String `tfsdk:"type"`
     Name         types.String `tfsdk:"name"`
 }
@@ -335,6 +342,7 @@ func (n *NetworkListsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
                         "id":            schema.Int64Attribute{Computed: true},
                         "last_editor":   schema.StringAttribute{Computed: true},
                         "last_modified": schema.StringAttribute{Computed: true},
+                        "created_at":    schema.StringAttribute{Computed: true},
                         "type":          schema.StringAttribute{Computed: true},
                         "name":          schema.StringAttribute{Computed: true},
                     },
@@ -398,6 +406,7 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
             ID:           types.Int64Value(nl.GetId()),
             LastEditor:   types.StringValue(nl.GetLastEditor()),
             LastModified: types.StringValue(nl.GetLastModified().Format(time.RFC3339)),
+            CreatedAt:    types.StringValue(nl.GetCreatedAt().Format(time.RFC3339)),
             Type:         types.StringValue(nl.GetType()),
             Name:         types.StringValue(nl.GetName()),
         }
@@ -485,6 +494,7 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
         ID:           types.Int64Value(data.GetId()),
         LastEditor:   types.StringValue(data.GetLastEditor()),
         LastModified: types.StringValue(data.GetLastModified().Format(time.RFC3339)),
+        CreatedAt:    types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
         Type:         types.StringValue(data.GetType()),
         Name:         types.StringValue(data.GetName()),
         Items:        utils.SliceStringTypeToSet(sliceString),

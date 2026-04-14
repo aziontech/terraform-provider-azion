@@ -2,6 +2,36 @@
 
 This document provides specific guidance for implementing DNSSEC resources and data sources in the Terraform provider.
 
+## Important: Data Source vs Resource Differences
+
+The DNSSEC data source and resource have **different zone_id types**:
+
+| Component | Zone ID Type | Reason |
+|-----------|-------------|--------|
+| **Data Source** | `types.Int64` | Used for reading - accepts numeric input directly |
+| **Resource** | `types.String` | Used for import - string ID passed through from import state |
+
+**Data Source Schema:**
+```go
+"zone_id": schema.Int64Attribute{
+    Description: "The zone identifier to target for the resource.",
+    Required:    true,
+}
+```
+
+**Resource Schema:**
+```go
+"zone_id": schema.StringAttribute{
+    Required:    true,
+    Description: "The zone identifier to target for the resource.",
+    PlanModifiers: []planmodifier.String{
+        stringplanmodifier.UseStateForUnknown(),
+    },
+}
+```
+
+The resource uses `types.String` for `zone_id` because `ImportStatePassthroughID` passes the import ID as a string.
+
 ## Important: SDK Naming Convention
 
 When implementing DNSSEC resources, **do not use the "edge" prefix** in variable names or struct fields. The V4 SDK (`azion-api`) uses cleaner naming without this prefix:
@@ -775,7 +805,7 @@ terraform-provider-azion/
 ### Model Struct Naming
 
 ```go
-// Resource model
+// Resource model - note zone_id is types.String for import support
 type dnssecResourceModel struct {
     ZoneId        types.String `tfsdk:"zone_id"`
     SchemaVersion types.Int64  `tfsdk:"schema_version"`
@@ -787,13 +817,30 @@ type dnssecModel struct {
     IsEnabled types.Bool `tfsdk:"is_enabled"`
 }
 
-// Data source model
+// Data source model - note zone_id is types.Int64 for numeric input
 type dnssecDataSourceModel struct {
     ID               types.String             `tfsdk:"id"`
-    ZoneId           types.Int64              `tfsdk:"zone_id"`
+    ZoneId           types.Int64              `tfsdk:"zone_id"`  // Int64 for data source
     SchemaVersion    types.Int64              `tfsdk:"schema_version"`
     Dnssec           *dnssecDSModel           `tfsdk:"dnssec"`
     DelegationSigner *DelegationSignerDSModel `tfsdk:"delegation_signer"`
+}
+
+type dnssecDSModel struct {
+    IsEnabled types.Bool   `tfsdk:"is_enabled"`
+    Status    types.String `tfsdk:"status"`
+}
+
+type DelegationSignerDSModel struct {
+    AlgorithmType *AlgTypeDS   `tfsdk:"algorithm_type"`
+    Digest        types.String `tfsdk:"digest"`
+    DigestType    *AlgTypeDS   `tfsdk:"digest_type"`
+    KeyTag        types.Int64  `tfsdk:"key_tag"`
+}
+
+type AlgTypeDS struct {
+    Id   types.Int64  `tfsdk:"id"`
+    Slug types.String `tfsdk:"slug"`
 }
 ```
 

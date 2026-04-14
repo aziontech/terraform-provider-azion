@@ -202,6 +202,10 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
         }
     }
 
+    if response != nil {
+        defer response.Body.Close()
+    }
+
     zoneData := zoneResponse.GetData()
 
     // Convert nameservers to Terraform List
@@ -454,6 +458,10 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
         }
     }
 
+    if response != nil {
+        defer response.Body.Close()
+    }
+
     zoneState := ZonesDataSourceModel{
         Page:     types.Int64Value(Page.ValueInt64()),
         PageSize: types.Int64Value(PageSize.ValueInt64()),
@@ -570,6 +578,7 @@ package provider
 import (
     "context"
     "fmt"
+    "io"
     "net/http"
     "strconv"
     "time"
@@ -653,10 +662,20 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
                 return
             }
         } else {
+            bodyBytes, errReadAll := io.ReadAll(response.Body)
+            if errReadAll != nil {
+                resp.Diagnostics.AddError(errReadAll.Error(), "err")
+                return
+            }
+            bodyString := string(bodyBytes)
             usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
-            resp.Diagnostics.AddError(usrMsg, errMsg)
+            resp.Diagnostics.AddError(usrMsg, fmt.Sprintf("%s\nDetails: %s", errMsg, bodyString))
             return
         }
+    }
+
+    if response != nil {
+        defer response.Body.Close()
     }
 
     zoneData := zoneResponse.GetData()
@@ -746,6 +765,10 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
         }
     }
 
+    if response != nil {
+        defer response.Body.Close()
+    }
+
     zoneData := zoneResponse.GetData()
 
     // Convert nameservers to Terraform List
@@ -833,6 +856,10 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
         }
     }
 
+    if response != nil {
+        defer response.Body.Close()
+    }
+
     zoneData := zoneResponse.GetData()
 
     // Convert nameservers to Terraform List
@@ -913,6 +940,10 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
             resp.Diagnostics.AddError(usrMsg, errMsg)
             return
         }
+    }
+
+    if response != nil {
+        defer response.Body.Close()
     }
 }
 ```
