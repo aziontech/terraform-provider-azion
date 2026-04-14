@@ -60,6 +60,7 @@ type certificateResultsModel struct {
 	Active             types.Bool   `tfsdk:"active"`
 	ProductVersion     types.String `tfsdk:"product_version"`
 	LastEditor         types.String `tfsdk:"last_editor"`
+	CreatedAt          types.String `tfsdk:"created_at"`
 	LastModified       types.String `tfsdk:"last_modified"`
 	RenewedAt          types.String `tfsdk:"renewed_at"`
 	CertificateContent types.String `tfsdk:"certificate_content"`
@@ -164,6 +165,10 @@ func (r *certificateResource) Schema(_ context.Context, _ resource.SchemaRequest
 					},
 					"last_editor": schema.StringAttribute{
 						Description: "Last editor of the certificate.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "Creation timestamp of the certificate.",
 						Computed:    true,
 					},
 					"last_modified": schema.StringAttribute{
@@ -525,6 +530,11 @@ func populateCertificateResultsFromAPI(ctx context.Context, cert azionapi.Certif
 		renewedAt = (*cert.RenewedAt.Get()).Format(time.RFC3339)
 	}
 
+	var createdAt string
+	if cert.CreatedAt.IsSet() && cert.CreatedAt.Get() != nil {
+		createdAt = (*cert.CreatedAt.Get()).Format(time.RFC3339)
+	}
+
 	result := &certificateResultsModel{
 		ID:                 types.Int64Value(cert.GetId()),
 		Name:               types.StringValue(cert.GetName()),
@@ -541,6 +551,7 @@ func populateCertificateResultsFromAPI(ctx context.Context, cert azionapi.Certif
 		KeyAlgorithm:       types.StringValue(cert.GetKeyAlgorithm()),
 		ProductVersion:     types.StringValue(cert.GetProductVersion()),
 		LastEditor:         types.StringValue(cert.GetLastEditor()),
+		CreatedAt:          types.StringValue(createdAt),
 		LastModified:       types.StringValue(cert.GetLastModified().Format(time.RFC3339)),
 		RenewedAt:          types.StringValue(renewedAt),
 		CertificateContent: types.StringValue(certificateContent),
