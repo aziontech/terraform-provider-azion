@@ -61,6 +61,7 @@ Read-Only:
 - `key_algorithm` (String) Key algorithm used for the certificate.
 - `last_editor` (String) Last editor of the certificate.
 - `last_modified` (String) Last modified timestamp of the certificate.
+- `created_at` (String) Creation timestamp of the certificate.
 - `managed` (Boolean) Indicates whether the digital certificate is managed.
 - `name` (String) Name of the digital certificate.
 - `product_version` (String) Product version of the certificate.
