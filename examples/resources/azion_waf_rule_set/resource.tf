@@ -23,9 +23,9 @@ resource "azion_waf_rule_set" "example" {
 resource "azion_waf_rule_set" "header_example" {
   waf_id = 12345
   result = {
-    name     = "Header Exception"
-    active   = true
-    rule_id  = 0
+    name    = "Header Exception"
+    active  = true
+    rule_id = 0
 
     conditions = [
       {
@@ -42,9 +42,9 @@ resource "azion_waf_rule_set" "header_example" {
 resource "azion_waf_rule_set" "value_example" {
   waf_id = 12345
   result = {
-    name     = "Query String Exception"
-    active   = true
-    rule_id  = 0
+    name    = "Query String Exception"
+    active  = true
+    rule_id = 0
 
     conditions = [
       {
