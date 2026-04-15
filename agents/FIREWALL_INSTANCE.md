@@ -81,9 +81,11 @@ The "edge" prefix has been **completely removed** from all naming - both interna
 | `EdgeFirewallFunctionsInstanceDataSource` | `FirewallFunctionsInstanceDataSource` |
 | `EdgeFirewallFunctionInstanceDataSourceModel` | `FirewallFunctionInstanceDataSourceModel` |
 | `EdgeFirewallEdgeFunctionInstanceResults` | `FirewallFunctionInstanceData` |
-| `EdgeFirewallEdgeFunctionsInstanceResults行者Results` | `FirewallFunctionInstanceResults` |
+| `EdgeFirewallEdgeFunctionsInstanceResults` | `FirewallFunctionInstanceResults` |
 | `edge_firewall_id` (Terraform attribute) | `firewall_id` |
 | `azion_edge_firewall_edge_function_instance` (type name) | `azion_firewall_function_instance` |
+
+> **Note:** The actual implementation uses `firewall_id` as the attribute name in both schema and struct tags. The "edge" prefix has been completely removed from all naming.
 
 ### Naming Convention for Structs
 
@@ -151,6 +153,8 @@ type EdgeFirewallEdgeFunctionInstanceDataSource struct {  // Don't use "Edge" pr
 | Plural Data Source | `azion_firewall_functions_instance` |
 | Resource | `azion_firewall_functions_instance` |
 
+> **Note:** The Terraform resource names do not include the `edge_` prefix. The internal Go code naming also follows this convention - no "edge" prefix in struct names, variable names, or attribute names.
+
 ---
 
 ## Data Source Implementation
@@ -178,7 +182,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func dataSourceAzionEdgeFirewallEdgeFunctionInstance() datasource.DataSource {
+func dataSourceAzionFirewallFunctionInstance() datasource.DataSource {
 	return &FirewallFunctionInstanceDataSource{}
 }
 
@@ -188,7 +192,7 @@ type FirewallFunctionInstanceDataSource struct {
 
 type FirewallFunctionInstanceDataSourceModel struct {
 	ID         types.Int64                  `tfsdk:"id"`
-	FirewallID types.Int64                  `tfsdk:"edge_firewall_id"`
+	FirewallID types.Int64                  `tfsdk:"firewall_id"`
 	Data       FirewallFunctionInstanceData `tfsdk:"data"`
 }
 
@@ -200,6 +204,7 @@ type FirewallFunctionInstanceData struct {
 	Active       types.Bool   `tfsdk:"active"`
 	LastEditor   types.String `tfsdk:"last_editor"`
 	LastModified types.String `tfsdk:"last_modified"`
+	CreatedAt    types.String `tfsdk:"created_at"`
 }
 
 func (f *FirewallFunctionInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -210,17 +215,17 @@ func (f *FirewallFunctionInstanceDataSource) Configure(_ context.Context, req da
 }
 
 func (f *FirewallFunctionInstanceDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_firewall_edge_function_instance"
+	resp.TypeName = req.ProviderTypeName + "_firewall_function_instance"
 }
 
 func (f *FirewallFunctionInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int64Attribute{
-				Description: "Numeric identifier of the data source.",
-				Computed:    true,
+				Description: "ID of the firewall function instance to retrieve.",
+				Required:    true,
 			},
-			"edge_firewall_id": schema.Int64Attribute{
+			"firewall_id": schema.Int64Attribute{
 				Description: "Identifier of the Firewall",
 				Required:    true,
 			},
@@ -255,6 +260,10 @@ func (f *FirewallFunctionInstanceDataSource) Schema(_ context.Context, _ datasou
 						Description: "Last modified timestamp of the firewall function instance.",
 						Computed:    true,
 					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp of the firewall function instance.",
+						Computed:    true,
+					},
 				},
 			},
 		},
@@ -265,13 +274,17 @@ func (f *FirewallFunctionInstanceDataSource) Read(ctx context.Context, req datas
 	var firewallID types.Int64
 	var functionInstanceID types.Int64
 
-	diagsFirewallId := req.Config.GetAttribute(ctx, path.Root("edge_firewall_id"), &firewallID)
+	diagsFirewallId := req.Config.GetAttribute(ctx, path.Root("firewall_id"), &firewallID)
 	resp.Diagnostics.Append(diagsFirewallId...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	functionInstanceID = types.Int64Value(0)
+	diagsFunctionInstanceId := req.Config.GetAttribute(ctx, path.Root("id"), &functionInstanceID)
+	resp.Diagnostics.Append(diagsFunctionInstanceId...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	firewallFunctionInstanceResponse, response, err := f.client.api.FirewallsFunctionAPI.
 		RetrieveFirewallFunction(ctx, firewallID.ValueInt64(), functionInstanceID.ValueInt64()).Execute()
@@ -326,10 +339,11 @@ func (f *FirewallFunctionInstanceDataSource) Read(ctx context.Context, req datas
 		Active:       types.BoolValue(firewallFunctionInstanceResponse.Data.GetActive()),
 		LastEditor:   types.StringValue(firewallFunctionInstanceResponse.Data.GetLastEditor()),
 		LastModified: types.StringValue(firewallFunctionInstanceResponse.Data.GetLastModified().Format(time.RFC3339)),
+		CreatedAt:    types.StringValue(firewallFunctionInstanceResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	state := FirewallFunctionInstanceDataSourceModel{
-		ID:         firewallID,
+		ID:         functionInstanceID,
 		FirewallID: firewallID,
 		Data:       data,
 	}
@@ -367,7 +381,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func dataSourceAzionEdgeFirewallEdgeFunctionsInstance() datasource.DataSource {
+func dataSourceAzionFirewallFunctionsInstance() datasource.DataSource {
 	return &FirewallFunctionsInstanceDataSource{}
 }
 
@@ -377,7 +391,7 @@ type FirewallFunctionsInstanceDataSource struct {
 
 type FirewallFunctionsInstanceDataSourceModel struct {
 	ID         types.Int64                       `tfsdk:"id"`
-	FirewallID types.Int64                       `tfsdk:"edge_firewall_id"`
+	FirewallID types.Int64                       `tfsdk:"firewall_id"`
 	Counter    types.Int64                       `tfsdk:"counter"`
 	Page       types.Int64                       `tfsdk:"page"`
 	PageSize   types.Int64                       `tfsdk:"page_size"`
@@ -393,6 +407,7 @@ type FirewallFunctionInstanceResults struct {
 	Active       types.Bool   `tfsdk:"active"`
 	LastEditor   types.String `tfsdk:"last_editor"`
 	LastModified types.String `tfsdk:"last_modified"`
+	CreatedAt    types.String `tfsdk:"created_at"`
 }
 
 func (f *FirewallFunctionsInstanceDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -403,7 +418,7 @@ func (f *FirewallFunctionsInstanceDataSource) Configure(_ context.Context, req d
 }
 
 func (f *FirewallFunctionsInstanceDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_firewall_edge_functions_instance"
+	resp.TypeName = req.ProviderTypeName + "_firewall_functions_instance"
 }
 
 func (f *FirewallFunctionsInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -413,7 +428,7 @@ func (f *FirewallFunctionsInstanceDataSource) Schema(_ context.Context, _ dataso
 				Description: "Numeric identifier of the data source.",
 				Computed:    true,
 			},
-			"edge_firewall_id": schema.Int64Attribute{
+			"firewall_id": schema.Int64Attribute{
 				Description: "Numeric identifier of the Firewall",
 				Required:    true,
 			},
@@ -465,6 +480,10 @@ func (f *FirewallFunctionsInstanceDataSource) Schema(_ context.Context, _ dataso
 							Description: "Last modified timestamp of the firewall function instance.",
 							Computed:    true,
 						},
+						"created_at": schema.StringAttribute{
+							Description: "The creation timestamp of the firewall function instance.",
+							Computed:    true,
+						},
 					},
 				},
 			},
@@ -477,7 +496,7 @@ func (f *FirewallFunctionsInstanceDataSource) Read(ctx context.Context, req data
 	var pageSize types.Int64
 	var firewallID types.Int64
 
-	diagsFirewallId := req.Config.GetAttribute(ctx, path.Root("edge_firewall_id"), &firewallID)
+	diagsFirewallId := req.Config.GetAttribute(ctx, path.Root("firewall_id"), &firewallID)
 	resp.Diagnostics.Append(diagsFirewallId...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -562,6 +581,7 @@ func (f *FirewallFunctionsInstanceDataSource) Read(ctx context.Context, req data
 			Active:       types.BoolValue(result.GetActive()),
 			LastEditor:   types.StringValue(result.GetLastEditor()),
 			LastModified: types.StringValue(result.GetLastModified().Format(time.RFC3339)),
+			CreatedAt:    types.StringValue(result.GetCreatedAt().Format(time.RFC3339)),
 		}
 		functionInstancesResults = append(functionInstancesResults, functionInstance)
 	}
@@ -594,10 +614,11 @@ func (f *FirewallFunctionsInstanceDataSource) Read(ctx context.Context, req data
 | **API Method** | `RetrieveFirewallFunction(ctx, firewallId, functionId)` | `ListFirewallFunction(ctx, firewallId).Page().PageSize()` |
 | **Response Type** | `*sdk.FirewallFunctionInstanceResponse` | `*sdk.PaginatedFirewallFunctionInstanceList` |
 | **Data Attribute** | `schema.SingleNestedAttribute` | `schema.ListNestedAttribute` |
-| **ID Field** | `types.Int64` (single ID) | `types.Int64` (firewall ID, results have their own IDs) |
+| **ID Field** | `types.Int64` (Required - function instance ID) | `types.Int64` (Computed - firewall ID) |
 | **Pagination** | No | Yes (`page`, `page_size`, `counter`, `total_pages`) |
 | **Struct Naming** | `FirewallFunctionInstanceDataSource` | `FirewallFunctionsInstanceDataSource` (plural) |
 | **Results Struct** | `FirewallFunctionInstanceData` | `FirewallFunctionInstanceResults` |
+| **Created At Field** | Included in data struct | Included in results struct |
 
 ---
 
@@ -618,7 +639,7 @@ type FirewallFunctionInstanceResourceModel struct {
 	State       types.String                         `tfsdk:"state"`
 	Data        FirewallFunctionInstanceResourceData `tfsdk:"data"`
 	ID          types.String                         `tfsdk:"id"`
-	FirewallID  types.Int64                          `tfsdk:"edge_firewall_id"`
+	FirewallID  types.Int64                          `tfsdk:"firewall_id"`
 	LastUpdated types.String                         `tfsdk:"last_updated"`
 }
 
@@ -631,6 +652,7 @@ type FirewallFunctionInstanceResourceData struct {
 	Active       types.Bool   `tfsdk:"active"`
 	LastEditor   types.String `tfsdk:"last_editor"`
 	LastModified types.String `tfsdk:"last_modified"`
+	CreatedAt    types.String `tfsdk:"created_at"`
 }
 ```
 
@@ -647,7 +669,7 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	diagsFirewallID := req.Config.GetAttribute(ctx, path.Root("edge_firewall_id"), &firewallID)
+	diagsFirewallID := req.Config.GetAttribute(ctx, path.Root("firewall_id"), &firewallID)
 	resp.Diagnostics.Append(diagsFirewallID...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -655,14 +677,13 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 
 	// Handle JSON args
 	var argsStr string
-	if plan.Data.Args.IsUnknown() {
+	if plan.Data.Args.IsNull() || plan.Data.Args.IsUnknown() {
 		argsStr = "{}"
 	} else {
-		if plan.Data.Args.ValueString() == "" || plan.Data.Args.IsNull() {
-			resp.Diagnostics.AddError("Args", "Is not null")
-			return
-		}
 		argsStr = plan.Data.Args.ValueString()
+		if argsStr == "" {
+			argsStr = "{}"
+		}
 	}
 
 	planJsonArgs, err := utils.UnmarshallJsonArgsFirewall(argsStr)
@@ -676,6 +697,7 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 		Name:     plan.Data.Name.ValueString(),
 		Function: plan.Data.Function.ValueInt64(),
 		Args:     &planJsonArgs,
+		Active:   plan.Data.Active.ValueBoolPointer(),
 	}
 
 	// Call API
@@ -709,6 +731,7 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 		Active:       types.BoolValue(functionInstanceResponse.Data.GetActive()),
 		LastEditor:   types.StringValue(functionInstanceResponse.Data.GetLastEditor()),
 		LastModified: types.StringValue(functionInstanceResponse.Data.GetLastModified().Format(time.RFC850)),
+		CreatedAt:    types.StringValue(functionInstanceResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	plan.State = types.StringValue(functionInstanceResponse.GetState())
@@ -790,6 +813,7 @@ func (r *FirewallFunctionsInstanceResource) Read(ctx context.Context, req resour
 			Args:         types.StringValue(jsonArgsStr),
 			Function:     types.Int64Value(functionInstanceResponse.Data.GetFunction()),
 			Active:       types.BoolValue(functionInstanceResponse.Data.GetActive()),
+			CreatedAt:    types.StringValue(functionInstanceResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		},
 	}
 
@@ -821,29 +845,21 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	// Determine IDs from plan or state
-	if plan.Data.ID.IsNull() {
-		functionInstanceID = state.Data.ID
-	} else {
-		functionInstanceID = plan.Data.ID
-	}
+	// Always use the function instance ID from state (it's a computed field)
+	functionInstanceID = state.Data.ID
 
-	if plan.FirewallID.IsNull() {
-		firewallID = state.FirewallID
-	} else {
-		firewallID = plan.FirewallID
-	}
+	// Always use the firewall ID from state (it's required and shouldn't change)
+	firewallID = state.FirewallID
 
 	// Handle JSON args
 	var argsStr string
-	if plan.Data.Args.IsUnknown() {
+	if plan.Data.Args.IsNull() || plan.Data.Args.IsUnknown() {
 		argsStr = "{}"
 	} else {
-		if plan.Data.Args.ValueString() == "" || plan.Data.Args.IsNull() {
-			resp.Diagnostics.AddError("Args", "Is not null")
-			return
-		}
 		argsStr = plan.Data.Args.ValueString()
+		if argsStr == "" {
+			argsStr = "{}"
+		}
 	}
 
 	requestJsonArgsStr, err := utils.UnmarshallJsonArgsFirewall(argsStr)
@@ -857,6 +873,7 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 		Name:     plan.Data.Name.ValueStringPointer(),
 		Function: plan.Data.Function.ValueInt64Pointer(),
 		Args:     &requestJsonArgsStr,
+		Active:   plan.Data.Active.ValueBoolPointer(),
 	}
 
 	updateResponse, response, err := r.client.api.FirewallsFunctionAPI.
@@ -889,6 +906,7 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 		Args:         types.StringValue(jsonArgsStr),
 		ID:           types.Int64Value(updateResponse.Data.GetId()),
 		Active:       types.BoolValue(updateResponse.Data.GetActive()),
+		CreatedAt:    types.StringValue(updateResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	plan.State = types.StringValue(updateResponse.GetState())
@@ -956,7 +974,7 @@ The Read method handles parsing the imported ID in the format `firewallId/functi
 ### Required Attributes
 
 ```go
-"edge_firewall_id": schema.Int64Attribute{
+"firewall_id": schema.Int64Attribute{
     Description: "Identifier of the Firewall",
     Required:    true,
 },
@@ -976,11 +994,14 @@ The Read method handles parsing the imported ID in the format `firewallId/functi
 "active": schema.BoolAttribute{
     Description: "Whether the function instance is active",
     Optional:    true,
-    Default:     booldefault.StaticBool(false),
+    Computed:    true,
+    Default:     booldefault.StaticBool(true),
 },
 "args": schema.StringAttribute{
     Description: "JSON arguments for the function instance",
     Optional:    true,
+    Computed:    true,
+    Default:     stringdefault.StaticString("{}"),
 },
 ```
 
@@ -997,6 +1018,10 @@ The Read method handles parsing the imported ID in the format `firewallId/functi
 },
 "last_modified": schema.StringAttribute{
     Description: "Last modified timestamp",
+    Computed:    true,
+},
+"created_at": schema.StringAttribute{
+    Description: "The creation timestamp of the firewall function instance",
     Computed:    true,
 },
 ```
@@ -1046,7 +1071,20 @@ The `args` field is a JSON string that needs conversion:
 jsonArgsStr, err := utils.ConvertInterfaceToString(response.Data.GetArgs())
 
 // From Terraform to API (Create/Update)
-argsInterface, err := utils.ConvertStringToInterface(plan.Data.Args.ValueString())
+argsInterface, err := utils.UnmarshallJsonArgsFirewall(plan.Data.Args.ValueString())
+```
+
+### 4. Active Field Defaults to true
+
+The `active` field has a default value of `true` (not `false`):
+
+```go
+"active": schema.BoolAttribute{
+    Description: "Whether the function instance is active.",
+    Optional:    true,
+    Computed:    true,
+    Default:     booldefault.StaticBool(true),
+},
 ```
 
 ### 4. Handling Rate Limiting (429)
@@ -1072,6 +1110,17 @@ Since singular and plural data sources are in the same package, use unique struc
 - Singular: `FirewallFunctionInstanceDataSource`, `FirewallFunctionInstanceData`
 - Plural: `FirewallFunctionsInstanceDataSource`, `FirewallFunctionInstanceResults`
 
+### 6. Singular Data Source ID Field
+
+The singular data source's `id` attribute is **Required** (not Computed). Both `id` (function instance ID) and `firewall_id` must be provided to read a specific function instance.
+
+```go
+"id": schema.Int64Attribute{
+    Description: "ID of the firewall function instance to retrieve.",
+    Required:    true,
+},
+```
+
 ---
 
 ## Summary Checklist
@@ -1080,9 +1129,10 @@ When implementing firewall function instance data sources:
 
 1. **Use correct SDK**: `azion-api` (not `edge-api`)
 2. **Client access**: `f.client.api.FirewallsFunctionAPI`
-3. **Naming**: Remove "edge" prefix from all internal struct/function names
+3. **Naming**: No "edge" prefix in Terraform resource names or internal struct/function names
 4. **Unique struct names**: Differentiate singular and plural with `Instance` vs `Instances` or `Data` vs `Results`
 5. **Handle 429 errors**: Use `utils.RetryOn429`
-6. **Handle JSON args**: Use `utils.ConvertInterfaceToString` and `utils.ConvertStringToInterface`
-7. **Time formatting**: Use `time.RFC3339` for last_modified
-8. **Register in provider.go**: Add to `DataSources()` function
+6. **Handle JSON args**: Use `utils.ConvertInterfaceToString` and `utils.UnmarshallJsonArgsFirewall`
+7. **Time formatting**: Use `time.RFC3339` for created_at, `time.RFC850` for last_modified and last_updated
+8. **Register in provider.go**: Add to `DataSources()` and `Resources()` functions
+9. **Include created_at**: All data structs should include the `created_at` field

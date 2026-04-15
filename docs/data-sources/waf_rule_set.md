@@ -56,3 +56,35 @@ Read-Only:
 - `match` (String) The match type for the condition.
 - `name` (String) The name for specific condition on name.
 - `value` (String) The value for specific condition on value.
+
+## Condition Match Types
+
+### Generic Condition Match Types
+
+When `condition_type = "generic"`, the following match types are available:
+
+- `any_http_header_name` - Any HTTP header name
+- `any_http_header_value` - Any HTTP header value
+- `any_query_string_name` - Any query string parameter name
+- `any_query_string_value` - Any query string parameter value
+- `any_url` - Any URL
+- `body_form_field_name` - Body form field name
+- `body_form_field_value` - Body form field value
+- `file_extension` - File extension
+- `raw_body` - Raw request body
+
+### Specific Condition on Name Match Types
+
+When `condition_type = "specific_on_name"`, the `name` field is populated and the following match types are available:
+
+- `specific_body_form_field_name` - Specific body form field name
+- `specific_http_header_name` - Specific HTTP header name
+- `specific_query_string_name` - Specific query string name
+
+### Specific Condition on Value Match Types
+
+When `condition_type = "specific_on_value"`, the `value` field is populated and the following match types are available:
+
+- `specific_body_form_field_value` - Specific body form field value
+- `specific_http_header_value` - Specific HTTP header value
+- `specific_query_string_value` - Specific query string value

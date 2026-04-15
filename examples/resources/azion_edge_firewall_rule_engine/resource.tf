@@ -14,7 +14,7 @@ resource "azion_edge_firewall_rule_engine" "block_admin" {
       {
         entries = [
           {
-            variable    = "request_uri"
+            variable    = "$${request_uri}"
             operator    = "matches"
             conditional = "if"
             argument    = "/admin.*"
@@ -44,7 +44,7 @@ resource "azion_edge_firewall_rule_engine" "run_function_example" {
       {
         entries = [
           {
-            variable    = "request_uri"
+            variable    = "$${request_uri}"
             operator    = "starts_with"
             conditional = "if"
             argument    = "/api/"
@@ -76,7 +76,7 @@ resource "azion_edge_firewall_rule_engine" "custom_response_example" {
       {
         entries = [
           {
-            variable    = "host"
+            variable    = "$${host}"
             operator    = "is_equal"
             conditional = "if"
             argument    = "maintenance.example.com"
@@ -107,7 +107,7 @@ resource "azion_edge_firewall_rule_engine" "waf_example" {
       {
         entries = [
           {
-            variable    = "host"
+            variable    = "$${host}"
             operator    = "is_equal"
             conditional = "if"
             argument    = "api.example.com"
@@ -140,7 +140,7 @@ resource "azion_edge_firewall_rule_engine" "rate_limit_example" {
       {
         entries = [
           {
-            variable    = "request_uri"
+            variable    = "$${request_uri}"
             operator    = "starts_with"
             conditional = "if"
             argument    = "/api/"
@@ -167,7 +167,7 @@ resource "azion_edge_firewall_rule_engine" "complex_example" {
       {
         entries = [
           {
-            variable    = "request_uri"
+            variable    = "$${request_uri}"
             operator    = "matches"
             conditional = "if"
             argument    = "/admin.*"
@@ -177,7 +177,7 @@ resource "azion_edge_firewall_rule_engine" "complex_example" {
       {
         entries = [
           {
-            variable    = "network"
+            variable    = "$${network}"
             operator    = "is_not_in_list"
             conditional = "and"
             argument    = "12345" # Allowed network list ID

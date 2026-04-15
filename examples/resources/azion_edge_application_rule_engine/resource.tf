@@ -105,7 +105,7 @@ resource "azion_application_rule_engine" "example_response" {
 
     behaviors = [
       {
-        type = "add_request_header"
+        type = "add_response_header"
         attributes = {
           value = "X-Response-Processed: true"
         }

@@ -361,6 +361,8 @@ type ApplicationFunctionInstancesDataSource struct {
 type FunctionInstancesDataSourceModel struct {
     ID            types.Int64                `tfsdk:"id"`
     ApplicationID types.Int64                `tfsdk:"application_id"`
+    Page          types.Int64                `tfsdk:"page"`
+    PageSize      types.Int64                `tfsdk:"page_size"`
     TotalCount    types.Int64                `tfsdk:"total_count"`
     Results       []FunctionInstanceResponse `tfsdk:"results"`
 }
@@ -378,6 +380,79 @@ type FunctionInstanceResponse struct {
 
 func (d *ApplicationFunctionInstancesDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
     resp.TypeName = req.ProviderTypeName + "_application_function_instances"
+}
+
+func (d *ApplicationFunctionInstancesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+    resp.Schema = schema.Schema{
+        Attributes: map[string]schema.Attribute{
+            "id": schema.Int64Attribute{
+                Description: "Numeric identifier of the data source.",
+                Computed:    true,
+            },
+            "application_id": schema.Int64Attribute{
+                Description: "Numeric identifier of the Application.",
+                Required:    true,
+            },
+            "page": schema.Int64Attribute{
+                Description: "Page number for pagination.",
+                Optional:    true,
+            },
+            "page_size": schema.Int64Attribute{
+                Description: "Number of items per page.",
+                Optional:    true,
+            },
+            "total_count": schema.Int64Attribute{
+                Description: "The total number of function instances.",
+                Computed:    true,
+            },
+            "results": schema.ListNestedAttribute{
+                Computed: true,
+                NestedObject: schema.NestedAttributeObject{
+                    Attributes: map[string]schema.Attribute{
+                        "id": schema.Int64Attribute{
+                            Description: "The function instance identifier.",
+                            Computed:    true,
+                        },
+                        "function_id": schema.Int64Attribute{
+                            Description: "The function identifier.",
+                            Computed:    true,
+                        },
+                        "name": schema.StringAttribute{
+                            Description: "Name of the function instance.",
+                            Computed:    true,
+                        },
+                        "args": schema.StringAttribute{
+                            Description: "Arguments of the function instance.",
+                            Computed:    true,
+                        },
+                        "active": schema.BoolAttribute{
+                            Description: "Active status of the function instance.",
+                            Computed:    true,
+                        },
+                        "last_editor": schema.StringAttribute{
+                            Description: "Last editor of the function instance.",
+                            Computed:    true,
+                        },
+                        "last_modified": schema.StringAttribute{
+                            Description: "Last modified timestamp of the function instance.",
+                            Computed:    true,
+                        },
+                        "created_at": schema.StringAttribute{
+                            Description: "The creation timestamp of the function instance.",
+                            Computed:    true,
+                        },
+                    },
+                },
+            },
+        },
+    }
+}
+
+func (d *ApplicationFunctionInstancesDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+    if req.ProviderData == nil {
+        return
+    }
+    d.client = req.ProviderData.(*apiClient)
 }
 
 func (d *ApplicationFunctionInstancesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -435,6 +510,8 @@ func (d *ApplicationFunctionInstancesDataSource) Read(ctx context.Context, req d
 
     state := FunctionInstancesDataSourceModel{
         ApplicationID: applicationID,
+        Page:          page,
+        PageSize:      pageSize,
         TotalCount:    types.Int64Value(functionInstancesResponse.GetCount()),
     }
 

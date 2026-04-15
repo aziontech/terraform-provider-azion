@@ -9,13 +9,37 @@ In order to edit/update a data_source or resource, the agent should receive a .y
 Use these files ONLY when prompted to edit/update said data_sources and/or resources.
 For detailed documentation on specific packages, see the `agents/` folder:
 
+### Applications
 - **[agents/APPLICATIONS.md](agents/APPLICATIONS.md)** - Applications (Main Settings)
 - **[agents/CACHE_SETTINGS.md](agents/CACHE_SETTINGS.md)** - Cache Settings
-- **[agents/FUNCTIONS.md](agents/FUNCTIONS.md)** - Functions
 - **[agents/RULES_ENGINE.md](agents/RULES_ENGINE.md)** - Rules Engine
-- **[agents/FIREWALL.md](agents/FIREWALL.md)** - Edge Firewall (Main Settings)
-- **[agents/FIREWALL_INSTANCE.md](agents/FIREWALL_INSTANCE.md)** - Edge Firewall Function Instances
-- **[agents/FIREWALL_RULES_ENGINE.md](agents/FIREWALL_RULES_ENGINE.md)** - Edge Firewall Rules Engine
+- **[agents/DEVICE_GROUPS.md](agents/DEVICE_GROUPS.md)** - Device Groups
+- **[agents/FUNCTIONS_INSTANCES.md](agents/FUNCTIONS_INSTANCES.md)** - Application Function Instances
+
+### Firewall
+- **[agents/FIREWALL.md](agents/FIREWALL.md)** - Firewall (Main Settings)
+- **[agents/FIREWALL_INSTANCE.md](agents/FIREWALL_INSTANCE.md)** - Firewall Function Instances
+- **[agents/FIREWALL_RULES_ENGINE.md](agents/FIREWALL_RULES_ENGINE.md)** - Firewall Rules Engine
+
+### Functions
+- **[agents/FUNCTIONS.md](agents/FUNCTIONS.md)** - Functions
+
+### Intelligent DNS
+- **[agents/ZONES.md](agents/ZONES.md)** - DNS Zones
+- **[agents/RECORDS.md](agents/RECORDS.md)** - DNS Records
+- **[agents/DNSSEC.md](agents/DNSSEC.md)** - DNSSEC
+
+### WAF
+- **[agents/WAF.md](agents/WAF.md)** - WAF (Main Settings)
+- **[agents/WAF_RULE_SETS.md](agents/WAF_RULE_SETS.md)** - WAF Rule Sets
+
+### Other Resources
+- **[agents/NETWORK_LISTS.md](agents/NETWORK_LISTS.md)** - Network Lists
+- **[agents/CONNECTOR.md](agents/CONNECTOR.md)** - Connector
+- **[agents/CUSTOM_PAGES.md](agents/CUSTOM_PAGES.md)** - Custom Pages
+- **[agents/DIGITAL_CERTIFICATE.md](agents/DIGITAL_CERTIFICATE.md)** - Digital Certificates
+- **[agents/WORKLOAD.md](agents/WORKLOAD.md)** - Workloads
+- **[agents/WORKLOAD_DEPLOYMENT.md](agents/WORKLOAD_DEPLOYMENT.md)** - Workload Deployments
 
 ---
 

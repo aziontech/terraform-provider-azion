@@ -107,6 +107,7 @@ type WorkloadDeploymentResultsModel struct {
     Strategy     *DeploymentStrategyModel     `tfsdk:"strategy"`
     LastEditor   types.String                 `tfsdk:"last_editor"`
     LastModified types.String                 `tfsdk:"last_modified"`
+    CreatedAt    types.String                 `tfsdk:"created_at"`
 }
 
 type DeploymentStrategyModel struct {
@@ -226,10 +227,32 @@ type WorkloadDeploymentsDataSource struct {
 }
 
 type WorkloadDeploymentsDataSourceModel struct {
-    WorkloadID types.String                      `tfsdk:"workload_id"`
-    Count      types.Int64                       `tfsdk:"count"`
-    Results    []WorkloadDeploymentsResultsModel `tfsdk:"results"`
-    ID         types.String                      `tfsdk:"id"`
+    WorkloadID       types.String                      `tfsdk:"workload_id"`
+    DeploymentsCount types.Int64                       `tfsdk:"deployments_count"`
+    Results          []WorkloadDeploymentsResultsModel `tfsdk:"results"`
+    ID               types.String                      `tfsdk:"id"`
+}
+
+type WorkloadDeploymentsResultsModel struct {
+    ID           types.Int64               `tfsdk:"id"`
+    Name         types.String              `tfsdk:"name"`
+    Current      types.Bool                `tfsdk:"current"`
+    Active       types.Bool                `tfsdk:"active"`
+    Strategy     *DeploymentsStrategyModel `tfsdk:"strategy"`
+    LastEditor   types.String              `tfsdk:"last_editor"`
+    LastModified types.String              `tfsdk:"last_modified"`
+    CreatedAt    types.String              `tfsdk:"created_at"`
+}
+
+type DeploymentsStrategyModel struct {
+    Type       types.String                   `tfsdk:"type"`
+    Attributes *DeploymentsStrategyAttrsModel `tfsdk:"attributes"`
+}
+
+type DeploymentsStrategyAttrsModel struct {
+    Application types.Int64 `tfsdk:"application"`
+    Firewall    types.Int64 `tfsdk:"firewall"`
+    CustomPage  types.Int64 `tfsdk:"custom_page"`
 }
 ```
 
@@ -315,7 +338,62 @@ func (d *WorkloadDeploymentDataSource) Schema(_ context.Context, _ datasource.Sc
             "data": schema.SingleNestedAttribute{
                 Computed: true,
                 Attributes: map[string]schema.Attribute{
-                    // ... nested attributes
+                    "id": schema.Int64Attribute{
+                        Description: "The deployment identifier.",
+                        Computed:    true,
+                    },
+                    "name": schema.StringAttribute{
+                        Description: "Name of the deployment.",
+                        Computed:    true,
+                    },
+                    "current": schema.BoolAttribute{
+                        Description: "Whether this is the current deployment.",
+                        Computed:    true,
+                    },
+                    "active": schema.BoolAttribute{
+                        Description: "Status of the deployment.",
+                        Computed:    true,
+                    },
+                    "strategy": schema.SingleNestedAttribute{
+                        Description: "Deployment strategy configuration.",
+                        Computed:    true,
+                        Attributes: map[string]schema.Attribute{
+                            "type": schema.StringAttribute{
+                                Description: "Type of deployment strategy.",
+                                Computed:    true,
+                            },
+                            "attributes": schema.SingleNestedAttribute{
+                                Description: "Strategy attributes.",
+                                Computed:    true,
+                                Attributes: map[string]schema.Attribute{
+                                    "application": schema.Int64Attribute{
+                                        Description: "Application ID for the deployment.",
+                                        Computed:    true,
+                                    },
+                                    "firewall": schema.Int64Attribute{
+                                        Description: "Firewall ID for the deployment.",
+                                        Computed:    true,
+                                    },
+                                    "custom_page": schema.Int64Attribute{
+                                        Description: "Custom page ID for the deployment.",
+                                        Computed:    true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "last_editor": schema.StringAttribute{
+                        Description: "The last editor of the deployment.",
+                        Computed:    true,
+                    },
+                    "last_modified": schema.StringAttribute{
+                        Description: "Last modified timestamp of the deployment.",
+                        Computed:    true,
+                    },
+                    "created_at": schema.StringAttribute{
+                        Description: "The creation timestamp of the deployment.",
+                        Computed:    true,
+                    },
                 },
             },
         },
@@ -345,7 +423,62 @@ func (d *WorkloadDeploymentsDataSource) Schema(_ context.Context, _ datasource.S
                 Computed: true,
                 NestedObject: schema.NestedAttributeObject{
                     Attributes: map[string]schema.Attribute{
-                        // ... nested attributes
+                        "id": schema.Int64Attribute{
+                            Description: "The deployment identifier.",
+                            Computed:    true,
+                        },
+                        "name": schema.StringAttribute{
+                            Description: "Name of the deployment.",
+                            Computed:    true,
+                        },
+                        "current": schema.BoolAttribute{
+                            Description: "Whether this is the current deployment.",
+                            Computed:    true,
+                        },
+                        "active": schema.BoolAttribute{
+                            Description: "Status of the deployment.",
+                            Computed:    true,
+                        },
+                        "strategy": schema.SingleNestedAttribute{
+                            Description: "Deployment strategy configuration.",
+                            Computed:    true,
+                            Attributes: map[string]schema.Attribute{
+                                "type": schema.StringAttribute{
+                                    Description: "Type of deployment strategy.",
+                                    Computed:    true,
+                                },
+                                "attributes": schema.SingleNestedAttribute{
+                                    Description: "Strategy attributes.",
+                                    Computed:    true,
+                                    Attributes: map[string]schema.Attribute{
+                                        "application": schema.Int64Attribute{
+                                            Description: "Application ID for the deployment.",
+                                            Computed:    true,
+                                        },
+                                        "firewall": schema.Int64Attribute{
+                                            Description: "Firewall ID for the deployment.",
+                                            Computed:    true,
+                                        },
+                                        "custom_page": schema.Int64Attribute{
+                                            Description: "Custom page ID for the deployment.",
+                                            Computed:    true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "last_editor": schema.StringAttribute{
+                            Description: "The last editor of the deployment.",
+                            Computed:    true,
+                        },
+                        "last_modified": schema.StringAttribute{
+                            Description: "Last modified timestamp of the deployment.",
+                            Computed:    true,
+                        },
+                        "created_at": schema.StringAttribute{
+                            Description: "The creation timestamp of the deployment.",
+                            Computed:    true,
+                        },
                     },
                 },
             },
@@ -569,6 +702,7 @@ type WorkloadDeploymentResourceResults struct {
     Strategy     *DeploymentStrategyResourceModel      `tfsdk:"strategy"`
     LastEditor   types.String                          `tfsdk:"last_editor"`
     LastModified types.String                          `tfsdk:"last_modified"`
+    CreatedAt    types.String                          `tfsdk:"created_at"`
 }
 
 type DeploymentStrategyResourceModel struct {
@@ -790,6 +924,10 @@ func (r *workloadDeploymentResource) Schema(_ context.Context, _ resource.Schema
                     },
                     "last_modified": schema.StringAttribute{
                         Description: "Last modified timestamp of the deployment.",
+                        Computed:    true,
+                    },
+                    "created_at": schema.StringAttribute{
+                        Description: "Creation timestamp of the deployment.",
                         Computed:    true,
                     },
                 },

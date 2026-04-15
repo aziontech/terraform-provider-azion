@@ -229,6 +229,7 @@ type FirewallResults struct {
 	LastEditor     types.String    `tfsdk:"last_editor"`
 	LastModified   types.String    `tfsdk:"last_modified"`
 	ProductVersion types.String    `tfsdk:"product_version"`
+	CreatedAt      types.String    `tfsdk:"created_at"`
 }
 
 func (f *FirewallDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -336,6 +337,7 @@ func (f *FirewallDataSource) Read(ctx context.Context, req datasource.ReadReques
 		LastEditor:     types.StringValue(firewallResponse.Data.GetLastEditor()),
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
+		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	firewallState := FirewallDataSourceModel{
@@ -486,7 +488,7 @@ type firewallResource struct {
 
 type FirewallResourceModel struct {
 	Firewall    *FirewallResourceResults `tfsdk:"data"`
-	ID          types.Int64              `tfsdk:"id"`
+	ID          types.String             `tfsdk:"id"`
 	LastUpdated types.String             `tfsdk:"last_updated"`
 }
 
@@ -505,6 +507,7 @@ type FirewallResourceResults struct {
 	Active         types.Bool               `tfsdk:"active"`
 	LastEditor     types.String             `tfsdk:"last_editor"`
 	LastModified   types.String             `tfsdk:"last_modified"`
+	CreatedAt      types.String             `tfsdk:"created_at"`
 	ProductVersion types.String             `tfsdk:"product_version"`
 }
 ```
@@ -577,7 +580,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 		Name:           types.StringValue(firewallResponse.Data.GetName()),
 		// ... other fields
 	}
-	plan.ID = types.Int64Value(firewallResponse.Data.GetId())
+	plan.ID = types.StringValue(strconv.FormatInt(firewallResponse.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -601,7 +604,12 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if state.ID.IsNull() {
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
-		firewallID = state.ID.ValueInt64()
+		var err error
+		firewallID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to parse firewall ID", err.Error())
+			return
+		}
 	}
 
 	// Execute API call
@@ -620,7 +628,7 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 		Name:           types.StringValue(firewallResponse.Data.GetName()),
 		// ... other fields
 	}
-	state.ID = types.Int64Value(firewallID)
+	state.ID = types.StringValue(strconv.FormatInt(firewallID, 10))
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -652,7 +660,12 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 	if state.ID.IsNull() {
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
-		firewallID = state.ID.ValueInt64()
+		var err error
+		firewallID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to parse firewall ID", err.Error())
+			return
+		}
 	}
 
 	// Build patched request (use pointers for partial update)
@@ -686,7 +699,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 		Name:           types.StringValue(firewallResponse.Data.GetName()),
 		// ... other fields
 	}
-	plan.ID = types.Int64Value(firewallResponse.Data.GetId())
+	plan.ID = types.StringValue(strconv.FormatInt(firewallResponse.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -709,7 +722,12 @@ func (r *firewallResource) Delete(ctx context.Context, req resource.DeleteReques
 	if state.ID.IsNull() {
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
-		firewallID = state.ID.ValueInt64()
+		var err error
+		firewallID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to parse firewall ID", err.Error())
+			return
+		}
 	}
 
 	_, response, err := r.client.api.FirewallsAPI.DeleteFirewall(ctx, firewallID).Execute()

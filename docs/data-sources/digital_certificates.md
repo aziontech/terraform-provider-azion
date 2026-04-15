@@ -30,9 +30,22 @@ output "certificate_names" {
 
 ### Read-Only
 
-- `id` (String) Identifier of the data source.
+- `counter` (Number) The total number of certificates.
+- `id` (String) Numeric identifier of the data source.
+- `links` (Attributes) Pagination links. (see [below for nested schema](#nestedatt--links))
+- `page` (Number) The current page number.
+- `page_size` (Number) The number of items per page.
 - `results` (Attributes List) List of certificates. (see [below for nested schema](#nestedatt--results))
 - `schema_version` (Number) Schema Version.
+- `total_pages` (Number) The total number of pages.
+
+<a id="nestedatt--links"></a>
+### Nested Schema for `links`
+
+Read-Only:
+
+- `next` (String) Link to the next page.
+- `previous` (String) Link to the previous page.
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
@@ -48,6 +61,7 @@ Read-Only:
 - `key_algorithm` (String) Key algorithm used for the certificate.
 - `last_editor` (String) Last editor of the certificate.
 - `last_modified` (String) Last modified timestamp of the certificate.
+- `created_at` (String) Creation timestamp of the certificate.
 - `managed` (Boolean) Indicates whether the digital certificate is managed.
 - `name` (String) Name of the digital certificate.
 - `product_version` (String) Product version of the certificate.

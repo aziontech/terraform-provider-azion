@@ -46,7 +46,7 @@ Read-Only:
 
 - `active` (Boolean) Whether the certificate is active.
 - `authority` (String) Certificate authority.
-- `certificate_content` (String, Sensitive) The content of the certificate.
+- `certificate_content` (String) The content of the certificate.
 - `certificate_type` (String) Type of the certificate.
 - `challenge` (String) Challenge type for the certificate.
 - `csr` (String) Certificate Signing Request (CSR).
@@ -55,9 +55,10 @@ Read-Only:
 - `key_algorithm` (String) Key algorithm used for the certificate.
 - `last_editor` (String) Last editor of the certificate.
 - `last_modified` (String) Last modified timestamp of the certificate.
+- `created_at` (String) Creation timestamp of the certificate.
 - `managed` (Boolean) Whether the certificate is managed.
 - `name` (String) Name of the certificate.
-- `private_key` (String, Sensitive) Private key of the certificate.
+- `private_key` (String) Private key of the certificate.
 - `product_version` (String) Product version of the certificate.
 - `renewed_at` (String) Renewal timestamp of the certificate.
 - `status` (String) Status of the certificate.
