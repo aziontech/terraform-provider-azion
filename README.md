@@ -5,6 +5,10 @@
 <!--- # Documentation: https://registry.terraform.io/providers/azion/azion/latest/docs
 -->
 
+## API Version Notice
+
+**Starting with version 2.0.0, this provider supports Azion API v4 only.** If you are using API v3, please use version 1.41.0 or earlier. The transition to API v4 brings improved performance, new features, and a more consistent resource management experience. Note that some resources available in v3 (such as Domains, Origins, and Environment Variables) have been removed or restructured in v4.
+
 ## Quick links
 * [Requirements](#Requirements)
 * [Building](#building)
