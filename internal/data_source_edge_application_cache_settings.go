@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -18,7 +18,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &CacheSettingsDataSource{}
 )
 
-func dataSourceAzionEdgeApplicationCacheSettings() datasource.DataSource {
+func dataSourceAzionApplicationCacheSettings() datasource.DataSource {
 	return &CacheSettingsDataSource{}
 }
 
@@ -27,72 +27,37 @@ type CacheSettingsDataSource struct {
 }
 
 type CacheSettingsDataSourceModel struct {
-	ApplicationID types.Int64                    `tfsdk:"edge_application_id"`
-	Counter       types.Int64                    `tfsdk:"counter"`
-	Page          types.Int64                    `tfsdk:"page"`
-	PageSize      types.Int64                    `tfsdk:"page_size"`
-	TotalPages    types.Int64                    `tfsdk:"total_pages"`
-	Links         *GetCacheSettingsResponseLinks `tfsdk:"links"`
-	SchemaVersion types.Int64                    `tfsdk:"schema_version"`
-	Results       []CacheSettingsResults         `tfsdk:"results"`
-	ID            types.String                   `tfsdk:"id"`
+	ApplicationID types.Int64         `tfsdk:"application_id"`
+	Counter       types.Int64         `tfsdk:"counter"`
+	Page          types.Int64         `tfsdk:"page"`
+	PageSize      types.Int64         `tfsdk:"page_size"`
+	TotalPages    types.Int64         `tfsdk:"total_pages"`
+	Links         *LinksModel         `tfsdk:"links"`
+	Results       []CacheSettingModel `tfsdk:"results"`
+	ID            types.Int64         `tfsdk:"id"`
 }
 
-type GetCacheSettingsResponseLinks struct {
-	Previous types.String `tfsdk:"previous"`
-	Next     types.String `tfsdk:"next"`
-}
-
-type CacheSettingsResults struct {
-	CacheSettingID              types.Int64    `tfsdk:"cache_setting_id"`
-	Name                        types.String   `tfsdk:"name"`
-	BrowserCacheSettings        types.String   `tfsdk:"browser_cache_settings"`
-	BrowserCacheSettingsMaxTtl  types.Int64    `tfsdk:"browser_cache_settings_maximum_ttl"`
-	CdnCacheSettings            types.String   `tfsdk:"cdn_cache_settings"`
-	CdnCacheSettingsMaxTtl      types.Int64    `tfsdk:"cdn_cache_settings_maximum_ttl"`
-	CacheByQueryString          types.String   `tfsdk:"cache_by_query_string"`
-	QueryStringFields           []types.String `tfsdk:"query_string_fields"`
-	EnableQueryStringSort       types.Bool     `tfsdk:"enable_query_string_sort"`
-	CacheByCookies              types.String   `tfsdk:"cache_by_cookies"`
-	CookieNames                 []types.String `tfsdk:"cookie_names"`
-	AdaptiveDeliveryAction      types.String   `tfsdk:"adaptive_delivery_action"`
-	DeviceGroup                 []types.Int64  `tfsdk:"device_group"`
-	EnableCachingForPost        types.Bool     `tfsdk:"enable_caching_for_post"`
-	L2CachingEnabled            types.Bool     `tfsdk:"l2_caching_enabled"`
-	IsSliceConfigurationEnabled types.Bool     `tfsdk:"is_slice_configuration_enabled"`
-	IsSliceEdgeCachingEnabled   types.Bool     `tfsdk:"is_slice_edge_caching_enabled"`
-	IsSliceL2CachingEnabled     types.Bool     `tfsdk:"is_slice_l2_caching_enabled"`
-	SliceConfigurationRange     types.Int64    `tfsdk:"slice_configuration_range"`
-	EnableCachingForOptions     types.Bool     `tfsdk:"enable_caching_for_options"`
-	EnableStaleCache            types.Bool     `tfsdk:"enable_stale_cache"`
-	L2Region                    types.String   `tfsdk:"l2_region"`
-}
-
-func (c *CacheSettingsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+func (d *CacheSettingsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
-	c.client = req.ProviderData.(*apiClient)
+	d.client = req.ProviderData.(*apiClient)
 }
 
-func (c *CacheSettingsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_application_cache_settings"
+func (d *CacheSettingsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_application_cache_settings"
 }
 
-func (c *CacheSettingsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *CacheSettingsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
+			"id": schema.Int64Attribute{
 				Description: "Identifier of the data source.",
-				Optional:    true,
-			},
-			"edge_application_id": schema.Int64Attribute{
-				Description: "Numeric identifier of the Edge Application",
-				Required:    true,
-			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
 				Computed:    true,
+			},
+			"application_id": schema.Int64Attribute{
+				Description: "Numeric identifier of the Application.",
+				Required:    true,
 			},
 			"counter": schema.Int64Attribute{
 				Description: "The total number of Cache Settings.",
@@ -125,96 +90,126 @@ func (c *CacheSettingsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"cache_setting_id": schema.Int64Attribute{
-							Description: "The cache settings identifier to target for the resource.",
-							Required:    true,
+						"id": schema.Int64Attribute{
+							Description: "The cache setting identifier.",
+							Computed:    true,
 						},
 						"name": schema.StringAttribute{
-							Description: "Name of the cache settings.",
+							Description: "Name of the cache setting.",
 							Computed:    true,
 						},
-						"browser_cache_settings": schema.StringAttribute{
-							Description: "Browser cache settings value.",
+						"created_at": schema.StringAttribute{
+							Description: "The creation timestamp of the cache setting.",
 							Computed:    true,
 						},
-						"browser_cache_settings_maximum_ttl": schema.Int64Attribute{
-							Description: "Maximum TTL for browser cache settings.",
+						"browser_cache": schema.SingleNestedAttribute{
+							Description: "Browser cache settings.",
 							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"behavior": schema.StringAttribute{
+									Description: "Browser cache behavior: override, honor, no-cache.",
+									Computed:    true,
+								},
+								"max_age": schema.Int64Attribute{
+									Description: "Maximum TTL for browser cache.",
+									Computed:    true,
+								},
+							},
 						},
-						"cdn_cache_settings": schema.StringAttribute{
-							Description: "CDN cache settings value.",
+						"modules": schema.SingleNestedAttribute{
+							Description: "Cache settings modules.",
 							Computed:    true,
-						},
-						"cdn_cache_settings_maximum_ttl": schema.Int64Attribute{
-							Description: "Maximum TTL for CDN cache settings.",
-							Computed:    true,
-						},
-						"cache_by_query_string": schema.StringAttribute{
-							Description: "Cache by query string settings value.",
-							Computed:    true,
-						},
-						"query_string_fields": schema.ListAttribute{
-							ElementType: types.StringType,
-							Description: "Query string fields for cache settings.",
-							Computed:    true,
-						},
-						"enable_query_string_sort": schema.BoolAttribute{
-							Description: "Enable query string sorting for cache settings.",
-							Computed:    true,
-						},
-						"cache_by_cookies": schema.StringAttribute{
-							Description: "Cache by cookies settings value.",
-							Computed:    true,
-						},
-						"cookie_names": schema.ListAttribute{
-							ElementType: types.StringType,
-							Description: "Cookie names for cache settings.",
-							Computed:    true,
-						},
-						"adaptive_delivery_action": schema.StringAttribute{
-							Description: "Adaptive delivery action settings value.",
-							Computed:    true,
-						},
-						"device_group": schema.ListAttribute{
-							Description: "Device group settings.",
-							Computed:    true,
-							ElementType: types.Int64Type,
-						},
-						"enable_caching_for_post": schema.BoolAttribute{
-							Description: "Enable caching for POST requests.",
-							Computed:    true,
-						},
-						"l2_caching_enabled": schema.BoolAttribute{
-							Description: "Enable L2 caching.",
-							Computed:    true,
-						},
-						"is_slice_configuration_enabled": schema.BoolAttribute{
-							Description: "Enable slice configuration.",
-							Computed:    true,
-						},
-						"is_slice_edge_caching_enabled": schema.BoolAttribute{
-							Description: "Enable slice edge caching.",
-							Computed:    true,
-						},
-						"is_slice_l2_caching_enabled": schema.BoolAttribute{
-							Description: "Enable slice L2 caching.",
-							Computed:    true,
-						},
-						"slice_configuration_range": schema.Int64Attribute{
-							Description: "Slice configuration range.",
-							Computed:    true,
-						},
-						"enable_caching_for_options": schema.BoolAttribute{
-							Description: "Enable caching for OPTIONS requests.",
-							Computed:    true,
-						},
-						"enable_stale_cache": schema.BoolAttribute{
-							Description: "Enable stale cache.",
-							Computed:    true,
-						},
-						"l2_region": schema.StringAttribute{
-							Description: "L2 region settings value.",
-							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"cache": schema.SingleNestedAttribute{
+									Description: "Edge cache module settings.",
+									Computed:    true,
+									Attributes: map[string]schema.Attribute{
+										"behavior": schema.StringAttribute{
+											Description: "Cache behavior: honor, override.",
+											Computed:    true,
+										},
+										"max_age": schema.Int64Attribute{
+											Description: "Maximum TTL for edge cache.",
+											Computed:    true,
+										},
+										"stale_cache": schema.SingleNestedAttribute{
+											Description: "Stale cache settings.",
+											Computed:    true,
+											Attributes: map[string]schema.Attribute{
+												"enabled": schema.BoolAttribute{
+													Computed: true,
+												},
+											},
+										},
+										"large_file_cache": schema.SingleNestedAttribute{
+											Description: "Large file cache settings.",
+											Computed:    true,
+											Attributes: map[string]schema.Attribute{
+												"enabled": schema.BoolAttribute{
+													Computed: true,
+												},
+												"offset": schema.Int64Attribute{
+													Computed: true,
+												},
+											},
+										},
+										"tiered_cache": schema.SingleNestedAttribute{
+											Description: "Tiered cache settings.",
+											Computed:    true,
+											Attributes: map[string]schema.Attribute{
+												"topology": schema.StringAttribute{
+													Description: "Tiered cache topology.",
+													Computed:    true,
+												},
+												"enabled": schema.BoolAttribute{
+													Computed: true,
+												},
+											},
+										},
+									},
+								},
+								"application_accelerator": schema.SingleNestedAttribute{
+									Description: "Application accelerator module settings.",
+									Computed:    true,
+									Attributes: map[string]schema.Attribute{
+										"cache_vary_by_method": schema.ListAttribute{
+											ElementType: types.StringType,
+											Computed:    true,
+										},
+										"cache_vary_by_querystring": schema.SingleNestedAttribute{
+											Computed: true,
+											Attributes: map[string]schema.Attribute{
+												"behavior": schema.StringAttribute{Computed: true},
+												"fields": schema.ListAttribute{
+													ElementType: types.StringType,
+													Computed:    true,
+												},
+												"sort_enabled": schema.BoolAttribute{Computed: true},
+											},
+										},
+										"cache_vary_by_cookies": schema.SingleNestedAttribute{
+											Computed: true,
+											Attributes: map[string]schema.Attribute{
+												"behavior": schema.StringAttribute{Computed: true},
+												"cookie_names": schema.ListAttribute{
+													ElementType: types.StringType,
+													Computed:    true,
+												},
+											},
+										},
+										"cache_vary_by_devices": schema.SingleNestedAttribute{
+											Computed: true,
+											Attributes: map[string]schema.Attribute{
+												"behavior": schema.StringAttribute{Computed: true},
+												"device_group": schema.ListAttribute{
+													ElementType: types.Int64Type,
+													Computed:    true,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -223,122 +218,105 @@ func (c *CacheSettingsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 	}
 }
 
-func (c *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var Page types.Int64
-	var PageSize types.Int64
-	var EdgeApplicationId types.Int64
-	diagsEdgeApplicationId := req.Config.GetAttribute(ctx, path.Root("edge_application_id"), &EdgeApplicationId)
-	resp.Diagnostics.Append(diagsEdgeApplicationId...)
+func (d *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var applicationID types.Int64
+	var page types.Int64
+	var pageSize types.Int64
+
+	diags := req.Config.GetAttribute(ctx, path.Root("application_id"), &applicationID)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if Page.ValueInt64() == 0 {
-		Page = types.Int64Value(1)
+	// Get page and page_size from config
+	diags = req.Config.GetAttribute(ctx, path.Root("page"), &page)
+	resp.Diagnostics.Append(diags...)
+
+	diags = req.Config.GetAttribute(ctx, path.Root("page_size"), &pageSize)
+	resp.Diagnostics.Append(diags...)
+
+	// Set defaults
+	if page.IsNull() || page.IsUnknown() {
+		page = types.Int64Value(1)
 	}
-	if PageSize.ValueInt64() == 0 {
-		PageSize = types.Int64Value(10)
+	if pageSize.IsNull() || pageSize.IsUnknown() {
+		pageSize = types.Int64Value(10)
 	}
 
-	cacheSettingsResponse, response, err := c.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
+	listResponse, response, err := d.client.api.ApplicationsCacheSettingsAPI.ListCacheSettings(ctx, applicationID.ValueInt64()).Page(page.ValueInt64()).PageSize(pageSize.ValueInt64()).Execute()
 	if err != nil {
 		if response.StatusCode == 429 {
-			cacheSettingsResponse, response, err = utils.RetryOn429(func() (*edgeapplications.ApplicationCacheGetResponse, *http.Response, error) {
-				return c.client.edgeApplicationsApi.EdgeApplicationsCacheSettingsAPI.EdgeApplicationsEdgeApplicationIdCacheSettingsGet(ctx, EdgeApplicationId.ValueInt64()).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
+			listResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedCacheSettingList, *http.Response, error) {
+				return d.client.api.ApplicationsCacheSettingsAPI.ListCacheSettings(ctx, applicationID.ValueInt64()).Page(page.ValueInt64()).PageSize(pageSize.ValueInt64()).Execute()
+			}, 5)
 
 			if response != nil {
-				defer response.Body.Close() // <-- Close the body here
+				defer response.Body.Close()
 			}
 
 			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
+				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
 				return
 			}
 		} else {
 			bodyBytes, errReadAll := io.ReadAll(response.Body)
 			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
+				resp.Diagnostics.AddError(errReadAll.Error(), "err")
 			}
 			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), bodyString)
+			if response != nil {
+				response.Body.Close()
+			}
 			return
 		}
 	}
+	if response != nil {
+		defer response.Body.Close()
+	}
 
+	// Build state
+	state := CacheSettingsDataSourceModel{
+		ApplicationID: applicationID,
+		Page:          page,
+		PageSize:      pageSize,
+	}
+
+	if listResponse.HasCount() {
+		state.Counter = types.Int64Value(listResponse.GetCount())
+	}
+	if listResponse.HasTotalPages() {
+		state.TotalPages = types.Int64Value(listResponse.GetTotalPages())
+	}
+
+	// Links
 	var previous, next string
-	if cacheSettingsResponse.Links.Previous.Get() != nil {
-		previous = *cacheSettingsResponse.Links.Previous.Get()
+	if listResponse.HasPrevious() {
+		prev := listResponse.GetPrevious()
+		if prev != "" {
+			previous = prev
+		}
 	}
-	if cacheSettingsResponse.Links.Next.Get() != nil {
-		next = *cacheSettingsResponse.Links.Next.Get()
+	if listResponse.HasNext() {
+		n := listResponse.GetNext()
+		if n != "" {
+			next = n
+		}
+	}
+	state.Links = &LinksModel{
+		Previous: types.StringValue(previous),
+		Next:     types.StringValue(next),
 	}
 
-	edgeApplicationsCacheSettingsState := CacheSettingsDataSourceModel{
-		Page:          Page,
-		PageSize:      PageSize,
-		ApplicationID: EdgeApplicationId,
-		SchemaVersion: types.Int64Value(cacheSettingsResponse.SchemaVersion),
-		TotalPages:    types.Int64Value(cacheSettingsResponse.TotalPages),
-		Counter:       types.Int64Value(cacheSettingsResponse.Count),
-		Links: &GetCacheSettingsResponseLinks{
-			Previous: types.StringValue(previous),
-			Next:     types.StringValue(next),
-		},
+	// Results
+	if listResponse.HasResults() {
+		for _, cs := range listResponse.GetResults() {
+			state.Results = append(state.Results, *transformCacheSettingToModel(&cs))
+		}
 	}
 
-	for _, resultCacheSettings := range cacheSettingsResponse.Results {
-		var CookieNames []types.String
-		for _, cookieName := range resultCacheSettings.GetCookieNames() {
-			CookieNames = append(CookieNames, types.StringValue(*cookieName))
-		}
-		var QueryStringFields []types.String
-		for _, queryStringField := range resultCacheSettings.GetQueryStringFields() {
-			QueryStringFields = append(QueryStringFields, types.StringValue(queryStringField))
-		}
-		var DeviceGroups []types.Int64
-		for _, DeviceGroup := range resultCacheSettings.GetDeviceGroup() {
-			DeviceGroups = append(DeviceGroups, types.Int64Value(int64(DeviceGroup)))
-		}
-		edgeApplicationsCacheSettingsState.Results = append(edgeApplicationsCacheSettingsState.Results, CacheSettingsResults{
-			CacheSettingID:              types.Int64Value(resultCacheSettings.GetId()),
-			Name:                        types.StringValue(resultCacheSettings.GetName()),
-			BrowserCacheSettings:        types.StringValue(resultCacheSettings.GetBrowserCacheSettings()),
-			BrowserCacheSettingsMaxTtl:  types.Int64Value(resultCacheSettings.GetBrowserCacheSettingsMaximumTtl()),
-			CdnCacheSettings:            types.StringValue(resultCacheSettings.GetCdnCacheSettings()),
-			CdnCacheSettingsMaxTtl:      types.Int64Value(resultCacheSettings.GetCdnCacheSettingsMaximumTtl()),
-			CacheByQueryString:          types.StringValue(resultCacheSettings.GetCacheByQueryString()),
-			QueryStringFields:           QueryStringFields,
-			EnableQueryStringSort:       types.BoolValue(resultCacheSettings.GetEnableQueryStringSort()),
-			CacheByCookies:              types.StringValue(resultCacheSettings.GetCacheByCookies()),
-			CookieNames:                 CookieNames,
-			AdaptiveDeliveryAction:      types.StringValue(resultCacheSettings.GetAdaptiveDeliveryAction()),
-			DeviceGroup:                 DeviceGroups,
-			EnableCachingForPost:        types.BoolValue(resultCacheSettings.GetEnableCachingForPost()),
-			L2CachingEnabled:            types.BoolValue(resultCacheSettings.GetL2CachingEnabled()),
-			IsSliceConfigurationEnabled: types.BoolValue(resultCacheSettings.GetIsSliceConfigurationEnabled()),
-			IsSliceEdgeCachingEnabled:   types.BoolValue(resultCacheSettings.GetIsSliceEdgeCachingEnabled()),
-			IsSliceL2CachingEnabled:     types.BoolValue(resultCacheSettings.GetIsSliceL2CachingEnabled()),
-			SliceConfigurationRange:     types.Int64Value(resultCacheSettings.GetSliceConfigurationRange()),
-			EnableCachingForOptions:     types.BoolValue(resultCacheSettings.GetEnableCachingForOptions()),
-			EnableStaleCache:            types.BoolValue(resultCacheSettings.GetEnableStaleCache()),
-			L2Region:                    types.StringValue(resultCacheSettings.GetL2Region()),
-		})
-	}
-
-	edgeApplicationsCacheSettingsState.ID = types.StringValue("Get By ID Cache Settings")
-	diags := resp.State.Set(ctx, &edgeApplicationsCacheSettingsState)
+	state.ID = types.Int64Value(0)
+	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }

@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
-	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -19,7 +20,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &EdgeFunctionDataSource{}
 )
 
-func dataSourceAzionEdgeFunction() datasource.DataSource {
+func dataSourceAzionFunction() datasource.DataSource {
 	return &EdgeFunctionDataSource{}
 }
 
@@ -28,9 +29,8 @@ type EdgeFunctionDataSource struct {
 }
 
 type EdgeFunctionDataSourceModel struct {
-	SchemaVersion types.Int64         `tfsdk:"schema_version"`
-	Results       EdgeFunctionResults `tfsdk:"results"`
-	ID            types.String        `tfsdk:"id"`
+	Data EdgeFunctionResults `tfsdk:"data"`
+	ID   types.String        `tfsdk:"id"`
 }
 
 type GetEdgeFunctionResponseLinks struct {
@@ -39,18 +39,19 @@ type GetEdgeFunctionResponseLinks struct {
 }
 
 type EdgeFunctionResults struct {
-	FunctionID     types.Int64  `tfsdk:"function_id"`
-	Name           types.String `tfsdk:"name"`
-	Language       types.String `tfsdk:"language"`
-	Code           types.String `tfsdk:"code"`
-	JSONArgs       types.String `tfsdk:"json_args"`
-	FunctionToRun  types.String `tfsdk:"function_to_run"`
-	InitiatorType  types.String `tfsdk:"initiator_type"`
-	IsActive       types.Bool   `tfsdk:"active"`
-	LastEditor     types.String `tfsdk:"last_editor"`
-	Modified       types.String `tfsdk:"modified"`
-	ReferenceCount types.Int64  `tfsdk:"reference_count"`
-	Version        types.String `tfsdk:"version"`
+	ID                   types.Int64  `tfsdk:"id"`
+	Name                 types.String `tfsdk:"name"`
+	LastEditor           types.String `tfsdk:"last_editor"`
+	LastModified         types.String `tfsdk:"last_modified"`
+	ProductVersion       types.String `tfsdk:"product_version"`
+	Active               types.Bool   `tfsdk:"active"`
+	Runtime              types.String `tfsdk:"runtime"`
+	ExecutionEnvironment types.String `tfsdk:"execution_environment"`
+	Code                 types.String `tfsdk:"code"`
+	DefaultArgs          types.String `tfsdk:"default_args"`
+	ReferenceCount       types.Int64  `tfsdk:"reference_count"`
+	Version              types.String `tfsdk:"version"`
+	Vendor               types.String `tfsdk:"vendor"`
 }
 
 func (d *EdgeFunctionDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -61,7 +62,7 @@ func (d *EdgeFunctionDataSource) Configure(_ context.Context, req datasource.Con
 }
 
 func (d *EdgeFunctionDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_function"
+	resp.TypeName = req.ProviderTypeName + "_function"
 }
 
 func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -71,14 +72,10 @@ func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Description: "Numeric identifier of the data source.",
 				Required:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
-			"results": schema.SingleNestedAttribute{
+			"data": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
-					"function_id": schema.Int64Attribute{
+					"id": schema.Int64Attribute{
 						Description: "The function identifier.",
 						Computed:    true,
 					},
@@ -86,36 +83,36 @@ func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Description: "Name of the function.",
 						Computed:    true,
 					},
-					"language": schema.StringAttribute{
-						Description: "Language of the function.",
+					"last_editor": schema.StringAttribute{
+						Description: "The last editor of the function.",
 						Computed:    true,
 					},
-					"code": schema.StringAttribute{
-						Description: "Code of the function.",
+					"last_modified": schema.StringAttribute{
+						Description: "Last modified timestamp of the function.",
 						Computed:    true,
 					},
-					"json_args": schema.StringAttribute{
-						Computed:    true,
-						Description: "JSON arguments of the function.",
-					},
-					"function_to_run": schema.StringAttribute{
-						Description: "The function to run.",
-						Computed:    true,
-					},
-					"initiator_type": schema.StringAttribute{
-						Description: "Initiator type of the function.",
+					"product_version": schema.StringAttribute{
+						Description: "Product version of the function.",
 						Computed:    true,
 					},
 					"active": schema.BoolAttribute{
 						Description: "Status of the function.",
 						Computed:    true,
 					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the function.",
+					"runtime": schema.StringAttribute{
+						Description: "Runtime of the function.",
 						Computed:    true,
 					},
-					"modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the function.",
+					"execution_environment": schema.StringAttribute{
+						Description: "Execution environment of the function.",
+						Computed:    true,
+					},
+					"code": schema.StringAttribute{
+						Description: "Code of the function.",
+						Computed:    true,
+					},
+					"default_args": schema.StringAttribute{
+						Description: "Default arguments of the function as JSON.",
 						Computed:    true,
 					},
 					"reference_count": schema.Int64Attribute{
@@ -124,6 +121,10 @@ func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 					},
 					"version": schema.StringAttribute{
 						Description: "Version of the function.",
+						Computed:    true,
+					},
+					"vendor": schema.StringAttribute{
+						Description: "Vendor of the function.",
 						Computed:    true,
 					},
 				},
@@ -149,12 +150,12 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.
-		EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
+	functionsResponse, response, err := d.client.api.FunctionsAPI.
+		RetrieveFunction(ctx, edgeFunctionID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			functionsResponse, response, err = utils.RetryOn429(func() (*edgefunctions.EdgeFunctionResponse, *http.Response, error) {
-				return d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsIdGet(ctx, edgeFunctionID).Execute() //nolint
+			functionsResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
+				return d.client.api.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -175,38 +176,41 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		}
 	}
 
-	jsonArgsStr, err := utils.ConvertInterfaceToString(functionsResponse.Results.JsonArgs)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			err.Error(),
-			"err",
-		)
-	}
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	EdgeFunctionState := EdgeFunctionDataSourceModel{
-		SchemaVersion: types.Int64Value(int64(*functionsResponse.SchemaVersion)),
-		Results: EdgeFunctionResults{
-			FunctionID:    types.Int64Value(*functionsResponse.Results.Id),
-			Name:          types.StringValue(*functionsResponse.Results.Name),
-			Language:      types.StringValue(*functionsResponse.Results.Language),
-			Code:          types.StringValue(*functionsResponse.Results.Code),
-			JSONArgs:      types.StringValue(jsonArgsStr),
-			InitiatorType: types.StringValue(*functionsResponse.Results.InitiatorType),
-			IsActive:      types.BoolValue(*functionsResponse.Results.Active),
-			LastEditor:    types.StringValue(*functionsResponse.Results.LastEditor),
-			Modified:      types.StringValue(*functionsResponse.Results.Modified),
-		},
-	}
-	if functionsResponse.Results.ReferenceCount != nil {
-		EdgeFunctionState.Results.ReferenceCount = types.Int64Value(*functionsResponse.Results.ReferenceCount)
-	}
-	if functionsResponse.Results.FunctionToRun != nil {
-		EdgeFunctionState.Results.FunctionToRun = types.StringValue(*functionsResponse.Results.FunctionToRun)
+	defaultArgsStr := ""
+	if functionsResponse.Data.DefaultArgs != nil {
+		var err error
+		defaultArgsStr, err = utils.ConvertInterfaceToString(functionsResponse.Data.DefaultArgs)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				err.Error(),
+				"Failed to convert default_args to string",
+			)
+			return
+		}
 	}
 
-	EdgeFunctionState.ID = types.StringValue("Get By Id Edge Function")
+	EdgeFunctionState := EdgeFunctionDataSourceModel{
+		Data: EdgeFunctionResults{
+			ID:                   types.Int64Value(functionsResponse.Data.Id),
+			Name:                 types.StringValue(functionsResponse.Data.Name),
+			Code:                 types.StringValue(functionsResponse.Data.Code),
+			DefaultArgs:          types.StringValue(defaultArgsStr),
+			ExecutionEnvironment: types.StringValue(*functionsResponse.Data.ExecutionEnvironment),
+			Active:               types.BoolValue(*functionsResponse.Data.Active),
+			LastEditor:           types.StringValue(functionsResponse.Data.LastEditor),
+			LastModified:         types.StringValue(functionsResponse.Data.LastModified.Format(time.RFC850)),
+			ProductVersion:       types.StringValue(functionsResponse.Data.ProductVersion),
+			Version:              types.StringValue(functionsResponse.Data.Version),
+			Vendor:               types.StringValue(functionsResponse.Data.Vendor),
+			ReferenceCount:       types.Int64Value(functionsResponse.Data.ReferenceCount),
+		},
+	}
+
+	if functionsResponse.Data.Runtime != nil {
+		EdgeFunctionState.Data.Runtime = types.StringValue(*functionsResponse.Data.Runtime)
+	}
+
+	EdgeFunctionState.ID = types.StringValue("Get By Id Function")
 	diags = resp.State.Set(ctx, &EdgeFunctionState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -222,7 +226,7 @@ func errPrint(errCode int, err error) (string, string) {
 	case 401:
 		usrMsg = "Unauthorized Token"
 	case 404:
-		usrMsg = "No Edge Function found"
+		usrMsg = "No Function found"
 	default:
 		usrMsg = err.Error()
 	}

@@ -1,0 +1,1 @@
+terraform import azion_custom_page.example custom_page_id

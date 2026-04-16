@@ -1,10 +1,21 @@
-resource "azion_edge_firewall_main_setting" "example" {
-  results = {
-    name                       = "New EdgeFirewall in terraform"
-    is_active                  = true
-    edge_functions_enabled     = true
-    network_protection_enabled = true
-    waf_enabled                = true
-    domains                    = []
+resource "azion_firewall_main_setting" "example" {
+  data = {
+    name   = "New Firewall in terraform"
+    active = true
+    debug  = false
+
+    modules = {
+      functions = {
+        enabled = true
+      }
+
+      network_protection = {
+        enabled = true
+      }
+
+      waf = {
+        enabled = true
+      }
+    }
   }
 }

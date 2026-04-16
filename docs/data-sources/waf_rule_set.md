@@ -3,20 +3,19 @@
 page_title: "azion_waf_rule_set Data Source - terraform-provider-azion"
 subcategory: ""
 description: |-
-  
+  Provides a data source for reading a WAF exception (rule set) by ID.
 ---
 
 # azion_waf_rule_set (Data Source)
 
-
+Provides a data source for reading a WAF exception (rule set) by ID.
 
 ## Example Usage
 
 ```terraform
 data "azion_waf_rule_set" "example" {
-  result = {
-    waf_id = 6105
-  }
+  waf_id       = 12345
+  exception_id = 67890
 }
 ```
 
@@ -25,39 +24,67 @@ data "azion_waf_rule_set" "example" {
 
 ### Required
 
-- `result` (Attributes) (see [below for nested schema](#nestedatt--result))
+- `waf_id` (Number) The WAF identifier.
+- `exception_id` (Number) The WAF exception (rule set) identifier.
 
 ### Read-Only
 
 - `id` (String) Identifier of the data source.
-- `schema_version` (Number) Schema Version.
+- `results` (Attributes) The WAF exception data. (see [below for nested schema](#nestedatt--results))
 
-<a id="nestedatt--result"></a>
-### Nested Schema for `result`
-
-Required:
-
-- `waf_id` (Number) The WAF identifier.
+<a id="nestedatt--results"></a>
+### Nested Schema for `results`
 
 Read-Only:
 
-- `active` (Boolean) Whether the WAF is active.
-- `bypass_addresses` (List of String) List of bypass addresses.
-- `cross_site_scripting` (Boolean) Enable cross-site scripting protection.
-- `cross_site_scripting_sensitivity` (String) Sensitivity level for cross-site scripting protection.
-- `directory_traversal` (Boolean) Enable directory traversal protection.
-- `directory_traversal_sensitivity` (String) Sensitivity level for directory traversal protection.
-- `evading_tricks` (Boolean) Enable evading tricks protection.
-- `evading_tricks_sensitivity` (String) Sensitivity level for evading tricks protection.
-- `file_upload` (Boolean) Enable file upload protection.
-- `file_upload_sensitivity` (String) Sensitivity level for file upload protection.
-- `identified_attack` (Boolean) Enable protection against identified attacks.
-- `identified_attack_sensitivity` (String) Sensitivity level for protection against identified attacks.
-- `mode` (String) WAF mode (e.g., counting).
-- `name` (String) Name of the WAF configuration.
-- `remote_file_inclusion` (Boolean) Enable remote file inclusion protection.
-- `remote_file_inclusion_sensitivity` (String) Sensitivity level for remote file inclusion protection.
-- `sql_injection` (Boolean) Enable SQL injection protection.
-- `sql_injection_sensitivity` (String) Sensitivity level for SQL injection protection.
-- `unwanted_access` (Boolean) Enable protection against unwanted access.
-- `unwanted_access_sensitivity` (String) Sensitivity level for protection against unwanted access.
+- `active` (Boolean) Whether the exception is active.
+- `conditions` (Attributes List) Conditions for the WAF exception. (see [below for nested schema](#nestedatt--results--conditions))
+- `id` (Number) The ID of the WAF exception.
+- `last_editor` (String) Last editor of the exception.
+- `last_modified` (String) Last modified timestamp.
+- `name` (String) Name of the WAF exception.
+- `operator` (String) The operator for the exception (regex or contains).
+- `path` (String) Path pattern for the exception.
+- `rule_id` (Number) The rule ID that this exception applies to. 0 means all rules.
+
+<a id="nestedatt--results--conditions"></a>
+### Nested Schema for `results.conditions`
+
+Read-Only:
+
+- `condition_type` (String) Type of condition: generic, specific_on_name, or specific_on_value.
+- `match` (String) The match type for the condition.
+- `name` (String) The name for specific condition on name.
+- `value` (String) The value for specific condition on value.
+
+## Condition Match Types
+
+### Generic Condition Match Types
+
+When `condition_type = "generic"`, the following match types are available:
+
+- `any_http_header_name` - Any HTTP header name
+- `any_http_header_value` - Any HTTP header value
+- `any_query_string_name` - Any query string parameter name
+- `any_query_string_value` - Any query string parameter value
+- `any_url` - Any URL
+- `body_form_field_name` - Body form field name
+- `body_form_field_value` - Body form field value
+- `file_extension` - File extension
+- `raw_body` - Raw request body
+
+### Specific Condition on Name Match Types
+
+When `condition_type = "specific_on_name"`, the `name` field is populated and the following match types are available:
+
+- `specific_body_form_field_name` - Specific body form field name
+- `specific_http_header_name` - Specific HTTP header name
+- `specific_query_string_name` - Specific query string name
+
+### Specific Condition on Value Match Types
+
+When `condition_type = "specific_on_value"`, the `value` field is populated and the following match types are available:
+
+- `specific_body_form_field_value` - Specific body form field value
+- `specific_http_header_value` - Specific HTTP header value
+- `specific_query_string_value` - Specific query string value

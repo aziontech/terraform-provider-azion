@@ -2,10 +2,10 @@ package provider
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"net/http"
 
-	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
+	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -17,7 +17,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &EdgeFunctionsDataSource{}
 )
 
-func dataSourceAzionEdgeFunctions() datasource.DataSource {
+func dataSourceAzionFunctions() datasource.DataSource {
 	return &EdgeFunctionsDataSource{}
 }
 
@@ -26,12 +26,9 @@ type EdgeFunctionsDataSource struct {
 }
 
 type EdgeFunctionsDataSourceModel struct {
-	SchemaVersion types.Int64                    `tfsdk:"schema_version"`
-	Counter       types.Int64                    `tfsdk:"counter"`
-	TotalPages    types.Int64                    `tfsdk:"total_pages"`
-	Links         *GetEdgeFunctionsResponseLinks `tfsdk:"links"`
-	Results       []EdgeFunctionsResults         `tfsdk:"results"`
-	ID            types.String                   `tfsdk:"id"`
+	Counter types.Int64            `tfsdk:"counter"`
+	Results []EdgeFunctionsResults `tfsdk:"results"`
+	ID      types.String           `tfsdk:"id"`
 }
 
 type GetEdgeFunctionsResponseLinks struct {
@@ -40,18 +37,18 @@ type GetEdgeFunctionsResponseLinks struct {
 }
 
 type EdgeFunctionsResults struct {
-	FunctionID     types.Int64  `tfsdk:"function_id"`
-	Name           types.String `tfsdk:"name"`
-	Language       types.String `tfsdk:"language"`
-	Code           types.String `tfsdk:"code"`
-	JSONArgs       types.String `tfsdk:"json_args"`
-	FunctionToRun  types.String `tfsdk:"function_to_run"`
-	InitiatorType  types.String `tfsdk:"initiator_type"`
-	IsActive       types.Bool   `tfsdk:"active"`
-	LastEditor     types.String `tfsdk:"last_editor"`
-	Modified       types.String `tfsdk:"modified"`
-	ReferenceCount types.Int64  `tfsdk:"reference_count"`
-	Version        types.String `tfsdk:"version"`
+	ID                   types.Int64  `tfsdk:"id"`
+	Name                 types.String `tfsdk:"name"`
+	LastEditor           types.String `tfsdk:"last_editor"`
+	LastModified         types.String `tfsdk:"last_modified"`
+	ProductVersion       types.String `tfsdk:"product_version"`
+	Active               types.Bool   `tfsdk:"active"`
+	Runtime              types.String `tfsdk:"runtime"`
+	ExecutionEnvironment types.String `tfsdk:"execution_environment"`
+	DefaultArgs          types.String `tfsdk:"default_args"`
+	ReferenceCount       types.Int64  `tfsdk:"reference_count"`
+	Version              types.String `tfsdk:"version"`
+	Vendor               types.String `tfsdk:"vendor"`
 }
 
 func (d *EdgeFunctionsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -62,7 +59,7 @@ func (d *EdgeFunctionsDataSource) Configure(_ context.Context, req datasource.Co
 }
 
 func (d *EdgeFunctionsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_functions"
+	resp.TypeName = req.ProviderTypeName + "_functions"
 }
 
 func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -72,34 +69,15 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Description: "Numeric identifier of the data source.",
 				Computed:    true,
 			},
-			"schema_version": schema.Int64Attribute{
-				Description: "Schema Version.",
-				Computed:    true,
-			},
 			"counter": schema.Int64Attribute{
-				Description: "The total number of zones.",
+				Description: "The total count of functions.",
 				Computed:    true,
-			},
-			"total_pages": schema.Int64Attribute{
-				Description: "The total number of pages.",
-				Computed:    true,
-			},
-			"links": schema.SingleNestedAttribute{
-				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"previous": schema.StringAttribute{
-						Computed: true,
-					},
-					"next": schema.StringAttribute{
-						Computed: true,
-					},
-				},
 			},
 			"results": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"function_id": schema.Int64Attribute{
+						"id": schema.Int64Attribute{
 							Description: "The function identifier.",
 							Computed:    true,
 						},
@@ -107,36 +85,32 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 							Description: "Name of the function.",
 							Computed:    true,
 						},
-						"language": schema.StringAttribute{
-							Description: "Language of the function.",
+						"last_editor": schema.StringAttribute{
+							Description: "The last editor of the function.",
 							Computed:    true,
 						},
-						"code": schema.StringAttribute{
-							Description: "Code of the function.",
+						"last_modified": schema.StringAttribute{
+							Description: "Last modified timestamp of the function.",
 							Computed:    true,
 						},
-						"json_args": schema.StringAttribute{
-							Computed:    true,
-							Description: "JSON arguments of the function.",
-						},
-						"function_to_run": schema.StringAttribute{
-							Description: "The function to run.",
-							Computed:    true,
-						},
-						"initiator_type": schema.StringAttribute{
-							Description: "Initiator type of the function.",
+						"product_version": schema.StringAttribute{
+							Description: "Product version of the function.",
 							Computed:    true,
 						},
 						"active": schema.BoolAttribute{
 							Description: "Status of the function.",
 							Computed:    true,
 						},
-						"last_editor": schema.StringAttribute{
-							Description: "The last editor of the function.",
+						"runtime": schema.StringAttribute{
+							Description: "Runtime of the function.",
 							Computed:    true,
 						},
-						"modified": schema.StringAttribute{
-							Description: "Last modified timestamp of the function.",
+						"execution_environment": schema.StringAttribute{
+							Description: "Execution environment of the function.",
+							Computed:    true,
+						},
+						"default_args": schema.StringAttribute{
+							Description: "Default arguments of the function as JSON.",
 							Computed:    true,
 						},
 						"reference_count": schema.Int64Attribute{
@@ -147,6 +121,10 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 							Description: "Version of the function.",
 							Computed:    true,
 						},
+						"vendor": schema.StringAttribute{
+							Description: "Vendor of the function.",
+							Computed:    true,
+						},
 					},
 				},
 			},
@@ -155,11 +133,11 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 }
 
 func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	functionsResponse, response, err := d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsGet(ctx).Execute() //nolint
+	functionsResponse, response, err := d.client.api.FunctionsAPI.ListFunctions(ctx).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			functionsResponse, response, err = utils.RetryOn429(func() (*edgefunctions.ListEdgeFunctionResponse, *http.Response, error) {
-				return d.client.edgefunctionsApi.EdgeFunctionsAPI.EdgeFunctionsGet(ctx).Execute() //nolint
+			functionsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedEdgeFunctionList, *http.Response, error) {
+				return d.client.api.FunctionsAPI.ListFunctions(ctx).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -174,75 +152,77 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			usrMsg, errMsg := errPrintFunctions(response.StatusCode, err)
+			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
-		}
-	}
-
-	var previous, next string
-	if functionsResponse.Links != nil {
-		if functionsResponse.Links.Previous.Get() != nil {
-			previous = *functionsResponse.Links.Previous.Get()
-		}
-		if functionsResponse.Links.Next.Get() != nil {
-			next = *functionsResponse.Links.Next.Get()
 		}
 	}
 
 	edgeFunctionsState := EdgeFunctionsDataSourceModel{
-		SchemaVersion: types.Int64Value(*functionsResponse.SchemaVersion),
-		TotalPages:    types.Int64Value(*functionsResponse.TotalPages),
-		Counter:       types.Int64Value(*functionsResponse.Count),
-		Links: &GetEdgeFunctionsResponseLinks{
-			Previous: types.StringValue(previous),
-			Next:     types.StringValue(next),
-		},
+		Counter: types.Int64Value(*functionsResponse.Count),
 	}
 
 	for _, resultEdgeFunctions := range functionsResponse.GetResults() {
-		jsonArgsStr, err := utils.ConvertInterfaceToString(resultEdgeFunctions.JsonArgs)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				err.Error(),
-				"err",
-			)
+		defaultArgsStr := ""
+		if resultEdgeFunctions.DefaultArgs != nil {
+			var err error
+			defaultArgsStr, err = utils.ConvertInterfaceToString(resultEdgeFunctions.DefaultArgs)
+			if err != nil {
+				resp.Diagnostics.AddError(
+					err.Error(),
+					"Failed to convert default_args to string",
+				)
+				return
+			}
 		}
-		if resp.Diagnostics.HasError() {
-			return
+
+		result := EdgeFunctionsResults{
+			ID:             types.Int64Value(resultEdgeFunctions.Id),
+			Name:           types.StringValue(resultEdgeFunctions.Name),
+			DefaultArgs:    types.StringValue(defaultArgsStr),
+			Active:         types.BoolValue(*resultEdgeFunctions.Active),
+			LastEditor:     types.StringValue(resultEdgeFunctions.LastEditor),
+			ProductVersion: types.StringValue(resultEdgeFunctions.ProductVersion),
+			Version:        types.StringValue(resultEdgeFunctions.Version),
+			Vendor:         types.StringValue(resultEdgeFunctions.Vendor),
+			ReferenceCount: types.Int64Value(resultEdgeFunctions.ReferenceCount),
 		}
-		edgeFunctionsState.Results = append(edgeFunctionsState.Results, EdgeFunctionsResults{
-			FunctionID:    types.Int64Value(*resultEdgeFunctions.Id),
-			Name:          types.StringValue(*resultEdgeFunctions.Name),
-			Language:      types.StringValue(*resultEdgeFunctions.Language),
-			Code:          types.StringValue(*resultEdgeFunctions.Code),
-			JSONArgs:      types.StringValue(jsonArgsStr),
-			InitiatorType: types.StringValue(*resultEdgeFunctions.InitiatorType),
-			IsActive:      types.BoolValue(*resultEdgeFunctions.Active),
-			LastEditor:    types.StringValue(*resultEdgeFunctions.LastEditor),
-			Modified:      types.StringValue(*resultEdgeFunctions.Modified),
-		})
-		if resultEdgeFunctions.ReferenceCount != nil {
-			edgeFunctionsState.Results[len(edgeFunctionsState.Results)-1].ReferenceCount = types.Int64Value(*resultEdgeFunctions.ReferenceCount)
+
+		// Set optional fields if they exist in the response
+		if resultEdgeFunctions.Runtime != nil {
+			result.Runtime = types.StringValue(*resultEdgeFunctions.Runtime)
 		}
-		if resultEdgeFunctions.FunctionToRun != nil {
-			edgeFunctionsState.Results[len(edgeFunctionsState.Results)-1].FunctionToRun = types.StringValue(*resultEdgeFunctions.FunctionToRun)
+		if resultEdgeFunctions.ExecutionEnvironment != nil {
+			result.ExecutionEnvironment = types.StringValue(*resultEdgeFunctions.ExecutionEnvironment)
 		}
+		// LastModified is always returned but check if it's non-zero
+		if !resultEdgeFunctions.LastModified.IsZero() {
+			result.LastModified = types.StringValue(resultEdgeFunctions.LastModified.String())
+		}
+
+		edgeFunctionsState.Results = append(edgeFunctionsState.Results, result)
 	}
-	edgeFunctionsState.ID = types.StringValue("Get All Edge Functions")
+	edgeFunctionsState.ID = types.StringValue("Get All Functions")
 	diags := resp.State.Set(ctx, &edgeFunctionsState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+func errPrintFunctions(errCode int, err error) (string, string) {
+	var usrMsg string
+	switch errCode {
+	case 400:
+		usrMsg = "Bad Request"
+	case 401:
+		usrMsg = "Unauthorized Token"
+	case 404:
+		usrMsg = "No Functions found"
+	default:
+		usrMsg = err.Error()
+	}
+
+	errMsg := fmt.Sprintf("%d - %s", errCode, usrMsg)
+	return usrMsg, errMsg
 }

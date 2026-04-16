@@ -1,9 +1,9 @@
-resource "azion_intelligent_dns_record" "examples" {
+resource "azion_intelligent_dns_record" "example" {
   zone_id = "12345"
   record = {
-    record_type = "A"
-    entry       = "site"
-    answers_list = [
+    type = "A"
+    name = "site"
+    rdata = [
       "8.8.8.8"
     ]
     policy      = "weighted"

@@ -1,0 +1,1 @@
+terraform import azion_workload_deployment.example 12345/67890
