@@ -7,13 +7,11 @@ import (
 	"github.com/aziontech/azionapi-go-sdk/waf"
 
 	"github.com/aziontech/azionapi-go-sdk/digital_certificates"
-	"github.com/aziontech/azionapi-go-sdk/domains"
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
 	"github.com/aziontech/azionapi-go-sdk/edgefirewall"
 	"github.com/aziontech/azionapi-go-sdk/edgefunctions"
 	"github.com/aziontech/azionapi-go-sdk/edgefunctionsinstance_edgefirewall"
 	"github.com/aziontech/azionapi-go-sdk/networklist"
-	"github.com/aziontech/azionapi-go-sdk/variables"
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	edgeapi "github.com/aziontech/azionapi-v4-go-sdk-dev/edge-api"
 )
@@ -21,9 +19,6 @@ import (
 type apiClient struct {
 	idnsConfig *idns.Configuration
 	idnsApi    *idns.APIClient
-
-	domainsConfig *domains.Configuration
-	domainsApi    *domains.APIClient
 
 	edgefunctionsConfig *edgefunctions.Configuration
 	edgefunctionsApi    *edgefunctions.APIClient
@@ -51,9 +46,6 @@ type apiClient struct {
 	edgefunctionsinstanceEdgefirewallConfig *edgefunctionsinstance_edgefirewall.Configuration
 	edgefunctionsinstanceEdgefirewallApi    *edgefunctionsinstance_edgefirewall.APIClient
 
-	variablesConfig *variables.Configuration
-	variablesApi    *variables.APIClient
-
 	wafConfig *waf.Configuration
 	wafApi    *waf.APIClient
 }
@@ -61,7 +53,6 @@ type apiClient struct {
 func Client(APIToken string, userAgent string) *apiClient {
 	client := &apiClient{
 		idnsConfig:                              idns.NewConfiguration(),
-		domainsConfig:                           domains.NewConfiguration(),
 		edgefunctionsConfig:                     edgefunctions.NewConfiguration(),
 		apiConfig:                               azionapi.NewConfiguration(),
 		edgeConfig:                              edgeapi.NewConfiguration(),
@@ -69,7 +60,6 @@ func Client(APIToken string, userAgent string) *apiClient {
 		networkListConfig:                       networklist.NewConfiguration(),
 		edgefirewallConfig:                      edgefirewall.NewConfiguration(),
 		edgefunctionsinstanceEdgefirewallConfig: edgefunctionsinstance_edgefirewall.NewConfiguration(),
-		variablesConfig:                         variables.NewConfiguration(),
 		wafConfig:                               waf.NewConfiguration(),
 	}
 
@@ -81,21 +71,14 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.edgeConfig.Servers[0].URL = v4url
 
 	if envApiEntrypoint != "" {
-		client.domainsConfig.Servers[0].URL = envApiEntrypoint
 		client.idnsConfig.Servers[0].URL = envApiEntrypoint
 		client.edgefunctionsConfig.Servers[0].URL = envApiEntrypoint
 		client.digitalCertificatesConfig.Servers[0].URL = envApiEntrypoint
 		client.edgefirewallConfig.Servers[0].URL = envApiEntrypoint
 		client.edgefunctionsinstanceEdgefirewallConfig.Servers[0].URL = envApiEntrypoint
 		client.networkListConfig.Servers[0].URL = envApiEntrypoint
-		client.variablesConfig.Servers[0].URL = envApiEntrypoint
 		client.wafConfig.Servers[0].URL = envApiEntrypoint
 	}
-
-	client.domainsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-	client.domainsConfig.AddDefaultHeader("Accept", "application/json; version=3")
-	client.domainsConfig.UserAgent = userAgent
-	client.domainsApi = domains.NewAPIClient(client.domainsConfig)
 
 	client.idnsConfig.AddDefaultHeader("Authorization", "token "+APIToken)
 	client.idnsConfig.AddDefaultHeader("Accept", "application/json; version=3")
@@ -138,11 +121,6 @@ func Client(APIToken string, userAgent string) *apiClient {
 	client.edgefunctionsinstanceEdgefirewallConfig.AddDefaultHeader("Accept", "application/json; version=3")
 	client.edgefunctionsinstanceEdgefirewallConfig.UserAgent = userAgent
 	client.edgefunctionsinstanceEdgefirewallApi = edgefunctionsinstance_edgefirewall.NewAPIClient(client.edgefunctionsinstanceEdgefirewallConfig)
-
-	client.variablesConfig.AddDefaultHeader("Authorization", "token "+APIToken)
-	client.variablesConfig.AddDefaultHeader("Accept", "application/json; version=3")
-	client.variablesConfig.UserAgent = userAgent
-	client.variablesApi = variables.NewAPIClient(client.variablesConfig)
 
 	client.wafConfig.AddDefaultHeader("Authorization", "token "+APIToken)
 	client.wafConfig.AddDefaultHeader("Accept", "application/json; version=3")

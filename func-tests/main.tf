@@ -436,8 +436,9 @@ data "azion_digital_certificates" "example" {
 #   certificate_id = azion_digital_certificate.testfunc.certificate_result.certificate_id
 # }
 
-data "azion_domains" "example" {
-}
+# Removed: azion_domains is not available in V4 API
+# data "azion_domains" "example" {
+# }
 
 # data "azion_domain" "example" {
 #   id = azion_domain.testfunc.domain.id

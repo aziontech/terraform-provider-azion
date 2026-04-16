@@ -20,24 +20,6 @@ resource "azion_application_main_setting" "example" {
   }
 }
 
-resource "azion_edge_application_origin" "example" {
-  edge_application_id = azion_application_main_setting.example.application.application_id
-  origin = {
-    name        = "Terraform Main Settings Example"
-    origin_type = "single_origin"
-    addresses = [
-      {
-        address = "httpExample.org"
-      }
-    ]
-    origin_protocol_policy = "https"
-    host_header            = "$${host}"
-  }
-  depends_on = [
-    azion_application_main_setting.example
-  ]
-}
-
 resource "azion_application_cache_setting" "example" {
   application_id = azion_application_main_setting.example.application.application_id
   cache_setting = {
@@ -57,7 +39,6 @@ resource "azion_application_cache_setting" "example" {
     }
   }
   depends_on = [
-    azion_application_main_setting.example,
-    azion_edge_application_origin.example
+    azion_application_main_setting.example
   ]
 }
