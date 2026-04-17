@@ -133,9 +133,17 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 }
 
 func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	if d.client == nil {
+		resp.Diagnostics.AddError(
+			"Client not configured",
+			"The data source client has not been configured. This is an unexpected error.",
+		)
+		return
+	}
+
 	functionsResponse, response, err := d.client.api.FunctionsAPI.ListFunctions(ctx).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			functionsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedEdgeFunctionList, *http.Response, error) {
 				return d.client.api.FunctionsAPI.ListFunctions(ctx).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -152,10 +160,22 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintFunctions(response.StatusCode, err)
-			resp.Diagnostics.AddError(usrMsg, errMsg)
+			if response != nil {
+				usrMsg, errMsg := errPrintFunctions(response.StatusCode, err)
+				resp.Diagnostics.AddError(usrMsg, errMsg)
+			} else {
+				resp.Diagnostics.AddError(
+					"API request failed",
+					fmt.Sprintf("Unable to make API request: %s", err.Error()),
+				)
+			}
 			return
 		}
+	}
+
+	// Close response body after successful API call
+	if response != nil {
+		defer response.Body.Close()
 	}
 
 	edgeFunctionsState := EdgeFunctionsDataSourceModel{
