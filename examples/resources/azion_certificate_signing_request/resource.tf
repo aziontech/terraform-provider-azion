@@ -1,16 +1,3 @@
-terraform {
-  required_providers {
-    azion = {
-      source  = "azion/azion"
-      version = ">= 1.0.0"
-    }
-  }
-}
-
-provider "azion" {
-  api_token = var.api_token
-}
-
 # Create a Certificate Signing Request (CSR)
 # This will generate a new certificate with a CSR that can be sent to a Certificate Authority
 # The resource supports Create, Read, Delete, and Import operations.
