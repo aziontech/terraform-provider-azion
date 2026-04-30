@@ -25,11 +25,11 @@ resource "azion_certificate_signing_request" "example" {
     organization       = "Example Organization"
     organization_unity = "IT Department"
     email              = "admin@example.com"
-    
+
     # Optional fields
-    alternative_names  = ["www.example.com", "api.example.com"]
-    key_algorithm      = "rsa_2048"
-    active             = true
+    alternative_names = ["www.example.com", "api.example.com"]
+    key_algorithm     = "rsa_2048"
+    active            = true
   }
 }
 
