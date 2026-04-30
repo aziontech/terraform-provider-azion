@@ -229,7 +229,7 @@ func (r *crlResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	// Populate the state from the response.
 	crlData := createCrl.GetData()
-	plan.Crl = populateCrlResourceResults(ctx, crlData)
+	plan.Crl = populateCrlResourceResults(crlData)
 	plan.ID = types.StringValue(strconv.FormatInt(crlData.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -311,7 +311,7 @@ func (r *crlResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	crlData := getCrl.GetData()
-	state.Crl = populateCrlResourceResults(ctx, crlData)
+	state.Crl = populateCrlResourceResults(crlData)
 	state.ID = types.StringValue(strconv.FormatInt(crlData.GetId(), 10))
 
 	diags = resp.State.Set(ctx, &state)
@@ -409,7 +409,7 @@ func (r *crlResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	crlData := updateCrl.GetData()
-	plan.Crl = populateCrlResourceResults(ctx, crlData)
+	plan.Crl = populateCrlResourceResults(crlData)
 	plan.ID = types.StringValue(strconv.FormatInt(crlData.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -545,7 +545,7 @@ func (r *crlResource) ImportState(ctx context.Context, req resource.ImportStateR
 
 	crlData := getCrl.GetData()
 	state := crlResourceModel{
-		Crl: populateCrlResourceResults(ctx, crlData),
+		Crl: populateCrlResourceResults(crlData),
 		ID:  types.StringValue(strconv.FormatInt(crlData.GetId(), 10)),
 	}
 
@@ -557,7 +557,7 @@ func (r *crlResource) ImportState(ctx context.Context, req resource.ImportStateR
 }
 
 // populateCrlResourceResults transforms API response data to Terraform resource model.
-func populateCrlResourceResults(ctx context.Context, crl azionapi.CertificateRevocationList) *crlResourceResults {
+func populateCrlResourceResults(crl azionapi.CertificateRevocationList) *crlResourceResults {
 	var createdAt string
 	if crl.CreatedAt.IsSet() && crl.CreatedAt.Get() != nil {
 		createdAt = (*crl.CreatedAt.Get()).Format(time.RFC3339)

@@ -200,7 +200,7 @@ func (d *CrlsDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		}
 	}
 
-	state := populateCrlsListResults(ctx, crlsResponse)
+	state := populateCrlsListResults(crlsResponse)
 	state.ID = types.StringValue("Get All Certificate Revocation Lists")
 	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -210,7 +210,7 @@ func (d *CrlsDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 }
 
 // populateCrlsListResults transforms API response data to Terraform state model.
-func populateCrlsListResults(ctx context.Context, list *azionapi.PaginatedCertificateRevocationList) CrlsDataSourceModel {
+func populateCrlsListResults(list *azionapi.PaginatedCertificateRevocationList) CrlsDataSourceModel {
 	var previous, next string
 	if list.HasPrevious() {
 		previous = list.GetPrevious()
