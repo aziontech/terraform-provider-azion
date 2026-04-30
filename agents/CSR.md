@@ -4,7 +4,7 @@ This document provides guidance for implementing the Certificate Signing Request
 
 ## API Information
 
-- **SDK Package**: `github.com/aziontech/azionapi-v4-go-sdk-dev/tls-api`
+- **SDK Package**: `github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api`
 - **API Service**: `DigitalCertificatesCertificateSigningRequestsAPIService` (for Create)
 - **API Service**: `DigitalCertificatesCertificatesAPI` (for Read and Delete)
 - **Endpoint**: `POST /workspace/tls/csr` (Create)
