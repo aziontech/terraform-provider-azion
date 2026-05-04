@@ -117,6 +117,10 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionCustomPages,
 		dataSourceAzionApplicationDeviceGroup,
 		dataSourceAzionApplicationDeviceGroups,
+		dataSourceAzionCrl,
+		dataSourceAzionCrls,
+		dataSourceAzionBucket,
+		dataSourceAzionBuckets,
 	}
 }
 
@@ -131,6 +135,8 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewApplicationRulesEngineResource,
 		NewApplicationCacheSettingsResource,
 		NewCertificateResource,
+		NewCertificateSigningRequestResource,
+		NewCertificateRequestResource,
 		NetworkListResource,
 		FirewallMainSettingResource,
 		WafResource,
@@ -142,6 +148,8 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewConnectorResource,
 		NewCustomPageResource,
 		NewApplicationDeviceGroupResource,
+		NewCrlResource,
+		NewBucketResource,
 	}
 }
 

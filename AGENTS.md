@@ -38,8 +38,14 @@ For detailed documentation on specific packages, see the `agents/` folder:
 - **[agents/CONNECTOR.md](agents/CONNECTOR.md)** - Connector
 - **[agents/CUSTOM_PAGES.md](agents/CUSTOM_PAGES.md)** - Custom Pages
 - **[agents/DIGITAL_CERTIFICATE.md](agents/DIGITAL_CERTIFICATE.md)** - Digital Certificates
+- **[agents/CERTIFICATE_REQUEST.md](agents/CERTIFICATE_REQUEST.md)** - Certificate Request (Let's Encrypt)
+- **[agents/CSR.md](agents/CSR.md)** - Certificate Signing Request (CSR)
+- **[agents/CRL.md](agents/CRL.md)** - Certificate Revocation Lists (CRL)
 - **[agents/WORKLOAD.md](agents/WORKLOAD.md)** - Workloads
 - **[agents/WORKLOAD_DEPLOYMENT.md](agents/WORKLOAD_DEPLOYMENT.md)** - Workload Deployments
+
+### Storage
+- **[agents/STORAGE_BUCKETS.md](agents/STORAGE_BUCKETS.md)** - Storage Buckets
 
 ---
 
