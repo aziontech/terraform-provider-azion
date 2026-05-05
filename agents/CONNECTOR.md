@@ -471,18 +471,38 @@ type ConnectorHTTPAttributes struct {
 # Storage Connector Example
 # Used to connect to object storage services
 # NOTE: The bucket name must be a valid, existing bucket
+# You can either:
+#   1. Use an existing bucket name directly (string value)
+#   2. Reference a bucket created via azion_bucket resource
 resource "azion_connector" "storage_connector" {
   connector = {
     name   = "tf-test-storage-connector"
     type   = "storage"
     active = true
     storage_attributes = {
-      # Replace with a valid bucket name
-      bucket = "awesome-app"
+      # Option 1: Use an existing bucket name directly
+      # bucket = "my-existing-bucket"
+      
+      # Option 2: Reference a bucket resource (recommended)
+      bucket = azion_bucket.example.bucket.name
       prefix = "path/to/files/"
     }
   }
+  
+  # When referencing a bucket resource, add depends_on to ensure
+  # the bucket is created before the connector
+  depends_on = [
+    azion_bucket.example
+  ]
 }
+
+# Example bucket resource (if using Option 2 above)
+# resource "azion_bucket" "example" {
+#   bucket = {
+#     name             = "my-terraform-bucket"
+#     workloads_access = "read_write"
+#   }
+# }
 
 # HTTP Connector Example
 # Used to connect to HTTP origins

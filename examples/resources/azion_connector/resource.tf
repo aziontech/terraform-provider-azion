@@ -80,6 +80,49 @@ resource "azion_connector" "http_connector_full" {
   }
 }
 
+# HTTP Connector with HMAC Origin Shield (S3-compatible)
+# Used to connect to S3-compatible origins with HMAC authentication
+resource "azion_connector" "s3_with_hmac" {
+  connector = {
+    name   = "S3 Connector with HMAC"
+    type   = "http"
+    active = true
+    http_attributes = {
+      addresses = [
+        {
+          address    = "my-bucket.s3.us-east-1.amazonaws.com"
+          http_port  = 80
+          https_port = 443
+          active     = true
+        }
+      ]
+      connection_options = {
+        host             = "my-bucket.s3.amazonaws.com"
+        transport_policy = "force_https"
+      }
+      modules = {
+        origin_shield = {
+          enabled = true
+          config = {
+            hmac = {
+              enabled = true
+              config = {
+                type = "aws4_hmac_sha256"
+                attributes = {
+                  region     = "us-east-1"
+                  service    = "s3"
+                  access_key = "YOUR_ACCESS_KEY"
+                  secret_key = "YOUR_SECRET_KEY"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 # =====================================================
 # DATA SOURCES
 # =====================================================

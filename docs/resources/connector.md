@@ -95,6 +95,51 @@ resource "azion_connector" "http_connector_full" {
 }
 ```
 
+### HTTP Connector with HMAC Origin Shield (S3-compatible)
+
+```hcl
+resource "azion_connector" "s3_with_hmac" {
+  connector = {
+    name   = "S3 Connector with HMAC"
+    type   = "http"
+    active = true
+    http_attributes = {
+      addresses = [
+        {
+          address    = "my-bucket.s3.us-east-1.amazonaws.com"
+          http_port  = 80
+          https_port = 443
+          active     = true
+        }
+      ]
+      connection_options = {
+        host             = "my-bucket.s3.amazonaws.com"
+        transport_policy = "force_https"
+      }
+      modules = {
+        origin_shield = {
+          enabled = true
+          config = {
+            hmac = {
+              enabled = true
+              config = {
+                type = "aws4_hmac_sha256"
+                attributes = {
+                  region     = "us-east-1"
+                  service     = "s3"
+                  access_key = "YOUR_ACCESS_KEY"
+                  secret_key = "YOUR_SECRET_KEY"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
 ### Using Data Sources
 
 ```hcl
@@ -163,6 +208,16 @@ When `type = "http"`, include `http_attributes` inside the `connector` block:
       * `enabled` - (Optional) Whether load balancer is enabled.
     * `origin_shield` - (Optional) Origin shield module:
       * `enabled` - (Optional) Whether origin shield is enabled.
+      * `config` - (Optional) Origin shield configuration:
+        * `hmac` - (Optional) HMAC configuration for origin shield:
+          * `enabled` - (Required) Whether HMAC is enabled.
+          * `config` - (Optional) AWS4 HMAC configuration:
+            * `type` - (Optional) HMAC type (e.g., `aws4_hmac_sha256`).
+            * `attributes` - (Optional) AWS4 HMAC attributes:
+              * `region` - (Required) AWS region.
+              * `service` - (Optional) AWS service name (e.g., `s3`).
+              * `access_key` - (Required, Sensitive) AWS access key.
+              * `secret_key` - (Required, Sensitive) AWS secret key.
 
 ## Attribute Reference
 

@@ -114,7 +114,33 @@ type LoadBalancerModuleModel struct {
 
 // Origin shield module.
 type OriginShieldModuleModel struct {
-	Enabled types.Bool `tfsdk:"enabled"`
+	Enabled types.Bool               `tfsdk:"enabled"`
+	Config  *OriginShieldConfigModel `tfsdk:"config"`
+}
+
+// Origin shield config.
+type OriginShieldConfigModel struct {
+	Hmac *HMACConfigModel `tfsdk:"hmac"`
+}
+
+// HMAC configuration.
+type HMACConfigModel struct {
+	Enabled types.Bool           `tfsdk:"enabled"`
+	Config  *AWS4HMACConfigModel `tfsdk:"config"`
+}
+
+// AWS4 HMAC configuration.
+type AWS4HMACConfigModel struct {
+	Type       types.String             `tfsdk:"type"`
+	Attributes *AWS4HMACAttributesModel `tfsdk:"attributes"`
+}
+
+// AWS4 HMAC attributes.
+type AWS4HMACAttributesModel struct {
+	Region    types.String `tfsdk:"region"`
+	Service   types.String `tfsdk:"service"`
+	AccessKey types.String `tfsdk:"access_key"`
+	SecretKey types.String `tfsdk:"secret_key"`
 }
 
 func (r *connectorResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -312,6 +338,56 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 												Description: "Whether origin shield is enabled.",
 												Optional:    true,
 												Computed:    true,
+											},
+											"config": schema.SingleNestedAttribute{
+												Description: "Origin shield configuration.",
+												Optional:    true,
+												Attributes: map[string]schema.Attribute{
+													"hmac": schema.SingleNestedAttribute{
+														Description: "HMAC configuration for origin shield.",
+														Optional:    true,
+														Attributes: map[string]schema.Attribute{
+															"enabled": schema.BoolAttribute{
+																Description: "Whether HMAC is enabled.",
+																Optional:    true,
+															},
+															"config": schema.SingleNestedAttribute{
+																Description: "AWS4 HMAC configuration.",
+																Optional:    true,
+																Attributes: map[string]schema.Attribute{
+																	"type": schema.StringAttribute{
+																		Description: "HMAC type (e.g., aws4_hmac_sha256).",
+																		Optional:    true,
+																	},
+																	"attributes": schema.SingleNestedAttribute{
+																		Description: "AWS4 HMAC attributes.",
+																		Optional:    true,
+																		Attributes: map[string]schema.Attribute{
+																			"region": schema.StringAttribute{
+																				Description: "AWS region.",
+																				Optional:    true,
+																			},
+																			"service": schema.StringAttribute{
+																				Description: "AWS service name.",
+																				Optional:    true,
+																			},
+																			"access_key": schema.StringAttribute{
+																				Description: "AWS access key.",
+																				Optional:    true,
+																				Sensitive:   true,
+																			},
+																			"secret_key": schema.StringAttribute{
+																				Description: "AWS secret key.",
+																				Optional:    true,
+																				Sensitive:   true,
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
 											},
 										},
 									},
@@ -741,6 +817,40 @@ func (r *connectorResource) buildHTTPConnectorRequest(ctx context.Context, conne
 			if !osModel.Enabled.IsNull() && !osModel.Enabled.IsUnknown() {
 				os.SetEnabled(osModel.Enabled.ValueBool())
 			}
+			// Handle HMAC config if provided.
+			if osModel.Config != nil && osModel.Config.Hmac != nil {
+				hmacEnabled := false
+				if !osModel.Config.Hmac.Enabled.IsNull() && !osModel.Config.Hmac.Enabled.IsUnknown() {
+					hmacEnabled = osModel.Config.Hmac.Enabled.ValueBool()
+				}
+				hmacConfig := azionapi.NewHMACRequest(hmacEnabled)
+				if osModel.Config.Hmac.Config != nil && osModel.Config.Hmac.Config.Attributes != nil {
+					region := ""
+					if !osModel.Config.Hmac.Config.Attributes.Region.IsNull() && !osModel.Config.Hmac.Config.Attributes.Region.IsUnknown() {
+						region = osModel.Config.Hmac.Config.Attributes.Region.ValueString()
+					}
+					accessKey := ""
+					if !osModel.Config.Hmac.Config.Attributes.AccessKey.IsNull() && !osModel.Config.Hmac.Config.Attributes.AccessKey.IsUnknown() {
+						accessKey = osModel.Config.Hmac.Config.Attributes.AccessKey.ValueString()
+					}
+					secretKey := ""
+					if !osModel.Config.Hmac.Config.Attributes.SecretKey.IsNull() && !osModel.Config.Hmac.Config.Attributes.SecretKey.IsUnknown() {
+						secretKey = osModel.Config.Hmac.Config.Attributes.SecretKey.ValueString()
+					}
+					attrs := azionapi.NewAWS4HMACAttributesRequest(region, accessKey, secretKey)
+					if !osModel.Config.Hmac.Config.Attributes.Service.IsNull() && !osModel.Config.Hmac.Config.Attributes.Service.IsUnknown() {
+						attrs.SetService(osModel.Config.Hmac.Config.Attributes.Service.ValueString())
+					}
+					aws4Hmac := azionapi.NewAWS4HMACRequest(*attrs)
+					if !osModel.Config.Hmac.Config.Type.IsNull() && !osModel.Config.Hmac.Config.Type.IsUnknown() {
+						aws4Hmac.SetType(osModel.Config.Hmac.Config.Type.ValueString())
+					}
+					hmacConfig.SetConfig(*aws4Hmac)
+				}
+				osConfig := azionapi.NewOriginShieldConfigRequest()
+				osConfig.SetHmac(*hmacConfig)
+				os.SetConfig(*osConfig)
+			}
 			modules.SetOriginShield(*os)
 		}
 		attrs.SetModules(*modules)
@@ -873,6 +983,40 @@ func (r *connectorResource) buildHTTPPatchedConnectorRequest(ctx context.Context
 			os := azionapi.NewOriginShieldModuleRequest()
 			if !osModel.Enabled.IsNull() && !osModel.Enabled.IsUnknown() {
 				os.SetEnabled(osModel.Enabled.ValueBool())
+			}
+			// Handle HMAC config if provided.
+			if osModel.Config != nil && osModel.Config.Hmac != nil {
+				hmacEnabled := false
+				if !osModel.Config.Hmac.Enabled.IsNull() && !osModel.Config.Hmac.Enabled.IsUnknown() {
+					hmacEnabled = osModel.Config.Hmac.Enabled.ValueBool()
+				}
+				hmacConfig := azionapi.NewHMACRequest(hmacEnabled)
+				if osModel.Config.Hmac.Config != nil && osModel.Config.Hmac.Config.Attributes != nil {
+					region := ""
+					if !osModel.Config.Hmac.Config.Attributes.Region.IsNull() && !osModel.Config.Hmac.Config.Attributes.Region.IsUnknown() {
+						region = osModel.Config.Hmac.Config.Attributes.Region.ValueString()
+					}
+					accessKey := ""
+					if !osModel.Config.Hmac.Config.Attributes.AccessKey.IsNull() && !osModel.Config.Hmac.Config.Attributes.AccessKey.IsUnknown() {
+						accessKey = osModel.Config.Hmac.Config.Attributes.AccessKey.ValueString()
+					}
+					secretKey := ""
+					if !osModel.Config.Hmac.Config.Attributes.SecretKey.IsNull() && !osModel.Config.Hmac.Config.Attributes.SecretKey.IsUnknown() {
+						secretKey = osModel.Config.Hmac.Config.Attributes.SecretKey.ValueString()
+					}
+					attrs := azionapi.NewAWS4HMACAttributesRequest(region, accessKey, secretKey)
+					if !osModel.Config.Hmac.Config.Attributes.Service.IsNull() && !osModel.Config.Hmac.Config.Attributes.Service.IsUnknown() {
+						attrs.SetService(osModel.Config.Hmac.Config.Attributes.Service.ValueString())
+					}
+					aws4Hmac := azionapi.NewAWS4HMACRequest(*attrs)
+					if !osModel.Config.Hmac.Config.Type.IsNull() && !osModel.Config.Hmac.Config.Type.IsUnknown() {
+						aws4Hmac.SetType(osModel.Config.Hmac.Config.Type.ValueString())
+					}
+					hmacConfig.SetConfig(*aws4Hmac)
+				}
+				osConfig := azionapi.NewOriginShieldConfigRequest()
+				osConfig.SetHmac(*hmacConfig)
+				os.SetConfig(*osConfig)
 			}
 			modules.SetOriginShield(*os)
 		}
@@ -1017,6 +1161,34 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 				if c.Attributes.Modules.OriginShield.Enabled != nil {
 					osModel.Enabled = types.BoolValue(*c.Attributes.Modules.OriginShield.Enabled)
 				}
+				// Handle HMAC config from API response.
+				if c.Attributes.Modules.OriginShield.Config.IsSet() {
+					config := c.Attributes.Modules.OriginShield.Config.Get()
+					if config != nil && config.Hmac != nil {
+						osModel.Config = &OriginShieldConfigModel{
+							Hmac: &HMACConfigModel{
+								Enabled: types.BoolValue(config.Hmac.Enabled),
+							},
+						}
+						if config.Hmac.Config.IsSet() {
+							aws4Hmac := config.Hmac.Config.Get()
+							if aws4Hmac != nil {
+								osModel.Config.Hmac.Config = &AWS4HMACConfigModel{}
+								if aws4Hmac.Type != nil {
+									osModel.Config.Hmac.Config.Type = types.StringValue(*aws4Hmac.Type)
+								}
+								osModel.Config.Hmac.Config.Attributes = &AWS4HMACAttributesModel{
+									Region:    types.StringValue(aws4Hmac.Attributes.Region),
+									AccessKey: types.StringValue(aws4Hmac.Attributes.AccessKey),
+									SecretKey: types.StringValue(aws4Hmac.Attributes.SecretKey),
+								}
+								if aws4Hmac.Attributes.Service != nil {
+									osModel.Config.Hmac.Config.Attributes.Service = types.StringValue(*aws4Hmac.Attributes.Service)
+								}
+							}
+						}
+					}
+				}
 				osValue, diags := types.ObjectValueFrom(ctx, OriginShieldModuleModel{}.attrTypes(), osModel)
 				if !diags.HasError() {
 					modulesModel.OriginShield = osValue
@@ -1068,6 +1240,40 @@ func (m LoadBalancerModuleModel) attrTypes() map[string]attr.Type {
 func (m OriginShieldModuleModel) attrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"enabled": types.BoolType,
+		"config":  types.ObjectType{AttrTypes: OriginShieldConfigModel{}.attrTypes()},
+	}
+}
+
+// attrTypes returns the attribute types for OriginShieldConfigModel.
+func (m OriginShieldConfigModel) attrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"hmac": types.ObjectType{AttrTypes: HMACConfigModel{}.attrTypes()},
+	}
+}
+
+// attrTypes returns the attribute types for HMACConfigModel.
+func (m HMACConfigModel) attrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"enabled": types.BoolType,
+		"config":  types.ObjectType{AttrTypes: AWS4HMACConfigModel{}.attrTypes()},
+	}
+}
+
+// attrTypes returns the attribute types for AWS4HMACConfigModel.
+func (m AWS4HMACConfigModel) attrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"type":       types.StringType,
+		"attributes": types.ObjectType{AttrTypes: AWS4HMACAttributesModel{}.attrTypes()},
+	}
+}
+
+// attrTypes returns the attribute types for AWS4HMACAttributesModel.
+func (m AWS4HMACAttributesModel) attrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"region":     types.StringType,
+		"service":    types.StringType,
+		"access_key": types.StringType,
+		"secret_key": types.StringType,
 	}
 }
 
