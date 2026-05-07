@@ -16,29 +16,29 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &EdgeFunctionDataSource{}
-	_ datasource.DataSourceWithConfigure = &EdgeFunctionDataSource{}
+	_ datasource.DataSource              = &functionDataSource{}
+	_ datasource.DataSourceWithConfigure = &functionDataSource{}
 )
 
 func dataSourceAzionFunction() datasource.DataSource {
-	return &EdgeFunctionDataSource{}
+	return &functionDataSource{}
 }
 
-type EdgeFunctionDataSource struct {
+type functionDataSource struct {
 	client *apiClient
 }
 
-type EdgeFunctionDataSourceModel struct {
-	Data EdgeFunctionResults `tfsdk:"data"`
-	ID   types.String        `tfsdk:"id"`
+type functionDataSourceModel struct {
+	Data functionResults `tfsdk:"data"`
+	ID   types.String    `tfsdk:"id"`
 }
 
-type GetEdgeFunctionResponseLinks struct {
+type GetFunctionResponseLinks struct {
 	Previous types.String `tfsdk:"previous"`
 	Next     types.String `tfsdk:"next"`
 }
 
-type EdgeFunctionResults struct {
+type functionResults struct {
 	ID                   types.Int64  `tfsdk:"id"`
 	Name                 types.String `tfsdk:"name"`
 	LastEditor           types.String `tfsdk:"last_editor"`
@@ -54,18 +54,18 @@ type EdgeFunctionResults struct {
 	Vendor               types.String `tfsdk:"vendor"`
 }
 
-func (d *EdgeFunctionDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+func (d *functionDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	d.client = req.ProviderData.(*apiClient)
 }
 
-func (d *EdgeFunctionDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *functionDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_function"
 }
 
-func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *functionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -133,15 +133,15 @@ func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 	}
 }
 
-func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var getEdgeFunctionId types.String
-	diags := req.Config.GetAttribute(ctx, path.Root("id"), &getEdgeFunctionId)
+func (d *functionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var getFunctionId types.String
+	diags := req.Config.GetAttribute(ctx, path.Root("id"), &getFunctionId)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	edgeFunctionID, err := strconv.ParseInt(getEdgeFunctionId.ValueString(), 10, 64)
+	functionID, err := strconv.ParseInt(getFunctionId.ValueString(), 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error ",
@@ -151,11 +151,11 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	functionsResponse, response, err := d.client.api.FunctionsAPI.
-		RetrieveFunction(ctx, edgeFunctionID).Execute() //nolint
+		RetrieveFunction(ctx, functionID).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
 			functionsResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
-				return d.client.api.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionID).Execute() //nolint
+				return d.client.api.FunctionsAPI.RetrieveFunction(ctx, functionID).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -189,8 +189,8 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		}
 	}
 
-	EdgeFunctionState := EdgeFunctionDataSourceModel{
-		Data: EdgeFunctionResults{
+	FunctionState := functionDataSourceModel{
+		Data: functionResults{
 			ID:                   types.Int64Value(functionsResponse.Data.Id),
 			Name:                 types.StringValue(functionsResponse.Data.Name),
 			Code:                 types.StringValue(functionsResponse.Data.Code),
@@ -207,11 +207,11 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	if functionsResponse.Data.Runtime != nil {
-		EdgeFunctionState.Data.Runtime = types.StringValue(*functionsResponse.Data.Runtime)
+		FunctionState.Data.Runtime = types.StringValue(*functionsResponse.Data.Runtime)
 	}
 
-	EdgeFunctionState.ID = types.StringValue("Get By Id Function")
-	diags = resp.State.Set(ctx, &EdgeFunctionState)
+	FunctionState.ID = types.StringValue("Get By Id Function")
+	diags = resp.State.Set(ctx, &FunctionState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

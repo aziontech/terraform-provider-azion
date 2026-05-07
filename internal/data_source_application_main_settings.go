@@ -47,7 +47,7 @@ type ApplicationData struct {
 }
 
 type ApplicationModules struct {
-	Cache                  *CacheModule                  `tfsdk:"edge_cache"`
+	Cache                  *CacheModule                  `tfsdk:"cache"`
 	Functions              *FunctionModule               `tfsdk:"functions"`
 	ApplicationAccelerator *ApplicationAcceleratorModule `tfsdk:"application_accelerator"`
 	ImageProcessor         *ImageProcessorModule         `tfsdk:"image_processor"`
@@ -125,7 +125,7 @@ func (e *ApplicationDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 					"modules": schema.SingleNestedAttribute{
 						Computed: true,
 						Attributes: map[string]schema.Attribute{
-							"edge_cache": schema.SingleNestedAttribute{
+							"cache": schema.SingleNestedAttribute{
 								Computed: true,
 								Attributes: map[string]schema.Attribute{
 									"enabled": schema.BoolAttribute{Computed: true},

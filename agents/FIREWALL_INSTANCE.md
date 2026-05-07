@@ -83,7 +83,7 @@ The "edge" prefix has been **completely removed** from all naming - both interna
 | `EdgeFirewallEdgeFunctionInstanceResults` | `FirewallFunctionInstanceData` |
 | `EdgeFirewallEdgeFunctionsInstanceResults` | `FirewallFunctionInstanceResults` |
 | `edge_firewall_id` (Terraform attribute) | `firewall_id` |
-| `azion_edge_firewall_edge_function_instance` (type name) | `azion_firewall_function_instance` |
+| `azion_firewall_function_instance` (type name) | `azion_firewall_function_instance` |
 
 > **Note:** The actual implementation uses `firewall_id` as the attribute name in both schema and struct tags. The "edge" prefix has been completely removed from all naming.
 
@@ -163,7 +163,7 @@ type EdgeFirewallEdgeFunctionInstanceDataSource struct {  // Don't use "Edge" pr
 
 For reading a single firewall function instance.
 
-#### File: `internal/data_source_edge_firewall_edge_function_instance.go`
+#### File: `internal/data_source_firewall_function_instance.go`
 
 ```go
 package provider
@@ -362,7 +362,7 @@ func (f *FirewallFunctionInstanceDataSource) Read(ctx context.Context, req datas
 
 For listing multiple firewall function instances with pagination.
 
-#### File: `internal/data_source_edge_firewall_edge_functions_instance.go`
+#### File: `internal/data_source_firewall_functions_instance.go`
 
 ```go
 package provider

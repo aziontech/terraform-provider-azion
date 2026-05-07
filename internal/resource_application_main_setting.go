@@ -97,7 +97,7 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 					"modules": schema.SingleNestedAttribute{
 						Optional: true,
 						Attributes: map[string]schema.Attribute{
-							"edge_cache": schema.SingleNestedAttribute{
+							"cache": schema.SingleNestedAttribute{
 								Optional: true,
 								Attributes: map[string]schema.Attribute{
 									"enabled": schema.BoolAttribute{Optional: true},

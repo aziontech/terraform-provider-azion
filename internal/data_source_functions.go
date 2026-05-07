@@ -13,30 +13,30 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &EdgeFunctionsDataSource{}
-	_ datasource.DataSourceWithConfigure = &EdgeFunctionsDataSource{}
+	_ datasource.DataSource              = &functionsDataSource{}
+	_ datasource.DataSourceWithConfigure = &functionsDataSource{}
 )
 
 func dataSourceAzionFunctions() datasource.DataSource {
-	return &EdgeFunctionsDataSource{}
+	return &functionsDataSource{}
 }
 
-type EdgeFunctionsDataSource struct {
+type functionsDataSource struct {
 	client *apiClient
 }
 
-type EdgeFunctionsDataSourceModel struct {
-	Counter types.Int64            `tfsdk:"counter"`
-	Results []EdgeFunctionsResults `tfsdk:"results"`
-	ID      types.String           `tfsdk:"id"`
+type functionsDataSourceModel struct {
+	Counter types.Int64        `tfsdk:"counter"`
+	Results []functionsResults `tfsdk:"results"`
+	ID      types.String       `tfsdk:"id"`
 }
 
-type GetEdgeFunctionsResponseLinks struct {
+type GetFunctionsResponseLinks struct {
 	Previous types.String `tfsdk:"previous"`
 	Next     types.String `tfsdk:"next"`
 }
 
-type EdgeFunctionsResults struct {
+type functionsResults struct {
 	ID                   types.Int64  `tfsdk:"id"`
 	Name                 types.String `tfsdk:"name"`
 	LastEditor           types.String `tfsdk:"last_editor"`
@@ -51,18 +51,18 @@ type EdgeFunctionsResults struct {
 	Vendor               types.String `tfsdk:"vendor"`
 }
 
-func (d *EdgeFunctionsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
+func (d *functionsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	d.client = req.ProviderData.(*apiClient)
 }
 
-func (d *EdgeFunctionsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *functionsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_functions"
 }
 
-func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *functionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -132,7 +132,7 @@ func (d *EdgeFunctionsDataSource) Schema(_ context.Context, _ datasource.SchemaR
 	}
 }
 
-func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *functionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	if d.client == nil {
 		resp.Diagnostics.AddError(
 			"Client not configured",
@@ -178,15 +178,15 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 		defer response.Body.Close()
 	}
 
-	edgeFunctionsState := EdgeFunctionsDataSourceModel{
+	functionsState := functionsDataSourceModel{
 		Counter: types.Int64Value(*functionsResponse.Count),
 	}
 
-	for _, resultEdgeFunctions := range functionsResponse.GetResults() {
+	for _, resultFunctions := range functionsResponse.GetResults() {
 		defaultArgsStr := ""
-		if resultEdgeFunctions.DefaultArgs != nil {
+		if resultFunctions.DefaultArgs != nil {
 			var err error
-			defaultArgsStr, err = utils.ConvertInterfaceToString(resultEdgeFunctions.DefaultArgs)
+			defaultArgsStr, err = utils.ConvertInterfaceToString(resultFunctions.DefaultArgs)
 			if err != nil {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -196,34 +196,34 @@ func (d *EdgeFunctionsDataSource) Read(ctx context.Context, req datasource.ReadR
 			}
 		}
 
-		result := EdgeFunctionsResults{
-			ID:             types.Int64Value(resultEdgeFunctions.Id),
-			Name:           types.StringValue(resultEdgeFunctions.Name),
+		result := functionsResults{
+			ID:             types.Int64Value(resultFunctions.Id),
+			Name:           types.StringValue(resultFunctions.Name),
 			DefaultArgs:    types.StringValue(defaultArgsStr),
-			Active:         types.BoolValue(*resultEdgeFunctions.Active),
-			LastEditor:     types.StringValue(resultEdgeFunctions.LastEditor),
-			ProductVersion: types.StringValue(resultEdgeFunctions.ProductVersion),
-			Version:        types.StringValue(resultEdgeFunctions.Version),
-			Vendor:         types.StringValue(resultEdgeFunctions.Vendor),
-			ReferenceCount: types.Int64Value(resultEdgeFunctions.ReferenceCount),
+			Active:         types.BoolValue(*resultFunctions.Active),
+			LastEditor:     types.StringValue(resultFunctions.LastEditor),
+			ProductVersion: types.StringValue(resultFunctions.ProductVersion),
+			Version:        types.StringValue(resultFunctions.Version),
+			Vendor:         types.StringValue(resultFunctions.Vendor),
+			ReferenceCount: types.Int64Value(resultFunctions.ReferenceCount),
 		}
 
 		// Set optional fields if they exist in the response
-		if resultEdgeFunctions.Runtime != nil {
-			result.Runtime = types.StringValue(*resultEdgeFunctions.Runtime)
+		if resultFunctions.Runtime != nil {
+			result.Runtime = types.StringValue(*resultFunctions.Runtime)
 		}
-		if resultEdgeFunctions.ExecutionEnvironment != nil {
-			result.ExecutionEnvironment = types.StringValue(*resultEdgeFunctions.ExecutionEnvironment)
+		if resultFunctions.ExecutionEnvironment != nil {
+			result.ExecutionEnvironment = types.StringValue(*resultFunctions.ExecutionEnvironment)
 		}
 		// LastModified is always returned but check if it's non-zero
-		if !resultEdgeFunctions.LastModified.IsZero() {
-			result.LastModified = types.StringValue(resultEdgeFunctions.LastModified.String())
+		if !resultFunctions.LastModified.IsZero() {
+			result.LastModified = types.StringValue(resultFunctions.LastModified.String())
 		}
 
-		edgeFunctionsState.Results = append(edgeFunctionsState.Results, result)
+		functionsState.Results = append(functionsState.Results, result)
 	}
-	edgeFunctionsState.ID = types.StringValue("Get All Functions")
-	diags := resp.State.Set(ctx, &edgeFunctionsState)
+	functionsState.ID = types.StringValue("Get All Functions")
+	diags := resp.State.Set(ctx, &functionsState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

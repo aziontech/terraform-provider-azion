@@ -19,26 +19,26 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &edgeFunctionResource{}
-	_ resource.ResourceWithConfigure   = &edgeFunctionResource{}
-	_ resource.ResourceWithImportState = &edgeFunctionResource{}
+	_ resource.Resource                = &functionResource{}
+	_ resource.ResourceWithConfigure   = &functionResource{}
+	_ resource.ResourceWithImportState = &functionResource{}
 )
 
-func NewEdgeFunctionResource() resource.Resource {
-	return &edgeFunctionResource{}
+func NewFunctionResource() resource.Resource {
+	return &functionResource{}
 }
 
-type edgeFunctionResource struct {
+type functionResource struct {
 	client *apiClient
 }
 
-type edgeFunctionResourceModel struct {
-	Function    *edgeFunctionResourceResults `tfsdk:"function"`
-	ID          types.String                 `tfsdk:"id"`
-	LastUpdated types.String                 `tfsdk:"last_updated"`
+type functionResourceModel struct {
+	Function    *functionResourceResults `tfsdk:"function"`
+	ID          types.String             `tfsdk:"id"`
+	LastUpdated types.String             `tfsdk:"last_updated"`
 }
 
-type edgeFunctionResourceResults struct {
+type functionResourceResults struct {
 	ID                   types.Int64  `tfsdk:"id"`
 	Name                 types.String `tfsdk:"name"`
 	LastEditor           types.String `tfsdk:"last_editor"`
@@ -54,11 +54,11 @@ type edgeFunctionResourceResults struct {
 	Vendor               types.String `tfsdk:"vendor"`
 }
 
-func (r *edgeFunctionResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *functionResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_function"
 }
 
-func (r *edgeFunctionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *functionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "" +
 			"~> **Note about default_args**\n" +
@@ -141,15 +141,15 @@ func (r *edgeFunctionResource) Schema(_ context.Context, _ resource.SchemaReques
 	}
 }
 
-func (r *edgeFunctionResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
+func (r *functionResource) Configure(_ context.Context, req resource.ConfigureRequest, _ *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	r.client = req.ProviderData.(*apiClient)
 }
 
-func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan edgeFunctionResourceModel
+func (r *functionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan functionResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -186,10 +186,10 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 		edgeFunction.SetDefaultArgs(planJsonArgs)
 	}
 
-	createEdgeFunction, response, err := r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
+	createFunction, response, err := r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			createEdgeFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
+			createFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
 				return r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
@@ -221,7 +221,7 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 		}
 	}
 
-	jsonArgsStr, err := utils.ConvertInterfaceToString(createEdgeFunction.Data.DefaultArgs)
+	jsonArgsStr, err := utils.ConvertInterfaceToString(createFunction.Data.DefaultArgs)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -232,26 +232,26 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	plan.Function = &edgeFunctionResourceResults{
-		ID:                   types.Int64Value(createEdgeFunction.Data.Id),
-		Name:                 types.StringValue(createEdgeFunction.Data.Name),
-		Code:                 types.StringValue(createEdgeFunction.Data.Code),
+	plan.Function = &functionResourceResults{
+		ID:                   types.Int64Value(createFunction.Data.Id),
+		Name:                 types.StringValue(createFunction.Data.Name),
+		Code:                 types.StringValue(createFunction.Data.Code),
 		DefaultArgs:          types.StringValue(jsonArgsStr),
-		ExecutionEnvironment: types.StringValue(*createEdgeFunction.Data.ExecutionEnvironment),
-		Active:               types.BoolValue(*createEdgeFunction.Data.Active),
-		LastEditor:           types.StringValue(createEdgeFunction.Data.LastEditor),
-		LastModified:         types.StringValue(createEdgeFunction.Data.LastModified.Format(time.RFC850)),
-		ProductVersion:       types.StringValue(createEdgeFunction.Data.ProductVersion),
-		Version:              types.StringValue(createEdgeFunction.Data.Version),
-		Vendor:               types.StringValue(createEdgeFunction.Data.Vendor),
-		ReferenceCount:       types.Int64Value(createEdgeFunction.Data.ReferenceCount),
+		ExecutionEnvironment: types.StringValue(*createFunction.Data.ExecutionEnvironment),
+		Active:               types.BoolValue(*createFunction.Data.Active),
+		LastEditor:           types.StringValue(createFunction.Data.LastEditor),
+		LastModified:         types.StringValue(createFunction.Data.LastModified.Format(time.RFC850)),
+		ProductVersion:       types.StringValue(createFunction.Data.ProductVersion),
+		Version:              types.StringValue(createFunction.Data.Version),
+		Vendor:               types.StringValue(createFunction.Data.Vendor),
+		ReferenceCount:       types.Int64Value(createFunction.Data.ReferenceCount),
 	}
 
-	if createEdgeFunction.Data.Runtime != nil {
-		plan.Function.Runtime = types.StringValue(*createEdgeFunction.Data.Runtime)
+	if createFunction.Data.Runtime != nil {
+		plan.Function.Runtime = types.StringValue(*createFunction.Data.Runtime)
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(createEdgeFunction.Data.Id, 10))
+	plan.ID = types.StringValue(strconv.FormatInt(createFunction.Data.Id, 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -261,20 +261,20 @@ func (r *edgeFunctionResource) Create(ctx context.Context, req resource.CreateRe
 	}
 }
 
-func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state edgeFunctionResourceModel
+func (r *functionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state functionResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var edgeFunctionId int64
+	var functionId int64
 	var err error
 	if state.Function != nil {
-		edgeFunctionId = state.Function.ID.ValueInt64()
+		functionId = state.Function.ID.ValueInt64()
 	} else {
-		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
+		functionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
@@ -284,15 +284,15 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 		}
 	}
 
-	getEdgeFunction, response, err := r.client.api.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionId).Execute() //nolint
+	getFunction, response, err := r.client.api.FunctionsAPI.RetrieveFunction(ctx, functionId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 		if response.StatusCode == 429 {
-			getEdgeFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
-				return r.client.api.FunctionsAPI.RetrieveFunction(ctx, edgeFunctionId).Execute() //nolint
+			getFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
+				return r.client.api.FunctionsAPI.RetrieveFunction(ctx, functionId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -323,7 +323,7 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 		}
 	}
 
-	jsonArgsStr, err := utils.ConvertInterfaceToString(getEdgeFunction.Data.DefaultArgs)
+	jsonArgsStr, err := utils.ConvertInterfaceToString(getFunction.Data.DefaultArgs)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -334,25 +334,25 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	state.Function = &edgeFunctionResourceResults{
-		ID:                   types.Int64Value(getEdgeFunction.Data.Id),
-		Name:                 types.StringValue(getEdgeFunction.Data.Name),
-		Code:                 types.StringValue(getEdgeFunction.Data.Code),
+	state.Function = &functionResourceResults{
+		ID:                   types.Int64Value(getFunction.Data.Id),
+		Name:                 types.StringValue(getFunction.Data.Name),
+		Code:                 types.StringValue(getFunction.Data.Code),
 		DefaultArgs:          types.StringValue(jsonArgsStr),
-		ExecutionEnvironment: types.StringValue(*getEdgeFunction.Data.ExecutionEnvironment),
-		Active:               types.BoolValue(*getEdgeFunction.Data.Active),
-		LastEditor:           types.StringValue(getEdgeFunction.Data.LastEditor),
-		LastModified:         types.StringValue(getEdgeFunction.Data.LastModified.Format(time.RFC850)),
-		ProductVersion:       types.StringValue(getEdgeFunction.Data.ProductVersion),
-		Version:              types.StringValue(getEdgeFunction.Data.Version),
-		Vendor:               types.StringValue(getEdgeFunction.Data.Vendor),
-		ReferenceCount:       types.Int64Value(getEdgeFunction.Data.ReferenceCount),
+		ExecutionEnvironment: types.StringValue(*getFunction.Data.ExecutionEnvironment),
+		Active:               types.BoolValue(*getFunction.Data.Active),
+		LastEditor:           types.StringValue(getFunction.Data.LastEditor),
+		LastModified:         types.StringValue(getFunction.Data.LastModified.Format(time.RFC850)),
+		ProductVersion:       types.StringValue(getFunction.Data.ProductVersion),
+		Version:              types.StringValue(getFunction.Data.Version),
+		Vendor:               types.StringValue(getFunction.Data.Vendor),
+		ReferenceCount:       types.Int64Value(getFunction.Data.ReferenceCount),
 	}
 
-	if getEdgeFunction.Data.Runtime != nil {
-		state.Function.Runtime = types.StringValue(*getEdgeFunction.Data.Runtime)
+	if getFunction.Data.Runtime != nil {
+		state.Function.Runtime = types.StringValue(*getFunction.Data.Runtime)
 	}
-	state.ID = types.StringValue(strconv.FormatInt(getEdgeFunction.Data.Id, 10))
+	state.ID = types.StringValue(strconv.FormatInt(getFunction.Data.Id, 10))
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -361,42 +361,42 @@ func (r *edgeFunctionResource) Read(ctx context.Context, req resource.ReadReques
 	}
 }
 
-func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan edgeFunctionResourceModel
+func (r *functionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan functionResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var state edgeFunctionResourceModel
-	diagsEdgeFunction := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diagsEdgeFunction...)
+	var state functionResourceModel
+	diagsFunction := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diagsFunction...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	updateEdgeFunctionRequest := azionapi.PatchedFunctionsRequest{}
+	updateFunctionRequest := azionapi.PatchedFunctionsRequest{}
 
 	// Only include optional fields if they are set
 	if !plan.Function.Name.IsNull() && !plan.Function.Name.IsUnknown() {
-		updateEdgeFunctionRequest.SetName(plan.Function.Name.ValueString())
+		updateFunctionRequest.SetName(plan.Function.Name.ValueString())
 	}
 
 	if !plan.Function.Code.IsNull() && !plan.Function.Code.IsUnknown() {
-		updateEdgeFunctionRequest.SetCode(plan.Function.Code.ValueString())
+		updateFunctionRequest.SetCode(plan.Function.Code.ValueString())
 	}
 
 	if !plan.Function.Active.IsNull() && !plan.Function.Active.IsUnknown() {
-		updateEdgeFunctionRequest.SetActive(plan.Function.Active.ValueBool())
+		updateFunctionRequest.SetActive(plan.Function.Active.ValueBool())
 	}
 
 	if !plan.Function.ExecutionEnvironment.IsNull() && !plan.Function.ExecutionEnvironment.IsUnknown() {
-		updateEdgeFunctionRequest.SetExecutionEnvironment(plan.Function.ExecutionEnvironment.ValueString())
+		updateFunctionRequest.SetExecutionEnvironment(plan.Function.ExecutionEnvironment.ValueString())
 	}
 
 	if !plan.Function.Runtime.IsNull() && !plan.Function.Runtime.IsUnknown() {
-		updateEdgeFunctionRequest.SetRuntime(plan.Function.Runtime.ValueString())
+		updateFunctionRequest.SetRuntime(plan.Function.Runtime.ValueString())
 	}
 
 	if !plan.Function.DefaultArgs.IsNull() && !plan.Function.DefaultArgs.IsUnknown() {
@@ -408,15 +408,15 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 			)
 			return
 		}
-		updateEdgeFunctionRequest.SetDefaultArgs(requestJsonArgs)
+		updateFunctionRequest.SetDefaultArgs(requestJsonArgs)
 	}
 
-	var edgeFunctionId int64
+	var functionId int64
 	var err error
 	if state.ID.IsNull() {
-		edgeFunctionId = state.Function.ID.ValueInt64()
+		functionId = state.Function.ID.ValueInt64()
 	} else {
-		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
+		functionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
@@ -426,11 +426,11 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	updateEdgeFunction, response, err := r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, edgeFunctionId).PatchedFunctionsRequest(updateEdgeFunctionRequest).Execute() //nolint
+	updateFunction, response, err := r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, functionId).PatchedFunctionsRequest(updateFunctionRequest).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
-			updateEdgeFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
-				return r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, edgeFunctionId).PatchedFunctionsRequest(updateEdgeFunctionRequest).Execute() //nolint
+			updateFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
+				return r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, functionId).PatchedFunctionsRequest(updateFunctionRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -461,7 +461,7 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	jsonArgsStr, err := utils.ConvertInterfaceToString(updateEdgeFunction.Data.DefaultArgs)
+	jsonArgsStr, err := utils.ConvertInterfaceToString(updateFunction.Data.DefaultArgs)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			err.Error(),
@@ -472,26 +472,26 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	plan.Function = &edgeFunctionResourceResults{
-		ID:                   types.Int64Value(updateEdgeFunction.Data.Id),
-		Name:                 types.StringValue(updateEdgeFunction.Data.Name),
-		Code:                 types.StringValue(updateEdgeFunction.Data.Code),
+	plan.Function = &functionResourceResults{
+		ID:                   types.Int64Value(updateFunction.Data.Id),
+		Name:                 types.StringValue(updateFunction.Data.Name),
+		Code:                 types.StringValue(updateFunction.Data.Code),
 		DefaultArgs:          types.StringValue(jsonArgsStr),
-		ExecutionEnvironment: types.StringValue(*updateEdgeFunction.Data.ExecutionEnvironment),
-		Active:               types.BoolValue(*updateEdgeFunction.Data.Active),
-		LastEditor:           types.StringValue(updateEdgeFunction.Data.LastEditor),
-		LastModified:         types.StringValue(updateEdgeFunction.Data.LastModified.Format(time.RFC850)),
-		ProductVersion:       types.StringValue(updateEdgeFunction.Data.ProductVersion),
-		Version:              types.StringValue(updateEdgeFunction.Data.Version),
-		Vendor:               types.StringValue(updateEdgeFunction.Data.Vendor),
-		ReferenceCount:       types.Int64Value(updateEdgeFunction.Data.ReferenceCount),
+		ExecutionEnvironment: types.StringValue(*updateFunction.Data.ExecutionEnvironment),
+		Active:               types.BoolValue(*updateFunction.Data.Active),
+		LastEditor:           types.StringValue(updateFunction.Data.LastEditor),
+		LastModified:         types.StringValue(updateFunction.Data.LastModified.Format(time.RFC850)),
+		ProductVersion:       types.StringValue(updateFunction.Data.ProductVersion),
+		Version:              types.StringValue(updateFunction.Data.Version),
+		Vendor:               types.StringValue(updateFunction.Data.Vendor),
+		ReferenceCount:       types.Int64Value(updateFunction.Data.ReferenceCount),
 	}
 
-	if updateEdgeFunction.Data.Runtime != nil {
-		plan.Function.Runtime = types.StringValue(*updateEdgeFunction.Data.Runtime)
+	if updateFunction.Data.Runtime != nil {
+		plan.Function.Runtime = types.StringValue(*updateFunction.Data.Runtime)
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(updateEdgeFunction.Data.Id, 10))
+	plan.ID = types.StringValue(strconv.FormatInt(updateFunction.Data.Id, 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -501,20 +501,20 @@ func (r *edgeFunctionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 }
 
-func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state edgeFunctionResourceModel
+func (r *functionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state functionResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var edgeFunctionId int64
+	var functionId int64
 	var err error
 	if state.Function != nil {
-		edgeFunctionId = state.Function.ID.ValueInt64()
+		functionId = state.Function.ID.ValueInt64()
 	} else {
-		edgeFunctionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
+		functionId, err = strconv.ParseInt(state.ID.ValueString(), 10, 32)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Value Conversion error ",
@@ -524,11 +524,11 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 		}
 	}
 
-	_, response, err := r.client.api.FunctionsAPI.DeleteFunction(ctx, edgeFunctionId).Execute() //nolint
+	_, response, err := r.client.api.FunctionsAPI.DeleteFunction(ctx, functionId).Execute() //nolint
 	if err != nil {
 		if response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
-				return r.client.api.FunctionsAPI.DeleteFunction(ctx, edgeFunctionId).Execute() //nolint
+				return r.client.api.FunctionsAPI.DeleteFunction(ctx, functionId).Execute() //nolint
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -560,6 +560,6 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 }
 
-func (r *edgeFunctionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *functionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

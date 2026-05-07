@@ -117,7 +117,7 @@ func (e *ApplicationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Description: "Modules configuration.",
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
-								"edge_cache": schema.SingleNestedAttribute{
+								"cache": schema.SingleNestedAttribute{
 									Computed: true,
 									Attributes: map[string]schema.Attribute{
 										"enabled": schema.BoolAttribute{

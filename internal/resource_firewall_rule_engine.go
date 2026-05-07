@@ -88,7 +88,7 @@ type FirewallBehaviorAttrsResourceModel struct {
 }
 
 func (r *firewallRuleEngineResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_edge_firewall_rule_engine"
+	resp.TypeName = req.ProviderTypeName + "_firewall_rule_engine"
 }
 
 func (r *firewallRuleEngineResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

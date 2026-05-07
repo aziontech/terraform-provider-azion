@@ -49,11 +49,11 @@ type BrowserCacheModuleModel struct {
 }
 
 type CacheSettingsModulesModel struct {
-	Cache                  *CacheSettingsEdgeCacheModuleModel        `tfsdk:"cache"`
+	Cache                  *CacheSettingsCacheModuleModel            `tfsdk:"cache"`
 	ApplicationAccelerator *CacheSettingsApplicationAcceleratorModel `tfsdk:"application_accelerator"`
 }
 
-type CacheSettingsEdgeCacheModuleModel struct {
+type CacheSettingsCacheModuleModel struct {
 	Behavior       types.String                   `tfsdk:"behavior"`
 	MaxAge         types.Int64                    `tfsdk:"max_age"`
 	StaleCache     *StateCacheModuleModel         `tfsdk:"stale_cache"`
@@ -386,7 +386,7 @@ func transformCacheSettingToModel(cs *azionapi.CacheSetting) *CacheSettingModel 
 		// Cache (Edge Cache)
 		if modules.HasCache() {
 			cache := modules.GetCache()
-			model.Modules.Cache = &CacheSettingsEdgeCacheModuleModel{}
+			model.Modules.Cache = &CacheSettingsCacheModuleModel{}
 
 			if cache.HasBehavior() {
 				model.Modules.Cache.Behavior = types.StringValue(cache.GetBehavior())

@@ -1,5 +1,5 @@
 # Example: Basic firewall rule with drop behavior
-resource "azion_edge_firewall_rule_engine" "block_admin" {
+resource "azion_firewall_rule_engine" "block_admin" {
   firewall_id = 1234567890
   results = {
     name        = "Block Admin Path"
@@ -26,7 +26,7 @@ resource "azion_edge_firewall_rule_engine" "block_admin" {
 }
 
 # Example: Firewall rule with run_function behavior
-resource "azion_edge_firewall_rule_engine" "run_function_example" {
+resource "azion_firewall_rule_engine" "run_function_example" {
   firewall_id = 1234567890
   results = {
     name        = "Execute Function on API"
@@ -56,7 +56,7 @@ resource "azion_edge_firewall_rule_engine" "run_function_example" {
 }
 
 # Example: Firewall rule with set_custom_response behavior
-resource "azion_edge_firewall_rule_engine" "custom_response_example" {
+resource "azion_firewall_rule_engine" "custom_response_example" {
   firewall_id = 1234567890
   results = {
     name        = "Maintenance Page"
@@ -88,7 +88,7 @@ resource "azion_edge_firewall_rule_engine" "custom_response_example" {
 }
 
 # Example: Firewall rule with set_waf behavior
-resource "azion_edge_firewall_rule_engine" "waf_example" {
+resource "azion_firewall_rule_engine" "waf_example" {
   firewall_id = 1234567890
   results = {
     name        = "Enable WAF Protection"
@@ -119,7 +119,7 @@ resource "azion_edge_firewall_rule_engine" "waf_example" {
 }
 
 # Example: Firewall rule with set_rate_limit behavior
-resource "azion_edge_firewall_rule_engine" "rate_limit_example" {
+resource "azion_firewall_rule_engine" "rate_limit_example" {
   firewall_id = 1234567890
   results = {
     name        = "Rate Limit API"
@@ -152,7 +152,7 @@ resource "azion_edge_firewall_rule_engine" "rate_limit_example" {
 }
 
 # Example: Complex rule with multiple criteria
-resource "azion_edge_firewall_rule_engine" "complex_example" {
+resource "azion_firewall_rule_engine" "complex_example" {
   firewall_id = 1234567890
   results = {
     name        = "Complex Security Rule"

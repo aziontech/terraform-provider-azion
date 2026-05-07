@@ -1,0 +1,1 @@
+terraform import azion_application_functions_instance.example <application_id>/<function_instance_id>

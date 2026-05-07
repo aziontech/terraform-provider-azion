@@ -131,7 +131,7 @@ Note: The plural data source reuses the same `FirewallCriteriaDataModel`, `Firew
 
 ## Resource Implementation
 
-### Resource File: `internal/resource_edge_firewall_rule_engine.go`
+### Resource File: `internal/resource_firewall_rule_engine.go`
 
 #### Resource Model
 
@@ -653,9 +653,9 @@ if err != nil {
 
 | Type | File Name | Terraform Name |
 |------|-----------|----------------|
-| Singular Data Source | `data_source_edge_firewall_rule_engine.go` | `azion_firewall_rule_engine` |
-| Plural Data Source | `data_source_edge_firewall_rules_engine.go` | `azion_firewall_rules_engine` |
-| Resource | `resource_edge_firewall_rule_engine.go` | `azion_edge_firewall_rule_engine` |
+| Singular Data Source | `data_source_firewall_rule_engine.go` | `azion_firewall_rule_engine` |
+| Plural Data Source | `data_source_firewall_rules_engine.go` | `azion_firewall_rules_engine` |
+| Resource | `resource_firewall_rule_engine.go` | `azion_firewall_rule_engine` |
 
 **Note**: The Terraform resource names still use `edge_firewall` for backwards compatibility, but the internal Go code does not use the `edge` prefix per the V4 SDK naming convention.
 
@@ -694,7 +694,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 
 - Singular Data Source: `docs/data-sources/firewall_rule_engine.md`
 - Plural Data Source: `docs/data-sources/firewall_rules_engine.md`
-- Resource: `docs/resources/edge_firewall_rule_engine.md`
+- Resource: `docs/resources/firewall_rule_engine.md`
 
 ---
 
@@ -702,8 +702,8 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 
 - Singular Data Source: `examples/data-sources/azion_firewall_rule_engine/data-source.tf`
 - Plural Data Source: `examples/data-sources/azion_firewall_rules_engine/data-source.tf`
-- Resource: `examples/resources/azion_edge_firewall_rule_engine/resource.tf`
-- Import Script: `examples/resources/azion_edge_firewall_rule_engine/import.sh`
+- Resource: `examples/resources/azion_firewall_rule_engine/resource.tf`
+- Import Script: `examples/resources/azion_firewall_rule_engine/import.sh`
 
 ---
 
