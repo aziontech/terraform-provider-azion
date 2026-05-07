@@ -12,6 +12,45 @@ Creates and manages a firewall rules engine rule. The firewall rules engine allo
 
 ## Example Usage
 
+### With Parent Firewall
+
+```terraform
+# First, create the parent firewall
+resource "azion_firewall_main_setting" "example" {
+  data = {
+    name   = "My Firewall"
+    active = true
+  }
+}
+
+# Then create the rule engine for that firewall
+resource "azion_firewall_rule_engine" "example" {
+  firewall_id = azion_firewall_main_setting.example.data.id
+  results = {
+    name        = "Block Specific Path"
+    description = "Block requests to specific path"
+    active      = true
+    behaviors = [
+      {
+        type = "drop"
+      }
+    ]
+    criteria = [
+      {
+        entries = [
+          {
+            variable    = "${request_uri}"
+            operator    = "matches"
+            conditional = "if"
+            argument    = "/admin.*"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ### Basic Rule with Drop Behavior
 
 ```terraform

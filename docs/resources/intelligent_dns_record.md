@@ -12,6 +12,37 @@ Creates and manages DNS records in an Intelligent DNS zone.
 
 ## Example Usage
 
+### With Parent Zone
+
+```terraform
+# First, create the parent DNS zone
+resource "azion_intelligent_dns_zone" "example" {
+  zone = {
+    name    = "example.com"
+    active  = true
+    domain  = "example.com"
+  }
+}
+
+# Then create the DNS record for that zone
+resource "azion_intelligent_dns_record" "example" {
+  zone_id = azion_intelligent_dns_zone.example.id
+  record = {
+    type = "A"
+    name = "site"
+    rdata = [
+      "8.8.8.8"
+    ]
+    policy      = "weighted"
+    weight      = 50
+    description = "This is a description"
+    ttl         = 20
+  }
+}
+```
+
+### Using Hardcoded Zone ID
+
 ```terraform
 resource "azion_intelligent_dns_record" "example" {
   zone_id = "12345"

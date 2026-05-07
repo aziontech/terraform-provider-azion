@@ -441,6 +441,62 @@ terraform import azion_resource.example 12345
   * ...
 ```
 
+### Child Resource Documentation (MANDATORY)
+
+**IMPORTANT**: Resources that are "children" of other resources MUST include an example of their parent resource in their documentation. This ensures users can see the complete context and understand how to reference the parent resource's ID.
+
+#### Parent-Child Relationships
+
+| Parent Resource | Child Resources |
+|-----------------|-----------------|
+| `azion_application_main_setting` | `azion_application_rule_engine`, `azion_application_function_instance`, `azion_application_cache_setting`, `azion_application_device_group` |
+| `azion_firewall_main_setting` | `azion_firewall_rule_engine`, `azion_firewall_functions_instance` |
+| `azion_waf` | `azion_waf_rule_set` |
+| `azion_intelligent_dns_zone` | `azion_intelligent_dns_record`, `azion_intelligent_dns_dnssec` |
+
+#### Required Documentation Pattern for Child Resources
+
+When documenting a child resource, you MUST include:
+
+1. **Parent Resource Example** - A complete example showing the parent resource creation
+2. **Reference Using Terraform Interpolation** - The child resource should reference the parent's ID using `azion_parent_resource.example.id` or similar
+
+Example for a child resource (`azion_application_rule_engine`):
+
+```markdown
+## Example Usage
+
+### With Parent Application
+
+```terraform
+# First, create the parent application
+resource "azion_application_main_setting" "example" {
+  application = {
+    name   = "My Application"
+    active = true
+  }
+}
+
+# Then create the rule engine for that application
+resource "azion_application_rule_engine" "example" {
+  application_id = azion_application_main_setting.example.application.application_id
+  results = {
+    name  = "My Rule"
+    phase = "request"
+    # ... rest of configuration
+  }
+}
+```
+```
+
+#### Files That Must Be Updated
+
+When creating or updating child resource documentation:
+
+1. **Documentation file**: `docs/resources/<child_resource>.md` - Add parent resource example
+2. **Example file**: `examples/resources/azion_<child_resource>/resource.tf` - Add parent resource example
+3. **Agent file**: `agents/<CHILD_RESOURCE>.md` - Add note about mandatory parent documentation
+
 ---
 
 ## Provider Registration

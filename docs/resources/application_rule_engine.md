@@ -12,6 +12,48 @@ description: |-
 
 ## Example Usage
 
+### With Parent Application
+
+```terraform
+# First, create the parent application
+resource "azion_application_main_setting" "example" {
+  application = {
+    name   = "My Application"
+    active = true
+  }
+}
+
+# Then create the rule engine for that application
+resource "azion_application_rule_engine" "example" {
+  application_id = azion_application_main_setting.example.application.application_id
+  results = {
+    name        = "Terraform Example"
+    phase       = "request"
+    description = "My rule engine"
+    behaviors = [
+      {
+        type = "deliver"
+      },
+      {
+        type = "bypass_cache"
+      }
+    ]
+    criteria = [
+      {
+        entries = [
+          {
+            variable    = "$${uri}"
+            operator    = "is_equal"
+            conditional = "if"
+            argument    = "/"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ### Basic Rule with No-Args Behaviors
 
 ```terraform

@@ -10,6 +10,27 @@ Creates an application device group resource. Device groups allow you to categor
 
 ## Example Usage
 
+### With Parent Application
+
+```terraform
+# First, create the parent application
+resource "azion_application_main_setting" "example" {
+  application = {
+    name   = "My Application"
+    active = true
+  }
+}
+
+# Then create the device group for that application
+resource "azion_application_device_group" "mobile" {
+  application_id = azion_application_main_setting.example.application.application_id
+  device_group = {
+    name       = "mobiledevices"
+    user_agent = ".*(Mobile|Android|iPhone).*"
+  }
+}
+```
+
 ### Create a Device Group for Mobile Devices
 
 ```terraform

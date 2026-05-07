@@ -1,3 +1,39 @@
+# Example: Complete setup with parent firewall
+# First, create the parent firewall
+resource "azion_firewall_main_setting" "example" {
+  data = {
+    name   = "My Firewall"
+    active = true
+  }
+}
+
+# Then create the rule engine for that firewall
+resource "azion_firewall_rule_engine" "example" {
+  firewall_id = azion_firewall_main_setting.example.data.id
+  results = {
+    name        = "Block Admin Path"
+    description = "Block access to admin paths"
+    active      = true
+    behaviors = [
+      {
+        type = "drop"
+      }
+    ]
+    criteria = [
+      {
+        entries = [
+          {
+            variable    = "$${request_uri}"
+            operator    = "matches"
+            conditional = "if"
+            argument    = "/admin.*"
+          }
+        ]
+      }
+    ]
+  }
+}
+
 # Example: Basic firewall rule with drop behavior
 resource "azion_firewall_rule_engine" "block_admin" {
   firewall_id = 1234567890

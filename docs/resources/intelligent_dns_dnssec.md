@@ -12,6 +12,29 @@ Provides a resource to manage DNSSEC (DNS Security Extensions) settings for an I
 
 ## Example Usage
 
+### With Parent Zone
+
+```terraform
+# First, create the parent DNS zone
+resource "azion_intelligent_dns_zone" "example" {
+  zone = {
+    name    = "example.com"
+    active  = true
+    domain  = "example.com"
+  }
+}
+
+# Then configure DNSSEC for that zone
+resource "azion_intelligent_dns_dnssec" "example" {
+  zone_id = azion_intelligent_dns_zone.example.id
+  dnssec = {
+    is_enabled = true
+  }
+}
+```
+
+### Using Hardcoded Zone ID
+
 ```terraform
 resource "azion_intelligent_dns_dnssec" "example" {
   zone_id = "12345"
