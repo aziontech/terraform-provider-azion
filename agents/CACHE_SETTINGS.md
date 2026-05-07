@@ -233,7 +233,7 @@ LargeFileCacheModule {
 
 For reading a single cache setting by its identifier:
 
-File: `internal/data_source_edge_application_cache_setting.go`
+File: `internal/data_source_application_cache_setting.go`
 
 ```go
 package provider
@@ -543,7 +543,7 @@ func (d *CacheSettingDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 For listing multiple cache settings with pagination support:
 
-File: `internal/data_source_edge_application_cache_settings.go`
+File: `internal/data_source_application_cache_settings.go`
 
 ```go
 package provider
@@ -768,7 +768,7 @@ func (d *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 
 | Aspect | Singular Data Source | Plural Data Source |
 |--------|---------------------|-------------------|
-| **File Name** | `data_source_edge_application_cache_setting.go` | `data_source_edge_application_cache_settings.go` |
+| **File Name** | `data_source_application_cache_setting.go` | `data_source_application_cache_settings.go` |
 | **Type Name** | `azion_application_cache_setting` | `azion_application_cache_settings` |
 | **ID Field** | `Computed` (set after read) | `Computed` (set after read) |
 | **Results** | `SingleNestedAttribute` (single object) | `ListNestedAttribute` (array of objects) |
@@ -780,7 +780,7 @@ func (d *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 
 ## Resource Implementation
 
-File: `internal/resource_edge_application_cache_setting.go`
+File: `internal/resource_application_cache_setting.go`
 
 ```go
 package provider

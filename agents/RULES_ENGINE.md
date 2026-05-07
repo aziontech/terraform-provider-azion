@@ -277,7 +277,7 @@ Common behavior types without args:
 
 ## Data Source - Single Rule
 
-### File: `internal/data_source_edge_application_rule_engine.go`
+### File: `internal/data_source_application_rule_engine.go`
 
 **Note:** The file name retains `edge_application` for backwards compatibility, but the Terraform resource name uses `application_rule_engine`.
 
@@ -692,7 +692,7 @@ func getBehaviorArgsValue(value azionapi.BehaviorArgsAttributesValue) string {
 
 ## Data Source - List Rules
 
-### File: `internal/data_source_edge_application_rules_engine.go`
+### File: `internal/data_source_application_rules_engine.go`
 
 ```go
 package provider
@@ -1015,7 +1015,7 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 ## Resource - CRUD Operations
 
-### File: `internal/resource_edge_application_rule_engine.go`
+### File: `internal/resource_application_rule_engine.go`
 
 The resource handles both request and response phase rules, as well as the special "default" rule.
 

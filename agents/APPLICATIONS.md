@@ -151,7 +151,7 @@ ImageProcessorModule {
 
 For reading a single application by its identifier:
 
-File: `internal/data_source_edge_application_main_settings.go` (singular) and `internal/data_source_edge_applications_main_settings.go` (plural)
+File: `internal/data_source_application_main_settings.go` (singular) and `internal/data_source_applications_main_settings.go` (plural)
 
 ```go
 package provider
@@ -436,7 +436,7 @@ func (e *ApplicationDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 For listing multiple applications with pagination support:
 
-File: `internal/data_source_edge_applications_main_settings.go`
+File: `internal/data_source_applications_main_settings.go`
 
 ```go
 package provider
@@ -714,7 +714,7 @@ func (e *ApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 | Aspect | Singular Data Source | Plural Data Source |
 |--------|---------------------|-------------------|
-| **File Name** | `data_source_edge_application_main_settings.go` | `data_source_edge_applications_main_settings.go` |
+| **File Name** | `data_source_application_main_settings.go` | `data_source_applications_main_settings.go` |
 | **Type Name** | `azion_application_main_settings` | `azion_applications_main_settings` |
 | **ID Field** | `Required` (user provides ID to look up) | `Computed` (set after reading) |
 | **Results** | `SingleNestedAttribute` (single object) | `ListNestedAttribute` (array of objects) |
@@ -728,7 +728,7 @@ func (e *ApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 ## Resource Implementation
 
-File: `internal/resource_edge_application_main_setting.go`
+File: `internal/resource_application_main_setting.go`
 
 ```go
 package provider

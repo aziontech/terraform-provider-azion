@@ -129,7 +129,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewZoneResource,
 		NewRecordResource,
 		NewDnssecResource,
-		NewEdgeFunctionResource,
+		NewFunctionResource,
 		NewApplicationMainSettingsResource,
 		NewApplicationFunctionInstanceResource,
 		NewApplicationRulesEngineResource,

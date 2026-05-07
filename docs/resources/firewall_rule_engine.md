@@ -1,12 +1,12 @@
 ---
 subcategory: ""
 layout: "azion"
-page_title: "Azion: azion_edge_firewall_rule_engine"
+page_title: "Azion: azion_firewall_rule_engine"
 description: |-
   Provides a firewall rules engine resource.
 ---
 
-# azion_edge_firewall_rule_engine (Resource)
+# azion_firewall_rule_engine (Resource)
 
 Creates and manages a firewall rules engine rule. The firewall rules engine allows you to create conditional rules with behaviors to control request processing within a firewall.
 
@@ -15,7 +15,7 @@ Creates and manages a firewall rules engine rule. The firewall rules engine allo
 ### Basic Rule with Drop Behavior
 
 ```terraform
-resource "azion_edge_firewall_rule_engine" "example" {
+resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
   results = {
     name        = "Block Specific Path"
@@ -45,7 +45,7 @@ resource "azion_edge_firewall_rule_engine" "example" {
 ### Rule with Run Function Behavior
 
 ```terraform
-resource "azion_edge_firewall_rule_engine" "example" {
+resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
   results = {
     name        = "Run Function on API Requests"
@@ -78,7 +78,7 @@ resource "azion_edge_firewall_rule_engine" "example" {
 ### Rule with Set Custom Response Behavior
 
 ```terraform
-resource "azion_edge_firewall_rule_engine" "example" {
+resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
   results = {
     name        = "Custom Response for Maintenance"
@@ -113,7 +113,7 @@ resource "azion_edge_firewall_rule_engine" "example" {
 ### Rule with Set WAF Behavior
 
 ```terraform
-resource "azion_edge_firewall_rule_engine" "example" {
+resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
   results = {
     name        = "Enable WAF"
@@ -147,7 +147,7 @@ resource "azion_edge_firewall_rule_engine" "example" {
 ### Rule with Set Rate Limit Behavior
 
 ```terraform
-resource "azion_edge_firewall_rule_engine" "example" {
+resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
   results = {
     name        = "Rate Limit API Requests"
@@ -183,7 +183,7 @@ resource "azion_edge_firewall_rule_engine" "example" {
 ### Complex Rule with Multiple Criteria
 
 ```terraform
-resource "azion_edge_firewall_rule_engine" "example" {
+resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
   results = {
     name        = "Complex Rule"
@@ -348,11 +348,11 @@ Optional:
 Import is supported using the following syntax:
 
 ```shell
-terraform import azion_edge_firewall_rule_engine.example <firewall_id>/<rule_id>
+terraform import azion_firewall_rule_engine.example <firewall_id>/<rule_id>
 ```
 
 For example:
 
 ```shell
-terraform import azion_edge_firewall_rule_engine.example 1234567890/987654
+terraform import azion_firewall_rule_engine.example 1234567890/987654
 ```

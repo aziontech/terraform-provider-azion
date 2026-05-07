@@ -89,7 +89,7 @@ When implementing resources using the V4 API, the "edge" prefix is **removed** f
 | `EdgeFirewallModules` | `FirewallModules` |
 | `EdgeFirewallResults` | `FirewallResults` |
 | `edge_firewall_id` (Terraform attribute) | `firewall_id` |
-| `azion_edge_firewall_main_setting` (type name) | `azion_firewall_main_setting` |
+| `azion_firewall_main_setting` (type name) | `azion_firewall_main_setting` |
 | `e.client.edgeApi` | `f.client.api` |
 | `dataSourceAzionEdgeFirewall` | `dataSourceAzionFirewall` |
 | `EdgeFirewallResource` | `FirewallMainSettingResource` |
@@ -164,7 +164,7 @@ r.client.api.FirewallsAPI.DeleteFirewall(ctx, idInt64).Execute()
 
 For reading a single firewall by its identifier:
 
-#### File: `internal/data_source_edge_firewall_main_setting.go`
+#### File: `internal/data_source_firewall_main_setting.go`
 
 ```go
 package provider
@@ -360,7 +360,7 @@ func (f *FirewallDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 For listing multiple firewalls with pagination support:
 
-#### File: `internal/data_source_edge_firewall_main_settings.go`
+#### File: `internal/data_source_firewall_main_settings.go`
 
 ```go
 package provider
@@ -943,7 +943,7 @@ When implementing Firewall data sources and resources:
 2. **Use correct client field**: `f.client.api.FirewallsAPI`
 3. **Remove "edge" prefix**: Use `FirewallDataSource`, not `EdgeFirewallDataSource`
 4. **Remove "edge_" from attributes**: Use `firewall_id`, not `edge_firewall_id`
-5. **Remove "edge_" from type names**: Use `azion_firewall_main_setting`, not `azion_edge_firewall_main_setting`
+5. **Remove "edge_" from type names**: Use `azion_firewall_main_setting`, not `azion_firewall_main_setting`
 6. **Match response types**: `*sdk.FirewallResponse` for singular, `*sdk.PaginatedFirewallList` for plural
 7. **Handle 429 errors**: Use `utils.RetryOn429` with correct type signature
 8. **Close response body**: `defer response.Body.Close()` after retry

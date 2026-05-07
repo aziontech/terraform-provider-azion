@@ -1,0 +1,1 @@
+terraform import azion_application_main_setting.example application_id

@@ -35,7 +35,7 @@ resource "azion_application_main_setting" "example" {
   }
 }
 
-resource "azion_edge_application_origin" "example" {
+resource "azion_application_origin" "example" {
   edge_application_id = azion_application_main_setting.example.application.application_id
   origin = {
     name        = "Terraform Main Settings Example"
@@ -73,7 +73,7 @@ resource "azion_application_cache_setting" "example" {
   }
   depends_on = [
     azion_application_main_setting.example,
-    azion_edge_application_origin.example
+    azion_application_origin.example
   ]
 }
 ```
