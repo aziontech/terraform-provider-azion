@@ -72,10 +72,10 @@ resource "azion_connector" "http_connector_full" {
         load_balancer = {
           enabled = true
           config = {
-            method              = "round_robin"
-            max_retries         = 3
-            connection_timeout  = 60
-            read_write_timeout  = 120
+            method             = "round_robin"
+            max_retries        = 3
+            connection_timeout = 60
+            read_write_timeout = 120
           }
         }
         origin_shield = {
