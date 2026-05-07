@@ -49,7 +49,7 @@ type BrowserCacheModuleModel struct {
 }
 
 type CacheSettingsModulesModel struct {
-	Cache                  *CacheSettingsCacheModuleModel        `tfsdk:"cache"`
+	Cache                  *CacheSettingsCacheModuleModel            `tfsdk:"cache"`
 	ApplicationAccelerator *CacheSettingsApplicationAcceleratorModel `tfsdk:"application_accelerator"`
 }
 

@@ -26,9 +26,9 @@ type functionsDataSource struct {
 }
 
 type functionsDataSourceModel struct {
-	Counter types.Int64            `tfsdk:"counter"`
+	Counter types.Int64        `tfsdk:"counter"`
 	Results []functionsResults `tfsdk:"results"`
-	ID      types.String           `tfsdk:"id"`
+	ID      types.String       `tfsdk:"id"`
 }
 
 type GetFunctionsResponseLinks struct {

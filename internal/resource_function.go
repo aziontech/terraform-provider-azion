@@ -34,8 +34,8 @@ type functionResource struct {
 
 type functionResourceModel struct {
 	Function    *functionResourceResults `tfsdk:"function"`
-	ID          types.String                 `tfsdk:"id"`
-	LastUpdated types.String                 `tfsdk:"last_updated"`
+	ID          types.String             `tfsdk:"id"`
+	LastUpdated types.String             `tfsdk:"last_updated"`
 }
 
 type functionResourceResults struct {

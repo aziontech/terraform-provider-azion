@@ -30,7 +30,7 @@ type functionDataSource struct {
 
 type functionDataSourceModel struct {
 	Data functionResults `tfsdk:"data"`
-	ID   types.String        `tfsdk:"id"`
+	ID   types.String    `tfsdk:"id"`
 }
 
 type GetFunctionResponseLinks struct {
