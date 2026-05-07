@@ -109,7 +109,16 @@ type HTTPModulesModel struct {
 
 // Load balancer module.
 type LoadBalancerModuleModel struct {
-	Enabled types.Bool `tfsdk:"enabled"`
+	Enabled types.Bool               `tfsdk:"enabled"`
+	Config  *LoadBalancerConfigModel `tfsdk:"config"`
+}
+
+// Load balancer config.
+type LoadBalancerConfigModel struct {
+	Method            types.String `tfsdk:"method"`
+	MaxRetries        types.Int64  `tfsdk:"max_retries"`
+	ConnectionTimeout types.Int64  `tfsdk:"connection_timeout"`
+	ReadWriteTimeout  types.Int64  `tfsdk:"read_write_timeout"`
 }
 
 // Origin shield module.
@@ -326,6 +335,33 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 												Description: "Whether load balancer is enabled.",
 												Optional:    true,
 												Computed:    true,
+											},
+											"config": schema.SingleNestedAttribute{
+												Description: "Load balancer configuration.",
+												Optional:    true,
+												Computed:    true,
+												Attributes: map[string]schema.Attribute{
+													"method": schema.StringAttribute{
+														Description: "Load balancing method (round_robin, least_conn, ip_hash).",
+														Optional:    true,
+														Computed:    true,
+													},
+													"max_retries": schema.Int64Attribute{
+														Description: "Maximum number of retry attempts on connection failure.",
+														Optional:    true,
+														Computed:    true,
+													},
+													"connection_timeout": schema.Int64Attribute{
+														Description: "Maximum time (in seconds) to wait for a connection to be established.",
+														Optional:    true,
+														Computed:    true,
+													},
+													"read_write_timeout": schema.Int64Attribute{
+														Description: "Maximum time (in seconds) to wait for data read/write after connection.",
+														Optional:    true,
+														Computed:    true,
+													},
+												},
 											},
 										},
 									},
@@ -805,6 +841,23 @@ func (r *connectorResource) buildHTTPConnectorRequest(ctx context.Context, conne
 			if !lbModel.Enabled.IsNull() && !lbModel.Enabled.IsUnknown() {
 				lb.SetEnabled(lbModel.Enabled.ValueBool())
 			}
+			// Handle config if provided.
+			if lbModel.Config != nil {
+				lbConfig := azionapi.NewLoadBalancerModuleConfigRequest()
+				if !lbModel.Config.Method.IsNull() && !lbModel.Config.Method.IsUnknown() {
+					lbConfig.SetMethod(lbModel.Config.Method.ValueString())
+				}
+				if !lbModel.Config.MaxRetries.IsNull() && !lbModel.Config.MaxRetries.IsUnknown() {
+					lbConfig.SetMaxRetries(lbModel.Config.MaxRetries.ValueInt64())
+				}
+				if !lbModel.Config.ConnectionTimeout.IsNull() && !lbModel.Config.ConnectionTimeout.IsUnknown() {
+					lbConfig.SetConnectionTimeout(lbModel.Config.ConnectionTimeout.ValueInt64())
+				}
+				if !lbModel.Config.ReadWriteTimeout.IsNull() && !lbModel.Config.ReadWriteTimeout.IsUnknown() {
+					lbConfig.SetReadWriteTimeout(lbModel.Config.ReadWriteTimeout.ValueInt64())
+				}
+				lb.SetConfig(*lbConfig)
+			}
 			modules.SetLoadBalancer(*lb)
 		}
 
@@ -911,6 +964,18 @@ func (r *connectorResource) buildHTTPPatchedConnectorRequest(ctx context.Context
 		if !addr.HTTPSPort.IsNull() && !addr.HTTPSPort.IsUnknown() {
 			address.SetHttpsPort(addr.HTTPSPort.ValueInt64())
 		}
+		if addr.Modules != nil && addr.Modules.LoadBalancer != nil {
+			lb := azionapi.NewAddressLoadBalancerModuleRequest()
+			if !addr.Modules.LoadBalancer.ServerRole.IsNull() && !addr.Modules.LoadBalancer.ServerRole.IsUnknown() {
+				lb.SetServerRole(addr.Modules.LoadBalancer.ServerRole.ValueString())
+			}
+			if !addr.Modules.LoadBalancer.Weight.IsNull() && !addr.Modules.LoadBalancer.Weight.IsUnknown() {
+				lb.SetWeight(addr.Modules.LoadBalancer.Weight.ValueInt64())
+			}
+			addrModules := azionapi.NewAddressModulesRequest()
+			addrModules.SetLoadBalancer(*lb)
+			address.SetModules(*addrModules)
+		}
 		addresses = append(addresses, *address)
 	}
 
@@ -971,6 +1036,23 @@ func (r *connectorResource) buildHTTPPatchedConnectorRequest(ctx context.Context
 			lb := azionapi.NewLoadBalancerModuleRequest()
 			if !lbModel.Enabled.IsNull() && !lbModel.Enabled.IsUnknown() {
 				lb.SetEnabled(lbModel.Enabled.ValueBool())
+			}
+			// Handle config if provided.
+			if lbModel.Config != nil {
+				lbConfig := azionapi.NewLoadBalancerModuleConfigRequest()
+				if !lbModel.Config.Method.IsNull() && !lbModel.Config.Method.IsUnknown() {
+					lbConfig.SetMethod(lbModel.Config.Method.ValueString())
+				}
+				if !lbModel.Config.MaxRetries.IsNull() && !lbModel.Config.MaxRetries.IsUnknown() {
+					lbConfig.SetMaxRetries(lbModel.Config.MaxRetries.ValueInt64())
+				}
+				if !lbModel.Config.ConnectionTimeout.IsNull() && !lbModel.Config.ConnectionTimeout.IsUnknown() {
+					lbConfig.SetConnectionTimeout(lbModel.Config.ConnectionTimeout.ValueInt64())
+				}
+				if !lbModel.Config.ReadWriteTimeout.IsNull() && !lbModel.Config.ReadWriteTimeout.IsUnknown() {
+					lbConfig.SetReadWriteTimeout(lbModel.Config.ReadWriteTimeout.ValueInt64())
+				}
+				lb.SetConfig(*lbConfig)
 			}
 			modules.SetLoadBalancer(*lb)
 		}
@@ -1150,6 +1232,25 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 				if c.Attributes.Modules.LoadBalancer.Enabled != nil {
 					lbModel.Enabled = types.BoolValue(*c.Attributes.Modules.LoadBalancer.Enabled)
 				}
+				// Handle config from API response.
+				if c.Attributes.Modules.LoadBalancer.Config.IsSet() {
+					lbConfig := c.Attributes.Modules.LoadBalancer.Config.Get()
+					if lbConfig != nil {
+						lbModel.Config = &LoadBalancerConfigModel{}
+						if lbConfig.Method != nil {
+							lbModel.Config.Method = types.StringValue(*lbConfig.Method)
+						}
+						if lbConfig.MaxRetries != nil {
+							lbModel.Config.MaxRetries = types.Int64Value(*lbConfig.MaxRetries)
+						}
+						if lbConfig.ConnectionTimeout != nil {
+							lbModel.Config.ConnectionTimeout = types.Int64Value(*lbConfig.ConnectionTimeout)
+						}
+						if lbConfig.ReadWriteTimeout != nil {
+							lbModel.Config.ReadWriteTimeout = types.Int64Value(*lbConfig.ReadWriteTimeout)
+						}
+					}
+				}
 				lbValue, diags := types.ObjectValueFrom(ctx, LoadBalancerModuleModel{}.attrTypes(), lbModel)
 				if !diags.HasError() {
 					modulesModel.LoadBalancer = lbValue
@@ -1233,6 +1334,17 @@ func (m HTTPModulesModel) attrTypes() map[string]attr.Type {
 func (m LoadBalancerModuleModel) attrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"enabled": types.BoolType,
+		"config":  types.ObjectType{AttrTypes: LoadBalancerConfigModel{}.attrTypes()},
+	}
+}
+
+// attrTypes returns the attribute types for LoadBalancerConfigModel.
+func (m LoadBalancerConfigModel) attrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"method":             types.StringType,
+		"max_retries":        types.Int64Type,
+		"connection_timeout": types.Int64Type,
+		"read_write_timeout": types.Int64Type,
 	}
 }
 
