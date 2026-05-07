@@ -2,9 +2,9 @@
 # First, create the parent DNS zone
 resource "azion_intelligent_dns_zone" "example" {
   zone = {
-    name    = "example.com"
-    active  = true
-    domain  = "example.com"
+    name   = "example.com"
+    active = true
+    domain = "example.com"
   }
 }
 
