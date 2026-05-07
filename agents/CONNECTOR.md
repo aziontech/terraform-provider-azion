@@ -183,9 +183,13 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 
 ### Create Method
 
-The Create method handles polymorphic connector types:
+The Create method handles polymorphic connector types with proper error handling:
 
 ```go
+import (
+    "github.com/aziontech/terraform-provider-azion/internal/utils"
+)
+
 func (r *connectorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
     var plan connectorResourceModel
     diags := req.Plan.Get(ctx, &plan)
@@ -195,24 +199,118 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
     }
 
     connectorType := plan.Connector.Type.ValueString()
+    var connectorId int64
 
     switch connectorType {
     case "storage":
         connectorReq, err := buildStorageConnectorRequest(plan.Connector)
-        // ... handle storage creation
-        
+        if err != nil {
+            resp.Diagnostics.AddError(err.Error(), "Failed to build storage connector request")
+            return
+        }
+        createConnector, response, err := r.client.api.ConnectorsAPI.CreateConnector(ctx).ConnectorRequest(connectorReq).Execute()
+        if response != nil {
+            defer response.Body.Close()  // Close body BEFORE error check
+        }
+        if err != nil {
+            if response != nil && response.StatusCode == http.StatusTooManyRequests {
+                // Retry on 429 rate limiting
+                createConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
+                    return r.client.api.ConnectorsAPI.CreateConnector(ctx).ConnectorRequest(connectorReq).Execute()
+                }, 5)
+                if response != nil {
+                    defer response.Body.Close()
+                }
+                if err != nil {
+                    resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+                    return
+                }
+            } else {
+                addConnectorAPIError(&resp.Diagnostics, err, response, "create")
+                return
+            }
+        }
+        connectorId = getConnectorId(createConnector.GetData())
+
     case "http":
         connectorReq, err := r.buildHTTPConnectorRequest(ctx, plan.Connector)
-        // ... handle HTTP creation
+        // ... similar pattern with error handling
     }
     
     // Read back to get API defaults
     getConnector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+    if response != nil {
+        defer response.Body.Close()  // Close body BEFORE error check
+    }
+    if err != nil {
+        // Handle 429 and other errors similarly
+    }
     
     // Populate response and set state
     r.populateConnectorFromResponse(ctx, plan.Connector, getConnector.GetData())
     plan.ID = types.StringValue(strconv.FormatInt(plan.Connector.ID.ValueInt64(), 10))
     // ... set state
+}
+```
+
+### Important: Response Body Closure Pattern
+
+**CRITICAL**: Always close HTTP response bodies to prevent resource leaks. The `defer response.Body.Close()` must be placed BEFORE the error check:
+
+```go
+// WRONG - body not closed on error paths
+result, response, err := client.API.Method(ctx).Execute()
+if err != nil {
+    return  // Body leaked!
+}
+if response != nil {
+    defer response.Body.Close()
+}
+
+// CORRECT - body always closed
+result, response, err := client.API.Method(ctx).Execute()
+if response != nil {
+    defer response.Body.Close()  // Placed BEFORE error check
+}
+if err != nil {
+    // error handling
+    return
+}
+```
+
+### Important: Rate Limiting (429) Retry Pattern
+
+Use `utils.RetryOn429` for automatic retries on rate limiting:
+
+```go
+if response != nil && response.StatusCode == http.StatusTooManyRequests {
+    result, response, err = utils.RetryOn429(func() (*azionapi.SomeResponse, *http.Response, error) {
+        return client.API.Method(ctx).Execute()
+    }, 5)  // Max 5 retries
+    if response != nil {
+        defer response.Body.Close()
+    }
+    if err != nil {
+        resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+        return
+    }
+}
+```
+
+For delete operations (which return different types), use `utils.RetryOn429Delete`:
+
+```go
+if response != nil && response.StatusCode == http.StatusTooManyRequests {
+    _, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
+        return client.API.DeleteMethod(ctx, id).Execute()
+    }, 5)
+    if response != nil {
+        defer response.Body.Close()
+    }
+    if err != nil {
+        resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+        return
+    }
 }
 ```
 
@@ -641,6 +739,60 @@ output "all_connectors_names" {
 
 ---
 
+## Error Handling
+
+### Standard Error Handling Pattern
+
+The connector resource uses comprehensive error handling with:
+
+1. **Response body closure** - Always close response bodies, even on error paths
+2. **Rate limiting (429) retry** - Automatic retries with exponential backoff
+3. **Detailed error messages** - Include API response body in diagnostics
+
+### Error Handling Helper Function
+
+```go
+// addConnectorAPIError adds an appropriate error to diagnostics based on the API response.
+func addConnectorAPIError(diagnostics *diag.Diagnostics, err error, response *http.Response, operation string) {
+    if response == nil {
+        diagnostics.AddError(err.Error(), "No response received")
+        return
+    }
+
+    bodyBytes, errReadAll := io.ReadAll(response.Body)
+    if errReadAll != nil {
+        diagnostics.AddError(errReadAll.Error(), "Failed to read response body")
+        return
+    }
+    bodyString := string(bodyBytes)
+    diagnostics.AddError(
+        fmt.Sprintf("API Error during %s", operation),
+        bodyString,
+    )
+}
+```
+
+### Handling 404 Not Found
+
+For Read operations, handle 404 specially to remove the resource from state:
+
+```go
+if response != nil && response.StatusCode == http.StatusNotFound {
+    resp.State.RemoveResource(ctx)
+    return
+}
+```
+
+For Delete operations, 404 is not an error (resource already deleted):
+
+```go
+if response != nil && response.StatusCode == http.StatusNotFound {
+    return  // Resource already deleted, success
+}
+```
+
+---
+
 ## Common Issues
 
 ### 1. "Provider returned invalid result object after apply" - Unknown Values
@@ -709,3 +861,6 @@ When implementing the connector resource:
 5. [ ] Use `types.ObjectValueFrom()` when converting models to types.Object
 6. [ ] Nest `storage_attributes` and `http_attributes` inside `connector` block
 7. [ ] Only support `storage` and `http` types (no `live_ingest`)
+8. [ ] Close response bodies BEFORE error checking (`defer response.Body.Close()`)
+9. [ ] Implement 429 retry logic using `utils.RetryOn429`
+10. [ ] Handle 404 specially in Read (remove from state) and Delete (ignore) operations
