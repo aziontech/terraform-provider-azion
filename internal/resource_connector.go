@@ -9,6 +9,7 @@ import (
 	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
+	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -467,12 +468,25 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 			return
 		}
 		createConnector, response, err := r.client.api.ConnectorsAPI.CreateConnector(ctx).ConnectorRequest(connectorReq).Execute() //nolint
-		if err != nil {
-			addConnectorAPIError(&resp.Diagnostics, err, response, "create")
-			return
-		}
 		if response != nil {
 			defer response.Body.Close()
+		}
+		if err != nil {
+			if response != nil && response.StatusCode == http.StatusTooManyRequests {
+				createConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
+					return r.client.api.ConnectorsAPI.CreateConnector(ctx).ConnectorRequest(connectorReq).Execute()
+				}, 5)
+				if response != nil {
+					defer response.Body.Close()
+				}
+				if err != nil {
+					resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+					return
+				}
+			} else {
+				addConnectorAPIError(&resp.Diagnostics, err, response, "create")
+				return
+			}
 		}
 		connectorId = getConnectorId(createConnector.GetData())
 
@@ -486,12 +500,25 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 			return
 		}
 		createConnector, response, err := r.client.api.ConnectorsAPI.CreateConnector(ctx).ConnectorRequest(connectorReq).Execute() //nolint
-		if err != nil {
-			addConnectorAPIError(&resp.Diagnostics, err, response, "create")
-			return
-		}
 		if response != nil {
 			defer response.Body.Close()
+		}
+		if err != nil {
+			if response != nil && response.StatusCode == http.StatusTooManyRequests {
+				createConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
+					return r.client.api.ConnectorsAPI.CreateConnector(ctx).ConnectorRequest(connectorReq).Execute()
+				}, 5)
+				if response != nil {
+					defer response.Body.Close()
+				}
+				if err != nil {
+					resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+					return
+				}
+			} else {
+				addConnectorAPIError(&resp.Diagnostics, err, response, "create")
+				return
+			}
 		}
 		connectorId = getConnectorId(createConnector.GetData())
 
@@ -505,12 +532,25 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 
 	// Read the connector back to ensure we have the complete state with all API defaults.
 	getConnector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute() //nolint
-	if err != nil {
-		addConnectorAPIError(&resp.Diagnostics, err, response, "read after create")
-		return
-	}
 	if response != nil {
 		defer response.Body.Close()
+	}
+	if err != nil {
+		if response != nil && response.StatusCode == http.StatusTooManyRequests {
+			getConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
+				return r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+			}, 5)
+			if response != nil {
+				defer response.Body.Close()
+			}
+			if err != nil {
+				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+				return
+			}
+		} else {
+			addConnectorAPIError(&resp.Diagnostics, err, response, "read after create")
+			return
+		}
 	}
 
 	r.populateConnectorFromResponse(ctx, plan.Connector, getConnector.GetData())
@@ -566,17 +606,29 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	getConnector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute() //nolint
+	if response != nil {
+		defer response.Body.Close()
+	}
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		addConnectorAPIError(&resp.Diagnostics, err, response, "read")
-		return
-	}
-
-	if response != nil {
-		defer response.Body.Close()
+		if response != nil && response.StatusCode == http.StatusTooManyRequests {
+			getConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
+				return r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+			}, 5)
+			if response != nil {
+				defer response.Body.Close()
+			}
+			if err != nil {
+				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+				return
+			}
+		} else {
+			addConnectorAPIError(&resp.Diagnostics, err, response, "read")
+			return
+		}
 	}
 
 	r.populateConnectorFromResponse(ctx, state.Connector, getConnector.GetData())
@@ -620,12 +672,25 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 			return
 		}
 		updateConnector, response, err := r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute() //nolint
-		if err != nil {
-			addConnectorAPIError(&resp.Diagnostics, err, response, "update")
-			return
-		}
 		if response != nil {
 			defer response.Body.Close()
+		}
+		if err != nil {
+			if response != nil && response.StatusCode == http.StatusTooManyRequests {
+				updateConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
+					return r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute()
+				}, 5)
+				if response != nil {
+					defer response.Body.Close()
+				}
+				if err != nil {
+					resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+					return
+				}
+			} else {
+				addConnectorAPIError(&resp.Diagnostics, err, response, "update")
+				return
+			}
 		}
 		r.populateConnectorFromResponse(ctx, plan.Connector, updateConnector.GetData())
 
@@ -639,12 +704,25 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 			return
 		}
 		updateConnector, response, err := r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute() //nolint
-		if err != nil {
-			addConnectorAPIError(&resp.Diagnostics, err, response, "update")
-			return
-		}
 		if response != nil {
 			defer response.Body.Close()
+		}
+		if err != nil {
+			if response != nil && response.StatusCode == http.StatusTooManyRequests {
+				updateConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
+					return r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute()
+				}, 5)
+				if response != nil {
+					defer response.Body.Close()
+				}
+				if err != nil {
+					resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+					return
+				}
+			} else {
+				addConnectorAPIError(&resp.Diagnostics, err, response, "update")
+				return
+			}
 		}
 		r.populateConnectorFromResponse(ctx, plan.Connector, updateConnector.GetData())
 
@@ -678,16 +756,28 @@ func (r *connectorResource) Delete(ctx context.Context, req resource.DeleteReque
 	connectorId := state.Connector.ID.ValueInt64()
 
 	_, response, err := r.client.api.ConnectorsAPI.DeleteConnector(ctx, connectorId).Execute() //nolint
-	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
-			return
-		}
-		addConnectorAPIError(&resp.Diagnostics, err, response, "delete")
-		return
-	}
-
 	if response != nil {
 		defer response.Body.Close()
+	}
+	if err != nil {
+		if response != nil && response.StatusCode == http.StatusNotFound {
+			return
+		}
+		if response != nil && response.StatusCode == http.StatusTooManyRequests {
+			_, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
+				return r.client.api.ConnectorsAPI.DeleteConnector(ctx, connectorId).Execute()
+			}, 5)
+			if response != nil {
+				defer response.Body.Close()
+			}
+			if err != nil {
+				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+				return
+			}
+		} else {
+			addConnectorAPIError(&resp.Diagnostics, err, response, "delete")
+			return
+		}
 	}
 }
 
@@ -703,12 +793,25 @@ func (r *connectorResource) ImportState(ctx context.Context, req resource.Import
 
 	// First, get the connector from API to determine its type
 	getConnector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
-	if err != nil {
-		addConnectorAPIError(&resp.Diagnostics, err, response, "import")
-		return
-	}
 	if response != nil {
 		defer response.Body.Close()
+	}
+	if err != nil {
+		if response != nil && response.StatusCode == http.StatusTooManyRequests {
+			getConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
+				return r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+			}, 5)
+			if response != nil {
+				defer response.Body.Close()
+			}
+			if err != nil {
+				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
+				return
+			}
+		} else {
+			addConnectorAPIError(&resp.Diagnostics, err, response, "import")
+			return
+		}
 	}
 
 	// Create the model and populate it from response

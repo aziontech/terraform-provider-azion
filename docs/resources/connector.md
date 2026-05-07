@@ -132,7 +132,7 @@ resource "azion_connector" "s3_with_hmac" {
                 type = "aws4_hmac_sha256"
                 attributes = {
                   region     = "us-east-1"
-                  service     = "s3"
+                  service    = "s3"
                   access_key = "YOUR_ACCESS_KEY"
                   secret_key = "YOUR_SECRET_KEY"
                 }
