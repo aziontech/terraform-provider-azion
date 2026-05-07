@@ -84,7 +84,13 @@ resource "azion_connector" "http_connector_full" {
       }
       modules = {
         load_balancer = {
-          enabled = false
+          enabled = true
+          config = {
+            method              = "round_robin"
+            max_retries         = 3
+            connection_timeout  = 60
+            read_write_timeout  = 120
+          }
         }
         origin_shield = {
           enabled = false
@@ -206,6 +212,11 @@ When `type = "http"`, include `http_attributes` inside the `connector` block:
   * `modules` - (Optional) HTTP modules configuration (Computed with API defaults):
     * `load_balancer` - (Optional) Load balancer module:
       * `enabled` - (Optional) Whether load balancer is enabled.
+      * `config` - (Optional) Load balancer configuration (required when `enabled = true`):
+        * `method` - (Optional) Load balancing method (`round_robin`, `least_conn`, `ip_hash`).
+        * `max_retries` - (Optional) Maximum number of retry attempts on connection failure.
+        * `connection_timeout` - (Optional) Maximum time (in seconds) to wait for a connection.
+        * `read_write_timeout` - (Optional) Maximum time (in seconds) to wait for data read/write.
     * `origin_shield` - (Optional) Origin shield module:
       * `enabled` - (Optional) Whether origin shield is enabled.
       * `config` - (Optional) Origin shield configuration:

@@ -70,7 +70,13 @@ resource "azion_connector" "http_connector_full" {
       }
       modules = {
         load_balancer = {
-          enabled = false
+          enabled = true
+          config = {
+            method              = "round_robin"
+            max_retries         = 3
+            connection_timeout  = 60
+            read_write_timeout  = 120
+          }
         }
         origin_shield = {
           enabled = false
