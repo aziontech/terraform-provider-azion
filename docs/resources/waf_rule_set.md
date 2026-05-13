@@ -12,6 +12,36 @@ Creates a WAF exception (rule set) resource. WAF exceptions allow you to bypass 
 
 ## Example Usage
 
+### With Parent WAF
+
+```terraform
+# First, create the parent WAF
+resource "azion_waf" "example" {
+  result = {
+    name   = "My WAF"
+    active = true
+  }
+}
+
+# Then create the rule set for that WAF
+resource "azion_waf_rule_set" "example" {
+  waf_id = azion_waf.example.id
+  result = {
+    name     = "My WAF Exception"
+    path     = "/api/*"
+    active   = true
+    operator = "regex"
+    rule_id  = 0
+    conditions = [
+      {
+        match          = "any_url"
+        condition_type = "generic"
+      }
+    ]
+  }
+}
+```
+
 ### Generic Condition Example
 
 ```terraform

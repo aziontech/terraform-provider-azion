@@ -1,3 +1,31 @@
+# Example: Complete setup with parent WAF
+# First, create the parent WAF
+resource "azion_waf" "example" {
+  result = {
+    name   = "My WAF"
+    active = true
+  }
+}
+
+# Then create the rule set for that WAF
+resource "azion_waf_rule_set" "example_with_parent" {
+  waf_id = azion_waf.example.id
+  result = {
+    name     = "My WAF Exception"
+    path     = "/api/*"
+    active   = true
+    operator = "regex"
+    rule_id  = 0
+
+    conditions = [
+      {
+        match          = "any_url"
+        condition_type = "generic"
+      }
+    ]
+  }
+}
+
 # Create a WAF rule set with a generic condition
 # Generic conditions only use the 'match' field
 resource "azion_waf_rule_set" "example" {

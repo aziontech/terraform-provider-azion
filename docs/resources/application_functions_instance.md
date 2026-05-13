@@ -12,6 +12,39 @@ Provides a resource to manage Function Instances for an Application.
 
 ## Example Usage
 
+### With Parent Application
+
+```terraform
+# First, create the parent application with functions module enabled
+resource "azion_application_main_setting" "example" {
+  application = {
+    name   = "My Application"
+    active = true
+    modules = {
+      functions = {
+        enabled = true
+      }
+    }
+  }
+}
+
+# Then create the function instance for that application
+resource "azion_application_function_instance" "example" {
+  application_id = azion_application_main_setting.example.application.application_id
+  data = {
+    name        = "Terraform Example"
+    function_id = 12345
+    active      = true
+    args = jsonencode({
+      key     = "Value"
+      Example = "example"
+    })
+  }
+}
+```
+
+### Using Hardcoded Application ID
+
 ```terraform
 resource "azion_application_function_instance" "example" {
   application_id = 1234567890

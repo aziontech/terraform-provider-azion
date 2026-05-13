@@ -12,6 +12,45 @@ Creates and manages a firewall rules engine rule. The firewall rules engine allo
 
 ## Example Usage
 
+### With Parent Firewall
+
+```terraform
+# First, create the parent firewall
+resource "azion_firewall_main_setting" "example" {
+  data = {
+    name   = "My Firewall"
+    active = true
+  }
+}
+
+# Then create the rule engine for that firewall
+resource "azion_firewall_rule_engine" "example" {
+  firewall_id = azion_firewall_main_setting.example.data.id
+  results = {
+    name        = "Block Specific Path"
+    description = "Block requests to specific path"
+    active      = true
+    behaviors = [
+      {
+        type = "drop"
+      }
+    ]
+    criteria = [
+      {
+        entries = [
+          {
+            variable    = "${request_uri}"
+            operator    = "matches"
+            conditional = "if"
+            argument    = "/admin.*"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ### Basic Rule with Drop Behavior
 
 ```terraform
@@ -180,6 +219,17 @@ resource "azion_firewall_rule_engine" "example" {
 }
 ```
 
+## Supported Behaviors
+
+| Behavior | Description | Requires Attributes |
+|----------|-------------|---------------------|
+| `deny` | Denies the request with a `403` response. | No |
+| `drop` | Drops the connection without sending a response. | No |
+| `set_rate_limit` | Applies a rate limit to matching requests. | Yes (`type`, `limit_by`, `average_rate_limit`, `maximum_burst_size`) |
+| `set_waf` | Applies a WAF rule set to matching requests. | Yes (`waf_id`, `mode`) |
+| `run_function` | Executes a function instance. | Yes (`value`: function instance ID) |
+| `set_custom_response` | Returns a custom HTTP response. | Yes (`status_code`, `content_type`, `content_body`) |
+
 ### Complex Rule with Multiple Criteria
 
 ```terraform
@@ -259,11 +309,11 @@ Read-Only:
 
 Required:
 
-- `type` (String) Type of behavior. Valid values: `run_function`, `set_custom_response`, `set_waf`, `set_rate_limit`, `drop`.
+- `type` (String) Type of behavior. Valid values: `deny`, `drop`, `run_function`, `set_custom_response`, `set_rate_limit`, `set_waf`. See [Supported Behaviors](#supported-behaviors) for details.
 
 Optional:
 
-- `attributes` (Attributes) Behavior attributes. Required for `run_function`, `set_custom_response`, `set_waf`, and `set_rate_limit` behaviors. Not needed for `drop`. (see [below for nested schema](#nestedatt--results--behaviors--attributes))
+- `attributes` (Attributes) Behavior attributes. Required for `run_function`, `set_custom_response`, `set_waf`, and `set_rate_limit` behaviors. Not needed for `deny` or `drop`. (see [below for nested schema](#nestedatt--results--behaviors--attributes))
 
 <a id="nestedatt--results--behaviors--attributes"></a>
 ### Nested Schema for `results.behaviors.attributes`

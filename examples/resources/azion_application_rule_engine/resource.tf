@@ -1,5 +1,44 @@
-# Example 1: Request phase rule with no-args behavior
+# Example: Complete setup with parent application
+# First, create the parent application
+resource "azion_application_main_setting" "example" {
+  application = {
+    name   = "My Application"
+    active = true
+  }
+}
+
+# Then create the rule engine for that application
 resource "azion_application_rule_engine" "example" {
+  application_id = azion_application_main_setting.example.application.application_id
+  results = {
+    name        = "Terraform Example"
+    phase       = "request"
+    description = "My rule engine"
+    behaviors = [
+      {
+        type = "deliver"
+      },
+      {
+        type = "bypass_cache"
+      }
+    ]
+    criteria = [
+      {
+        entries = [
+          {
+            variable    = "$${uri}"
+            operator    = "is_equal"
+            conditional = "if"
+            argument    = "/"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+# Example 1: Request phase rule with no-args behavior
+resource "azion_application_rule_engine" "example_simple" {
   application_id = 1234567890
   results = {
     name        = "Terraform Example"

@@ -1060,7 +1060,47 @@ Example Terraform configurations are located in:
 | Plural Data Source Example | `examples/data-sources/azion_application_functions_instance/data-source.tf` |
 | Resource Example | `examples/resources/azion_application_functions_instance/resource.tf` |
 
-### Example: Resource Usage
+### MANDATORY: Parent Resource Documentation
+
+**IMPORTANT**: This is a child resource of `azion_application_main_setting`. Documentation and examples MUST include the parent resource creation to show complete context.
+
+When updating documentation, always include:
+
+1. **Parent Application Example** - Show creation of the parent application first
+2. **Reference Using Terraform Interpolation** - Use `azion_application_main_setting.example.application.application_id` to reference the parent ID
+
+### Example: Complete Resource Usage with Parent Application
+
+```terraform
+# First, create the parent application with functions module enabled
+resource "azion_application_main_setting" "example" {
+  application = {
+    name   = "My Application"
+    active = true
+    modules = {
+      functions = {
+        enabled = true
+      }
+    }
+  }
+}
+
+# Then create the function instance for that application
+resource "azion_application_function_instance" "example" {
+  application_id = azion_application_main_setting.example.application.application_id
+  data = {
+    name        = "Terraform Example"
+    function_id = 12345
+    active      = true
+    args = jsonencode({
+      key     = "Value"
+      Example = "example"
+    })
+  }
+}
+```
+
+### Example: Resource Usage (Hardcoded ID)
 
 ```terraform
 resource "azion_application_function_instance" "example" {
