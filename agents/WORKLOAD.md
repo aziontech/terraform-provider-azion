@@ -586,6 +586,49 @@ if plan.Mtls.Config != nil && response.Data.Mtls.Config.IsSet() {
 
 Apply this rule recursively: every nested struct pointer in the model needs its own `plan.X != nil` gate, not just the top-level one.
 
+#### 2b. Inconsistent Result From Missing Setter in Create/Update
+
+**Problem:** The plan has a concrete value for a nested field but the API returns a different value:
+```
+.workload.tls.minimum_version: was cty.StringVal("tls_1_2"), but now cty.StringVal("tls_1_3")
+```
+
+This happens when Create/Update builds the SDK request struct but forgets to call the setter for one of the fields. The API receives the request without that field, applies its default, and returns the default — which then disagrees with the plan.
+
+**Solution:** Every optional field declared in the schema must have a matching `IsNull()/IsUnknown()`-gated `SetX(...)` call in **both** Create and Update. Missing setters are silent — the build passes, the plan looks fine, the bug only appears at apply time.
+
+```go
+// WRONG - schema exposes minimum_version but Create never sends it
+if plan.Workload.Tls != nil {
+    tls := azionapi.NewTLSWorkloadRequest()
+    if !plan.Workload.Tls.Certificate.IsNull() && !plan.Workload.Tls.Certificate.IsUnknown() {
+        tls.SetCertificate(plan.Workload.Tls.Certificate.ValueInt64())
+    }
+    if !plan.Workload.Tls.Ciphers.IsNull() && !plan.Workload.Tls.Ciphers.IsUnknown() {
+        tls.SetCiphers(plan.Workload.Tls.Ciphers.ValueInt64())
+    }
+    // BUG: MinimumVersion is in the schema and model but never set on the request
+    workload.SetTls(*tls)
+}
+
+// CORRECT - every schema field has a corresponding setter
+if plan.Workload.Tls != nil {
+    tls := azionapi.NewTLSWorkloadRequest()
+    if !plan.Workload.Tls.Certificate.IsNull() && !plan.Workload.Tls.Certificate.IsUnknown() {
+        tls.SetCertificate(plan.Workload.Tls.Certificate.ValueInt64())
+    }
+    if !plan.Workload.Tls.Ciphers.IsNull() && !plan.Workload.Tls.Ciphers.IsUnknown() {
+        tls.SetCiphers(plan.Workload.Tls.Ciphers.ValueInt64())
+    }
+    if !plan.Workload.Tls.MinimumVersion.IsNull() && !plan.Workload.Tls.MinimumVersion.IsUnknown() {
+        tls.SetMinimumVersion(plan.Workload.Tls.MinimumVersion.ValueString())
+    }
+    workload.SetTls(*tls)
+}
+```
+
+When adding a field to a nested struct's schema, audit Create, Update, and `populateWorkloadResults` together — all three must handle it.
+
 ### 3. Nullable Types Not Checked Properly
 
 **Problem:** Accessing nullable types without checking `IsSet()` and `Get()`.
@@ -846,6 +889,9 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
         }
         if !plan.Workload.Tls.Ciphers.IsNull() && !plan.Workload.Tls.Ciphers.IsUnknown() {
             tls.SetCiphers(plan.Workload.Tls.Ciphers.ValueInt64())
+        }
+        if !plan.Workload.Tls.MinimumVersion.IsNull() && !plan.Workload.Tls.MinimumVersion.IsUnknown() {
+            tls.SetMinimumVersion(plan.Workload.Tls.MinimumVersion.ValueString())
         }
         workload.SetTls(*tls)
     }
