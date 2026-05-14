@@ -302,7 +302,9 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 
 	// Preserve the prior state's Modules shape so unconfigured submodules
 	// aren't introduced into state by the API response, which would cause
-	// perpetual drift on subsequent plans.
+	// perpetual drift on subsequent plans. When prior state is nil (import),
+	// populate every submodule the API returned so the imported state mirrors
+	// reality.
 	var previousModules *ApplicationModules
 	if state.Application != nil {
 		previousModules = state.Application.Modules
@@ -317,25 +319,25 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 	state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
 
-	if previousModules != nil && stateApplication.Data.Modules != nil {
+	if stateApplication.Data.Modules != nil {
 		modelState := stateApplication.Data.GetModules()
 		modelPlan := ApplicationModules{}
-		if previousModules.Cache != nil && modelState.Cache != nil {
+		if modelState.Cache != nil && (previousModules == nil || previousModules.Cache != nil) {
 			modelPlan.Cache = &CacheModule{
 				Enabled: types.BoolValue(modelState.Cache.GetEnabled()),
 			}
 		}
-		if previousModules.Functions != nil && modelState.Functions != nil {
+		if modelState.Functions != nil && (previousModules == nil || previousModules.Functions != nil) {
 			modelPlan.Functions = &FunctionModule{
 				Enabled: types.BoolValue(modelState.Functions.GetEnabled()),
 			}
 		}
-		if previousModules.ApplicationAccelerator != nil && modelState.ApplicationAccelerator != nil {
+		if modelState.ApplicationAccelerator != nil && (previousModules == nil || previousModules.ApplicationAccelerator != nil) {
 			modelPlan.ApplicationAccelerator = &ApplicationAcceleratorModule{
 				Enabled: types.BoolValue(modelState.ApplicationAccelerator.GetEnabled()),
 			}
 		}
-		if previousModules.ImageProcessor != nil && modelState.ImageProcessor != nil {
+		if modelState.ImageProcessor != nil && (previousModules == nil || previousModules.ImageProcessor != nil) {
 			modelPlan.ImageProcessor = &ImageProcessorModule{
 				Enabled: types.BoolValue(modelState.ImageProcessor.GetEnabled()),
 			}

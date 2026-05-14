@@ -356,30 +356,36 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	// Preserve the prior state's Modules shape so unconfigured submodules
 	// aren't introduced into state by the API response, which would cause
-	// perpetual drift on subsequent plans (state {} vs plan null).
+	// perpetual drift on subsequent plans (state {} vs plan null). When prior
+	// state is nil (import), populate every submodule the API returned so the
+	// imported state mirrors reality.
+	var priorModules *FirewallResourceModules
+	if state.Firewall != nil {
+		priorModules = state.Firewall.Modules
+	}
 	var modulesResponsePtr *FirewallResourceModules
-	if state.Firewall != nil && state.Firewall.Modules != nil {
+	if firewallResponse.Data.Modules != nil {
 		modules := firewallResponse.Data.GetModules()
 		modulesResponse := FirewallResourceModules{}
-		if state.Firewall.Modules.DdosProtection != nil {
+		if priorModules == nil || priorModules.DdosProtection != nil {
 			ddosProtection := modules.GetDdosProtection()
 			modulesResponse.DdosProtection = &DdosProtectionModule{
 				Enabled: types.BoolValue(ddosProtection.GetEnabled()),
 			}
 		}
-		if state.Firewall.Modules.Functions != nil {
+		if priorModules == nil || priorModules.Functions != nil {
 			functions := modules.GetFunctions()
 			modulesResponse.Functions = &FunctionsModule{
 				Enabled: types.BoolValue(functions.GetEnabled()),
 			}
 		}
-		if state.Firewall.Modules.NetworkProtection != nil {
+		if priorModules == nil || priorModules.NetworkProtection != nil {
 			networkProtection := modules.GetNetworkProtection()
 			modulesResponse.NetworkProtection = &NetworkProtectionModule{
 				Enabled: types.BoolValue(networkProtection.GetEnabled()),
 			}
 		}
-		if state.Firewall.Modules.WAF != nil {
+		if priorModules == nil || priorModules.WAF != nil {
 			waf := modules.GetWaf()
 			modulesResponse.WAF = &WAFModule{
 				Enabled: types.BoolValue(waf.GetEnabled()),
