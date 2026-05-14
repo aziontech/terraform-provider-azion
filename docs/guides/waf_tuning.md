@@ -396,7 +396,7 @@ terraform import azion_waf_rule_set.example <exception_id>
 
 - [azion_waf](../resources/waf.md) - Main WAF configuration
 - [azion_waf_rule_set](../resources/waf_rule_set.md) - WAF exceptions
-- [azion_firewall_main_setting](../resources/firewall_main_setting.md) - Edge Firewall configuration
+- [azion_firewall_main_setting](../resources/firewall_main_setting.md) - Firewall configuration
 
 ## Next Steps
 
