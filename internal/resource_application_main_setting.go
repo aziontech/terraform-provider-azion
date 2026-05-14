@@ -300,6 +300,14 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 		}
 	}
 
+	// Preserve the prior state's Modules shape so unconfigured submodules
+	// aren't introduced into state by the API response, which would cause
+	// perpetual drift on subsequent plans.
+	var previousModules *ApplicationModules
+	if state.Application != nil {
+		previousModules = state.Application.Modules
+	}
+
 	state.Application = &ApplicationResults{
 		ApplicationID:  types.Int64Value(stateApplication.Data.GetId()),
 		Name:           types.StringValue(stateApplication.Data.GetName()),
@@ -309,31 +317,31 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 	state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
 
-	modelPlan := ApplicationModules{}
-	if stateApplication.Data.Modules != nil {
+	if previousModules != nil && stateApplication.Data.Modules != nil {
 		modelState := stateApplication.Data.GetModules()
-		if modelState.Cache != nil {
+		modelPlan := ApplicationModules{}
+		if previousModules.Cache != nil && modelState.Cache != nil {
 			modelPlan.Cache = &CacheModule{
 				Enabled: types.BoolValue(modelState.Cache.GetEnabled()),
 			}
 		}
-		if modelState.Functions != nil {
+		if previousModules.Functions != nil && modelState.Functions != nil {
 			modelPlan.Functions = &FunctionModule{
 				Enabled: types.BoolValue(modelState.Functions.GetEnabled()),
 			}
 		}
-		if modelState.ApplicationAccelerator != nil {
+		if previousModules.ApplicationAccelerator != nil && modelState.ApplicationAccelerator != nil {
 			modelPlan.ApplicationAccelerator = &ApplicationAcceleratorModule{
 				Enabled: types.BoolValue(modelState.ApplicationAccelerator.GetEnabled()),
 			}
 		}
-		if modelState.ImageProcessor != nil {
+		if previousModules.ImageProcessor != nil && modelState.ImageProcessor != nil {
 			modelPlan.ImageProcessor = &ImageProcessorModule{
 				Enabled: types.BoolValue(modelState.ImageProcessor.GetEnabled()),
 			}
 		}
+		state.Application.Modules = &modelPlan
 	}
-	state.Application.Modules = &modelPlan
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

@@ -10,14 +10,12 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -65,9 +63,9 @@ type StorageAttributesModel struct {
 
 // HTTP connector attributes.
 type HTTPAttributesModel struct {
-	Addresses         []AddressModel `tfsdk:"addresses"`
-	ConnectionOptions types.Object   `tfsdk:"connection_options"`
-	Modules           types.Object   `tfsdk:"modules"`
+	Addresses         []AddressModel              `tfsdk:"addresses"`
+	ConnectionOptions *HTTPConnectionOptionsModel `tfsdk:"connection_options"`
+	Modules           *HTTPModulesModel           `tfsdk:"modules"`
 }
 
 // Address model for HTTP connectors.
@@ -104,8 +102,8 @@ type HTTPConnectionOptionsModel struct {
 
 // HTTP modules.
 type HTTPModulesModel struct {
-	LoadBalancer types.Object `tfsdk:"load_balancer"`
-	OriginShield types.Object `tfsdk:"origin_shield"`
+	LoadBalancer *LoadBalancerModuleModel `tfsdk:"load_balancer"`
+	OriginShield *OriginShieldModuleModel `tfsdk:"origin_shield"`
 }
 
 // Load balancer module.
@@ -130,7 +128,13 @@ type OriginShieldModuleModel struct {
 
 // Origin shield config.
 type OriginShieldConfigModel struct {
-	Hmac *HMACConfigModel `tfsdk:"hmac"`
+	OriginIPAcl *OriginIPAclModel `tfsdk:"origin_ip_acl"`
+	Hmac        *HMACConfigModel  `tfsdk:"hmac"`
+}
+
+// Origin IP ACL configuration for origin shield.
+type OriginIPAclModel struct {
+	Enabled types.Bool `tfsdk:"enabled"`
 }
 
 // HMAC configuration.
@@ -276,91 +280,74 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 								},
 							},
 							"connection_options": schema.SingleNestedAttribute{
-								Description: "HTTP connection options. API provides defaults if not specified.",
+								Description: "HTTP connection options.",
 								Optional:    true,
-								Computed:    true,
 								Attributes: map[string]schema.Attribute{
 									"dns_resolution": schema.StringAttribute{
 										Description: "DNS resolution strategy.",
 										Optional:    true,
-										Computed:    true,
 									},
 									"following_redirect": schema.BoolAttribute{
 										Description: "Whether to follow redirects.",
 										Optional:    true,
-										Computed:    true,
 									},
 									"host": schema.StringAttribute{
 										Description: "Host header value. Use ${host} to pass through the original host.",
 										Optional:    true,
-										Computed:    true,
 									},
 									"http_version_policy": schema.StringAttribute{
 										Description: "HTTP version policy.",
 										Optional:    true,
-										Computed:    true,
 									},
 									"path_prefix": schema.StringAttribute{
 										Description: "Path prefix for requests.",
 										Optional:    true,
-										Computed:    true,
 									},
 									"real_ip_header": schema.StringAttribute{
 										Description: "Header for real IP.",
 										Optional:    true,
-										Computed:    true,
 									},
 									"real_port_header": schema.StringAttribute{
 										Description: "Header for real port.",
 										Optional:    true,
-										Computed:    true,
 									},
 									"transport_policy": schema.StringAttribute{
 										Description: "Transport policy.",
 										Optional:    true,
-										Computed:    true,
 									},
 								},
 							},
 							"modules": schema.SingleNestedAttribute{
-								Description: "HTTP modules configuration. API provides defaults if not specified.",
+								Description: "HTTP modules configuration.",
 								Optional:    true,
-								Computed:    true,
 								Attributes: map[string]schema.Attribute{
 									"load_balancer": schema.SingleNestedAttribute{
 										Description: "Load balancer module.",
 										Optional:    true,
-										Computed:    true,
 										Attributes: map[string]schema.Attribute{
 											"enabled": schema.BoolAttribute{
 												Description: "Whether load balancer is enabled.",
 												Optional:    true,
-												Computed:    true,
 											},
 											"config": schema.SingleNestedAttribute{
 												Description: "Load balancer configuration.",
 												Optional:    true,
-												Computed:    true,
 												Attributes: map[string]schema.Attribute{
 													"method": schema.StringAttribute{
 														Description: "Load balancing method (round_robin, least_conn, ip_hash).",
 														Optional:    true,
-														Computed:    true,
 													},
 													"max_retries": schema.Int64Attribute{
 														Description: "Maximum number of retry attempts on connection failure.",
 														Optional:    true,
-														Computed:    true,
 													},
 													"connection_timeout": schema.Int64Attribute{
 														Description: "Maximum time (in seconds) to wait for a connection to be established.",
 														Optional:    true,
-														Computed:    true,
 													},
 													"read_write_timeout": schema.Int64Attribute{
 														Description: "Maximum time (in seconds) to wait for data read/write after connection.",
 														Optional:    true,
-														Computed:    true,
 													},
 												},
 											},
@@ -369,17 +356,25 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									"origin_shield": schema.SingleNestedAttribute{
 										Description: "Origin shield module.",
 										Optional:    true,
-										Computed:    true,
 										Attributes: map[string]schema.Attribute{
 											"enabled": schema.BoolAttribute{
 												Description: "Whether origin shield is enabled.",
 												Optional:    true,
-												Computed:    true,
 											},
 											"config": schema.SingleNestedAttribute{
 												Description: "Origin shield configuration.",
 												Optional:    true,
 												Attributes: map[string]schema.Attribute{
+													"origin_ip_acl": schema.SingleNestedAttribute{
+														Description: "Origin IP ACL configuration.",
+														Optional:    true,
+														Attributes: map[string]schema.Attribute{
+															"enabled": schema.BoolAttribute{
+																Description: "Whether the origin IP ACL is enabled.",
+																Optional:    true,
+															},
+														},
+													},
 													"hmac": schema.SingleNestedAttribute{
 														Description: "HMAC configuration for origin shield.",
 														Optional:    true,
@@ -854,14 +849,38 @@ func buildStorageConnectorRequest(connector *connectorResourceResults) (azionapi
 	return azionapi.ConnectorRequestBaseAsConnectorRequest(req), nil
 }
 
-func (r *connectorResource) buildHTTPConnectorRequest(ctx context.Context, connector *connectorResourceResults) (azionapi.ConnectorRequest, error) {
+func (r *connectorResource) buildHTTPConnectorRequest(_ context.Context, connector *connectorResourceResults) (azionapi.ConnectorRequest, error) {
 	if connector.HTTPAttrs == nil {
 		return azionapi.ConnectorRequest{}, fmt.Errorf("http_attributes is required for http type connectors")
 	}
 
-	// Build addresses
+	addresses := buildAddressRequests(connector.HTTPAttrs.Addresses)
+	attrs := azionapi.NewConnectorHTTPAttributesRequest(addresses)
+
+	if connector.HTTPAttrs.ConnectionOptions != nil {
+		attrs.SetConnectionOptions(*buildConnectionOptionsRequest(connector.HTTPAttrs.ConnectionOptions))
+	}
+
+	if connector.HTTPAttrs.Modules != nil {
+		attrs.SetModules(*buildHTTPModulesRequest(connector.HTTPAttrs.Modules))
+	}
+
+	req := azionapi.NewConnectorHTTPRequest(
+		connector.Name.ValueString(),
+		connector.Type.ValueString(),
+		*attrs,
+	)
+
+	if !connector.Active.IsNull() && !connector.Active.IsUnknown() {
+		req.SetActive(connector.Active.ValueBool())
+	}
+
+	return azionapi.ConnectorHTTPRequestAsConnectorRequest(req), nil
+}
+
+func buildAddressRequests(addrs []AddressModel) []azionapi.AddressRequest {
 	var addresses []azionapi.AddressRequest
-	for _, addr := range connector.HTTPAttrs.Addresses {
+	for _, addr := range addrs {
 		address := azionapi.NewAddressRequest(addr.Address.ValueString())
 		if !addr.Active.IsNull() && !addr.Active.IsUnknown() {
 			address.SetActive(addr.Active.ValueBool())
@@ -886,143 +905,116 @@ func (r *connectorResource) buildHTTPConnectorRequest(ctx context.Context, conne
 		}
 		addresses = append(addresses, *address)
 	}
+	return addresses
+}
 
-	attrs := azionapi.NewConnectorHTTPAttributesRequest(addresses)
+func buildConnectionOptionsRequest(co *HTTPConnectionOptionsModel) *azionapi.HTTPConnectionOptionsRequest {
+	connOpts := azionapi.NewHTTPConnectionOptionsRequest()
+	if !co.DNSResolution.IsNull() && !co.DNSResolution.IsUnknown() {
+		connOpts.SetDnsResolution(co.DNSResolution.ValueString())
+	}
+	if !co.FollowingRedirect.IsNull() && !co.FollowingRedirect.IsUnknown() {
+		connOpts.SetFollowingRedirect(co.FollowingRedirect.ValueBool())
+	}
+	if !co.Host.IsNull() && !co.Host.IsUnknown() {
+		connOpts.SetHost(co.Host.ValueString())
+	}
+	if !co.HTTPVersionPolicy.IsNull() && !co.HTTPVersionPolicy.IsUnknown() {
+		connOpts.SetHttpVersionPolicy(co.HTTPVersionPolicy.ValueString())
+	}
+	if !co.PathPrefix.IsNull() && !co.PathPrefix.IsUnknown() {
+		connOpts.SetPathPrefix(co.PathPrefix.ValueString())
+	}
+	if !co.RealIPHeader.IsNull() && !co.RealIPHeader.IsUnknown() {
+		connOpts.SetRealIpHeader(co.RealIPHeader.ValueString())
+	}
+	if !co.RealPortHeader.IsNull() && !co.RealPortHeader.IsUnknown() {
+		connOpts.SetRealPortHeader(co.RealPortHeader.ValueString())
+	}
+	if !co.TransportPolicy.IsNull() && !co.TransportPolicy.IsUnknown() {
+		connOpts.SetTransportPolicy(co.TransportPolicy.ValueString())
+	}
+	return connOpts
+}
 
-	// Build connection options if provided
-	if !connector.HTTPAttrs.ConnectionOptions.IsNull() && !connector.HTTPAttrs.ConnectionOptions.IsUnknown() {
-		var connOptsModel HTTPConnectionOptionsModel
-		diags := connector.HTTPAttrs.ConnectionOptions.As(ctx, &connOptsModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return azionapi.ConnectorRequest{}, fmt.Errorf("failed to parse connection_options")
-		}
+func buildHTTPModulesRequest(m *HTTPModulesModel) *azionapi.HTTPModulesRequest {
+	modules := azionapi.NewHTTPModulesRequest()
 
-		connOpts := azionapi.NewHTTPConnectionOptionsRequest()
-		if !connOptsModel.DNSResolution.IsNull() && !connOptsModel.DNSResolution.IsUnknown() {
-			connOpts.SetDnsResolution(connOptsModel.DNSResolution.ValueString())
+	if m.LoadBalancer != nil {
+		lb := azionapi.NewLoadBalancerModuleRequest()
+		if !m.LoadBalancer.Enabled.IsNull() && !m.LoadBalancer.Enabled.IsUnknown() {
+			lb.SetEnabled(m.LoadBalancer.Enabled.ValueBool())
 		}
-		if !connOptsModel.FollowingRedirect.IsNull() && !connOptsModel.FollowingRedirect.IsUnknown() {
-			connOpts.SetFollowingRedirect(connOptsModel.FollowingRedirect.ValueBool())
+		if m.LoadBalancer.Config != nil {
+			lbConfig := azionapi.NewLoadBalancerModuleConfigRequest()
+			if !m.LoadBalancer.Config.Method.IsNull() && !m.LoadBalancer.Config.Method.IsUnknown() {
+				lbConfig.SetMethod(m.LoadBalancer.Config.Method.ValueString())
+			}
+			if !m.LoadBalancer.Config.MaxRetries.IsNull() && !m.LoadBalancer.Config.MaxRetries.IsUnknown() {
+				lbConfig.SetMaxRetries(m.LoadBalancer.Config.MaxRetries.ValueInt64())
+			}
+			if !m.LoadBalancer.Config.ConnectionTimeout.IsNull() && !m.LoadBalancer.Config.ConnectionTimeout.IsUnknown() {
+				lbConfig.SetConnectionTimeout(m.LoadBalancer.Config.ConnectionTimeout.ValueInt64())
+			}
+			if !m.LoadBalancer.Config.ReadWriteTimeout.IsNull() && !m.LoadBalancer.Config.ReadWriteTimeout.IsUnknown() {
+				lbConfig.SetReadWriteTimeout(m.LoadBalancer.Config.ReadWriteTimeout.ValueInt64())
+			}
+			lb.SetConfig(*lbConfig)
 		}
-		if !connOptsModel.Host.IsNull() && !connOptsModel.Host.IsUnknown() {
-			connOpts.SetHost(connOptsModel.Host.ValueString())
-		}
-		if !connOptsModel.HTTPVersionPolicy.IsNull() && !connOptsModel.HTTPVersionPolicy.IsUnknown() {
-			connOpts.SetHttpVersionPolicy(connOptsModel.HTTPVersionPolicy.ValueString())
-		}
-		if !connOptsModel.PathPrefix.IsNull() && !connOptsModel.PathPrefix.IsUnknown() {
-			connOpts.SetPathPrefix(connOptsModel.PathPrefix.ValueString())
-		}
-		if !connOptsModel.RealIPHeader.IsNull() && !connOptsModel.RealIPHeader.IsUnknown() {
-			connOpts.SetRealIpHeader(connOptsModel.RealIPHeader.ValueString())
-		}
-		if !connOptsModel.RealPortHeader.IsNull() && !connOptsModel.RealPortHeader.IsUnknown() {
-			connOpts.SetRealPortHeader(connOptsModel.RealPortHeader.ValueString())
-		}
-		if !connOptsModel.TransportPolicy.IsNull() && !connOptsModel.TransportPolicy.IsUnknown() {
-			connOpts.SetTransportPolicy(connOptsModel.TransportPolicy.ValueString())
-		}
-		attrs.SetConnectionOptions(*connOpts)
+		modules.SetLoadBalancer(*lb)
 	}
 
-	// Build modules if provided
-	if !connector.HTTPAttrs.Modules.IsNull() && !connector.HTTPAttrs.Modules.IsUnknown() {
-		var modulesModel HTTPModulesModel
-		diags := connector.HTTPAttrs.Modules.As(ctx, &modulesModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return azionapi.ConnectorRequest{}, fmt.Errorf("failed to parse modules")
+	if m.OriginShield != nil {
+		os := azionapi.NewOriginShieldModuleRequest()
+		if !m.OriginShield.Enabled.IsNull() && !m.OriginShield.Enabled.IsUnknown() {
+			os.SetEnabled(m.OriginShield.Enabled.ValueBool())
 		}
-
-		modules := azionapi.NewHTTPModulesRequest()
-
-		if !modulesModel.LoadBalancer.IsNull() && !modulesModel.LoadBalancer.IsUnknown() {
-			var lbModel LoadBalancerModuleModel
-			if diag := modulesModel.LoadBalancer.As(ctx, &lbModel, basetypes.ObjectAsOptions{}); diag.HasError() {
-				return azionapi.ConnectorRequest{}, fmt.Errorf("failed to parse load_balancer module")
-			}
-			lb := azionapi.NewLoadBalancerModuleRequest()
-			if !lbModel.Enabled.IsNull() && !lbModel.Enabled.IsUnknown() {
-				lb.SetEnabled(lbModel.Enabled.ValueBool())
-			}
-			// Handle config if provided.
-			if lbModel.Config != nil {
-				lbConfig := azionapi.NewLoadBalancerModuleConfigRequest()
-				if !lbModel.Config.Method.IsNull() && !lbModel.Config.Method.IsUnknown() {
-					lbConfig.SetMethod(lbModel.Config.Method.ValueString())
+		if m.OriginShield.Config != nil {
+			osConfig := azionapi.NewOriginShieldConfigRequest()
+			if m.OriginShield.Config.OriginIPAcl != nil {
+				ipAcl := azionapi.NewOriginIPACLRequest()
+				if !m.OriginShield.Config.OriginIPAcl.Enabled.IsNull() && !m.OriginShield.Config.OriginIPAcl.Enabled.IsUnknown() {
+					ipAcl.SetEnabled(m.OriginShield.Config.OriginIPAcl.Enabled.ValueBool())
 				}
-				if !lbModel.Config.MaxRetries.IsNull() && !lbModel.Config.MaxRetries.IsUnknown() {
-					lbConfig.SetMaxRetries(lbModel.Config.MaxRetries.ValueInt64())
-				}
-				if !lbModel.Config.ConnectionTimeout.IsNull() && !lbModel.Config.ConnectionTimeout.IsUnknown() {
-					lbConfig.SetConnectionTimeout(lbModel.Config.ConnectionTimeout.ValueInt64())
-				}
-				if !lbModel.Config.ReadWriteTimeout.IsNull() && !lbModel.Config.ReadWriteTimeout.IsUnknown() {
-					lbConfig.SetReadWriteTimeout(lbModel.Config.ReadWriteTimeout.ValueInt64())
-				}
-				lb.SetConfig(*lbConfig)
+				osConfig.SetOriginIpAcl(*ipAcl)
 			}
-			modules.SetLoadBalancer(*lb)
-		}
-
-		if !modulesModel.OriginShield.IsNull() && !modulesModel.OriginShield.IsUnknown() {
-			var osModel OriginShieldModuleModel
-			if diag := modulesModel.OriginShield.As(ctx, &osModel, basetypes.ObjectAsOptions{}); diag.HasError() {
-				return azionapi.ConnectorRequest{}, fmt.Errorf("failed to parse origin_shield module")
-			}
-			os := azionapi.NewOriginShieldModuleRequest()
-			if !osModel.Enabled.IsNull() && !osModel.Enabled.IsUnknown() {
-				os.SetEnabled(osModel.Enabled.ValueBool())
-			}
-			// Handle HMAC config if provided.
-			if osModel.Config != nil && osModel.Config.Hmac != nil {
+			if m.OriginShield.Config.Hmac != nil {
 				hmacEnabled := false
-				if !osModel.Config.Hmac.Enabled.IsNull() && !osModel.Config.Hmac.Enabled.IsUnknown() {
-					hmacEnabled = osModel.Config.Hmac.Enabled.ValueBool()
+				if !m.OriginShield.Config.Hmac.Enabled.IsNull() && !m.OriginShield.Config.Hmac.Enabled.IsUnknown() {
+					hmacEnabled = m.OriginShield.Config.Hmac.Enabled.ValueBool()
 				}
-				hmacConfig := azionapi.NewHMACRequest(hmacEnabled)
-				if osModel.Config.Hmac.Config != nil && osModel.Config.Hmac.Config.Attributes != nil {
+				hmacReq := azionapi.NewHMACRequest(hmacEnabled)
+				if m.OriginShield.Config.Hmac.Config != nil && m.OriginShield.Config.Hmac.Config.Attributes != nil {
 					region := ""
-					if !osModel.Config.Hmac.Config.Attributes.Region.IsNull() && !osModel.Config.Hmac.Config.Attributes.Region.IsUnknown() {
-						region = osModel.Config.Hmac.Config.Attributes.Region.ValueString()
+					if !m.OriginShield.Config.Hmac.Config.Attributes.Region.IsNull() && !m.OriginShield.Config.Hmac.Config.Attributes.Region.IsUnknown() {
+						region = m.OriginShield.Config.Hmac.Config.Attributes.Region.ValueString()
 					}
 					accessKey := ""
-					if !osModel.Config.Hmac.Config.Attributes.AccessKey.IsNull() && !osModel.Config.Hmac.Config.Attributes.AccessKey.IsUnknown() {
-						accessKey = osModel.Config.Hmac.Config.Attributes.AccessKey.ValueString()
+					if !m.OriginShield.Config.Hmac.Config.Attributes.AccessKey.IsNull() && !m.OriginShield.Config.Hmac.Config.Attributes.AccessKey.IsUnknown() {
+						accessKey = m.OriginShield.Config.Hmac.Config.Attributes.AccessKey.ValueString()
 					}
 					secretKey := ""
-					if !osModel.Config.Hmac.Config.Attributes.SecretKey.IsNull() && !osModel.Config.Hmac.Config.Attributes.SecretKey.IsUnknown() {
-						secretKey = osModel.Config.Hmac.Config.Attributes.SecretKey.ValueString()
+					if !m.OriginShield.Config.Hmac.Config.Attributes.SecretKey.IsNull() && !m.OriginShield.Config.Hmac.Config.Attributes.SecretKey.IsUnknown() {
+						secretKey = m.OriginShield.Config.Hmac.Config.Attributes.SecretKey.ValueString()
 					}
-					attrs := azionapi.NewAWS4HMACAttributesRequest(region, accessKey, secretKey)
-					if !osModel.Config.Hmac.Config.Attributes.Service.IsNull() && !osModel.Config.Hmac.Config.Attributes.Service.IsUnknown() {
-						attrs.SetService(osModel.Config.Hmac.Config.Attributes.Service.ValueString())
+					hmacAttrs := azionapi.NewAWS4HMACAttributesRequest(region, accessKey, secretKey)
+					if !m.OriginShield.Config.Hmac.Config.Attributes.Service.IsNull() && !m.OriginShield.Config.Hmac.Config.Attributes.Service.IsUnknown() {
+						hmacAttrs.SetService(m.OriginShield.Config.Hmac.Config.Attributes.Service.ValueString())
 					}
-					aws4Hmac := azionapi.NewAWS4HMACRequest(*attrs)
-					if !osModel.Config.Hmac.Config.Type.IsNull() && !osModel.Config.Hmac.Config.Type.IsUnknown() {
-						aws4Hmac.SetType(osModel.Config.Hmac.Config.Type.ValueString())
+					aws4Hmac := azionapi.NewAWS4HMACRequest(*hmacAttrs)
+					if !m.OriginShield.Config.Hmac.Config.Type.IsNull() && !m.OriginShield.Config.Hmac.Config.Type.IsUnknown() {
+						aws4Hmac.SetType(m.OriginShield.Config.Hmac.Config.Type.ValueString())
 					}
-					hmacConfig.SetConfig(*aws4Hmac)
+					hmacReq.SetConfig(*aws4Hmac)
 				}
-				osConfig := azionapi.NewOriginShieldConfigRequest()
-				osConfig.SetHmac(*hmacConfig)
-				os.SetConfig(*osConfig)
+				osConfig.SetHmac(*hmacReq)
 			}
-			modules.SetOriginShield(*os)
+			os.SetConfig(*osConfig)
 		}
-		attrs.SetModules(*modules)
+		modules.SetOriginShield(*os)
 	}
 
-	req := azionapi.NewConnectorHTTPRequest(
-		connector.Name.ValueString(),
-		connector.Type.ValueString(),
-		*attrs,
-	)
-
-	if !connector.Active.IsNull() && !connector.Active.IsUnknown() {
-		req.SetActive(connector.Active.ValueBool())
-	}
-
-	return azionapi.ConnectorHTTPRequestAsConnectorRequest(req), nil
+	return modules
 }
 
 func buildStoragePatchedConnectorRequest(connector *connectorResourceResults) (azionapi.PatchedConnectorRequest, error) {
@@ -1049,163 +1041,20 @@ func buildStoragePatchedConnectorRequest(connector *connectorResourceResults) (a
 	return azionapi.PatchedConnectorRequestBaseAsPatchedConnectorRequest(req), nil
 }
 
-func (r *connectorResource) buildHTTPPatchedConnectorRequest(ctx context.Context, connector *connectorResourceResults) (azionapi.PatchedConnectorRequest, error) {
+func (r *connectorResource) buildHTTPPatchedConnectorRequest(_ context.Context, connector *connectorResourceResults) (azionapi.PatchedConnectorRequest, error) {
 	if connector.HTTPAttrs == nil {
 		return azionapi.PatchedConnectorRequest{}, fmt.Errorf("http_attributes is required for http type connectors")
 	}
 
-	// Build addresses
-	var addresses []azionapi.AddressRequest
-	for _, addr := range connector.HTTPAttrs.Addresses {
-		address := azionapi.NewAddressRequest(addr.Address.ValueString())
-		if !addr.Active.IsNull() && !addr.Active.IsUnknown() {
-			address.SetActive(addr.Active.ValueBool())
-		}
-		if !addr.HTTPPort.IsNull() && !addr.HTTPPort.IsUnknown() {
-			address.SetHttpPort(addr.HTTPPort.ValueInt64())
-		}
-		if !addr.HTTPSPort.IsNull() && !addr.HTTPSPort.IsUnknown() {
-			address.SetHttpsPort(addr.HTTPSPort.ValueInt64())
-		}
-		if addr.Modules != nil && addr.Modules.LoadBalancer != nil {
-			lb := azionapi.NewAddressLoadBalancerModuleRequest()
-			if !addr.Modules.LoadBalancer.ServerRole.IsNull() && !addr.Modules.LoadBalancer.ServerRole.IsUnknown() {
-				lb.SetServerRole(addr.Modules.LoadBalancer.ServerRole.ValueString())
-			}
-			if !addr.Modules.LoadBalancer.Weight.IsNull() && !addr.Modules.LoadBalancer.Weight.IsUnknown() {
-				lb.SetWeight(addr.Modules.LoadBalancer.Weight.ValueInt64())
-			}
-			addrModules := azionapi.NewAddressModulesRequest()
-			addrModules.SetLoadBalancer(*lb)
-			address.SetModules(*addrModules)
-		}
-		addresses = append(addresses, *address)
-	}
-
 	attrs := azionapi.ConnectorHTTPAttributesRequest{}
-	attrs.SetAddresses(addresses)
+	attrs.SetAddresses(buildAddressRequests(connector.HTTPAttrs.Addresses))
 
-	// Build connection options if provided
-	if !connector.HTTPAttrs.ConnectionOptions.IsNull() && !connector.HTTPAttrs.ConnectionOptions.IsUnknown() {
-		var connOptsModel HTTPConnectionOptionsModel
-		diags := connector.HTTPAttrs.ConnectionOptions.As(ctx, &connOptsModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return azionapi.PatchedConnectorRequest{}, fmt.Errorf("failed to parse connection_options")
-		}
-
-		connOpts := azionapi.NewHTTPConnectionOptionsRequest()
-		if !connOptsModel.DNSResolution.IsNull() && !connOptsModel.DNSResolution.IsUnknown() {
-			connOpts.SetDnsResolution(connOptsModel.DNSResolution.ValueString())
-		}
-		if !connOptsModel.FollowingRedirect.IsNull() && !connOptsModel.FollowingRedirect.IsUnknown() {
-			connOpts.SetFollowingRedirect(connOptsModel.FollowingRedirect.ValueBool())
-		}
-		if !connOptsModel.Host.IsNull() && !connOptsModel.Host.IsUnknown() {
-			connOpts.SetHost(connOptsModel.Host.ValueString())
-		}
-		if !connOptsModel.HTTPVersionPolicy.IsNull() && !connOptsModel.HTTPVersionPolicy.IsUnknown() {
-			connOpts.SetHttpVersionPolicy(connOptsModel.HTTPVersionPolicy.ValueString())
-		}
-		if !connOptsModel.PathPrefix.IsNull() && !connOptsModel.PathPrefix.IsUnknown() {
-			connOpts.SetPathPrefix(connOptsModel.PathPrefix.ValueString())
-		}
-		if !connOptsModel.RealIPHeader.IsNull() && !connOptsModel.RealIPHeader.IsUnknown() {
-			connOpts.SetRealIpHeader(connOptsModel.RealIPHeader.ValueString())
-		}
-		if !connOptsModel.RealPortHeader.IsNull() && !connOptsModel.RealPortHeader.IsUnknown() {
-			connOpts.SetRealPortHeader(connOptsModel.RealPortHeader.ValueString())
-		}
-		if !connOptsModel.TransportPolicy.IsNull() && !connOptsModel.TransportPolicy.IsUnknown() {
-			connOpts.SetTransportPolicy(connOptsModel.TransportPolicy.ValueString())
-		}
-		attrs.SetConnectionOptions(*connOpts)
+	if connector.HTTPAttrs.ConnectionOptions != nil {
+		attrs.SetConnectionOptions(*buildConnectionOptionsRequest(connector.HTTPAttrs.ConnectionOptions))
 	}
 
-	// Build modules if provided
-	if !connector.HTTPAttrs.Modules.IsNull() && !connector.HTTPAttrs.Modules.IsUnknown() {
-		var modulesModel HTTPModulesModel
-		diags := connector.HTTPAttrs.Modules.As(ctx, &modulesModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return azionapi.PatchedConnectorRequest{}, fmt.Errorf("failed to parse modules")
-		}
-
-		modules := azionapi.NewHTTPModulesRequest()
-
-		if !modulesModel.LoadBalancer.IsNull() && !modulesModel.LoadBalancer.IsUnknown() {
-			var lbModel LoadBalancerModuleModel
-			if diag := modulesModel.LoadBalancer.As(ctx, &lbModel, basetypes.ObjectAsOptions{}); diag.HasError() {
-				return azionapi.PatchedConnectorRequest{}, fmt.Errorf("failed to parse load_balancer module")
-			}
-			lb := azionapi.NewLoadBalancerModuleRequest()
-			if !lbModel.Enabled.IsNull() && !lbModel.Enabled.IsUnknown() {
-				lb.SetEnabled(lbModel.Enabled.ValueBool())
-			}
-			// Handle config if provided.
-			if lbModel.Config != nil {
-				lbConfig := azionapi.NewLoadBalancerModuleConfigRequest()
-				if !lbModel.Config.Method.IsNull() && !lbModel.Config.Method.IsUnknown() {
-					lbConfig.SetMethod(lbModel.Config.Method.ValueString())
-				}
-				if !lbModel.Config.MaxRetries.IsNull() && !lbModel.Config.MaxRetries.IsUnknown() {
-					lbConfig.SetMaxRetries(lbModel.Config.MaxRetries.ValueInt64())
-				}
-				if !lbModel.Config.ConnectionTimeout.IsNull() && !lbModel.Config.ConnectionTimeout.IsUnknown() {
-					lbConfig.SetConnectionTimeout(lbModel.Config.ConnectionTimeout.ValueInt64())
-				}
-				if !lbModel.Config.ReadWriteTimeout.IsNull() && !lbModel.Config.ReadWriteTimeout.IsUnknown() {
-					lbConfig.SetReadWriteTimeout(lbModel.Config.ReadWriteTimeout.ValueInt64())
-				}
-				lb.SetConfig(*lbConfig)
-			}
-			modules.SetLoadBalancer(*lb)
-		}
-
-		if !modulesModel.OriginShield.IsNull() && !modulesModel.OriginShield.IsUnknown() {
-			var osModel OriginShieldModuleModel
-			if diag := modulesModel.OriginShield.As(ctx, &osModel, basetypes.ObjectAsOptions{}); diag.HasError() {
-				return azionapi.PatchedConnectorRequest{}, fmt.Errorf("failed to parse origin_shield module")
-			}
-			os := azionapi.NewOriginShieldModuleRequest()
-			if !osModel.Enabled.IsNull() && !osModel.Enabled.IsUnknown() {
-				os.SetEnabled(osModel.Enabled.ValueBool())
-			}
-			// Handle HMAC config if provided.
-			if osModel.Config != nil && osModel.Config.Hmac != nil {
-				hmacEnabled := false
-				if !osModel.Config.Hmac.Enabled.IsNull() && !osModel.Config.Hmac.Enabled.IsUnknown() {
-					hmacEnabled = osModel.Config.Hmac.Enabled.ValueBool()
-				}
-				hmacConfig := azionapi.NewHMACRequest(hmacEnabled)
-				if osModel.Config.Hmac.Config != nil && osModel.Config.Hmac.Config.Attributes != nil {
-					region := ""
-					if !osModel.Config.Hmac.Config.Attributes.Region.IsNull() && !osModel.Config.Hmac.Config.Attributes.Region.IsUnknown() {
-						region = osModel.Config.Hmac.Config.Attributes.Region.ValueString()
-					}
-					accessKey := ""
-					if !osModel.Config.Hmac.Config.Attributes.AccessKey.IsNull() && !osModel.Config.Hmac.Config.Attributes.AccessKey.IsUnknown() {
-						accessKey = osModel.Config.Hmac.Config.Attributes.AccessKey.ValueString()
-					}
-					secretKey := ""
-					if !osModel.Config.Hmac.Config.Attributes.SecretKey.IsNull() && !osModel.Config.Hmac.Config.Attributes.SecretKey.IsUnknown() {
-						secretKey = osModel.Config.Hmac.Config.Attributes.SecretKey.ValueString()
-					}
-					attrs := azionapi.NewAWS4HMACAttributesRequest(region, accessKey, secretKey)
-					if !osModel.Config.Hmac.Config.Attributes.Service.IsNull() && !osModel.Config.Hmac.Config.Attributes.Service.IsUnknown() {
-						attrs.SetService(osModel.Config.Hmac.Config.Attributes.Service.ValueString())
-					}
-					aws4Hmac := azionapi.NewAWS4HMACRequest(*attrs)
-					if !osModel.Config.Hmac.Config.Type.IsNull() && !osModel.Config.Hmac.Config.Type.IsUnknown() {
-						aws4Hmac.SetType(osModel.Config.Hmac.Config.Type.ValueString())
-					}
-					hmacConfig.SetConfig(*aws4Hmac)
-				}
-				osConfig := azionapi.NewOriginShieldConfigRequest()
-				osConfig.SetHmac(*hmacConfig)
-				os.SetConfig(*osConfig)
-			}
-			modules.SetOriginShield(*os)
-		}
-		attrs.SetModules(*modules)
+	if connector.HTTPAttrs.Modules != nil {
+		attrs.SetModules(*buildHTTPModulesRequest(connector.HTTPAttrs.Modules))
 	}
 
 	req := azionapi.NewPatchedConnectorHTTPRequest(connector.Type.ValueString())
@@ -1249,6 +1098,11 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 
 	case *azionapi.ConnectorHTTP:
 		// HTTP connector.
+		// Snapshot the prior http_attributes shape so unconfigured nested blocks
+		// aren't introduced into state from API echoes, which would cause perpetual
+		// drift on subsequent plans.
+		priorHTTPAttrs := model.HTTPAttrs
+
 		model.ID = types.Int64Value(c.Id)
 		model.Name = types.StringValue(c.Name)
 		model.LastEditor = types.StringValue(c.LastEditor)
@@ -1258,151 +1112,24 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 		model.Type = types.StringValue(c.Type)
 		model.Active = types.BoolPointerValue(c.Active)
 
-		// Populate HTTP attributes
-		httpAttrs := &HTTPAttributesModel{}
-
-		// Addresses
-		for _, addr := range c.Attributes.Addresses {
-			addrModel := AddressModel{
-				Address: types.StringValue(addr.Address),
-			}
-			if addr.Active != nil {
-				addrModel.Active = types.BoolValue(*addr.Active)
-			}
-			if addr.HttpPort != nil {
-				addrModel.HTTPPort = types.Int64Value(*addr.HttpPort)
-			}
-			if addr.HttpsPort != nil {
-				addrModel.HTTPSPort = types.Int64Value(*addr.HttpsPort)
-			}
-			if addr.Modules.IsSet() {
-				modules := addr.Modules.Get()
-				if modules != nil && modules.LoadBalancer != nil {
-					addrModel.Modules = &AddressModulesModel{
-						LoadBalancer: &AddressLoadBalancerModel{},
-					}
-					if modules.LoadBalancer.ServerRole != nil {
-						addrModel.Modules.LoadBalancer.ServerRole = types.StringValue(*modules.LoadBalancer.ServerRole)
-					}
-					if modules.LoadBalancer.Weight != nil {
-						addrModel.Modules.LoadBalancer.Weight = types.Int64Value(*modules.LoadBalancer.Weight)
-					}
-				}
-			}
-			httpAttrs.Addresses = append(httpAttrs.Addresses, addrModel)
+		httpAttrs := &HTTPAttributesModel{
+			Addresses: populateAddresses(c.Attributes.Addresses),
 		}
 
-		// Connection options - always populate from API response
-		if c.Attributes.ConnectionOptions != nil {
-			co := c.Attributes.ConnectionOptions
-			connOptsModel := HTTPConnectionOptionsModel{}
-			if co.DnsResolution != nil {
-				connOptsModel.DNSResolution = types.StringValue(*co.DnsResolution)
+		if shouldPopulate(priorHTTPAttrs, func(p *HTTPAttributesModel) bool { return p.ConnectionOptions != nil }) && c.Attributes.ConnectionOptions != nil {
+			var priorCO *HTTPConnectionOptionsModel
+			if priorHTTPAttrs != nil {
+				priorCO = priorHTTPAttrs.ConnectionOptions
 			}
-			if co.FollowingRedirect != nil {
-				connOptsModel.FollowingRedirect = types.BoolValue(*co.FollowingRedirect)
-			}
-			if co.Host != nil {
-				connOptsModel.Host = types.StringValue(*co.Host)
-			}
-			if co.HttpVersionPolicy != nil {
-				connOptsModel.HTTPVersionPolicy = types.StringValue(*co.HttpVersionPolicy)
-			}
-			if co.PathPrefix != nil {
-				connOptsModel.PathPrefix = types.StringValue(*co.PathPrefix)
-			}
-			if co.RealIpHeader != nil {
-				connOptsModel.RealIPHeader = types.StringValue(*co.RealIpHeader)
-			}
-			if co.RealPortHeader != nil {
-				connOptsModel.RealPortHeader = types.StringValue(*co.RealPortHeader)
-			}
-			if co.TransportPolicy != nil {
-				connOptsModel.TransportPolicy = types.StringValue(*co.TransportPolicy)
-			}
-			connOptsValue, diags := types.ObjectValueFrom(ctx, HTTPConnectionOptionsModel{}.attrTypes(), connOptsModel)
-			if !diags.HasError() {
-				httpAttrs.ConnectionOptions = connOptsValue
-			}
+			httpAttrs.ConnectionOptions = populateConnectionOptions(priorCO, c.Attributes.ConnectionOptions)
 		}
 
-		// Modules - always populate from API response
-		if c.Attributes.Modules != nil {
-			modulesModel := HTTPModulesModel{}
-
-			if c.Attributes.Modules.LoadBalancer != nil {
-				lbModel := LoadBalancerModuleModel{}
-				if c.Attributes.Modules.LoadBalancer.Enabled != nil {
-					lbModel.Enabled = types.BoolValue(*c.Attributes.Modules.LoadBalancer.Enabled)
-				}
-				// Handle config from API response.
-				if c.Attributes.Modules.LoadBalancer.Config.IsSet() {
-					lbConfig := c.Attributes.Modules.LoadBalancer.Config.Get()
-					if lbConfig != nil {
-						lbModel.Config = &LoadBalancerConfigModel{}
-						if lbConfig.Method != nil {
-							lbModel.Config.Method = types.StringValue(*lbConfig.Method)
-						}
-						if lbConfig.MaxRetries != nil {
-							lbModel.Config.MaxRetries = types.Int64Value(*lbConfig.MaxRetries)
-						}
-						if lbConfig.ConnectionTimeout != nil {
-							lbModel.Config.ConnectionTimeout = types.Int64Value(*lbConfig.ConnectionTimeout)
-						}
-						if lbConfig.ReadWriteTimeout != nil {
-							lbModel.Config.ReadWriteTimeout = types.Int64Value(*lbConfig.ReadWriteTimeout)
-						}
-					}
-				}
-				lbValue, diags := types.ObjectValueFrom(ctx, LoadBalancerModuleModel{}.attrTypes(), lbModel)
-				if !diags.HasError() {
-					modulesModel.LoadBalancer = lbValue
-				}
+		if shouldPopulate(priorHTTPAttrs, func(p *HTTPAttributesModel) bool { return p.Modules != nil }) && c.Attributes.Modules != nil {
+			var priorModules *HTTPModulesModel
+			if priorHTTPAttrs != nil {
+				priorModules = priorHTTPAttrs.Modules
 			}
-
-			if c.Attributes.Modules.OriginShield != nil {
-				osModel := OriginShieldModuleModel{}
-				if c.Attributes.Modules.OriginShield.Enabled != nil {
-					osModel.Enabled = types.BoolValue(*c.Attributes.Modules.OriginShield.Enabled)
-				}
-				// Handle HMAC config from API response.
-				if c.Attributes.Modules.OriginShield.Config.IsSet() {
-					config := c.Attributes.Modules.OriginShield.Config.Get()
-					if config != nil && config.Hmac != nil {
-						osModel.Config = &OriginShieldConfigModel{
-							Hmac: &HMACConfigModel{
-								Enabled: types.BoolValue(config.Hmac.Enabled),
-							},
-						}
-						if config.Hmac.Config.IsSet() {
-							aws4Hmac := config.Hmac.Config.Get()
-							if aws4Hmac != nil {
-								osModel.Config.Hmac.Config = &AWS4HMACConfigModel{}
-								if aws4Hmac.Type != nil {
-									osModel.Config.Hmac.Config.Type = types.StringValue(*aws4Hmac.Type)
-								}
-								osModel.Config.Hmac.Config.Attributes = &AWS4HMACAttributesModel{
-									Region:    types.StringValue(aws4Hmac.Attributes.Region),
-									AccessKey: types.StringValue(aws4Hmac.Attributes.AccessKey),
-									SecretKey: types.StringValue(aws4Hmac.Attributes.SecretKey),
-								}
-								if aws4Hmac.Attributes.Service != nil {
-									osModel.Config.Hmac.Config.Attributes.Service = types.StringValue(*aws4Hmac.Attributes.Service)
-								}
-							}
-						}
-					}
-				}
-				osValue, diags := types.ObjectValueFrom(ctx, OriginShieldModuleModel{}.attrTypes(), osModel)
-				if !diags.HasError() {
-					modulesModel.OriginShield = osValue
-				}
-			}
-
-			modulesValue, diags := types.ObjectValueFrom(ctx, HTTPModulesModel{}.attrTypes(), modulesModel)
-			if !diags.HasError() {
-				httpAttrs.Modules = modulesValue
-			}
+			httpAttrs.Modules = populateHTTPModules(priorModules, c.Attributes.Modules)
 		}
 
 		model.HTTPAttrs = httpAttrs
@@ -1411,85 +1138,220 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 	}
 }
 
-// attrTypes returns the attribute types for HTTPConnectionOptionsModel.
-func (m HTTPConnectionOptionsModel) attrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"dns_resolution":      types.StringType,
-		"following_redirect":  types.BoolType,
-		"host":                types.StringType,
-		"http_version_policy": types.StringType,
-		"path_prefix":         types.StringType,
-		"real_ip_header":      types.StringType,
-		"real_port_header":    types.StringType,
-		"transport_policy":    types.StringType,
+// shouldPopulate returns true when prior is nil (e.g. fresh import) or when
+// the predicate over the prior shape returns true. This gates state population
+// so that fields the user never configured don't get introduced from API echoes.
+func shouldPopulate[T any](prior *T, pred func(*T) bool) bool {
+	if prior == nil {
+		return true
 	}
+	return pred(prior)
 }
 
-// attrTypes returns the attribute types for HTTPModulesModel.
-func (m HTTPModulesModel) attrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"load_balancer": types.ObjectType{AttrTypes: LoadBalancerModuleModel{}.attrTypes()},
-		"origin_shield": types.ObjectType{AttrTypes: OriginShieldModuleModel{}.attrTypes()},
+func populateAddresses(in []azionapi.Address) []AddressModel {
+	var out []AddressModel
+	for _, addr := range in {
+		addrModel := AddressModel{
+			Address: types.StringValue(addr.Address),
+		}
+		if addr.Active != nil {
+			addrModel.Active = types.BoolValue(*addr.Active)
+		}
+		if addr.HttpPort != nil {
+			addrModel.HTTPPort = types.Int64Value(*addr.HttpPort)
+		}
+		if addr.HttpsPort != nil {
+			addrModel.HTTPSPort = types.Int64Value(*addr.HttpsPort)
+		}
+		if addr.Modules.IsSet() {
+			modules := addr.Modules.Get()
+			if modules != nil && modules.LoadBalancer != nil {
+				addrModel.Modules = &AddressModulesModel{
+					LoadBalancer: &AddressLoadBalancerModel{},
+				}
+				if modules.LoadBalancer.ServerRole != nil {
+					addrModel.Modules.LoadBalancer.ServerRole = types.StringValue(*modules.LoadBalancer.ServerRole)
+				}
+				if modules.LoadBalancer.Weight != nil {
+					addrModel.Modules.LoadBalancer.Weight = types.Int64Value(*modules.LoadBalancer.Weight)
+				}
+			}
+		}
+		out = append(out, addrModel)
 	}
+	return out
 }
 
-// attrTypes returns the attribute types for LoadBalancerModuleModel.
-func (m LoadBalancerModuleModel) attrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"enabled": types.BoolType,
-		"config":  types.ObjectType{AttrTypes: LoadBalancerConfigModel{}.attrTypes()},
+func populateConnectionOptions(prior *HTTPConnectionOptionsModel, co *azionapi.HTTPConnectionOptions) *HTTPConnectionOptionsModel {
+	out := &HTTPConnectionOptionsModel{}
+	// Seed with prior values so unconfigured leaves stay null and don't drift
+	// from API echoes (e.g. http_version_policy="http1_1", path_prefix="").
+	if prior != nil {
+		*out = *prior
 	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.DNSResolution.IsNull() }) && co.DnsResolution != nil {
+		out.DNSResolution = types.StringValue(*co.DnsResolution)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.FollowingRedirect.IsNull() }) && co.FollowingRedirect != nil {
+		out.FollowingRedirect = types.BoolValue(*co.FollowingRedirect)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.Host.IsNull() }) && co.Host != nil {
+		out.Host = types.StringValue(*co.Host)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.HTTPVersionPolicy.IsNull() }) && co.HttpVersionPolicy != nil {
+		out.HTTPVersionPolicy = types.StringValue(*co.HttpVersionPolicy)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.PathPrefix.IsNull() }) && co.PathPrefix != nil {
+		out.PathPrefix = types.StringValue(*co.PathPrefix)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.RealIPHeader.IsNull() }) && co.RealIpHeader != nil {
+		out.RealIPHeader = types.StringValue(*co.RealIpHeader)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.RealPortHeader.IsNull() }) && co.RealPortHeader != nil {
+		out.RealPortHeader = types.StringValue(*co.RealPortHeader)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.TransportPolicy.IsNull() }) && co.TransportPolicy != nil {
+		out.TransportPolicy = types.StringValue(*co.TransportPolicy)
+	}
+	return out
 }
 
-// attrTypes returns the attribute types for LoadBalancerConfigModel.
-func (m LoadBalancerConfigModel) attrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"method":             types.StringType,
-		"max_retries":        types.Int64Type,
-		"connection_timeout": types.Int64Type,
-		"read_write_timeout": types.Int64Type,
-	}
-}
+func populateHTTPModules(prior *HTTPModulesModel, m *azionapi.HTTPModules) *HTTPModulesModel {
+	out := &HTTPModulesModel{}
 
-// attrTypes returns the attribute types for OriginShieldModuleModel.
-func (m OriginShieldModuleModel) attrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"enabled": types.BoolType,
-		"config":  types.ObjectType{AttrTypes: OriginShieldConfigModel{}.attrTypes()},
+	if shouldPopulate(prior, func(p *HTTPModulesModel) bool { return p.LoadBalancer != nil }) && m.LoadBalancer != nil {
+		var priorLB *LoadBalancerModuleModel
+		if prior != nil {
+			priorLB = prior.LoadBalancer
+		}
+		lb := &LoadBalancerModuleModel{}
+		if priorLB != nil {
+			lb.Enabled = priorLB.Enabled
+		}
+		if shouldPopulate(priorLB, func(p *LoadBalancerModuleModel) bool { return !p.Enabled.IsNull() }) && m.LoadBalancer.Enabled != nil {
+			lb.Enabled = types.BoolValue(*m.LoadBalancer.Enabled)
+		}
+		if shouldPopulate(priorLB, func(p *LoadBalancerModuleModel) bool { return p.Config != nil }) && m.LoadBalancer.Config.IsSet() {
+			if lbConfig := m.LoadBalancer.Config.Get(); lbConfig != nil {
+				var priorLBConfig *LoadBalancerConfigModel
+				if priorLB != nil {
+					priorLBConfig = priorLB.Config
+				}
+				cfg := &LoadBalancerConfigModel{}
+				if priorLBConfig != nil {
+					*cfg = *priorLBConfig
+				}
+				if shouldPopulate(priorLBConfig, func(p *LoadBalancerConfigModel) bool { return !p.Method.IsNull() }) && lbConfig.Method != nil {
+					cfg.Method = types.StringValue(*lbConfig.Method)
+				}
+				if shouldPopulate(priorLBConfig, func(p *LoadBalancerConfigModel) bool { return !p.MaxRetries.IsNull() }) && lbConfig.MaxRetries != nil {
+					cfg.MaxRetries = types.Int64Value(*lbConfig.MaxRetries)
+				}
+				if shouldPopulate(priorLBConfig, func(p *LoadBalancerConfigModel) bool { return !p.ConnectionTimeout.IsNull() }) && lbConfig.ConnectionTimeout != nil {
+					cfg.ConnectionTimeout = types.Int64Value(*lbConfig.ConnectionTimeout)
+				}
+				if shouldPopulate(priorLBConfig, func(p *LoadBalancerConfigModel) bool { return !p.ReadWriteTimeout.IsNull() }) && lbConfig.ReadWriteTimeout != nil {
+					cfg.ReadWriteTimeout = types.Int64Value(*lbConfig.ReadWriteTimeout)
+				}
+				lb.Config = cfg
+			}
+		}
+		out.LoadBalancer = lb
 	}
-}
 
-// attrTypes returns the attribute types for OriginShieldConfigModel.
-func (m OriginShieldConfigModel) attrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"hmac": types.ObjectType{AttrTypes: HMACConfigModel{}.attrTypes()},
-	}
-}
+	if shouldPopulate(prior, func(p *HTTPModulesModel) bool { return p.OriginShield != nil }) && m.OriginShield != nil {
+		var priorOS *OriginShieldModuleModel
+		if prior != nil {
+			priorOS = prior.OriginShield
+		}
+		os := &OriginShieldModuleModel{}
+		if priorOS != nil {
+			os.Enabled = priorOS.Enabled
+		}
+		if shouldPopulate(priorOS, func(p *OriginShieldModuleModel) bool { return !p.Enabled.IsNull() }) && m.OriginShield.Enabled != nil {
+			os.Enabled = types.BoolValue(*m.OriginShield.Enabled)
+		}
+		if shouldPopulate(priorOS, func(p *OriginShieldModuleModel) bool { return p.Config != nil }) && m.OriginShield.Config.IsSet() {
+			if osConfig := m.OriginShield.Config.Get(); osConfig != nil {
+				var priorOSConfig *OriginShieldConfigModel
+				if priorOS != nil {
+					priorOSConfig = priorOS.Config
+				}
+				os.Config = &OriginShieldConfigModel{}
 
-// attrTypes returns the attribute types for HMACConfigModel.
-func (m HMACConfigModel) attrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"enabled": types.BoolType,
-		"config":  types.ObjectType{AttrTypes: AWS4HMACConfigModel{}.attrTypes()},
-	}
-}
+				if shouldPopulate(priorOSConfig, func(p *OriginShieldConfigModel) bool { return p.OriginIPAcl != nil }) && osConfig.OriginIpAcl != nil {
+					var priorIPAcl *OriginIPAclModel
+					if priorOSConfig != nil {
+						priorIPAcl = priorOSConfig.OriginIPAcl
+					}
+					ipAcl := &OriginIPAclModel{}
+					if priorIPAcl != nil {
+						ipAcl.Enabled = priorIPAcl.Enabled
+					}
+					if shouldPopulate(priorIPAcl, func(p *OriginIPAclModel) bool { return !p.Enabled.IsNull() }) && osConfig.OriginIpAcl.Enabled != nil {
+						ipAcl.Enabled = types.BoolValue(*osConfig.OriginIpAcl.Enabled)
+					}
+					os.Config.OriginIPAcl = ipAcl
+				}
 
-// attrTypes returns the attribute types for AWS4HMACConfigModel.
-func (m AWS4HMACConfigModel) attrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"type":       types.StringType,
-		"attributes": types.ObjectType{AttrTypes: AWS4HMACAttributesModel{}.attrTypes()},
+				if shouldPopulate(priorOSConfig, func(p *OriginShieldConfigModel) bool { return p.Hmac != nil }) && osConfig.Hmac != nil {
+					var priorHmac *HMACConfigModel
+					if priorOSConfig != nil {
+						priorHmac = priorOSConfig.Hmac
+					}
+					hmac := &HMACConfigModel{}
+					if priorHmac != nil {
+						hmac.Enabled = priorHmac.Enabled
+					}
+					if shouldPopulate(priorHmac, func(p *HMACConfigModel) bool { return !p.Enabled.IsNull() }) {
+						hmac.Enabled = types.BoolValue(osConfig.Hmac.Enabled)
+					}
+					if shouldPopulate(priorHmac, func(p *HMACConfigModel) bool { return p.Config != nil }) && osConfig.Hmac.Config.IsSet() {
+						if aws4 := osConfig.Hmac.Config.Get(); aws4 != nil {
+							var priorAws4 *AWS4HMACConfigModel
+							if priorHmac != nil {
+								priorAws4 = priorHmac.Config
+							}
+							hmac.Config = &AWS4HMACConfigModel{}
+							if priorAws4 != nil {
+								hmac.Config.Type = priorAws4.Type
+							}
+							if shouldPopulate(priorAws4, func(p *AWS4HMACConfigModel) bool { return !p.Type.IsNull() }) && aws4.Type != nil {
+								hmac.Config.Type = types.StringValue(*aws4.Type)
+							}
+							if shouldPopulate(priorAws4, func(p *AWS4HMACConfigModel) bool { return p.Attributes != nil }) {
+								var priorAttrs *AWS4HMACAttributesModel
+								if priorAws4 != nil {
+									priorAttrs = priorAws4.Attributes
+								}
+								attrs := &AWS4HMACAttributesModel{}
+								if priorAttrs != nil {
+									*attrs = *priorAttrs
+								}
+								if shouldPopulate(priorAttrs, func(p *AWS4HMACAttributesModel) bool { return !p.Region.IsNull() }) {
+									attrs.Region = types.StringValue(aws4.Attributes.Region)
+								}
+								if shouldPopulate(priorAttrs, func(p *AWS4HMACAttributesModel) bool { return !p.AccessKey.IsNull() }) {
+									attrs.AccessKey = types.StringValue(aws4.Attributes.AccessKey)
+								}
+								if shouldPopulate(priorAttrs, func(p *AWS4HMACAttributesModel) bool { return !p.SecretKey.IsNull() }) {
+									attrs.SecretKey = types.StringValue(aws4.Attributes.SecretKey)
+								}
+								if shouldPopulate(priorAttrs, func(p *AWS4HMACAttributesModel) bool { return !p.Service.IsNull() }) && aws4.Attributes.Service != nil {
+									attrs.Service = types.StringValue(*aws4.Attributes.Service)
+								}
+								hmac.Config.Attributes = attrs
+							}
+						}
+					}
+					os.Config.Hmac = hmac
+				}
+			}
+		}
+		out.OriginShield = os
 	}
-}
 
-// attrTypes returns the attribute types for AWS4HMACAttributesModel.
-func (m AWS4HMACAttributesModel) attrTypes() map[string]attr.Type {
-	return map[string]attr.Type{
-		"region":     types.StringType,
-		"service":    types.StringType,
-		"access_key": types.StringType,
-		"secret_key": types.StringType,
-	}
+	return out
 }
 
 // addConnectorAPIError adds an appropriate error to diagnostics based on the API response.

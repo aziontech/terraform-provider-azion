@@ -553,6 +553,39 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 }
 ```
 
+#### 2a. Inconsistent Result on Nested-Within-Nested Blocks
+
+**Problem:** Same class of error, but on a child block when the parent block IS set:
+```
+.workload.mtls.config: was null, but now cty.ObjectVal(map[string]cty.Value{
+  "certificate":cty.NullVal(cty.Number),
+  "crl":cty.NullVal(cty.List(cty.Number)),
+  "verification":cty.NullVal(cty.String),
+})
+```
+
+This happens when the user specifies the parent block (e.g. `mtls = { enabled = false }`) but omits a child block (`config`). The API echoes back the child as a set-but-all-null object, and unconditionally copying it into state produces an empty struct that differs from the plan's `null`.
+
+**Solution:** Gate the child population on both the plan and the API response. Gating only on the API response is not enough — the API will return the child even when the user didn't ask for it:
+
+```go
+// WRONG - populates Config whenever the API returns it
+if response.Data.Mtls.Config.IsSet() {
+    config := response.Data.Mtls.Config.Get()
+    // ... build configModel ...
+    mtlsModel.Config = configModel
+}
+
+// CORRECT - only populate Config when the user specified it in the plan
+if plan.Mtls.Config != nil && response.Data.Mtls.Config.IsSet() {
+    config := response.Data.Mtls.Config.Get()
+    // ... build configModel ...
+    mtlsModel.Config = configModel
+}
+```
+
+Apply this rule recursively: every nested struct pointer in the model needs its own `plan.X != nil` gate, not just the top-level one.
+
 ### 3. Nullable Types Not Checked Properly
 
 **Problem:** Accessing nullable types without checking `IsSet()` and `Get()`.
@@ -1069,7 +1102,10 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
     // Handle Protocols - only populate from API if it was specified in the plan
     if plan.Protocols != nil && response.Data.Protocols != nil {
         protocolsModel := &ProtocolsResourceModel{}
-        if response.Data.Protocols.Http != nil {
+        // Only populate Http if it was specified in the plan to avoid
+        // "Provider produced inconsistent result after apply" when the API
+        // echoes back an http object the user didn't configure.
+        if plan.Protocols.Http != nil && response.Data.Protocols.Http != nil {
             httpModel := &HttpProtocolResourceModel{}
             if response.Data.Protocols.Http.Versions != nil {
                 versionsList, _ := types.ListValueFrom(ctx, types.StringType, response.Data.Protocols.Http.Versions)
@@ -1109,7 +1145,10 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
                 mtlsModel.Enabled = types.BoolValue(*enabled)
             }
         }
-        if response.Data.Mtls.Config.IsSet() {
+        // Only populate Config if it was specified in the plan to avoid
+        // "Provider produced inconsistent result after apply" when the API
+        // echoes back a config object with all-null inner fields.
+        if plan.Mtls.Config != nil && response.Data.Mtls.Config.IsSet() {
             config := response.Data.Mtls.Config.Get()
             if config != nil {
                 configModel := &MTLSConfigResourceModel{}
