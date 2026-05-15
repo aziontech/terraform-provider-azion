@@ -579,7 +579,10 @@ func (r *applicationCacheSettingsResource) Read(ctx context.Context, req resourc
 		resp.Diagnostics.AddError("Empty response", "cacheSettingResponse has no data after successful API call")
 		return
 	}
-	state.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSettingData)
+	// Gate nested-field population on the prior state's shape so unconfigured
+	// fields aren't introduced from the API echo, which would cause perpetual
+	// drift on subsequent plans.
+	state.CacheSetting = buildCacheSettingResultFromResponse(state.CacheSetting, cacheSettingData)
 	// Preserve top-level ID from state if not already set (it should come from req.State.Get())
 	// Only set it from CacheSetting.ID if state.ID is null/unknown
 	if state.ID.IsNull() || state.ID.IsUnknown() {
@@ -1275,4 +1278,181 @@ func transformCacheSettingResponseToResourceModel(cs *azionapi.CacheSetting) *Ca
 	}
 
 	return model
+}
+
+// buildCacheSettingResultFromResponse builds a CacheSettingResourceModel from an API
+// response, using prior to gate population of optional nested fields and leaf values.
+// Used by Read to prevent perpetual drift: if the user never configured a field but
+// the API echoes back a default value, this leaves the field null in state.
+//
+// Import callers pass nil for prior and should use transformCacheSettingResponseToResourceModel
+// instead, since import wants to capture everything the API returns.
+func buildCacheSettingResultFromResponse(prior *CacheSettingResourceModel, data *azionapi.CacheSetting) *CacheSettingResourceModel {
+	if data == nil {
+		return nil
+	}
+
+	result := &CacheSettingResourceModel{
+		ID:   types.Int64Value(data.GetId()),
+		Name: types.StringValue(data.GetName()),
+	}
+
+	if data.CreatedAt.IsSet() && data.CreatedAt.Get() != nil {
+		result.CreatedAt = types.StringValue(data.GetCreatedAt().Format(time.RFC3339))
+	}
+
+	if prior == nil {
+		return result
+	}
+
+	if prior.BrowserCache != nil && data.HasBrowserCache() {
+		bc := data.GetBrowserCache()
+		result.BrowserCache = &BrowserCacheResourceModel{
+			Behavior: prior.BrowserCache.Behavior,
+			MaxAge:   prior.BrowserCache.MaxAge,
+		}
+		if !prior.BrowserCache.Behavior.IsNull() && bc.HasBehavior() {
+			result.BrowserCache.Behavior = types.StringValue(bc.GetBehavior())
+		}
+		if !prior.BrowserCache.MaxAge.IsNull() && bc.HasMaxAge() {
+			result.BrowserCache.MaxAge = types.Int64Value(bc.GetMaxAge())
+		}
+	}
+
+	if prior.Modules != nil && data.HasModules() {
+		modulesResp := data.GetModules()
+		modulesResult := &CacheSettingsModulesResourceModel{}
+
+		if prior.Modules.Cache != nil && modulesResp.HasCache() {
+			cacheResp := modulesResp.GetCache()
+			cacheResult := &CacheSettingsCacheResourceModel{
+				Behavior: prior.Modules.Cache.Behavior,
+				MaxAge:   prior.Modules.Cache.MaxAge,
+			}
+			if !prior.Modules.Cache.Behavior.IsNull() && cacheResp.HasBehavior() {
+				cacheResult.Behavior = types.StringValue(cacheResp.GetBehavior())
+			}
+			if !prior.Modules.Cache.MaxAge.IsNull() && cacheResp.HasMaxAge() {
+				cacheResult.MaxAge = types.Int64Value(cacheResp.GetMaxAge())
+			}
+
+			if prior.Modules.Cache.StaleCache != nil && cacheResp.HasStaleCache() {
+				sc := cacheResp.GetStaleCache()
+				cacheResult.StaleCache = &StateCacheResourceModel{
+					Enabled: prior.Modules.Cache.StaleCache.Enabled,
+				}
+				if !prior.Modules.Cache.StaleCache.Enabled.IsNull() && sc.HasEnabled() {
+					cacheResult.StaleCache.Enabled = types.BoolValue(sc.GetEnabled())
+				}
+			}
+
+			if prior.Modules.Cache.LargeFileCache != nil && cacheResp.HasLargeFileCache() {
+				lfc := cacheResp.GetLargeFileCache()
+				cacheResult.LargeFileCache = &LargeFileCacheResourceModel{
+					Enabled: prior.Modules.Cache.LargeFileCache.Enabled,
+					Offset:  prior.Modules.Cache.LargeFileCache.Offset,
+				}
+				if !prior.Modules.Cache.LargeFileCache.Enabled.IsNull() && lfc.HasEnabled() {
+					cacheResult.LargeFileCache.Enabled = types.BoolValue(lfc.GetEnabled())
+				}
+				if !prior.Modules.Cache.LargeFileCache.Offset.IsNull() && lfc.HasOffset() {
+					cacheResult.LargeFileCache.Offset = types.Int64Value(lfc.GetOffset())
+				}
+			}
+
+			if prior.Modules.Cache.TieredCache != nil && cacheResp.HasTieredCache() {
+				tc := cacheResp.GetTieredCache()
+				cacheResult.TieredCache = &CacheSettingsTieredCacheResourceModel{
+					Topology: prior.Modules.Cache.TieredCache.Topology,
+					Enabled:  prior.Modules.Cache.TieredCache.Enabled,
+				}
+				if !prior.Modules.Cache.TieredCache.Topology.IsNull() && tc.HasTopology() {
+					cacheResult.TieredCache.Topology = types.StringValue(tc.GetTopology())
+				}
+				if !prior.Modules.Cache.TieredCache.Enabled.IsNull() && tc.HasEnabled() {
+					cacheResult.TieredCache.Enabled = types.BoolValue(tc.GetEnabled())
+				}
+			}
+
+			modulesResult.Cache = cacheResult
+		}
+
+		if prior.Modules.ApplicationAccelerator != nil && modulesResp.HasApplicationAccelerator() {
+			aaResp := modulesResp.GetApplicationAccelerator()
+			aaResult := &CacheSettingsAppAcceleratorResourceModel{}
+
+			if prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring != nil && aaResp.HasCacheVaryByQuerystring() {
+				qsResp := aaResp.GetCacheVaryByQuerystring()
+				qsResult := &CacheVaryByQuerystringResourceModel{
+					Behavior:    prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Behavior,
+					Fields:      prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Fields,
+					SortEnabled: prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.SortEnabled,
+				}
+				if !prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Behavior.IsNull() && qsResp.HasBehavior() {
+					qsResult.Behavior = types.StringValue(qsResp.GetBehavior())
+				}
+				if len(prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Fields) > 0 && qsResp.HasFields() {
+					qsResult.Fields = nil
+					for _, f := range qsResp.GetFields() {
+						qsResult.Fields = append(qsResult.Fields, types.StringValue(f))
+					}
+				}
+				if !prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.SortEnabled.IsNull() && qsResp.HasSortEnabled() {
+					qsResult.SortEnabled = types.BoolValue(qsResp.GetSortEnabled())
+				}
+				aaResult.CacheVaryByQuerystring = qsResult
+			}
+
+			if prior.Modules.ApplicationAccelerator.CacheVaryByCookies != nil && aaResp.HasCacheVaryByCookies() {
+				cookiesResp := aaResp.GetCacheVaryByCookies()
+				cookiesResult := &CacheVaryByCookiesResourceModel{
+					Behavior:    prior.Modules.ApplicationAccelerator.CacheVaryByCookies.Behavior,
+					CookieNames: prior.Modules.ApplicationAccelerator.CacheVaryByCookies.CookieNames,
+				}
+				if !prior.Modules.ApplicationAccelerator.CacheVaryByCookies.Behavior.IsNull() && cookiesResp.HasBehavior() {
+					cookiesResult.Behavior = types.StringValue(cookiesResp.GetBehavior())
+				}
+				if len(prior.Modules.ApplicationAccelerator.CacheVaryByCookies.CookieNames) > 0 && cookiesResp.HasCookieNames() {
+					cookiesResult.CookieNames = nil
+					for _, cn := range cookiesResp.GetCookieNames() {
+						cookiesResult.CookieNames = append(cookiesResult.CookieNames, types.StringValue(cn))
+					}
+				}
+				aaResult.CacheVaryByCookies = cookiesResult
+			}
+
+			if prior.Modules.ApplicationAccelerator.CacheVaryByDevices != nil && aaResp.HasCacheVaryByDevices() {
+				devicesResp := aaResp.GetCacheVaryByDevices()
+				devicesResult := &CacheVaryByDevicesResourceModel{
+					Behavior:    prior.Modules.ApplicationAccelerator.CacheVaryByDevices.Behavior,
+					DeviceGroup: prior.Modules.ApplicationAccelerator.CacheVaryByDevices.DeviceGroup,
+				}
+				if !prior.Modules.ApplicationAccelerator.CacheVaryByDevices.Behavior.IsNull() && devicesResp.HasBehavior() {
+					devicesResult.Behavior = types.StringValue(devicesResp.GetBehavior())
+				}
+				if len(prior.Modules.ApplicationAccelerator.CacheVaryByDevices.DeviceGroup) > 0 && devicesResp.HasDeviceGroup() {
+					devicesResult.DeviceGroup = nil
+					for _, dg := range devicesResp.GetDeviceGroup() {
+						devicesResult.DeviceGroup = append(devicesResult.DeviceGroup, types.Int64Value(dg))
+					}
+				}
+				aaResult.CacheVaryByDevices = devicesResult
+			}
+
+			if len(prior.Modules.ApplicationAccelerator.CacheVaryByMethod) > 0 && aaResp.HasCacheVaryByMethod() {
+				aaResult.CacheVaryByMethod = nil
+				for _, m := range aaResp.GetCacheVaryByMethod() {
+					aaResult.CacheVaryByMethod = append(aaResult.CacheVaryByMethod, types.StringValue(m))
+				}
+			} else {
+				aaResult.CacheVaryByMethod = prior.Modules.ApplicationAccelerator.CacheVaryByMethod
+			}
+
+			modulesResult.ApplicationAccelerator = aaResult
+		}
+
+		result.Modules = modulesResult
+	}
+
+	return result
 }

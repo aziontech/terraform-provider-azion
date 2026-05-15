@@ -1067,6 +1067,11 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
         }
     }
 
+    // Preserve the prior state's Modules shape so unconfigured submodules
+    // aren't introduced into state by the API response, which would cause
+    // perpetual drift on subsequent plans.
+    previousModules := state.Application.Modules
+
     // Update state from response
     state.Application = &ApplicationResults{
         ApplicationID:  types.Int64Value(stateApplication.Data.GetId()),
@@ -1077,32 +1082,34 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
     }
     state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
 
-    // Handle modules from response
-    modelPlan := ApplicationModules{}
-    if stateApplication.Data.Modules != nil {
+    // Handle modules from response - gate each submodule on the prior state having it.
+    // If the user never configured a submodule, do not introduce it into state from the
+    // API echo; otherwise Terraform will plan to set it to null on every subsequent run.
+    if previousModules != nil && stateApplication.Data.Modules != nil {
         modelState := stateApplication.Data.GetModules()
-        if modelState.Cache != nil {
+        modelPlan := ApplicationModules{}
+        if previousModules.Cache != nil && modelState.Cache != nil {
             modelPlan.Cache = &CacheModule{
                 Enabled: types.BoolValue(modelState.Cache.GetEnabled()),
             }
         }
-        if modelState.Functions != nil {
+        if previousModules.Functions != nil && modelState.Functions != nil {
             modelPlan.Functions = &FunctionModule{
                 Enabled: types.BoolValue(modelState.Functions.GetEnabled()),
             }
         }
-        if modelState.ApplicationAccelerator != nil {
+        if previousModules.ApplicationAccelerator != nil && modelState.ApplicationAccelerator != nil {
             modelPlan.ApplicationAccelerator = &ApplicationAcceleratorModule{
                 Enabled: types.BoolValue(modelState.ApplicationAccelerator.GetEnabled()),
             }
         }
-        if modelState.ImageProcessor != nil {
+        if previousModules.ImageProcessor != nil && modelState.ImageProcessor != nil {
             modelPlan.ImageProcessor = &ImageProcessorModule{
                 Enabled: types.BoolValue(modelState.ImageProcessor.GetEnabled()),
             }
         }
+        state.Application.Modules = &modelPlan
     }
-    state.Application.Modules = &modelPlan
 
     diags = resp.State.Set(ctx, &state)
     resp.Diagnostics.Append(diags...)
@@ -1359,6 +1366,16 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 ---
 
 ## Common Issues
+
+### Perpetual Drift on `modules` After First Refresh
+
+**Problem:** A user configures `azion_application_main_setting` without a `modules` block. The first apply succeeds (Create gates `Modules` on `plan.Application.Modules != nil`). On the next `terraform plan` — with no config changes — Terraform shows an in-place update wanting to set `modules.cache.enabled = true -> null` (or similar). Every subsequent plan repeats the same drift.
+
+**Root cause:** Read unconditionally populated `state.Application.Modules` from the API response (which always echoes back submodule defaults). After refresh, state had submodules the user never configured; HCL had none → Terraform planned to null them. Update then preserved those nulls in state, but the next refresh re-populated from API → loop.
+
+**Fix:** In Read, snapshot the prior `state.Application.Modules` *before* rebuilding `state.Application`, then gate each submodule on `previousModules.X != nil` (see the Read Method section above). If the prior state had no modules block, none gets re-introduced.
+
+**Self-heal for already-polluted state:** Run `terraform apply` once after the fix is deployed. Update writes the user's plan (modules=nil) into state, clearing the API-default leftovers. Subsequent plans show no drift.
 
 ### Application Schema Fields
 

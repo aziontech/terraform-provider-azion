@@ -277,6 +277,9 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 		if !plan.Workload.Tls.Ciphers.IsNull() && !plan.Workload.Tls.Ciphers.IsUnknown() {
 			tls.SetCiphers(plan.Workload.Tls.Ciphers.ValueInt64())
 		}
+		if !plan.Workload.Tls.MinimumVersion.IsNull() && !plan.Workload.Tls.MinimumVersion.IsUnknown() {
+			tls.SetMinimumVersion(plan.Workload.Tls.MinimumVersion.ValueString())
+		}
 		workload.SetTls(*tls)
 	}
 
@@ -538,6 +541,9 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 		if !plan.Workload.Tls.Ciphers.IsNull() && !plan.Workload.Tls.Ciphers.IsUnknown() {
 			tls.SetCiphers(plan.Workload.Tls.Ciphers.ValueInt64())
 		}
+		if !plan.Workload.Tls.MinimumVersion.IsNull() && !plan.Workload.Tls.MinimumVersion.IsUnknown() {
+			tls.SetMinimumVersion(plan.Workload.Tls.MinimumVersion.ValueString())
+		}
 		updateWorkloadRequest.SetTls(*tls)
 	}
 
@@ -735,7 +741,17 @@ func (r *workloadResource) ImportState(ctx context.Context, req resource.ImportS
 // Helper function to populate workload results from API response.
 // plan is used to preserve optional nested field values - if a nested field was null in the plan,
 // it stays null in the result to avoid "Provider produced inconsistent result after apply" errors.
+// When plan is nil (the post-import Read, where the prior state holds only the ID), every nested
+// block the API returned is populated so the imported state mirrors the remote resource.
 func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadResponse, plan *workloadResourceResults) *workloadResourceResults {
+	if plan == nil {
+		plan = &workloadResourceResults{
+			Tls:       &TLSWorkloadResourceModel{},
+			Protocols: &ProtocolsResourceModel{Http: &HttpProtocolResourceModel{}},
+			Mtls:      &MTLSResourceModel{Config: &MTLSConfigResourceModel{}},
+		}
+	}
+
 	result := &workloadResourceResults{
 		ID:             types.Int64Value(response.Data.Id),
 		Name:           types.StringValue(response.Data.Name),
@@ -782,7 +798,10 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 	// Handle Protocols - only populate from API if it was specified in the plan
 	if plan.Protocols != nil && response.Data.Protocols != nil {
 		protocolsModel := &ProtocolsResourceModel{}
-		if response.Data.Protocols.Http != nil {
+		// Only populate Http if it was specified in the plan to avoid
+		// "Provider produced inconsistent result after apply" when the API
+		// echoes back an http object the user didn't configure.
+		if plan.Protocols.Http != nil && response.Data.Protocols.Http != nil {
 			httpModel := &HttpProtocolResourceModel{}
 			if response.Data.Protocols.Http.Versions != nil {
 				versionsList, _ := types.ListValueFrom(ctx, types.StringType, response.Data.Protocols.Http.Versions)
@@ -822,7 +841,10 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 				mtlsModel.Enabled = types.BoolValue(*enabled)
 			}
 		}
-		if response.Data.Mtls.Config.IsSet() {
+		// Only populate Config if it was specified in the plan to avoid
+		// "Provider produced inconsistent result after apply" when the API
+		// echoes back a config object with all-null inner fields.
+		if plan.Mtls.Config != nil && response.Data.Mtls.Config.IsSet() {
 			config := response.Data.Mtls.Config.Get()
 			if config != nil {
 				configModel := &MTLSConfigResourceModel{}

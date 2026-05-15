@@ -1163,6 +1163,12 @@ func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resou
 
 **IMPORTANT:** The Read method must use a raw HTTP request function to work around the SDK validation issue.
 
+**CRITICAL:** Do NOT call `transformCacheSettingResponseToResourceModel(data)` in Read. That helper unconditionally populates every nested field the API returns, including defaults the user never configured (e.g. `large_file_cache.offset = 1024`, `application_accelerator = {...}`). Once those defaults land in state, Terraform sees them as drift on every subsequent plan and tries to null them out — perpetual drift.
+
+Use `buildCacheSettingResultFromResponse(prior, data)` instead, passing the prior `state.CacheSetting`. The helper gates every pointer field on `prior.X != nil`, every leaf on `!prior.X.IsNull()`, and every list on `len(prior.X) > 0`, so unconfigured fields stay null in state.
+
+`transformCacheSettingResponseToResourceModel` is still correct for **Import**, where there is no prior state and you do want to capture everything the API has.
+
 ```go
 func (r *applicationCacheSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
     var state ApplicationCacheSettingsResourceModel
@@ -1187,13 +1193,29 @@ func (r *applicationCacheSettingsResource) Read(ctx context.Context, req resourc
         return
     }
 
-    // Update state with response
-    state.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSetting)
+    // Gate nested-field population on the prior state's shape so unconfigured
+    // fields aren't introduced from the API echo, which would cause perpetual
+    // drift on subsequent plans.
+    state.CacheSetting = buildCacheSettingResultFromResponse(state.CacheSetting, cacheSetting)
 
     diags = resp.State.Set(ctx, &state)
     resp.Diagnostics.Append(diags...)
 }
 ```
+
+### The state-aware helper
+
+`buildCacheSettingResultFromResponse(prior, data)` is the Read-time analogue of Update's existing plan-gated population logic. The shape rule, applied recursively at every level of the model:
+
+| Prior field type | Gate |
+|------------------|------|
+| `*SomeStruct` (nested block) | `prior.X != nil && data.HasX()` — otherwise leave nil |
+| `types.String` / `types.Int64` / `types.Bool` (leaf) | `!prior.X.IsNull() && data.HasX()` — otherwise keep prior value (null) |
+| `[]types.String` / `[]types.Int64` (list) | `len(prior.X) > 0 && data.HasX()` — otherwise keep prior value (empty) |
+
+When the gate fails, **seed the result with the prior value**, not a zero-value. This keeps a user's explicit null distinguishable from a freshly-zeroed field across refresh cycles.
+
+The `if prior == nil { return result }` early exit means callers can safely pass `nil` for fresh imports (where there is no prior shape to preserve) and get only the always-present fields (`ID`, `Name`, `CreatedAt`).
 
 ---
 
