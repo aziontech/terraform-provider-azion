@@ -36,24 +36,26 @@ In addition to all arguments above, the following attributes are exported:
   * `name` - Name of the rules engine rule.
   * `active` - Whether the rule is active.
   * `criteria` - List of criteria groups for the rule.
-    * `entries` - List of criteria entries within the group.
-      * `conditional` - Conditional operator (if, and, or).
-      * `variable` - Variable to evaluate.
-      * `operator` - Comparison operator.
-      * `argument` - Argument for comparison.
-  * `behaviors` - List of behaviors for the rule.
-    * `type` - Type of behavior.
-    * `attributes` - Behavior attributes.
-      * `value` - Value for run_function behavior (function instance ID).
-      * `status_code` - Status code for set_custom_response behavior.
-      * `content_type` - Content type for set_custom_response behavior.
-      * `content_body` - Content body for set_custom_response behavior.
-      * `waf_id` - WAF ID for set_waf behavior.
-      * `mode` - Mode for set_waf or set_rate_limit behavior.
-      * `type` - Type for set_rate_limit behavior.
-      * `limit_by` - Limit by for set_rate_limit behavior.
-      * `average_rate_limit` - Average rate limit for set_rate_limit behavior.
-      * `maximum_burst_size` - Maximum burst size for set_rate_limit behavior.
+    * `entries` - List of criteria entries within the group. Each item contains a single `criterion` object.
+      * `criterion` - A single criterion entry.
+        * `conditional` - Conditional operator (if, and, or).
+        * `variable` - Variable to evaluate.
+        * `operator` - Comparison operator.
+        * `argument` - Argument for comparison.
+  * `behaviors` - List of behaviors for the rule. Each item contains a single `behavior` object.
+    * `behavior` - A single behavior for the rule.
+      * `type` - Type of behavior.
+      * `attributes` - Behavior attributes.
+        * `value` - Value for run_function behavior (function instance ID).
+        * `status_code` - Status code for set_custom_response behavior.
+        * `content_type` - Content type for set_custom_response behavior.
+        * `content_body` - Content body for set_custom_response behavior.
+        * `waf_id` - WAF ID for set_waf behavior.
+        * `mode` - Mode for set_waf or set_rate_limit behavior.
+        * `type` - Type for set_rate_limit behavior.
+        * `limit_by` - Limit by for set_rate_limit behavior.
+        * `average_rate_limit` - Average rate limit for set_rate_limit behavior.
+        * `maximum_burst_size` - Maximum burst size for set_rate_limit behavior.
   * `description` - Description of the rule.
   * `order` - Order of the rule.
   * `last_editor` - Last editor of the rule.

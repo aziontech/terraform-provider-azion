@@ -32,20 +32,26 @@ resource "azion_application_rule_engine" "example" {
     description = "My rule engine"
     behaviors = [
       {
-        type = "deliver"
+        behavior = {
+          type = "deliver"
+        }
       },
       {
-        type = "bypass_cache"
+        behavior = {
+          type = "bypass_cache"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "$${uri}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "/"
+            criterion = {
+              variable    = "$${uri}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "/"
+            }
           }
         ]
       }
@@ -65,20 +71,26 @@ resource "azion_application_rule_engine" "example" {
     description = "My rule engine"
     behaviors = [
       {
-        type = "deliver"
+        behavior = {
+          type = "deliver"
+        }
       },
       {
-        type = "bypass_cache"
+        behavior = {
+          type = "bypass_cache"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "$${uri}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "/"
+            criterion = {
+              variable    = "$${uri}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "/"
+            }
           }
         ]
       }
@@ -100,9 +112,11 @@ resource "azion_application_rule_engine" "example_with_args" {
 
     behaviors = [
       {
-        type = "add_request_header"
-        attributes = {
-          value = "X-Custom-Header: MyValue"
+        behavior = {
+          type = "add_request_header"
+          attributes = {
+            value = "X-Custom-Header: MyValue"
+          }
         }
       }
     ]
@@ -111,10 +125,12 @@ resource "azion_application_rule_engine" "example_with_args" {
       {
         entries = [
           {
-            variable    = "$${uri}"
-            operator    = "starts_with"
-            conditional = "if"
-            argument    = "/api/"
+            criterion = {
+              variable    = "$${uri}"
+              operator    = "starts_with"
+              conditional = "if"
+              argument    = "/api/"
+            }
           }
         ]
       }
@@ -135,11 +151,13 @@ resource "azion_application_rule_engine" "example_capture" {
 
     behaviors = [
       {
-        type = "capture_match_groups"
-        capture_attributes = {
-          subject        = "$${uri}"
-          regex          = "/api/([a-z]+)"
-          captured_array = "api_paths"
+        behavior = {
+          type = "capture_match_groups"
+          capture_attributes = {
+            subject        = "$${uri}"
+            regex          = "/api/([a-z]+)"
+            captured_array = "api_paths"
+          }
         }
       }
     ]
@@ -148,10 +166,12 @@ resource "azion_application_rule_engine" "example_capture" {
       {
         entries = [
           {
-            variable    = "$${uri}"
-            operator    = "matches"
-            conditional = "if"
-            argument    = "^/api/"
+            criterion = {
+              variable    = "$${uri}"
+              operator    = "matches"
+              conditional = "if"
+              argument    = "^/api/"
+            }
           }
         ]
       }
@@ -172,9 +192,11 @@ resource "azion_application_rule_engine" "example_response" {
 
     behaviors = [
       {
-        type = "add_response_header"
-        attributes = {
-          value = "X-Response-Processed: true"
+        behavior = {
+          type = "add_response_header"
+          attributes = {
+            value = "X-Response-Processed: true"
+          }
         }
       }
     ]
@@ -183,10 +205,12 @@ resource "azion_application_rule_engine" "example_response" {
       {
         entries = [
           {
-            variable    = "$${status}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "200"
+            criterion = {
+              variable    = "$${status}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "200"
+            }
           }
         ]
       }
@@ -212,9 +236,11 @@ resource "azion_application_rule_engine" "example_set_connector" {
 
     behaviors = [
       {
-        type = "set_connector"
-        attributes = {
-          value = azion_connector.storage_connector.connector.id
+        behavior = {
+          type = "set_connector"
+          attributes = {
+            value = azion_connector.storage_connector.connector.id
+          }
         }
       }
     ]
@@ -223,10 +249,12 @@ resource "azion_application_rule_engine" "example_set_connector" {
       {
         entries = [
           {
-            variable    = "$${uri}"
-            operator    = "starts_with"
-            conditional = "if"
-            argument    = "/static/"
+            criterion = {
+              variable    = "$${uri}"
+              operator    = "starts_with"
+              conditional = "if"
+              argument    = "/static/"
+            }
           }
         ]
       }
@@ -297,7 +325,7 @@ The behaviors available for a rule depend on the rule's `phase` (`request` or `r
 
 Required:
 
-- `behaviors` (Attributes List) Behaviors for the rule. (see [below for nested schema](#nestedatt--results--behaviors))
+- `behaviors` (Attributes List) Behaviors for the rule. Each item must contain a single `behavior` object. (see [below for nested schema](#nestedatt--results--behaviors))
 - `criteria` (Attributes List) Criteria for the rule. (see [below for nested schema](#nestedatt--results--criteria))
 - `name` (String) The name of the rules engine rule.
 - `phase` (String) The phase in which the rule is executed (request or response).
@@ -320,22 +348,29 @@ Read-Only:
 
 Required:
 
+- `behavior` (Attributes) A single behavior to apply on this rule. (see [below for nested schema](#nestedatt--results--behaviors--behavior))
+
+<a id="nestedatt--results--behaviors--behavior"></a>
+### Nested Schema for `results.behaviors.behavior`
+
+Required:
+
 - `type` (String) The type of behavior. Valid values depend on the rule's `phase`. See [Supported Behaviors](#supported-behaviors) for the full list.
 
 Optional:
 
-- `attributes` (Attributes) Behavior attributes for behaviors that require arguments. (see [below for nested schema](#nestedatt--results--behaviors--attributes))
-- `capture_attributes` (Attributes) Capture attributes for capture_match_groups behavior. (see [below for nested schema](#nestedatt--results--behaviors--capture_attributes))
+- `attributes` (Attributes) Behavior attributes for behaviors that require arguments. (see [below for nested schema](#nestedatt--results--behaviors--behavior--attributes))
+- `capture_attributes` (Attributes) Capture attributes for capture_match_groups behavior. (see [below for nested schema](#nestedatt--results--behaviors--behavior--capture_attributes))
 
-<a id="nestedatt--results--behaviors--attributes"></a>
-### Nested Schema for `results.behaviors.attributes`
+<a id="nestedatt--results--behaviors--behavior--attributes"></a>
+### Nested Schema for `results.behaviors.behavior.attributes`
 
 Required:
 
 - `value` (String) Value for the behavior.
 
-<a id="nestedatt--results--behaviors--capture_attributes"></a>
-### Nested Schema for `results.behaviors.capture_attributes`
+<a id="nestedatt--results--behaviors--behavior--capture_attributes"></a>
+### Nested Schema for `results.behaviors.behavior.capture_attributes`
 
 Required:
 
@@ -348,10 +383,17 @@ Required:
 
 Required:
 
-- `entries` (Attributes List) List of criteria entries. (see [below for nested schema](#nestedatt--results--criteria--entries))
+- `entries` (Attributes List) List of criteria entries. Each item must contain a single `criterion` object. (see [below for nested schema](#nestedatt--results--criteria--entries))
 
 <a id="nestedatt--results--criteria--entries"></a>
 ### Nested Schema for `results.criteria.entries`
+
+Required:
+
+- `criterion` (Attributes) A single criterion entry. (see [below for nested schema](#nestedatt--results--criteria--entries--criterion))
+
+<a id="nestedatt--results--criteria--entries--criterion"></a>
+### Nested Schema for `results.criteria.entries.criterion`
 
 Required:
 

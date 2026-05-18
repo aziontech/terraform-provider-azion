@@ -45,7 +45,7 @@ Required:
 Read-Only:
 
 - `active` (Boolean) Whether the rule is active.
-- `behaviors` (Attributes List) Behaviors for the rule. (see [below for nested schema](#nestedatt--results--behaviors))
+- `behaviors` (Attributes List) Behaviors for the rule. Each item contains a single `behavior` object. (see [below for nested schema](#nestedatt--results--behaviors))
 - `criteria` (Attributes List) Criteria for the rule. (see [below for nested schema](#nestedatt--results--criteria))
 - `description` (String) Description of the rule.
 - `last_editor` (String) Last editor of the rule.
@@ -58,19 +58,26 @@ Read-Only:
 
 Read-Only:
 
-- `attributes` (Attributes) Behavior attributes (for behaviors with args). (see [below for nested schema](#nestedatt--results--behaviors--attributes))
-- `capture_attributes` (Attributes) Capture attributes (for capture_match_groups). (see [below for nested schema](#nestedatt--results--behaviors--capture_attributes))
+- `behavior` (Attributes) A single behavior for the rule. (see [below for nested schema](#nestedatt--results--behaviors--behavior))
+
+<a id="nestedatt--results--behaviors--behavior"></a>
+### Nested Schema for `results.behaviors.behavior`
+
+Read-Only:
+
+- `attributes` (Attributes) Behavior attributes (for behaviors with args). (see [below for nested schema](#nestedatt--results--behaviors--behavior--attributes))
+- `capture_attributes` (Attributes) Capture attributes (for capture_match_groups). (see [below for nested schema](#nestedatt--results--behaviors--behavior--capture_attributes))
 - `type` (String) Type of behavior.
 
-<a id="nestedatt--results--behaviors--attributes"></a>
-### Nested Schema for `results.behaviors.attributes`
+<a id="nestedatt--results--behaviors--behavior--attributes"></a>
+### Nested Schema for `results.behaviors.behavior.attributes`
 
 Read-Only:
 
 - `value` (String) Value for the behavior.
 
-<a id="nestedatt--results--behaviors--capture_attributes"></a>
-### Nested Schema for `results.behaviors.capture_attributes`
+<a id="nestedatt--results--behaviors--behavior--capture_attributes"></a>
+### Nested Schema for `results.behaviors.behavior.capture_attributes`
 
 Read-Only:
 
@@ -80,6 +87,20 @@ Read-Only:
 
 <a id="nestedatt--results--criteria"></a>
 ### Nested Schema for `results.criteria`
+
+Read-Only:
+
+- `entries` (Attributes List) Criteria entries. Each item contains a single `criterion` object. (see [below for nested schema](#nestedatt--results--criteria--entries))
+
+<a id="nestedatt--results--criteria--entries"></a>
+### Nested Schema for `results.criteria.entries`
+
+Read-Only:
+
+- `criterion` (Attributes) A single criterion entry. (see [below for nested schema](#nestedatt--results--criteria--entries--criterion))
+
+<a id="nestedatt--results--criteria--entries--criterion"></a>
+### Nested Schema for `results.criteria.entries.criterion`
 
 Read-Only:
 

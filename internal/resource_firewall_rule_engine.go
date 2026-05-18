@@ -42,20 +42,24 @@ type FirewallRuleEngineResourceModel struct {
 }
 
 type FirewallRuleEngineResultResource struct {
-	ID           types.Int64                     `tfsdk:"id"`
-	Name         types.String                    `tfsdk:"name"`
-	Active       types.Bool                      `tfsdk:"active"`
-	Criteria     []FirewallCriteriaResourceModel `tfsdk:"criteria"`
-	Behaviors    []FirewallBehaviorResourceModel `tfsdk:"behaviors"`
-	Description  types.String                    `tfsdk:"description"`
-	Order        types.Int64                     `tfsdk:"order"`
-	LastEditor   types.String                    `tfsdk:"last_editor"`
-	LastModified types.String                    `tfsdk:"last_modified"`
-	CreatedAt    types.String                    `tfsdk:"created_at"`
+	ID           types.Int64                            `tfsdk:"id"`
+	Name         types.String                           `tfsdk:"name"`
+	Active       types.Bool                             `tfsdk:"active"`
+	Criteria     []FirewallCriteriaResourceModel        `tfsdk:"criteria"`
+	Behaviors    []FirewallBehaviorWrapperResourceModel `tfsdk:"behaviors"`
+	Description  types.String                           `tfsdk:"description"`
+	Order        types.Int64                            `tfsdk:"order"`
+	LastEditor   types.String                           `tfsdk:"last_editor"`
+	LastModified types.String                           `tfsdk:"last_modified"`
+	CreatedAt    types.String                           `tfsdk:"created_at"`
 }
 
 type FirewallCriteriaResourceModel struct {
-	Entries []FirewallCriteriaEntryResourceModel `tfsdk:"entries"`
+	Entries []FirewallCriterionWrapperResourceModel `tfsdk:"entries"`
+}
+
+type FirewallCriterionWrapperResourceModel struct {
+	Criterion *FirewallCriteriaEntryResourceModel `tfsdk:"criterion"`
 }
 
 type FirewallCriteriaEntryResourceModel struct {
@@ -63,6 +67,10 @@ type FirewallCriteriaEntryResourceModel struct {
 	Variable    types.String `tfsdk:"variable"`
 	Operator    types.String `tfsdk:"operator"`
 	Argument    types.String `tfsdk:"argument"`
+}
+
+type FirewallBehaviorWrapperResourceModel struct {
+	Behavior *FirewallBehaviorResourceModel `tfsdk:"behavior"`
 }
 
 type FirewallBehaviorResourceModel struct {
@@ -133,21 +141,27 @@ func (r *firewallRuleEngineResource) Schema(_ context.Context, _ resource.Schema
 									Required: true,
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
-											"conditional": schema.StringAttribute{
-												Description: "The conditional operator used in the rule's criteria (e.g., if, and, or).",
+											"criterion": schema.SingleNestedAttribute{
+												Description: "A single criterion entry.",
 												Required:    true,
-											},
-											"variable": schema.StringAttribute{
-												Description: "The variable used in the rule's criteria.",
-												Required:    true,
-											},
-											"operator": schema.StringAttribute{
-												Description: "The operator used in the rule's criteria.",
-												Required:    true,
-											},
-											"argument": schema.StringAttribute{
-												Description: "The argument used in the rule's criteria.",
-												Optional:    true,
+												Attributes: map[string]schema.Attribute{
+													"conditional": schema.StringAttribute{
+														Description: "The conditional operator used in the rule's criteria (e.g., if, and, or).",
+														Required:    true,
+													},
+													"variable": schema.StringAttribute{
+														Description: "The variable used in the rule's criteria.",
+														Required:    true,
+													},
+													"operator": schema.StringAttribute{
+														Description: "The operator used in the rule's criteria.",
+														Required:    true,
+													},
+													"argument": schema.StringAttribute{
+														Description: "The argument used in the rule's criteria.",
+														Optional:    true,
+													},
+												},
 											},
 										},
 									},
@@ -160,53 +174,59 @@ func (r *firewallRuleEngineResource) Schema(_ context.Context, _ resource.Schema
 						Required:    true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"type": schema.StringAttribute{
-									Description: "Type of behavior (e.g., run_function, set_custom_response, set_waf, set_rate_limit, drop).",
+								"behavior": schema.SingleNestedAttribute{
+									Description: "A single behavior to apply on this rule.",
 									Required:    true,
-								},
-								"attributes": schema.SingleNestedAttribute{
-									Description: "Behavior attributes (depends on behavior type).",
-									Optional:    true,
 									Attributes: map[string]schema.Attribute{
-										"value": schema.Int64Attribute{
-											Description: "Value for run_function behavior (function instance ID).",
-											Optional:    true,
-										},
-										"status_code": schema.Int64Attribute{
-											Description: "Status code for set_custom_response behavior.",
-											Optional:    true,
-										},
-										"content_type": schema.StringAttribute{
-											Description: "Content type for set_custom_response behavior.",
-											Optional:    true,
-										},
-										"content_body": schema.StringAttribute{
-											Description: "Content body for set_custom_response behavior.",
-											Optional:    true,
-										},
-										"waf_id": schema.Int64Attribute{
-											Description: "WAF ID for set_waf behavior.",
-											Optional:    true,
-										},
-										"mode": schema.StringAttribute{
-											Description: "Mode for set_waf behavior (logging or blocking).",
-											Optional:    true,
-										},
 										"type": schema.StringAttribute{
-											Description: "Type for set_rate_limit behavior (second or minute).",
-											Optional:    true,
+											Description: "Type of behavior (e.g., run_function, set_custom_response, set_waf, set_rate_limit, drop).",
+											Required:    true,
 										},
-										"limit_by": schema.StringAttribute{
-											Description: "Limit by for set_rate_limit behavior (client_ip or global).",
+										"attributes": schema.SingleNestedAttribute{
+											Description: "Behavior attributes (depends on behavior type).",
 											Optional:    true,
-										},
-										"average_rate_limit": schema.Int64Attribute{
-											Description: "Average rate limit for set_rate_limit behavior.",
-											Optional:    true,
-										},
-										"maximum_burst_size": schema.Int64Attribute{
-											Description: "Maximum burst size for set_rate_limit behavior.",
-											Optional:    true,
+											Attributes: map[string]schema.Attribute{
+												"value": schema.Int64Attribute{
+													Description: "Value for run_function behavior (function instance ID).",
+													Optional:    true,
+												},
+												"status_code": schema.Int64Attribute{
+													Description: "Status code for set_custom_response behavior.",
+													Optional:    true,
+												},
+												"content_type": schema.StringAttribute{
+													Description: "Content type for set_custom_response behavior.",
+													Optional:    true,
+												},
+												"content_body": schema.StringAttribute{
+													Description: "Content body for set_custom_response behavior.",
+													Optional:    true,
+												},
+												"waf_id": schema.Int64Attribute{
+													Description: "WAF ID for set_waf behavior.",
+													Optional:    true,
+												},
+												"mode": schema.StringAttribute{
+													Description: "Mode for set_waf behavior (logging or blocking).",
+													Optional:    true,
+												},
+												"type": schema.StringAttribute{
+													Description: "Type for set_rate_limit behavior (second or minute).",
+													Optional:    true,
+												},
+												"limit_by": schema.StringAttribute{
+													Description: "Limit by for set_rate_limit behavior (client_ip or global).",
+													Optional:    true,
+												},
+												"average_rate_limit": schema.Int64Attribute{
+													Description: "Average rate limit for set_rate_limit behavior.",
+													Optional:    true,
+												},
+												"maximum_burst_size": schema.Int64Attribute{
+													Description: "Maximum burst size for set_rate_limit behavior.",
+													Optional:    true,
+												},
+											},
 										},
 									},
 								},
@@ -586,7 +606,11 @@ func buildFirewallCriteriaRequest(criteria []FirewallCriteriaResourceModel) [][]
 	var result [][]azionapi.FirewallCriterionFieldRequest
 	for _, criterion := range criteria {
 		var criterionGroup []azionapi.FirewallCriterionFieldRequest
-		for _, c := range criterion.Entries {
+		for _, entry := range criterion.Entries {
+			if entry.Criterion == nil {
+				continue
+			}
+			c := entry.Criterion
 			criterionField := azionapi.NewFirewallCriterionFieldRequest(
 				c.Conditional.ValueString(),
 				c.Variable.ValueString(),
@@ -605,9 +629,13 @@ func buildFirewallCriteriaRequest(criteria []FirewallCriteriaResourceModel) [][]
 	return result
 }
 
-func buildFirewallBehaviorsRequest(behaviors []FirewallBehaviorResourceModel) []azionapi.FirewallBehaviorRequest {
+func buildFirewallBehaviorsRequest(behaviors []FirewallBehaviorWrapperResourceModel) []azionapi.FirewallBehaviorRequest {
 	var result []azionapi.FirewallBehaviorRequest
-	for _, b := range behaviors {
+	for _, wrapper := range behaviors {
+		if wrapper.Behavior == nil {
+			continue
+		}
+		b := wrapper.Behavior
 		behaviorType := b.Type.ValueString()
 
 		// Check if it's a behavior without arguments (like "drop")
@@ -705,9 +733,9 @@ func transformFirewallRuleToResultModel(rule azionapi.FirewallRule) *FirewallRul
 	result.LastModified = types.StringValue(rule.GetLastModified().Format(time.RFC3339))
 	result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))
 
-	// Transform criteria
+	// Transform criteria.
 	for _, criterionGroup := range rule.Criteria {
-		var criterionSet []FirewallCriteriaEntryResourceModel
+		var criterionSet []FirewallCriterionWrapperResourceModel
 		for _, c := range criterionGroup {
 			arg := getFirewallCriterionArgumentValue(c.Argument)
 			var argValue types.String
@@ -716,11 +744,13 @@ func transformFirewallRuleToResultModel(rule azionapi.FirewallRule) *FirewallRul
 			} else {
 				argValue = types.StringValue(arg)
 			}
-			criterionSet = append(criterionSet, FirewallCriteriaEntryResourceModel{
-				Conditional: types.StringValue(c.GetConditional()),
-				Variable:    types.StringValue(c.GetVariable()),
-				Operator:    types.StringValue(c.GetOperator()),
-				Argument:    argValue,
+			criterionSet = append(criterionSet, FirewallCriterionWrapperResourceModel{
+				Criterion: &FirewallCriteriaEntryResourceModel{
+					Conditional: types.StringValue(c.GetConditional()),
+					Variable:    types.StringValue(c.GetVariable()),
+					Operator:    types.StringValue(c.GetOperator()),
+					Argument:    argValue,
+				},
 			})
 		}
 		result.Criteria = append(result.Criteria, FirewallCriteriaResourceModel{
@@ -728,7 +758,7 @@ func transformFirewallRuleToResultModel(rule azionapi.FirewallRule) *FirewallRul
 		})
 	}
 
-	// Transform behaviors
+	// Transform behaviors.
 	for _, b := range rule.Behaviors {
 		behavior := FirewallBehaviorResourceModel{}
 
@@ -743,7 +773,9 @@ func transformFirewallRuleToResultModel(rule azionapi.FirewallRule) *FirewallRul
 			attrs := transformFirewallBehaviorObjectAttrs(b.FirewallBehaviorObjectArgs.Attributes)
 			behavior.Attributes = &attrs
 		}
-		result.Behaviors = append(result.Behaviors, behavior)
+		result.Behaviors = append(result.Behaviors, FirewallBehaviorWrapperResourceModel{
+			Behavior: &behavior,
+		})
 	}
 
 	return result

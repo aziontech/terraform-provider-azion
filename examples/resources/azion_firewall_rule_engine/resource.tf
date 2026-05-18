@@ -16,17 +16,21 @@ resource "azion_firewall_rule_engine" "example" {
     active      = true
     behaviors = [
       {
-        type = "drop"
+        behavior = {
+          type = "drop"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "$${request_uri}"
-            operator    = "matches"
-            conditional = "if"
-            argument    = "/admin.*"
+            criterion = {
+              variable    = "$${request_uri}"
+              operator    = "matches"
+              conditional = "if"
+              argument    = "/admin.*"
+            }
           }
         ]
       }
@@ -43,17 +47,21 @@ resource "azion_firewall_rule_engine" "block_admin" {
     active      = true
     behaviors = [
       {
-        type = "drop"
+        behavior = {
+          type = "drop"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "$${request_uri}"
-            operator    = "matches"
-            conditional = "if"
-            argument    = "/admin.*"
+            criterion = {
+              variable    = "$${request_uri}"
+              operator    = "matches"
+              conditional = "if"
+              argument    = "/admin.*"
+            }
           }
         ]
       }
@@ -70,9 +78,11 @@ resource "azion_firewall_rule_engine" "run_function_example" {
     active      = true
     behaviors = [
       {
-        type = "run_function"
-        attributes = {
-          value = 4305 # Function instance ID
+        behavior = {
+          type = "run_function"
+          attributes = {
+            value = 4305 # Function instance ID
+          }
         }
       }
     ]
@@ -80,10 +90,12 @@ resource "azion_firewall_rule_engine" "run_function_example" {
       {
         entries = [
           {
-            variable    = "$${request_uri}"
-            operator    = "starts_with"
-            conditional = "if"
-            argument    = "/api/"
+            criterion = {
+              variable    = "$${request_uri}"
+              operator    = "starts_with"
+              conditional = "if"
+              argument    = "/api/"
+            }
           }
         ]
       }
@@ -100,11 +112,13 @@ resource "azion_firewall_rule_engine" "custom_response_example" {
     active      = true
     behaviors = [
       {
-        type = "set_custom_response"
-        attributes = {
-          status_code  = 503
-          content_type = "text/html"
-          content_body = "<html><body><h1>Under Maintenance</h1><p>Please try again later.</p></body></html>"
+        behavior = {
+          type = "set_custom_response"
+          attributes = {
+            status_code  = 503
+            content_type = "text/html"
+            content_body = "<html><body><h1>Under Maintenance</h1><p>Please try again later.</p></body></html>"
+          }
         }
       }
     ]
@@ -112,10 +126,12 @@ resource "azion_firewall_rule_engine" "custom_response_example" {
       {
         entries = [
           {
-            variable    = "$${host}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "maintenance.example.com"
+            criterion = {
+              variable    = "$${host}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "maintenance.example.com"
+            }
           }
         ]
       }
@@ -132,10 +148,12 @@ resource "azion_firewall_rule_engine" "waf_example" {
     active      = true
     behaviors = [
       {
-        type = "set_waf"
-        attributes = {
-          waf_id = 98765
-          mode   = "blocking"
+        behavior = {
+          type = "set_waf"
+          attributes = {
+            waf_id = 98765
+            mode   = "blocking"
+          }
         }
       }
     ]
@@ -143,10 +161,12 @@ resource "azion_firewall_rule_engine" "waf_example" {
       {
         entries = [
           {
-            variable    = "$${host}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "api.example.com"
+            criterion = {
+              variable    = "$${host}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "api.example.com"
+            }
           }
         ]
       }
@@ -163,12 +183,14 @@ resource "azion_firewall_rule_engine" "rate_limit_example" {
     active      = true
     behaviors = [
       {
-        type = "set_rate_limit"
-        attributes = {
-          type               = "second"
-          limit_by           = "client_ip"
-          average_rate_limit = 100
-          maximum_burst_size = 200
+        behavior = {
+          type = "set_rate_limit"
+          attributes = {
+            type               = "second"
+            limit_by           = "client_ip"
+            average_rate_limit = 100
+            maximum_burst_size = 200
+          }
         }
       }
     ]
@@ -176,10 +198,12 @@ resource "azion_firewall_rule_engine" "rate_limit_example" {
       {
         entries = [
           {
-            variable    = "$${request_uri}"
-            operator    = "starts_with"
-            conditional = "if"
-            argument    = "/api/"
+            criterion = {
+              variable    = "$${request_uri}"
+              operator    = "starts_with"
+              conditional = "if"
+              argument    = "/api/"
+            }
           }
         ]
       }
@@ -196,27 +220,33 @@ resource "azion_firewall_rule_engine" "complex_example" {
     active      = true
     behaviors = [
       {
-        type = "drop"
+        behavior = {
+          type = "drop"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "$${request_uri}"
-            operator    = "matches"
-            conditional = "if"
-            argument    = "/admin.*"
+            criterion = {
+              variable    = "$${request_uri}"
+              operator    = "matches"
+              conditional = "if"
+              argument    = "/admin.*"
+            }
           }
         ]
       },
       {
         entries = [
           {
-            variable    = "$${network}"
-            operator    = "is_not_in_list"
-            conditional = "and"
-            argument    = "12345" # Allowed network list ID
+            criterion = {
+              variable    = "$${network}"
+              operator    = "is_not_in_list"
+              conditional = "and"
+              argument    = "12345" # Allowed network list ID
+            }
           }
         ]
       }
