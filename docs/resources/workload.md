@@ -71,7 +71,7 @@ The `workload` block supports:
 * `tls` - (Optional) TLS configuration for the workload. See [TLS Configuration](#tls-configuration) below.
 * `protocols` - (Optional) Protocol configurations for the workload. See [Protocols Configuration](#protocols-configuration) below.
 * `mtls` - (Optional) Mutual TLS configuration for the workload. See [MTLS Configuration](#mtls-configuration) below.
-* `domains` - (Optional) List of domains associated with the workload.
+* `domains` - (Optional) Set of domains associated with the workload. Order is not significant and duplicates are not allowed.
 * `workload_domain_allow_access` - (Optional) Whether domain access is allowed.
 
 ### TLS Configuration

@@ -63,9 +63,14 @@ type StorageAttributesModel struct {
 
 // HTTP connector attributes.
 type HTTPAttributesModel struct {
-	Addresses         []AddressModel              `tfsdk:"addresses"`
+	Addresses         []AddressWrapperModel       `tfsdk:"addresses"`
 	ConnectionOptions *HTTPConnectionOptionsModel `tfsdk:"connection_options"`
 	Modules           *HTTPModulesModel           `tfsdk:"modules"`
+}
+
+// AddressWrapperModel wraps a single endpoint under an `endpoint` label.
+type AddressWrapperModel struct {
+	Endpoint *AddressModel `tfsdk:"endpoint"`
 }
 
 // Address model for HTTP connectors.
@@ -233,44 +238,50 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"addresses": schema.ListNestedAttribute{
-								Description: "List of origin addresses.",
+								Description: "List of origin endpoints.",
 								Required:    true,
 								NestedObject: schema.NestedAttributeObject{
 									Attributes: map[string]schema.Attribute{
-										"address": schema.StringAttribute{
-											Description: "The origin address (IP or hostname).",
+										"endpoint": schema.SingleNestedAttribute{
+											Description: "A single origin endpoint configuration.",
 											Required:    true,
-										},
-										"active": schema.BoolAttribute{
-											Description: "Whether the address is active.",
-											Optional:    true,
-											Computed:    true,
-										},
-										"http_port": schema.Int64Attribute{
-											Description: "HTTP port number.",
-											Optional:    true,
-											Computed:    true,
-										},
-										"https_port": schema.Int64Attribute{
-											Description: "HTTPS port number.",
-											Optional:    true,
-											Computed:    true,
-										},
-										"modules": schema.SingleNestedAttribute{
-											Description: "Address-level modules.",
-											Optional:    true,
 											Attributes: map[string]schema.Attribute{
-												"load_balancer": schema.SingleNestedAttribute{
-													Description: "Load balancer module at address level.",
+												"address": schema.StringAttribute{
+													Description: "The origin address (IP or hostname).",
+													Required:    true,
+												},
+												"active": schema.BoolAttribute{
+													Description: "Whether the address is active.",
+													Optional:    true,
+													Computed:    true,
+												},
+												"http_port": schema.Int64Attribute{
+													Description: "HTTP port number.",
+													Optional:    true,
+													Computed:    true,
+												},
+												"https_port": schema.Int64Attribute{
+													Description: "HTTPS port number.",
+													Optional:    true,
+													Computed:    true,
+												},
+												"modules": schema.SingleNestedAttribute{
+													Description: "Address-level modules.",
 													Optional:    true,
 													Attributes: map[string]schema.Attribute{
-														"server_role": schema.StringAttribute{
-															Description: "Role of the address in load balancing (primary or backup).",
+														"load_balancer": schema.SingleNestedAttribute{
+															Description: "Load balancer module at address level.",
 															Optional:    true,
-														},
-														"weight": schema.Int64Attribute{
-															Description: "Weight used in load balancing strategy.",
-															Optional:    true,
+															Attributes: map[string]schema.Attribute{
+																"server_role": schema.StringAttribute{
+																	Description: "Role of the address in load balancing (primary or backup).",
+																	Optional:    true,
+																},
+																"weight": schema.Int64Attribute{
+																	Description: "Weight used in load balancing strategy.",
+																	Optional:    true,
+																},
+															},
 														},
 													},
 												},
@@ -878,9 +889,13 @@ func (r *connectorResource) buildHTTPConnectorRequest(_ context.Context, connect
 	return azionapi.ConnectorHTTPRequestAsConnectorRequest(req), nil
 }
 
-func buildAddressRequests(addrs []AddressModel) []azionapi.AddressRequest {
+func buildAddressRequests(addrs []AddressWrapperModel) []azionapi.AddressRequest {
 	var addresses []azionapi.AddressRequest
-	for _, addr := range addrs {
+	for _, wrapper := range addrs {
+		if wrapper.Endpoint == nil {
+			continue
+		}
+		addr := wrapper.Endpoint
 		address := azionapi.NewAddressRequest(addr.Address.ValueString())
 		if !addr.Active.IsNull() && !addr.Active.IsUnknown() {
 			address.SetActive(addr.Active.ValueBool())
@@ -1148,8 +1163,8 @@ func shouldPopulate[T any](prior *T, pred func(*T) bool) bool {
 	return pred(prior)
 }
 
-func populateAddresses(in []azionapi.Address) []AddressModel {
-	var out []AddressModel
+func populateAddresses(in []azionapi.Address) []AddressWrapperModel {
+	var out []AddressWrapperModel
 	for _, addr := range in {
 		addrModel := AddressModel{
 			Address: types.StringValue(addr.Address),
@@ -1177,7 +1192,9 @@ func populateAddresses(in []azionapi.Address) []AddressModel {
 				}
 			}
 		}
-		out = append(out, addrModel)
+		out = append(out, AddressWrapperModel{
+			Endpoint: &addrModel,
+		})
 	}
 	return out
 }

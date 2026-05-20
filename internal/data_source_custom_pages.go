@@ -40,7 +40,11 @@ type CustomPagesResults struct {
 	CreatedAt      types.String             `tfsdk:"created_at"`
 	Active         types.Bool               `tfsdk:"active"`
 	ProductVersion types.String             `tfsdk:"product_version"`
-	Pages          []CustomPagesPageResults `tfsdk:"pages"`
+	Pages          []CustomPagesPageWrapper `tfsdk:"pages"`
+}
+
+type CustomPagesPageWrapper struct {
+	Entry *CustomPagesPageResults `tfsdk:"entry"`
 }
 
 type CustomPagesPageResults struct {
@@ -119,37 +123,43 @@ func (d *CustomPagesDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 							Computed:    true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
-									"code": schema.StringAttribute{
-										Description: "HTTP status code for the page.",
-										Computed:    true,
-									},
-									"page": schema.SingleNestedAttribute{
-										Description: "Page connector configuration.",
+									"entry": schema.SingleNestedAttribute{
+										Description: "A single page entry — pairs an HTTP status code with its connector configuration.",
 										Computed:    true,
 										Attributes: map[string]schema.Attribute{
-											"type": schema.StringAttribute{
-												Description: "Type of the page connector.",
+											"code": schema.StringAttribute{
+												Description: "HTTP status code for the page.",
 												Computed:    true,
 											},
-											"attributes": schema.SingleNestedAttribute{
-												Description: "Attributes of the page connector.",
+											"page": schema.SingleNestedAttribute{
+												Description: "Page connector configuration.",
 												Computed:    true,
 												Attributes: map[string]schema.Attribute{
-													"connector": schema.Int64Attribute{
-														Description: "Connector ID.",
+													"type": schema.StringAttribute{
+														Description: "Type of the page connector.",
 														Computed:    true,
 													},
-													"ttl": schema.Int64Attribute{
-														Description: "Time to live for the page.",
+													"attributes": schema.SingleNestedAttribute{
+														Description: "Attributes of the page connector.",
 														Computed:    true,
-													},
-													"uri": schema.StringAttribute{
-														Description: "URI for the page.",
-														Computed:    true,
-													},
-													"custom_status_code": schema.Int64Attribute{
-														Description: "Custom status code for the page.",
-														Computed:    true,
+														Attributes: map[string]schema.Attribute{
+															"connector": schema.Int64Attribute{
+																Description: "Connector ID.",
+																Computed:    true,
+															},
+															"ttl": schema.Int64Attribute{
+																Description: "Time to live for the page.",
+																Computed:    true,
+															},
+															"uri": schema.StringAttribute{
+																Description: "URI for the page.",
+																Computed:    true,
+															},
+															"custom_status_code": schema.Int64Attribute{
+																Description: "Custom status code for the page.",
+																Computed:    true,
+															},
+														},
 													},
 												},
 											},
@@ -237,7 +247,7 @@ func (d *CustomPagesDataSource) Read(ctx context.Context, req datasource.ReadReq
 				pageResult.Page.Attributes.CustomStatusCode = types.Int64Value(*page.Page.Attributes.CustomStatusCode.Get())
 			}
 
-			result.Pages = append(result.Pages, pageResult)
+			result.Pages = append(result.Pages, CustomPagesPageWrapper{Entry: &pageResult})
 		}
 
 		customPagesState.Results = append(customPagesState.Results, result)

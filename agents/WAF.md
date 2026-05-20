@@ -1234,8 +1234,10 @@ resource "azion_waf" "example" {
         
         thresholds = [
           {
-            threat      = "sql_injection"
-            sensitivity = "high"
+            threshold = {
+              threat      = "sql_injection"
+              sensitivity = "high"
+            }
           }
         ]
       }
@@ -1261,9 +1263,10 @@ terraform import azion_waf.example 12345
     * `type` - (Optional) Type of the WAF engine.
     * `attributes` - (Optional) Attributes for the WAF engine settings.
       * `rulesets` - (Optional) List of ruleset IDs.
-      * `thresholds` - (Optional) Threshold configurations for the WAF.
-        * `threat` - (Required) The threat type for the threshold.
-        * `sensitivity` - (Optional) The sensitivity level for the threshold.
+      * `thresholds` - (Optional) Threshold configurations for the WAF. Each item must contain a single `threshold` object.
+        * `threshold` - (Required) A single threshold configuration.
+          * `threat` - (Required) The threat type for the threshold.
+          * `sensitivity` - (Optional) The sensitivity level for the threshold.
 
 ## Attribute Reference
 

@@ -27,12 +27,16 @@ resource "azion_waf" "example" {
         
         thresholds = [
           {
-            threat      = "sql_injection"
-            sensitivity = "high"
+            threshold = {
+              threat      = "sql_injection"
+              sensitivity = "high"
+            }
           },
           {
-            threat      = "cross_site_scripting"
-            sensitivity = "highest"
+            threshold = {
+              threat      = "cross_site_scripting"
+              sensitivity = "highest"
+            }
           }
         ]
       }
@@ -58,9 +62,10 @@ terraform import azion_waf.example 12345
     * `type` - (Optional) Type of the WAF engine (e.g., `score`).
     * `attributes` - (Optional) Attributes for the WAF engine settings.
       * `rulesets` - (Optional) List of ruleset IDs.
-      * `thresholds` - (Optional) Threshold configurations for the WAF.
-        * `threat` - (Required) The threat type for the threshold. Valid values: `cross_site_scripting`, `directory_traversal`, `evading_tricks`, `file_upload`, `identified_attack`, `remote_file_inclusion`, `sql_injection`, `unwanted_access`.
-        * `sensitivity` - (Optional) The sensitivity level for the threshold. Valid values: `highest`, `high`, `medium`, `low`, `lowest`.
+      * `thresholds` - (Optional) Threshold configurations for the WAF. Each item must contain a single `threshold` object.
+        * `threshold` - (Required) A single threshold configuration.
+          * `threat` - (Required) The threat type for the threshold. Valid values: `cross_site_scripting`, `directory_traversal`, `evading_tricks`, `file_upload`, `identified_attack`, `remote_file_inclusion`, `sql_injection`, `unwanted_access`.
+          * `sensitivity` - (Optional) The sensitivity level for the threshold. Valid values: `highest`, `high`, `medium`, `low`, `lowest`.
 
 ## Attribute Reference
 

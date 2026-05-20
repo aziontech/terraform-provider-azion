@@ -46,7 +46,11 @@ type customPageResourceResults struct {
 	CreatedAt      types.String                    `tfsdk:"created_at"`
 	Active         types.Bool                      `tfsdk:"active"`
 	ProductVersion types.String                    `tfsdk:"product_version"`
-	Pages          []customPageResourcePageResults `tfsdk:"pages"`
+	Pages          []customPageResourcePageWrapper `tfsdk:"pages"`
+}
+
+type customPageResourcePageWrapper struct {
+	Entry *customPageResourcePageResults `tfsdk:"entry"`
 }
 
 type customPageResourcePageResults struct {
@@ -121,40 +125,46 @@ func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Required:    true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"code": schema.StringAttribute{
-									Description: "HTTP status code for the page.",
-									Required:    true,
-								},
-								"page": schema.SingleNestedAttribute{
-									Description: "Page connector configuration.",
+								"entry": schema.SingleNestedAttribute{
+									Description: "A single page entry — pairs an HTTP status code with its connector configuration.",
 									Required:    true,
 									Attributes: map[string]schema.Attribute{
-										"type": schema.StringAttribute{
-											Description: "Type of the page connector.",
+										"code": schema.StringAttribute{
+											Description: "HTTP status code for the page.",
 											Required:    true,
 										},
-										"attributes": schema.SingleNestedAttribute{
-											Description: "Attributes of the page connector.",
+										"page": schema.SingleNestedAttribute{
+											Description: "Page connector configuration.",
 											Required:    true,
 											Attributes: map[string]schema.Attribute{
-												"connector": schema.Int64Attribute{
-													Description: "Connector ID.",
+												"type": schema.StringAttribute{
+													Description: "Type of the page connector.",
 													Required:    true,
 												},
-												"ttl": schema.Int64Attribute{
-													Description: "Time to live for the page.",
-													Optional:    true,
-													Computed:    true,
-												},
-												"uri": schema.StringAttribute{
-													Description: "URI for the page.",
-													Optional:    true,
-													Computed:    true,
-												},
-												"custom_status_code": schema.Int64Attribute{
-													Description: "Custom status code for the page.",
-													Optional:    true,
-													Computed:    true,
+												"attributes": schema.SingleNestedAttribute{
+													Description: "Attributes of the page connector.",
+													Required:    true,
+													Attributes: map[string]schema.Attribute{
+														"connector": schema.Int64Attribute{
+															Description: "Connector ID.",
+															Required:    true,
+														},
+														"ttl": schema.Int64Attribute{
+															Description: "Time to live for the page.",
+															Optional:    true,
+															Computed:    true,
+														},
+														"uri": schema.StringAttribute{
+															Description: "URI for the page.",
+															Optional:    true,
+															Computed:    true,
+														},
+														"custom_status_code": schema.Int64Attribute{
+															Description: "Custom status code for the page.",
+															Optional:    true,
+															Computed:    true,
+														},
+													},
 												},
 											},
 										},
@@ -196,7 +206,11 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 
 	// Build pages.
 	var pages []azionapi.PageRequestBase
-	for _, page := range plan.CustomPage.Pages {
+	for _, wrapper := range plan.CustomPage.Pages {
+		if wrapper.Entry == nil {
+			continue
+		}
+		page := wrapper.Entry
 		pageRequest := azionapi.PageRequestBase{
 			Code: page.Code.ValueString(),
 			Page: azionapi.PageConnectorRequest{
@@ -299,7 +313,7 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 			pageResult.Page.Attributes.CustomStatusCode = types.Int64Value(*page.Page.Attributes.CustomStatusCode.Get())
 		}
 
-		plan.CustomPage.Pages = append(plan.CustomPage.Pages, pageResult)
+		plan.CustomPage.Pages = append(plan.CustomPage.Pages, customPageResourcePageWrapper{Entry: &pageResult})
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(createCustomPage.Data.Id, 10))
@@ -411,7 +425,7 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 			pageResult.Page.Attributes.CustomStatusCode = types.Int64Value(*page.Page.Attributes.CustomStatusCode.Get())
 		}
 
-		state.CustomPage.Pages = append(state.CustomPage.Pages, pageResult)
+		state.CustomPage.Pages = append(state.CustomPage.Pages, customPageResourcePageWrapper{Entry: &pageResult})
 	}
 
 	state.ID = types.StringValue(strconv.FormatInt(getCustomPage.Data.Id, 10))
@@ -450,7 +464,11 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	// Build pages.
 	var pages []azionapi.PageRequestBase
-	for _, page := range plan.CustomPage.Pages {
+	for _, wrapper := range plan.CustomPage.Pages {
+		if wrapper.Entry == nil {
+			continue
+		}
+		page := wrapper.Entry
 		pageRequest := azionapi.PageRequestBase{
 			Code: page.Code.ValueString(),
 			Page: azionapi.PageConnectorRequest{
@@ -569,7 +587,7 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 			pageResult.Page.Attributes.CustomStatusCode = types.Int64Value(*page.Page.Attributes.CustomStatusCode.Get())
 		}
 
-		plan.CustomPage.Pages = append(plan.CustomPage.Pages, pageResult)
+		plan.CustomPage.Pages = append(plan.CustomPage.Pages, customPageResourcePageWrapper{Entry: &pageResult})
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(updateCustomPage.Data.Id, 10))

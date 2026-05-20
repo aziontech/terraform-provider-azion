@@ -671,6 +671,22 @@ if workloadResponse.Data.Tls.Certificate.IsSet() {
 | `[]string` | `types.StringType` | `types.ListNull(types.StringType)` |
 | `[]int64` | `types.Int64Type` | `types.ListNull(types.Int64Type)` |
 
+### 5a. Choosing `types.List` vs `types.Set`
+
+The resource's `domains` field uses `types.Set` (not `types.List`). Use a set whenever the collection's order has no meaning to the API and duplicates would be invalid — hostnames, tags, IDs returned in arbitrary order. Use a list when index position is part of the contract (HTTP versions returned in priority order, ports where order matters).
+
+| Aspect | `types.List` | `types.Set` |
+|--------|-------------|------------|
+| Order significant | yes | no |
+| Duplicates allowed | yes | no |
+| Reorder triggers plan diff | yes | no |
+| Schema attribute | `schema.ListAttribute` | `schema.SetAttribute` |
+| Constructor | `types.ListValueFrom`, `types.ListNull` | `types.SetValueFrom`, `types.SetNull` |
+
+`ElementsAs(ctx, &dst, false)` works identically for both, so Create/Update bodies don't change when switching types.
+
+**Note on schema asymmetry:** Workload data sources still expose `domains` as `types.List` because they reflect API ordering directly. The resource uses `types.Set` to avoid spurious plan diffs when the API echoes domains in a different order than the user wrote them. Don't mechanically align these — they serve different purposes.
+
 ### 6. Provider Registration
 
 **Problem:** Forgetting to register the data source in `provider.go`.
@@ -778,7 +794,7 @@ type workloadResourceResults struct {
     Tls                       *TLSWorkloadResourceModel `tfsdk:"tls"`
     Protocols                 *ProtocolsResourceModel   `tfsdk:"protocols"`
     Mtls                      *MTLSResourceModel        `tfsdk:"mtls"`
-    Domains                   types.List                `tfsdk:"domains"`
+    Domains                   types.Set                 `tfsdk:"domains"`
     WorkloadDomainAllowAccess types.Bool                `tfsdk:"workload_domain_allow_access"`
     WorkloadDomain            types.String              `tfsdk:"workload_domain"`
     ProductVersion            types.String              `tfsdk:"product_version"`
@@ -1222,12 +1238,12 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
         result.Mtls = mtlsModel
     }
 
-    // Handle Domains
+    // Handle Domains (types.Set — order-insensitive, no duplicates)
     if response.Data.Domains != nil {
-        domainsList, _ := types.ListValueFrom(ctx, types.StringType, response.Data.Domains)
-        result.Domains = domainsList
+        domainsSet, _ := types.SetValueFrom(ctx, types.StringType, response.Data.Domains)
+        result.Domains = domainsSet
     } else {
-        result.Domains = types.ListNull(types.StringType)
+        result.Domains = types.SetNull(types.StringType)
     }
 
     return result

@@ -49,7 +49,7 @@ type workloadResourceResults struct {
 	Tls                       *TLSWorkloadResourceModel `tfsdk:"tls"`
 	Protocols                 *ProtocolsResourceModel   `tfsdk:"protocols"`
 	Mtls                      *MTLSResourceModel        `tfsdk:"mtls"`
-	Domains                   types.List                `tfsdk:"domains"`
+	Domains                   types.Set                 `tfsdk:"domains"`
 	WorkloadDomainAllowAccess types.Bool                `tfsdk:"workload_domain_allow_access"`
 	WorkloadDomain            types.String              `tfsdk:"workload_domain"`
 	ProductVersion            types.String              `tfsdk:"product_version"`
@@ -213,9 +213,9 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
-					"domains": schema.ListAttribute{
+					"domains": schema.SetAttribute{
 						ElementType: types.StringType,
-						Description: "List of domains associated with the workload.",
+						Description: "Set of domains associated with the workload.",
 						Optional:    true,
 						Computed:    true,
 					},
@@ -874,10 +874,10 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 
 	// Handle Domains.
 	if response.Data.Domains != nil {
-		domainsList, _ := types.ListValueFrom(ctx, types.StringType, response.Data.Domains)
-		result.Domains = domainsList
+		domainsSet, _ := types.SetValueFrom(ctx, types.StringType, response.Data.Domains)
+		result.Domains = domainsSet
 	} else {
-		result.Domains = types.ListNull(types.StringType)
+		result.Domains = types.SetNull(types.StringType)
 	}
 
 	return result

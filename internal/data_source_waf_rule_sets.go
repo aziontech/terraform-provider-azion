@@ -44,15 +44,15 @@ type WafRuleSetsResponseLinks struct {
 }
 
 type WafRuleSetListItemDataModel struct {
-	ID           types.Int64                  `tfsdk:"id"`
-	RuleID       types.Int64                  `tfsdk:"rule_id"`
-	Name         types.String                 `tfsdk:"name"`
-	Path         types.String                 `tfsdk:"path"`
-	Conditions   []WafExceptionConditionModel `tfsdk:"conditions"`
-	Operator     types.String                 `tfsdk:"operator"`
-	Active       types.Bool                   `tfsdk:"active"`
-	LastEditor   types.String                 `tfsdk:"last_editor"`
-	LastModified types.String                 `tfsdk:"last_modified"`
+	ID           types.Int64                         `tfsdk:"id"`
+	RuleID       types.Int64                         `tfsdk:"rule_id"`
+	Name         types.String                        `tfsdk:"name"`
+	Path         types.String                        `tfsdk:"path"`
+	Conditions   []WafExceptionConditionWrapperModel `tfsdk:"conditions"`
+	Operator     types.String                        `tfsdk:"operator"`
+	Active       types.Bool                          `tfsdk:"active"`
+	LastEditor   types.String                        `tfsdk:"last_editor"`
+	LastModified types.String                        `tfsdk:"last_modified"`
 }
 
 func (o *WafRuleSetsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -129,21 +129,27 @@ func (o *WafRuleSetsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 							Computed:    true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
-									"match": schema.StringAttribute{
-										Description: "The match type for the condition.",
+									"condition": schema.SingleNestedAttribute{
+										Description: "A single condition for the WAF exception.",
 										Computed:    true,
-									},
-									"name": schema.StringAttribute{
-										Description: "The name for specific condition on name.",
-										Computed:    true,
-									},
-									"value": schema.StringAttribute{
-										Description: "The value for specific condition on value.",
-										Computed:    true,
-									},
-									"condition_type": schema.StringAttribute{
-										Description: "Type of condition: generic, specific_on_name, or specific_on_value.",
-										Computed:    true,
+										Attributes: map[string]schema.Attribute{
+											"match": schema.StringAttribute{
+												Description: "The match type for the condition.",
+												Computed:    true,
+											},
+											"name": schema.StringAttribute{
+												Description: "The name for specific condition on name.",
+												Computed:    true,
+											},
+											"value": schema.StringAttribute{
+												Description: "The value for specific condition on value.",
+												Computed:    true,
+											},
+											"condition_type": schema.StringAttribute{
+												Description: "Type of condition: generic, specific_on_name, or specific_on_value.",
+												Computed:    true,
+											},
+										},
 									},
 								},
 							},

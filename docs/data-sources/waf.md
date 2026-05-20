@@ -37,6 +37,7 @@ data "azion_waf" "example" {
     * `type` - Type of the WAF engine.
     * `attributes` - Attributes for the WAF engine settings.
       * `rulesets` - List of ruleset IDs.
-      * `thresholds` - Threshold configurations for the WAF.
-        * `threat` - The threat type for the threshold.
-        * `sensitivity` - The sensitivity level for the threshold.
+      * `thresholds` - Threshold configurations for the WAF. Each item contains a single `threshold` object.
+        * `threshold` - A single threshold configuration.
+          * `threat` - The threat type for the threshold.
+          * `sensitivity` - The sensitivity level for the threshold.
