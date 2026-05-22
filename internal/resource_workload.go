@@ -9,9 +9,11 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -177,8 +179,12 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 									},
 									"quic_ports": schema.ListAttribute{
 										ElementType: types.Int64Type,
-										Description: "QUIC ports.",
+										Description: "QUIC ports. Defaults to [443] when the http protocol block is set but this attribute is omitted, matching the API default.",
 										Optional:    true,
+										Computed:    true,
+										Default: listdefault.StaticValue(types.ListValueMust(types.Int64Type, []attr.Value{
+											types.Int64Value(443),
+										})),
 									},
 								},
 							},

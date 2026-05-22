@@ -103,7 +103,7 @@ The `http` block supports:
 * `versions` - (Optional) List of HTTP versions supported. Valid values: `http1`, `http2`, `http3`.
 * `http_ports` - (Optional) List of HTTP ports.
 * `https_ports` - (Optional) List of HTTPS ports.
-* `quic_ports` - (Optional) List of QUIC ports.
+* `quic_ports` - (Optional) List of QUIC ports. When the `http` block is set but `quic_ports` is omitted, the provider defaults this attribute to `[443]` to match the API default and avoid drift between plan and state. Omitting the entire `http` block does not trigger the default.
 
 ### MTLS Configuration
 
