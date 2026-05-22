@@ -151,13 +151,19 @@ func (o *WafsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 											Computed:    true,
 											NestedObject: schema.NestedAttributeObject{
 												Attributes: map[string]schema.Attribute{
-													"threat": schema.StringAttribute{
-														Description: "The threat type for the threshold.",
+													"threshold": schema.SingleNestedAttribute{
+														Description: "A single threshold configuration.",
 														Computed:    true,
-													},
-													"sensitivity": schema.StringAttribute{
-														Description: "The sensitivity level for the threshold.",
-														Computed:    true,
+														Attributes: map[string]schema.Attribute{
+															"threat": schema.StringAttribute{
+																Description: "The threat type for the threshold.",
+																Computed:    true,
+															},
+															"sensitivity": schema.StringAttribute{
+																Description: "The sensitivity level for the threshold.",
+																Computed:    true,
+															},
+														},
 													},
 												},
 											},

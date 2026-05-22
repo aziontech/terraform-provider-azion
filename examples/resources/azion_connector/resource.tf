@@ -28,9 +28,11 @@ resource "azion_connector" "http_connector" {
     http_attributes = {
       addresses = [
         {
-          address   = "192.168.1.100"
-          http_port = 80
-          active    = true
+          endpoint = {
+            address   = "192.168.1.100"
+            http_port = 80
+            active    = true
+          }
         }
       ]
     }
@@ -46,14 +48,16 @@ resource "azion_connector" "http_connector_full" {
     http_attributes = {
       addresses = [
         {
-          address    = "192.168.1.100"
-          http_port  = 80
-          https_port = 443
-          active     = true
-          modules = {
-            load_balancer = {
-              server_role = "primary"
-              weight      = 1
+          endpoint = {
+            address    = "192.168.1.100"
+            http_port  = 80
+            https_port = 443
+            active     = true
+            modules = {
+              load_balancer = {
+                server_role = "primary"
+                weight      = 1
+              }
             }
           }
         }
@@ -96,10 +100,12 @@ resource "azion_connector" "s3_with_hmac" {
     http_attributes = {
       addresses = [
         {
-          address    = "my-bucket.s3.us-east-1.amazonaws.com"
-          http_port  = 80
-          https_port = 443
-          active     = true
+          endpoint = {
+            address    = "my-bucket.s3.us-east-1.amazonaws.com"
+            http_port  = 80
+            https_port = 443
+            active     = true
+          }
         }
       ]
       connection_options = {

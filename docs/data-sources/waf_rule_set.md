@@ -38,7 +38,7 @@ data "azion_waf_rule_set" "example" {
 Read-Only:
 
 - `active` (Boolean) Whether the exception is active.
-- `conditions` (Attributes List) Conditions for the WAF exception. (see [below for nested schema](#nestedatt--results--conditions))
+- `conditions` (Attributes List) Conditions for the WAF exception. Each item contains a single `condition` object. (see [below for nested schema](#nestedatt--results--conditions))
 - `id` (Number) The ID of the WAF exception.
 - `last_editor` (String) Last editor of the exception.
 - `last_modified` (String) Last modified timestamp.
@@ -49,6 +49,13 @@ Read-Only:
 
 <a id="nestedatt--results--conditions"></a>
 ### Nested Schema for `results.conditions`
+
+Read-Only:
+
+- `condition` (Attributes) A single condition for the WAF exception. (see [below for nested schema](#nestedatt--results--conditions--condition))
+
+<a id="nestedatt--results--conditions--condition"></a>
+### Nested Schema for `results.conditions.condition`
 
 Read-Only:
 

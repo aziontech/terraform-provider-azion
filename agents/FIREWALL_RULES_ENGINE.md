@@ -341,17 +341,21 @@ resource "azion_firewall_rule_engine" "example" {
     active      = true
     behaviors = [
       {
-        type = "drop"
+        behavior = {
+          type = "drop"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "${request_uri}"
-            operator    = "matches"
-            conditional = "if"
-            argument    = "/admin.*"
+            criterion = {
+              variable    = "${request_uri}"
+              operator    = "matches"
+              conditional = "if"
+              argument    = "/admin.*"
+            }
           }
         ]
       }

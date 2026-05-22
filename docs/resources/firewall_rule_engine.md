@@ -32,17 +32,21 @@ resource "azion_firewall_rule_engine" "example" {
     active      = true
     behaviors = [
       {
-        type = "drop"
+        behavior = {
+          type = "drop"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "${request_uri}"
-            operator    = "matches"
-            conditional = "if"
-            argument    = "/admin.*"
+            criterion = {
+              variable    = "${request_uri}"
+              operator    = "matches"
+              conditional = "if"
+              argument    = "/admin.*"
+            }
           }
         ]
       }
@@ -62,17 +66,21 @@ resource "azion_firewall_rule_engine" "example" {
     active      = true
     behaviors = [
       {
-        type = "drop"
+        behavior = {
+          type = "drop"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "${request_uri}"
-            operator    = "matches"
-            conditional = "if"
-            argument    = "/admin.*"
+            criterion = {
+              variable    = "${request_uri}"
+              operator    = "matches"
+              conditional = "if"
+              argument    = "/admin.*"
+            }
           }
         ]
       }
@@ -92,9 +100,11 @@ resource "azion_firewall_rule_engine" "example" {
     active      = true
     behaviors = [
       {
-        type = "run_function"
-        attributes = {
-          value = 12345  # Function instance ID
+        behavior = {
+          type = "run_function"
+          attributes = {
+            value = 12345  # Function instance ID
+          }
         }
       }
     ]
@@ -102,10 +112,12 @@ resource "azion_firewall_rule_engine" "example" {
       {
         entries = [
           {
-            variable    = "${request_uri}"
-            operator    = "starts_with"
-            conditional = "if"
-            argument    = "/api/"
+            criterion = {
+              variable    = "${request_uri}"
+              operator    = "starts_with"
+              conditional = "if"
+              argument    = "/api/"
+            }
           }
         ]
       }
@@ -125,11 +137,13 @@ resource "azion_firewall_rule_engine" "example" {
     active      = true
     behaviors = [
       {
-        type = "set_custom_response"
-        attributes = {
-          status_code  = 503
-          content_type = "text/html"
-          content_body = "<html><body><h1>Under Maintenance</h1></body></html>"
+        behavior = {
+          type = "set_custom_response"
+          attributes = {
+            status_code  = 503
+            content_type = "text/html"
+            content_body = "<html><body><h1>Under Maintenance</h1></body></html>"
+          }
         }
       }
     ]
@@ -137,10 +151,12 @@ resource "azion_firewall_rule_engine" "example" {
       {
         entries = [
           {
-            variable    = "${host}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "maintenance.example.com"
+            criterion = {
+              variable    = "${host}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "maintenance.example.com"
+            }
           }
         ]
       }
@@ -160,10 +176,12 @@ resource "azion_firewall_rule_engine" "example" {
     active      = true
     behaviors = [
       {
-        type = "set_waf"
-        attributes = {
-          waf_id = 98765
-          mode   = "blocking"
+        behavior = {
+          type = "set_waf"
+          attributes = {
+            waf_id = 98765
+            mode   = "blocking"
+          }
         }
       }
     ]
@@ -171,10 +189,12 @@ resource "azion_firewall_rule_engine" "example" {
       {
         entries = [
           {
-            variable    = "${host}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "api.example.com"
+            criterion = {
+              variable    = "${host}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "api.example.com"
+            }
           }
         ]
       }
@@ -194,12 +214,14 @@ resource "azion_firewall_rule_engine" "example" {
     active      = true
     behaviors = [
       {
-        type = "set_rate_limit"
-        attributes = {
-          type               = "second"
-          limit_by           = "client_ip"
-          average_rate_limit = 100
-          maximum_burst_size = 200
+        behavior = {
+          type = "set_rate_limit"
+          attributes = {
+            type               = "second"
+            limit_by           = "client_ip"
+            average_rate_limit = 100
+            maximum_burst_size = 200
+          }
         }
       }
     ]
@@ -207,10 +229,12 @@ resource "azion_firewall_rule_engine" "example" {
       {
         entries = [
           {
-            variable    = "${request_uri}"
-            operator    = "starts_with"
-            conditional = "if"
-            argument    = "/api/"
+            criterion = {
+              variable    = "${request_uri}"
+              operator    = "starts_with"
+              conditional = "if"
+              argument    = "/api/"
+            }
           }
         ]
       }
@@ -241,27 +265,33 @@ resource "azion_firewall_rule_engine" "example" {
     active      = true
     behaviors = [
       {
-        type = "drop"
+        behavior = {
+          type = "drop"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "${request_uri}"
-            operator    = "matches"
-            conditional = "if"
-            argument    = "/admin.*"
+            criterion = {
+              variable    = "${request_uri}"
+              operator    = "matches"
+              conditional = "if"
+              argument    = "/admin.*"
+            }
           }
         ]
       },
       {
         entries = [
           {
-            variable    = "${network}"
-            operator    = "is_in_list"
-            conditional = "and"
-            argument    = "12345"
+            criterion = {
+              variable    = "${network}"
+              operator    = "is_in_list"
+              conditional = "and"
+              argument    = "12345"
+            }
           }
         ]
       }
@@ -287,7 +317,7 @@ resource "azion_firewall_rule_engine" "example" {
 
 Required:
 
-- `behaviors` (Attributes List) Behaviors for the rule. (see [below for nested schema](#nestedatt--results--behaviors))
+- `behaviors` (Attributes List) Behaviors for the rule. Each item must contain a single `behavior` object. (see [below for nested schema](#nestedatt--results--behaviors))
 - `criteria` (Attributes List) Criteria for the rule. (see [below for nested schema](#nestedatt--results--criteria))
 - `name` (String) The name of the rule.
 
@@ -309,14 +339,21 @@ Read-Only:
 
 Required:
 
+- `behavior` (Attributes) A single behavior to apply on this rule. (see [below for nested schema](#nestedatt--results--behaviors--behavior))
+
+<a id="nestedatt--results--behaviors--behavior"></a>
+### Nested Schema for `results.behaviors.behavior`
+
+Required:
+
 - `type` (String) Type of behavior. Valid values: `deny`, `drop`, `run_function`, `set_custom_response`, `set_rate_limit`, `set_waf`. See [Supported Behaviors](#supported-behaviors) for details.
 
 Optional:
 
-- `attributes` (Attributes) Behavior attributes. Required for `run_function`, `set_custom_response`, `set_waf`, and `set_rate_limit` behaviors. Not needed for `deny` or `drop`. (see [below for nested schema](#nestedatt--results--behaviors--attributes))
+- `attributes` (Attributes) Behavior attributes. Required for `run_function`, `set_custom_response`, `set_waf`, and `set_rate_limit` behaviors. Not needed for `deny` or `drop`. (see [below for nested schema](#nestedatt--results--behaviors--behavior--attributes))
 
-<a id="nestedatt--results--behaviors--attributes"></a>
-### Nested Schema for `results.behaviors.attributes`
+<a id="nestedatt--results--behaviors--behavior--attributes"></a>
+### Nested Schema for `results.behaviors.behavior.attributes`
 
 The attributes available depend on the behavior type:
 
@@ -343,10 +380,17 @@ The attributes available depend on the behavior type:
 
 Required:
 
-- `entries` (Attributes List) List of criteria entries. (see [below for nested schema](#nestedatt--results--criteria--entries))
+- `entries` (Attributes List) List of criteria entries. Each item must contain a single `criterion` object. (see [below for nested schema](#nestedatt--results--criteria--entries))
 
 <a id="nestedatt--results--criteria--entries"></a>
 ### Nested Schema for `results.criteria.entries`
+
+Required:
+
+- `criterion` (Attributes) A single criterion entry. (see [below for nested schema](#nestedatt--results--criteria--entries--criterion))
+
+<a id="nestedatt--results--criteria--entries--criterion"></a>
+### Nested Schema for `results.criteria.entries.criterion`
 
 Required:
 

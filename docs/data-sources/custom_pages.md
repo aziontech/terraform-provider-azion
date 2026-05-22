@@ -38,25 +38,32 @@ Read-Only:
 - `last_modified` (String) Last modified timestamp of the custom page.
 - `active` (Boolean) Status of the custom page.
 - `product_version` (String) Product version of the custom page.
-- `pages` (Attributes List) List of pages associated with the custom page. (see [below for nested schema](#nestedatt--results--pages))
+- `pages` (Attributes List) List of pages associated with the custom page. Each item contains a single `entry` object. (see [below for nested schema](#nestedatt--results--pages))
 
 <a id="nestedatt--results--pages"></a>
 ### Nested Schema for `pages`
 
 Read-Only:
 
-- `code` (String) HTTP status code for the page.
-- `page` (Attributes) Page connector configuration. (see [below for nested schema](#nestedatt--results--pages--page))
+- `entry` (Attributes) A single page entry — pairs an HTTP status code with its connector configuration. (see [below for nested schema](#nestedatt--results--pages--entry))
 
-<a id="nestedatt--results--pages--page"></a>
-### Nested Schema for `page`
+<a id="nestedatt--results--pages--entry"></a>
+### Nested Schema for `entry`
+
+Read-Only:
+
+- `code` (String) HTTP status code for the page.
+- `page` (Attributes) Page connector configuration. (see [below for nested schema](#nestedatt--results--pages--entry--page))
+
+<a id="nestedatt--results--pages--entry--page"></a>
+### Nested Schema for `entry.page`
 
 Read-Only:
 
 - `type` (String) Type of the page connector.
-- `attributes` (Attributes) Attributes of the page connector. (see [below for nested schema](#nestedatt--results--pages--page--attributes))
+- `attributes` (Attributes) Attributes of the page connector. (see [below for nested schema](#nestedatt--results--pages--entry--page--attributes))
 
-<a id="nestedatt--results--pages--page--attributes"></a>
+<a id="nestedatt--results--pages--entry--page--attributes"></a>
 ### Nested Schema for `attributes`
 
 Read-Only:

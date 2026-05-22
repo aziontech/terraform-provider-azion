@@ -43,17 +43,21 @@ type RulesEngineResourceModel struct {
 }
 
 type RulesEngineResourceResults struct {
-	ID           types.Int64                        `tfsdk:"id"`
-	Name         types.String                       `tfsdk:"name"`
-	Phase        types.String                       `tfsdk:"phase"`
-	Active       types.Bool                         `tfsdk:"active"`
-	Behaviors    []RulesEngineBehaviorResourceModel `tfsdk:"behaviors"`
-	Criteria     []CriteriaResourceModel            `tfsdk:"criteria"`
-	Description  types.String                       `tfsdk:"description"`
-	Order        types.Int64                        `tfsdk:"order"`
-	LastEditor   types.String                       `tfsdk:"last_editor"`
-	LastModified types.String                       `tfsdk:"last_modified"`
-	CreatedAt    types.String                       `tfsdk:"created_at"`
+	ID           types.Int64                       `tfsdk:"id"`
+	Name         types.String                      `tfsdk:"name"`
+	Phase        types.String                      `tfsdk:"phase"`
+	Active       types.Bool                        `tfsdk:"active"`
+	Behaviors    []RulesEngineBehaviorWrapperModel `tfsdk:"behaviors"`
+	Criteria     []CriteriaResourceModel           `tfsdk:"criteria"`
+	Description  types.String                      `tfsdk:"description"`
+	Order        types.Int64                       `tfsdk:"order"`
+	LastEditor   types.String                      `tfsdk:"last_editor"`
+	LastModified types.String                      `tfsdk:"last_modified"`
+	CreatedAt    types.String                      `tfsdk:"created_at"`
+}
+
+type RulesEngineBehaviorWrapperModel struct {
+	Behavior *RulesEngineBehaviorResourceModel `tfsdk:"behavior"`
 }
 
 type RulesEngineBehaviorResourceModel struct {
@@ -73,7 +77,11 @@ type CaptureAttributesResourceModel struct {
 }
 
 type CriteriaResourceModel struct {
-	Entries []RulesEngineResourceCriteria `tfsdk:"entries"`
+	Entries []RulesEngineCriterionWrapperModel `tfsdk:"entries"`
+}
+
+type RulesEngineCriterionWrapperModel struct {
+	Criterion *RulesEngineResourceCriteria `tfsdk:"criterion"`
 }
 
 type RulesEngineResourceCriteria struct {
@@ -131,35 +139,41 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Required: true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"type": schema.StringAttribute{
-									Description: "The type of behavior.",
+								"behavior": schema.SingleNestedAttribute{
+									Description: "A single behavior to apply on this rule.",
 									Required:    true,
-								},
-								"attributes": schema.SingleNestedAttribute{
-									Description: "Behavior attributes (for behaviors with args).",
-									Optional:    true,
 									Attributes: map[string]schema.Attribute{
-										"value": schema.StringAttribute{
-											Description: "Value for the behavior.",
+										"type": schema.StringAttribute{
+											Description: "The type of behavior.",
 											Required:    true,
 										},
-									},
-								},
-								"capture_attributes": schema.SingleNestedAttribute{
-									Description: "Capture attributes (for capture_match_groups).",
-									Optional:    true,
-									Attributes: map[string]schema.Attribute{
-										"subject": schema.StringAttribute{
-											Description: "Subject for capture.",
-											Required:    true,
+										"attributes": schema.SingleNestedAttribute{
+											Description: "Behavior attributes (for behaviors with args).",
+											Optional:    true,
+											Attributes: map[string]schema.Attribute{
+												"value": schema.StringAttribute{
+													Description: "Value for the behavior.",
+													Required:    true,
+												},
+											},
 										},
-										"regex": schema.StringAttribute{
-											Description: "Regex pattern.",
-											Required:    true,
-										},
-										"captured_array": schema.StringAttribute{
-											Description: "Captured array name.",
-											Required:    true,
+										"capture_attributes": schema.SingleNestedAttribute{
+											Description: "Capture attributes (for capture_match_groups).",
+											Optional:    true,
+											Attributes: map[string]schema.Attribute{
+												"subject": schema.StringAttribute{
+													Description: "Subject for capture.",
+													Required:    true,
+												},
+												"regex": schema.StringAttribute{
+													Description: "Regex pattern.",
+													Required:    true,
+												},
+												"captured_array": schema.StringAttribute{
+													Description: "Captured array name.",
+													Required:    true,
+												},
+											},
 										},
 									},
 								},
@@ -174,21 +188,27 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 									Required: true,
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
-											"conditional": schema.StringAttribute{
-												Description: "The conditional operator used in the rule's criteria (e.g., if, and, or).",
+											"criterion": schema.SingleNestedAttribute{
+												Description: "A single criterion entry.",
 												Required:    true,
-											},
-											"variable": schema.StringAttribute{
-												Description: "The variable used in the rule's criteria.",
-												Required:    true,
-											},
-											"operator": schema.StringAttribute{
-												Description: "The operator used in the rule's criteria.",
-												Required:    true,
-											},
-											"argument": schema.StringAttribute{
-												Description: "The argument used in the rule's criteria.",
-												Optional:    true,
+												Attributes: map[string]schema.Attribute{
+													"conditional": schema.StringAttribute{
+														Description: "The conditional operator used in the rule's criteria (e.g., if, and, or).",
+														Required:    true,
+													},
+													"variable": schema.StringAttribute{
+														Description: "The variable used in the rule's criteria.",
+														Required:    true,
+													},
+													"operator": schema.StringAttribute{
+														Description: "The operator used in the rule's criteria.",
+														Required:    true,
+													},
+													"argument": schema.StringAttribute{
+														Description: "The argument used in the rule's criteria.",
+														Optional:    true,
+													},
+												},
 											},
 										},
 									},
@@ -796,7 +816,11 @@ func buildCriteriaRequestV4(criteria []CriteriaResourceModel) [][]azionapi.Appli
 	var result [][]azionapi.ApplicationCriterionFieldRequest
 	for _, criterion := range criteria {
 		var criterionGroup []azionapi.ApplicationCriterionFieldRequest
-		for _, c := range criterion.Entries {
+		for _, entry := range criterion.Entries {
+			if entry.Criterion == nil {
+				continue
+			}
+			c := entry.Criterion
 			criterionField := azionapi.NewApplicationCriterionFieldRequest(
 				c.Conditional.ValueString(),
 				c.Variable.ValueString(),
@@ -815,11 +839,15 @@ func buildCriteriaRequestV4(criteria []CriteriaResourceModel) [][]azionapi.Appli
 	return result
 }
 
-func buildBehaviorsRequestV4(behaviors []RulesEngineBehaviorResourceModel) []azionapi.RequestPhaseBehaviorRequest {
+func buildBehaviorsRequestV4(behaviors []RulesEngineBehaviorWrapperModel) []azionapi.RequestPhaseBehaviorRequest {
 	var result []azionapi.RequestPhaseBehaviorRequest
-	for _, b := range behaviors {
+	for _, wrapper := range behaviors {
+		if wrapper.Behavior == nil {
+			continue
+		}
+		b := wrapper.Behavior
 		if b.Attributes != nil && !b.Attributes.Value.IsNull() {
-			// Behavior with args
+			// Behavior with args.
 			value := azionapi.BehaviorArgsAttributesValue{
 				String: b.Attributes.Value.ValueStringPointer(),
 			}
@@ -828,7 +856,7 @@ func buildBehaviorsRequestV4(behaviors []RulesEngineBehaviorResourceModel) []azi
 			behaviorRequest := azionapi.BehaviorArgsAsRequestPhaseBehaviorRequest(argsBehavior)
 			result = append(result, behaviorRequest)
 		} else if b.CaptureAttrs != nil {
-			// Capture behavior
+			// Capture behavior.
 			captureAttrs := azionapi.NewBehaviorCaptureMatchGroupsAttributes(
 				b.CaptureAttrs.Subject.ValueString(),
 				b.CaptureAttrs.Regex.ValueString(),
@@ -838,7 +866,7 @@ func buildBehaviorsRequestV4(behaviors []RulesEngineBehaviorResourceModel) []azi
 			behaviorRequest := azionapi.BehaviorCaptureAsRequestPhaseBehaviorRequest(captureBehavior)
 			result = append(result, behaviorRequest)
 		} else {
-			// No args behavior
+			// No args behavior.
 			noArgsBehavior := azionapi.NewBehaviorNoArgs(b.Type.ValueString())
 			behaviorRequest := azionapi.BehaviorNoArgsAsRequestPhaseBehaviorRequest(noArgsBehavior)
 			result = append(result, behaviorRequest)
@@ -847,11 +875,15 @@ func buildBehaviorsRequestV4(behaviors []RulesEngineBehaviorResourceModel) []azi
 	return result
 }
 
-func buildBehaviorsResponseV4(behaviors []RulesEngineBehaviorResourceModel) []azionapi.ResponsePhaseBehaviorRequest {
+func buildBehaviorsResponseV4(behaviors []RulesEngineBehaviorWrapperModel) []azionapi.ResponsePhaseBehaviorRequest {
 	var result []azionapi.ResponsePhaseBehaviorRequest
-	for _, b := range behaviors {
+	for _, wrapper := range behaviors {
+		if wrapper.Behavior == nil {
+			continue
+		}
+		b := wrapper.Behavior
 		if b.Attributes != nil && !b.Attributes.Value.IsNull() {
-			// Behavior with args
+			// Behavior with args.
 			value := azionapi.BehaviorArgsAttributesValue{
 				String: b.Attributes.Value.ValueStringPointer(),
 			}
@@ -860,7 +892,7 @@ func buildBehaviorsResponseV4(behaviors []RulesEngineBehaviorResourceModel) []az
 			behaviorRequest := azionapi.BehaviorArgsAsResponsePhaseBehaviorRequest(argsBehavior)
 			result = append(result, behaviorRequest)
 		} else if b.CaptureAttrs != nil {
-			// Capture behavior
+			// Capture behavior.
 			captureAttrs := azionapi.NewBehaviorCaptureMatchGroupsAttributes(
 				b.CaptureAttrs.Subject.ValueString(),
 				b.CaptureAttrs.Regex.ValueString(),
@@ -870,7 +902,7 @@ func buildBehaviorsResponseV4(behaviors []RulesEngineBehaviorResourceModel) []az
 			behaviorRequest := azionapi.BehaviorCaptureAsResponsePhaseBehaviorRequest(captureBehavior)
 			result = append(result, behaviorRequest)
 		} else {
-			// No args behavior
+			// No args behavior.
 			noArgsBehavior := azionapi.NewBehaviorNoArgs(b.Type.ValueString())
 			behaviorRequest := azionapi.BehaviorNoArgsAsResponsePhaseBehaviorRequest(noArgsBehavior)
 			result = append(result, behaviorRequest)
@@ -912,9 +944,9 @@ func transformRuleToResultsModel(rule azionapi.RequestPhaseRule, phase string) *
 	// CreatedAt
 	result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))
 
-	// Transform criteria
+	// Transform criteria.
 	for _, criterionGroup := range rule.Criteria {
-		var criterionSet []RulesEngineResourceCriteria
+		var criterionSet []RulesEngineCriterionWrapperModel
 		for _, c := range criterionGroup {
 			arg := getCriterionArgumentValue(c.Argument)
 			var argValue types.String
@@ -923,11 +955,13 @@ func transformRuleToResultsModel(rule azionapi.RequestPhaseRule, phase string) *
 			} else {
 				argValue = types.StringValue(arg)
 			}
-			criterionSet = append(criterionSet, RulesEngineResourceCriteria{
-				Conditional: types.StringValue(c.GetConditional()),
-				Variable:    types.StringValue(c.GetVariable()),
-				Operator:    types.StringValue(c.GetOperator()),
-				Argument:    argValue,
+			criterionSet = append(criterionSet, RulesEngineCriterionWrapperModel{
+				Criterion: &RulesEngineResourceCriteria{
+					Conditional: types.StringValue(c.GetConditional()),
+					Variable:    types.StringValue(c.GetVariable()),
+					Operator:    types.StringValue(c.GetOperator()),
+					Argument:    argValue,
+				},
 			})
 		}
 		result.Criteria = append(result.Criteria, CriteriaResourceModel{
@@ -935,7 +969,7 @@ func transformRuleToResultsModel(rule azionapi.RequestPhaseRule, phase string) *
 		})
 	}
 
-	// Transform behaviors
+	// Transform behaviors.
 	for _, b := range rule.Behaviors {
 		behavior := RulesEngineBehaviorResourceModel{}
 
@@ -955,7 +989,9 @@ func transformRuleToResultsModel(rule azionapi.RequestPhaseRule, phase string) *
 		} else if b.BehaviorNoArgs != nil {
 			behavior.Type = types.StringValue(b.BehaviorNoArgs.GetType())
 		}
-		result.Behaviors = append(result.Behaviors, behavior)
+		result.Behaviors = append(result.Behaviors, RulesEngineBehaviorWrapperModel{
+			Behavior: &behavior,
+		})
 	}
 
 	return result
@@ -984,9 +1020,9 @@ func transformRuleToResultsModelFromResponse(rule azionapi.ResponsePhaseRule, ph
 	// CreatedAt
 	result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))
 
-	// Transform criteria
+	// Transform criteria.
 	for _, criterionGroup := range rule.Criteria {
-		var criterionSet []RulesEngineResourceCriteria
+		var criterionSet []RulesEngineCriterionWrapperModel
 		for _, c := range criterionGroup {
 			arg := getCriterionArgumentValue(c.Argument)
 			var argValue types.String
@@ -995,11 +1031,13 @@ func transformRuleToResultsModelFromResponse(rule azionapi.ResponsePhaseRule, ph
 			} else {
 				argValue = types.StringValue(arg)
 			}
-			criterionSet = append(criterionSet, RulesEngineResourceCriteria{
-				Conditional: types.StringValue(c.GetConditional()),
-				Variable:    types.StringValue(c.GetVariable()),
-				Operator:    types.StringValue(c.GetOperator()),
-				Argument:    argValue,
+			criterionSet = append(criterionSet, RulesEngineCriterionWrapperModel{
+				Criterion: &RulesEngineResourceCriteria{
+					Conditional: types.StringValue(c.GetConditional()),
+					Variable:    types.StringValue(c.GetVariable()),
+					Operator:    types.StringValue(c.GetOperator()),
+					Argument:    argValue,
+				},
 			})
 		}
 		result.Criteria = append(result.Criteria, CriteriaResourceModel{
@@ -1007,7 +1045,7 @@ func transformRuleToResultsModelFromResponse(rule azionapi.ResponsePhaseRule, ph
 		})
 	}
 
-	// Transform behaviors
+	// Transform behaviors.
 	for _, b := range rule.Behaviors {
 		behavior := RulesEngineBehaviorResourceModel{}
 
@@ -1027,7 +1065,9 @@ func transformRuleToResultsModelFromResponse(rule azionapi.ResponsePhaseRule, ph
 		} else if b.BehaviorNoArgs != nil {
 			behavior.Type = types.StringValue(b.BehaviorNoArgs.GetType())
 		}
-		result.Behaviors = append(result.Behaviors, behavior)
+		result.Behaviors = append(result.Behaviors, RulesEngineBehaviorWrapperModel{
+			Behavior: &behavior,
+		})
 	}
 
 	return result

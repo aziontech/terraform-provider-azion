@@ -1496,17 +1496,21 @@ resource "azion_application_rule_engine" "example" {
     description = "My rule engine"
     behaviors = [
       {
-        type = "deliver"
+        behavior = {
+          type = "deliver"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "$${uri}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "/"
+            criterion = {
+              variable    = "$${uri}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "/"
+            }
           }
         ]
       }

@@ -80,8 +80,10 @@ resource "azion_waf_rule_set" "tuning_recommendation" {
     
     conditions = [
       {
-        match          = "any_url"
-        condition_type = "generic"
+        condition = {
+          match          = "any_url"
+          condition_type = "generic"
+        }
       }
     ]
   }
@@ -109,8 +111,10 @@ resource "azion_waf_rule_set" "health_endpoint" {
     
     conditions = [
       {
-        match          = "any_url"
-        condition_type = "generic"
+        condition = {
+          match          = "any_url"
+          condition_type = "generic"
+        }
       }
     ]
   }
@@ -134,9 +138,11 @@ resource "azion_waf_rule_set" "internal_service_header" {
     
     conditions = [
       {
-        match          = "specific_http_header_name"
-        name           = "X-Internal-Service"
-        condition_type = "specific_on_name"
+        condition = {
+          match          = "specific_http_header_name"
+          name           = "X-Internal-Service"
+          condition_type = "specific_on_name"
+        }
       }
     ]
   }
@@ -160,9 +166,11 @@ resource "azion_waf_rule_set" "jsonp_callback" {
     
     conditions = [
       {
-        match          = "specific_query_string_name"
-        name           = "callback"
-        condition_type = "specific_on_name"
+        condition = {
+          match          = "specific_query_string_name"
+          name           = "callback"
+          condition_type = "specific_on_name"
+        }
       }
     ]
   }
@@ -188,8 +196,10 @@ resource "azion_waf_rule_set" "file_upload_exception" {
     
     conditions = [
       {
-        match          = "file_extension"
-        condition_type = "generic"
+        condition = {
+          match          = "file_extension"
+          condition_type = "generic"
+        }
       }
     ]
   }
@@ -215,14 +225,18 @@ resource "azion_waf_rule_set" "internal_api" {
     
     conditions = [
       {
-        match          = "specific_http_header_name"
-        name           = "X-Internal-Auth"
-        condition_type = "specific_on_name"
+        condition = {
+          match          = "specific_http_header_name"
+          name           = "X-Internal-Auth"
+          condition_type = "specific_on_name"
+        }
       },
       {
-        match          = "specific_http_header_value"
-        value          = "trusted-service"
-        condition_type = "specific_on_value"
+        condition = {
+          match          = "specific_http_header_value"
+          value          = "trusted-service"
+          condition_type = "specific_on_value"
+        }
       }
     ]
   }

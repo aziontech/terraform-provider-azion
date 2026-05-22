@@ -16,20 +16,26 @@ resource "azion_application_rule_engine" "example" {
     description = "My rule engine"
     behaviors = [
       {
-        type = "deliver"
+        behavior = {
+          type = "deliver"
+        }
       },
       {
-        type = "bypass_cache"
+        behavior = {
+          type = "bypass_cache"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "$${uri}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "/"
+            criterion = {
+              variable    = "$${uri}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "/"
+            }
           }
         ]
       }
@@ -46,20 +52,26 @@ resource "azion_application_rule_engine" "example_simple" {
     description = "My rule engine"
     behaviors = [
       {
-        type = "deliver"
+        behavior = {
+          type = "deliver"
+        }
       },
       {
-        type = "bypass_cache"
+        behavior = {
+          type = "bypass_cache"
+        }
       }
     ]
     criteria = [
       {
         entries = [
           {
-            variable    = "$${uri}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "/"
+            criterion = {
+              variable    = "$${uri}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "/"
+            }
           }
         ]
       }
@@ -78,9 +90,11 @@ resource "azion_application_rule_engine" "example_with_args" {
 
     behaviors = [
       {
-        type = "add_request_header"
-        attributes = {
-          value = "X-Custom-Header: MyValue"
+        behavior = {
+          type = "add_request_header"
+          attributes = {
+            value = "X-Custom-Header: MyValue"
+          }
         }
       }
     ]
@@ -89,10 +103,12 @@ resource "azion_application_rule_engine" "example_with_args" {
       {
         entries = [
           {
-            variable    = "$${uri}"
-            operator    = "starts_with"
-            conditional = "if"
-            argument    = "/api/"
+            criterion = {
+              variable    = "$${uri}"
+              operator    = "starts_with"
+              conditional = "if"
+              argument    = "/api/"
+            }
           }
         ]
       }
@@ -110,11 +126,13 @@ resource "azion_application_rule_engine" "example_capture" {
 
     behaviors = [
       {
-        type = "capture_match_groups"
-        capture_attributes = {
-          subject        = "$${uri}"
-          regex          = "/api/([a-z]+)"
-          captured_array = "api_paths"
+        behavior = {
+          type = "capture_match_groups"
+          capture_attributes = {
+            subject        = "$${uri}"
+            regex          = "/api/([a-z]+)"
+            captured_array = "api_paths"
+          }
         }
       }
     ]
@@ -123,10 +141,12 @@ resource "azion_application_rule_engine" "example_capture" {
       {
         entries = [
           {
-            variable    = "$${uri}"
-            operator    = "matches"
-            conditional = "if"
-            argument    = "^/api/"
+            criterion = {
+              variable    = "$${uri}"
+              operator    = "matches"
+              conditional = "if"
+              argument    = "^/api/"
+            }
           }
         ]
       }
@@ -144,9 +164,11 @@ resource "azion_application_rule_engine" "example_response" {
 
     behaviors = [
       {
-        type = "add_response_header"
-        attributes = {
-          value = "X-Response-Processed: true"
+        behavior = {
+          type = "add_response_header"
+          attributes = {
+            value = "X-Response-Processed: true"
+          }
         }
       }
     ]
@@ -155,10 +177,12 @@ resource "azion_application_rule_engine" "example_response" {
       {
         entries = [
           {
-            variable    = "$${status}"
-            operator    = "is_equal"
-            conditional = "if"
-            argument    = "200"
+            criterion = {
+              variable    = "$${status}"
+              operator    = "is_equal"
+              conditional = "if"
+              argument    = "200"
+            }
           }
         ]
       }

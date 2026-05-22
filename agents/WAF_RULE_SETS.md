@@ -991,8 +991,10 @@ resource "azion_waf_rule_set" "example" {
     rule_id  = 0
     conditions = [
       {
-        match          = "any_url"
-        condition_type = "generic"
+        condition = {
+          match          = "any_url"
+          condition_type = "generic"
+        }
       }
     ]
   }

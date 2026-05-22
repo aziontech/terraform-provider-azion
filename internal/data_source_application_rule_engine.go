@@ -35,16 +35,24 @@ type RuleEngineDataSourceModel struct {
 }
 
 type RuleEngineResultModel struct {
-	ID           types.Int64        `tfsdk:"id"`
-	Name         types.String       `tfsdk:"name"`
-	Phase        types.String       `tfsdk:"phase"`
-	Active       types.Bool         `tfsdk:"active"`
-	Criteria     [][]CriterionModel `tfsdk:"criteria"`
-	Behaviors    []BehaviorModel    `tfsdk:"behaviors"`
-	Description  types.String       `tfsdk:"description"`
-	Order        types.Int64        `tfsdk:"order"`
-	LastEditor   types.String       `tfsdk:"last_editor"`
-	LastModified types.String       `tfsdk:"last_modified"`
+	ID           types.Int64            `tfsdk:"id"`
+	Name         types.String           `tfsdk:"name"`
+	Phase        types.String           `tfsdk:"phase"`
+	Active       types.Bool             `tfsdk:"active"`
+	Criteria     []CriteriaDataModel    `tfsdk:"criteria"`
+	Behaviors    []BehaviorWrapperModel `tfsdk:"behaviors"`
+	Description  types.String           `tfsdk:"description"`
+	Order        types.Int64            `tfsdk:"order"`
+	LastEditor   types.String           `tfsdk:"last_editor"`
+	LastModified types.String           `tfsdk:"last_modified"`
+}
+
+type CriteriaDataModel struct {
+	Entries []CriterionWrapperModel `tfsdk:"entries"`
+}
+
+type CriterionWrapperModel struct {
+	Criterion *CriterionModel `tfsdk:"criterion"`
 }
 
 type CriterionModel struct {
@@ -52,6 +60,10 @@ type CriterionModel struct {
 	Variable    types.String `tfsdk:"variable"`
 	Operator    types.String `tfsdk:"operator"`
 	Argument    types.String `tfsdk:"argument"`
+}
+
+type BehaviorWrapperModel struct {
+	Behavior *BehaviorModel `tfsdk:"behavior"`
 }
 
 type BehaviorModel struct {
@@ -116,21 +128,35 @@ func (r *RuleEngineDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 						Computed:    true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"conditional": schema.StringAttribute{
-									Description: "Conditional operator (if, and, or).",
+								"entries": schema.ListNestedAttribute{
+									Description: "Criteria entries.",
 									Computed:    true,
-								},
-								"variable": schema.StringAttribute{
-									Description: "Variable to evaluate.",
-									Computed:    true,
-								},
-								"operator": schema.StringAttribute{
-									Description: "Comparison operator.",
-									Computed:    true,
-								},
-								"argument": schema.StringAttribute{
-									Description: "Argument for comparison.",
-									Computed:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"criterion": schema.SingleNestedAttribute{
+												Description: "A single criterion entry.",
+												Computed:    true,
+												Attributes: map[string]schema.Attribute{
+													"conditional": schema.StringAttribute{
+														Description: "Conditional operator (if, and, or).",
+														Computed:    true,
+													},
+													"variable": schema.StringAttribute{
+														Description: "Variable to evaluate.",
+														Computed:    true,
+													},
+													"operator": schema.StringAttribute{
+														Description: "Comparison operator.",
+														Computed:    true,
+													},
+													"argument": schema.StringAttribute{
+														Description: "Argument for comparison.",
+														Computed:    true,
+													},
+												},
+											},
+										},
+									},
 								},
 							},
 						},
@@ -140,35 +166,41 @@ func (r *RuleEngineDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 						Computed:    true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"type": schema.StringAttribute{
-									Description: "Type of behavior.",
-									Computed:    true,
-								},
-								"attributes": schema.SingleNestedAttribute{
-									Description: "Behavior attributes (for behaviors with args).",
+								"behavior": schema.SingleNestedAttribute{
+									Description: "A single behavior for the rule.",
 									Computed:    true,
 									Attributes: map[string]schema.Attribute{
-										"value": schema.StringAttribute{
-											Description: "Value for the behavior.",
+										"type": schema.StringAttribute{
+											Description: "Type of behavior.",
 											Computed:    true,
 										},
-									},
-								},
-								"capture_attributes": schema.SingleNestedAttribute{
-									Description: "Capture attributes (for capture_match_groups).",
-									Computed:    true,
-									Attributes: map[string]schema.Attribute{
-										"subject": schema.StringAttribute{
-											Description: "Subject for capture.",
+										"attributes": schema.SingleNestedAttribute{
+											Description: "Behavior attributes (for behaviors with args).",
 											Computed:    true,
+											Attributes: map[string]schema.Attribute{
+												"value": schema.StringAttribute{
+													Description: "Value for the behavior.",
+													Computed:    true,
+												},
+											},
 										},
-										"regex": schema.StringAttribute{
-											Description: "Regex pattern.",
+										"capture_attributes": schema.SingleNestedAttribute{
+											Description: "Capture attributes (for capture_match_groups).",
 											Computed:    true,
-										},
-										"captured_array": schema.StringAttribute{
-											Description: "Captured array name.",
-											Computed:    true,
+											Attributes: map[string]schema.Attribute{
+												"subject": schema.StringAttribute{
+													Description: "Subject for capture.",
+													Computed:    true,
+												},
+												"regex": schema.StringAttribute{
+													Description: "Regex pattern.",
+													Computed:    true,
+												},
+												"captured_array": schema.StringAttribute{
+													Description: "Captured array name.",
+													Computed:    true,
+												},
+											},
 										},
 									},
 								},
@@ -349,25 +381,29 @@ func transformResponsePhaseRule(rule azionapi.ResponsePhaseRule, phase string) R
 		result.LastModified = types.StringValue(rule.LastModified.Get().Format(time.RFC3339))
 	}
 
-	// Transform criteria
+	// Transform criteria.
 	for _, criterionGroup := range rule.Criteria {
-		var group []CriterionModel
+		var entries []CriterionWrapperModel
 		for _, c := range criterionGroup {
 			arg := ""
 			if c.Argument.Get() != nil {
 				arg = fmt.Sprintf("%v", c.Argument.Get())
 			}
-			group = append(group, CriterionModel{
-				Conditional: types.StringValue(c.GetConditional()),
-				Variable:    types.StringValue(c.GetVariable()),
-				Operator:    types.StringValue(c.GetOperator()),
-				Argument:    types.StringValue(arg),
+			entries = append(entries, CriterionWrapperModel{
+				Criterion: &CriterionModel{
+					Conditional: types.StringValue(c.GetConditional()),
+					Variable:    types.StringValue(c.GetVariable()),
+					Operator:    types.StringValue(c.GetOperator()),
+					Argument:    types.StringValue(arg),
+				},
 			})
 		}
-		result.Criteria = append(result.Criteria, group)
+		result.Criteria = append(result.Criteria, CriteriaDataModel{
+			Entries: entries,
+		})
 	}
 
-	// Transform behaviors
+	// Transform behaviors.
 	for _, b := range rule.Behaviors {
 		behavior := BehaviorModel{}
 
@@ -387,7 +423,9 @@ func transformResponsePhaseRule(rule azionapi.ResponsePhaseRule, phase string) R
 		} else if b.BehaviorNoArgs != nil {
 			behavior.Type = types.StringValue(b.BehaviorNoArgs.GetType())
 		}
-		result.Behaviors = append(result.Behaviors, behavior)
+		result.Behaviors = append(result.Behaviors, BehaviorWrapperModel{
+			Behavior: &behavior,
+		})
 	}
 
 	return result

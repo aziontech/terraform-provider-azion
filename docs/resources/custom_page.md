@@ -19,24 +19,28 @@ resource "azion_custom_page" "example" {
     active = true
     pages = [
       {
-        code = "404"
-        page = {
-          type = "application"
-          attributes = {
-            connector = 12345
-            ttl       = 60
-            uri       = "/errors/404.html"
+        entry = {
+          code = "404"
+          page = {
+            type = "application"
+            attributes = {
+              connector = 12345
+              ttl       = 60
+              uri       = "/errors/404.html"
+            }
           }
         }
       },
       {
-        code = "500"
-        page = {
-          type = "application"
-          attributes = {
-            connector = 12345
-            ttl       = 60
-            uri       = "/errors/500.html"
+        entry = {
+          code = "500"
+          page = {
+            type = "application"
+            attributes = {
+              connector = 12345
+              ttl       = 60
+              uri       = "/errors/500.html"
+            }
           }
         }
       }
@@ -63,7 +67,7 @@ resource "azion_custom_page" "example" {
 Required:
 
 - `name` (String) Name of the custom page.
-- `pages` (Attributes List) List of pages associated with the custom page. (see [below for nested schema](#nestedatt--custom_page--pages))
+- `pages` (Attributes List) List of pages associated with the custom page. Each item must contain a single `entry` object. (see [below for nested schema](#nestedatt--custom_page--pages))
 
 Optional:
 
@@ -82,18 +86,25 @@ Read-Only:
 
 Required:
 
-- `code` (String) HTTP status code for the page. Valid values: `default`, `400`, `401`, `403`, `404`, `405`, `406`, `408`, `409`, `410`, `411`, `414`, `415`, `416`, `426`, `429`, `431`, `500`, `501`, `502`, `503`, `504`, `505`.
-- `page` (Attributes) Page connector configuration. (see [below for nested schema](#nestedatt--custom_page--pages--page))
+- `entry` (Attributes) A single page entry — pairs an HTTP status code with its connector configuration. (see [below for nested schema](#nestedatt--custom_page--pages--entry))
 
-<a id="nestedatt--custom_page--pages--page"></a>
-### Nested Schema for `page`
+<a id="nestedatt--custom_page--pages--entry"></a>
+### Nested Schema for `entry`
+
+Required:
+
+- `code` (String) HTTP status code for the page. Valid values: `default`, `400`, `401`, `403`, `404`, `405`, `406`, `408`, `409`, `410`, `411`, `414`, `415`, `416`, `426`, `429`, `431`, `500`, `501`, `502`, `503`, `504`, `505`.
+- `page` (Attributes) Page connector configuration. (see [below for nested schema](#nestedatt--custom_page--pages--entry--page))
+
+<a id="nestedatt--custom_page--pages--entry--page"></a>
+### Nested Schema for `entry.page`
 
 Required:
 
 - `type` (String) Type of the page connector.
-- `attributes` (Attributes) Attributes of the page connector. (see [below for nested schema](#nestedatt--custom_page--pages--page--attributes))
+- `attributes` (Attributes) Attributes of the page connector. (see [below for nested schema](#nestedatt--custom_page--pages--entry--page--attributes))
 
-<a id="nestedatt--custom_page--pages--page--attributes"></a>
+<a id="nestedatt--custom_page--pages--entry--page--attributes"></a>
 ### Nested Schema for `attributes`
 
 Required:

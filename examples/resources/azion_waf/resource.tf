@@ -21,16 +21,22 @@ resource "azion_waf" "full_example" {
 
         thresholds = [
           {
-            threat      = "sql_injection"
-            sensitivity = "high"
+            threshold = {
+              threat      = "sql_injection"
+              sensitivity = "high"
+            }
           },
           {
-            threat      = "cross_site_scripting"
-            sensitivity = "highest"
+            threshold = {
+              threat      = "cross_site_scripting"
+              sensitivity = "highest"
+            }
           },
           {
-            threat      = "directory_traversal"
-            sensitivity = "medium"
+            threshold = {
+              threat      = "directory_traversal"
+              sensitivity = "medium"
+            }
           }
         ]
       }

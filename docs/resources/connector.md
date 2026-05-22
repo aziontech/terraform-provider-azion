@@ -39,9 +39,11 @@ resource "azion_connector" "http_connector" {
     http_attributes = {
       addresses = [
         {
-          address   = "192.168.1.100"
-          http_port = 80
-          active    = true
+          endpoint = {
+            address   = "192.168.1.100"
+            http_port = 80
+            active    = true
+          }
         }
       ]
     }
@@ -60,14 +62,16 @@ resource "azion_connector" "http_connector_full" {
     http_attributes = {
       addresses = [
         {
-          address    = "192.168.1.100"
-          http_port  = 80
-          https_port = 443
-          active     = true
-          modules = {
-            load_balancer = {
-              server_role = "primary"
-              weight      = 1
+          endpoint = {
+            address    = "192.168.1.100"
+            http_port  = 80
+            https_port = 443
+            active     = true
+            modules = {
+              load_balancer = {
+                server_role = "primary"
+                weight      = 1
+              }
             }
           }
         }
@@ -112,10 +116,12 @@ resource "azion_connector" "s3_with_hmac" {
     http_attributes = {
       addresses = [
         {
-          address    = "my-bucket.s3.us-east-1.amazonaws.com"
-          http_port  = 80
-          https_port = 443
-          active     = true
+          endpoint = {
+            address    = "my-bucket.s3.us-east-1.amazonaws.com"
+            http_port  = 80
+            https_port = 443
+            active     = true
+          }
         }
       ]
       connection_options = {
@@ -191,15 +197,16 @@ When `type = "storage"`, include `storage_attributes` inside the `connector` blo
 When `type = "http"`, include `http_attributes` inside the `connector` block:
 
 * `http_attributes` - (Required) Attributes for HTTP type connectors:
-  * `addresses` - (Required) List of origin addresses:
-    * `address` - (Required) The origin address (IP or hostname).
-    * `active` - (Optional) Whether the address is active.
-    * `http_port` - (Optional) HTTP port number.
-    * `https_port` - (Optional) HTTPS port number.
-    * `modules` - (Optional) Address-level modules:
-      * `load_balancer` - (Optional) Load balancer module:
-        * `server_role` - (Optional) Role in load balancing (`primary` or `backup`).
-        * `weight` - (Optional) Weight for load balancing strategy.
+  * `addresses` - (Required) List of origin endpoints. Each item must contain a single `endpoint` object:
+    * `endpoint` - (Required) A single origin endpoint configuration.
+      * `address` - (Required) The origin address (IP or hostname).
+      * `active` - (Optional) Whether the address is active.
+      * `http_port` - (Optional) HTTP port number.
+      * `https_port` - (Optional) HTTPS port number.
+      * `modules` - (Optional) Address-level modules:
+        * `load_balancer` - (Optional) Load balancer module:
+          * `server_role` - (Optional) Role in load balancing (`primary` or `backup`).
+          * `weight` - (Optional) Weight for load balancing strategy.
   * `connection_options` - (Optional) HTTP connection options (Computed with API defaults):
     * `dns_resolution` - (Optional) DNS resolution strategy (`both` or `force_ipv4`).
     * `following_redirect` - (Optional) Whether to follow redirects.

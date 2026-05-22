@@ -34,8 +34,10 @@ resource "azion_waf_rule_set" "example" {
     rule_id  = 0
     conditions = [
       {
-        match          = "any_url"
-        condition_type = "generic"
+        condition = {
+          match          = "any_url"
+          condition_type = "generic"
+        }
       }
     ]
   }
@@ -55,8 +57,10 @@ resource "azion_waf_rule_set" "example" {
     rule_id  = 0
     conditions = [
       {
-        match          = "any_url"
-        condition_type = "generic"
+        condition = {
+          match          = "any_url"
+          condition_type = "generic"
+        }
       }
     ]
   }
@@ -69,14 +73,16 @@ resource "azion_waf_rule_set" "example" {
 resource "azion_waf_rule_set" "header_example" {
   waf_id = 12345
   result = {
-    name     = "Header Exception"
-    active   = true
-    rule_id  = 0
+    name    = "Header Exception"
+    active  = true
+    rule_id = 0
     conditions = [
       {
-        match          = "specific_http_header_name"
-        name           = "X-Custom-Header"
-        condition_type = "specific_on_name"
+        condition = {
+          match          = "specific_http_header_name"
+          name           = "X-Custom-Header"
+          condition_type = "specific_on_name"
+        }
       }
     ]
   }
@@ -89,14 +95,16 @@ resource "azion_waf_rule_set" "header_example" {
 resource "azion_waf_rule_set" "value_example" {
   waf_id = 12345
   result = {
-    name     = "Query String Exception"
-    active   = true
-    rule_id  = 0
+    name    = "Query String Exception"
+    active  = true
+    rule_id = 0
     conditions = [
       {
-        match          = "specific_query_string_value"
-        value          = "trusted_value"
-        condition_type = "specific_on_value"
+        condition = {
+          match          = "specific_query_string_value"
+          value          = "trusted_value"
+          condition_type = "specific_on_value"
+        }
       }
     ]
   }
@@ -122,7 +130,7 @@ resource "azion_waf_rule_set" "value_example" {
 Required:
 
 - `name` (String) Name of the WAF exception.
-- `conditions` (Attributes List) Conditions for the WAF exception. (see [below for nested schema](#nestedatt--result--conditions))
+- `conditions` (Attributes List) Conditions for the WAF exception. Each item must contain a single `condition` object. (see [below for nested schema](#nestedatt--result--conditions))
 
 Optional:
 
@@ -139,6 +147,13 @@ Read-Only:
 
 <a id="nestedatt--result--conditions"></a>
 ### Nested Schema for `result.conditions`
+
+Required:
+
+- `condition` (Attributes) A single condition for the WAF exception. (see [below for nested schema](#nestedatt--result--conditions--condition))
+
+<a id="nestedatt--result--conditions--condition"></a>
+### Nested Schema for `result.conditions.condition`
 
 Required:
 

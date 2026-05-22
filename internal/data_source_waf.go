@@ -50,8 +50,12 @@ type WafEngineSettingsModel struct {
 }
 
 type WafEngineSettingsAttributesModel struct {
-	Rulesets   []types.Int64             `tfsdk:"rulesets"`
-	Thresholds []WafThresholdConfigModel `tfsdk:"thresholds"`
+	Rulesets   []types.Int64              `tfsdk:"rulesets"`
+	Thresholds []WafThresholdWrapperModel `tfsdk:"thresholds"`
+}
+
+type WafThresholdWrapperModel struct {
+	Threshold *WafThresholdConfigModel `tfsdk:"threshold"`
 }
 
 type WafThresholdConfigModel struct {
@@ -134,13 +138,19 @@ func (o *WafDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 										Computed:    true,
 										NestedObject: schema.NestedAttributeObject{
 											Attributes: map[string]schema.Attribute{
-												"threat": schema.StringAttribute{
-													Description: "The threat type for the threshold.",
+												"threshold": schema.SingleNestedAttribute{
+													Description: "A single threshold configuration.",
 													Computed:    true,
-												},
-												"sensitivity": schema.StringAttribute{
-													Description: "The sensitivity level for the threshold.",
-													Computed:    true,
+													Attributes: map[string]schema.Attribute{
+														"threat": schema.StringAttribute{
+															Description: "The threat type for the threshold.",
+															Computed:    true,
+														},
+														"sensitivity": schema.StringAttribute{
+															Description: "The sensitivity level for the threshold.",
+															Computed:    true,
+														},
+													},
 												},
 											},
 										},
@@ -301,7 +311,7 @@ func transformWAFEngineSettingsAttributesToModel(attrs azionapi.WAFEngineSetting
 	// Optional thresholds.
 	if attrs.HasThresholds() {
 		thresholds := attrs.GetThresholds()
-		var thresholdValues []WafThresholdConfigModel
+		var thresholdValues []WafThresholdWrapperModel
 		for _, t := range thresholds {
 			thresholdModel := WafThresholdConfigModel{
 				Threat: types.StringValue(t.GetThreat()),
@@ -311,7 +321,9 @@ func transformWAFEngineSettingsAttributesToModel(attrs azionapi.WAFEngineSetting
 			} else {
 				thresholdModel.Sensitivity = types.StringNull()
 			}
-			thresholdValues = append(thresholdValues, thresholdModel)
+			thresholdValues = append(thresholdValues, WafThresholdWrapperModel{
+				Threshold: &thresholdModel,
+			})
 		}
 		result.Thresholds = thresholdValues
 	} else {

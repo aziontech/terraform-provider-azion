@@ -40,15 +40,15 @@ type WafRuleSetResourceModel struct {
 }
 
 type WafRuleSetResourceResults struct {
-	ID           types.Int64                  `tfsdk:"exception_id"`
-	RuleID       types.Int64                  `tfsdk:"rule_id"`
-	Name         types.String                 `tfsdk:"name"`
-	Path         types.String                 `tfsdk:"path"`
-	Conditions   []WafExceptionConditionModel `tfsdk:"conditions"`
-	Operator     types.String                 `tfsdk:"operator"`
-	Active       types.Bool                   `tfsdk:"active"`
-	LastEditor   types.String                 `tfsdk:"last_editor"`
-	LastModified types.String                 `tfsdk:"last_modified"`
+	ID           types.Int64                         `tfsdk:"exception_id"`
+	RuleID       types.Int64                         `tfsdk:"rule_id"`
+	Name         types.String                        `tfsdk:"name"`
+	Path         types.String                        `tfsdk:"path"`
+	Conditions   []WafExceptionConditionWrapperModel `tfsdk:"conditions"`
+	Operator     types.String                        `tfsdk:"operator"`
+	Active       types.Bool                          `tfsdk:"active"`
+	LastEditor   types.String                        `tfsdk:"last_editor"`
+	LastModified types.String                        `tfsdk:"last_modified"`
 }
 
 func (r *wafRuleSetResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -97,21 +97,27 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Required:    true,
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
-								"match": schema.StringAttribute{
-									Description: "The match type for the condition.",
+								"condition": schema.SingleNestedAttribute{
+									Description: "A single condition for the WAF exception.",
 									Required:    true,
-								},
-								"name": schema.StringAttribute{
-									Description: "The name for specific condition on name.",
-									Optional:    true,
-								},
-								"value": schema.StringAttribute{
-									Description: "The value for specific condition on value.",
-									Optional:    true,
-								},
-								"condition_type": schema.StringAttribute{
-									Description: "Type of condition: generic, specific_on_name, or specific_on_value.",
-									Required:    true,
+									Attributes: map[string]schema.Attribute{
+										"match": schema.StringAttribute{
+											Description: "The match type for the condition.",
+											Required:    true,
+										},
+										"name": schema.StringAttribute{
+											Description: "The name for specific condition on name.",
+											Optional:    true,
+										},
+										"value": schema.StringAttribute{
+											Description: "The value for specific condition on value.",
+											Optional:    true,
+										},
+										"condition_type": schema.StringAttribute{
+											Description: "Type of condition: generic, specific_on_name, or specific_on_value.",
+											Required:    true,
+										},
+									},
 								},
 							},
 						},
@@ -529,9 +535,9 @@ func transformWAFRuleToResourceModel(rule azionapi.WAFRule) *WafRuleSetResourceR
 	return result
 }
 
-// transformWAFExceptionConditionsForResource transforms SDK conditions to Terraform models for resources.
-func transformWAFExceptionConditionsForResource(conditions []azionapi.WAFExceptionCondition) []WafExceptionConditionModel {
-	var result []WafExceptionConditionModel
+// transformWAFExceptionConditionsForResource transforms SDK conditions to wrapped Terraform models for resources.
+func transformWAFExceptionConditionsForResource(conditions []azionapi.WAFExceptionCondition) []WafExceptionConditionWrapperModel {
+	var result []WafExceptionConditionWrapperModel
 
 	for _, cond := range conditions {
 		actualInstance := cond.GetActualInstance()
@@ -561,17 +567,23 @@ func transformWAFExceptionConditionsForResource(conditions []azionapi.WAFExcepti
 			model.ConditionType = types.StringValue("specific_on_value")
 		}
 
-		result = append(result, model)
+		result = append(result, WafExceptionConditionWrapperModel{
+			Condition: &model,
+		})
 	}
 
 	return result
 }
 
-// buildWAFExceptionConditionsRequest builds SDK conditions from Terraform models.
-func buildWAFExceptionConditionsRequest(conditions []WafExceptionConditionModel) []azionapi.WAFExceptionConditionRequest {
+// buildWAFExceptionConditionsRequest builds SDK conditions from Terraform wrapped models.
+func buildWAFExceptionConditionsRequest(conditions []WafExceptionConditionWrapperModel) []azionapi.WAFExceptionConditionRequest {
 	var result []azionapi.WAFExceptionConditionRequest
 
-	for _, c := range conditions {
+	for _, wrapper := range conditions {
+		if wrapper.Condition == nil {
+			continue
+		}
+		c := wrapper.Condition
 		switch c.ConditionType.ValueString() {
 		case "generic":
 			generic := azionapi.NewWAFExceptionGenericConditionRequest(c.Match.ValueString())

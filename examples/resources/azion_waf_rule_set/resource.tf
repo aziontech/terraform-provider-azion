@@ -19,8 +19,10 @@ resource "azion_waf_rule_set" "example_with_parent" {
 
     conditions = [
       {
-        match          = "any_url"
-        condition_type = "generic"
+        condition = {
+          match          = "any_url"
+          condition_type = "generic"
+        }
       }
     ]
   }
@@ -39,8 +41,10 @@ resource "azion_waf_rule_set" "example" {
 
     conditions = [
       {
-        match          = "any_url"
-        condition_type = "generic"
+        condition = {
+          match          = "any_url"
+          condition_type = "generic"
+        }
       }
     ]
   }
@@ -57,9 +61,11 @@ resource "azion_waf_rule_set" "header_example" {
 
     conditions = [
       {
-        match          = "specific_http_header_name"
-        name           = "X-Custom-Header"
-        condition_type = "specific_on_name"
+        condition = {
+          match          = "specific_http_header_name"
+          name           = "X-Custom-Header"
+          condition_type = "specific_on_name"
+        }
       }
     ]
   }
@@ -76,9 +82,11 @@ resource "azion_waf_rule_set" "value_example" {
 
     conditions = [
       {
-        match          = "specific_query_string_value"
-        value          = "trusted_value"
-        condition_type = "specific_on_value"
+        condition = {
+          match          = "specific_query_string_value"
+          value          = "trusted_value"
+          condition_type = "specific_on_value"
+        }
       }
     ]
   }
@@ -96,13 +104,17 @@ resource "azion_waf_rule_set" "multi_condition_example" {
 
     conditions = [
       {
-        match          = "any_url"
-        condition_type = "generic"
+        condition = {
+          match          = "any_url"
+          condition_type = "generic"
+        }
       },
       {
-        match          = "specific_http_header_name"
-        name           = "Authorization"
-        condition_type = "specific_on_name"
+        condition = {
+          match          = "specific_http_header_name"
+          name           = "Authorization"
+          condition_type = "specific_on_name"
+        }
       }
     ]
   }

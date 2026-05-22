@@ -55,8 +55,12 @@ type WafEngineSettingsResourceModel struct {
 }
 
 type WafEngineSettingsAttributesResourceModel struct {
-	Rulesets   []types.Int64                     `tfsdk:"rulesets"`
-	Thresholds []WafThresholdConfigResourceModel `tfsdk:"thresholds"`
+	Rulesets   []types.Int64                      `tfsdk:"rulesets"`
+	Thresholds []WafThresholdWrapperResourceModel `tfsdk:"thresholds"`
+}
+
+type WafThresholdWrapperResourceModel struct {
+	Threshold *WafThresholdConfigResourceModel `tfsdk:"threshold"`
 }
 
 type WafThresholdConfigResourceModel struct {
@@ -132,18 +136,24 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 										Optional:    true,
 										ElementType: types.Int64Type,
 									},
-									"thresholds": schema.ListNestedAttribute{
-										Description: "Threshold configurations for the WAF.",
+									"thresholds": schema.SetNestedAttribute{
+										Description: "Threshold configurations for the WAF. Order-insensitive; the API returns thresholds sorted alphabetically by threat.",
 										Optional:    true,
 										NestedObject: schema.NestedAttributeObject{
 											Attributes: map[string]schema.Attribute{
-												"threat": schema.StringAttribute{
-													Description: "The threat type for the threshold.",
+												"threshold": schema.SingleNestedAttribute{
+													Description: "A single threshold configuration.",
 													Required:    true,
-												},
-												"sensitivity": schema.StringAttribute{
-													Description: "The sensitivity level for the threshold.",
-													Optional:    true,
+													Attributes: map[string]schema.Attribute{
+														"threat": schema.StringAttribute{
+															Description: "The threat type for the threshold.",
+															Required:    true,
+														},
+														"sensitivity": schema.StringAttribute{
+															Description: "The sensitivity level for the threshold.",
+															Optional:    true,
+														},
+													},
 												},
 											},
 										},
@@ -548,7 +558,11 @@ func buildWAFEngineSettingsAttributesRequest(model *WafEngineSettingsAttributesR
 
 	if len(model.Thresholds) > 0 {
 		var thresholds []azionapi.ThresholdsConfigFieldRequest
-		for _, t := range model.Thresholds {
+		for _, wrapper := range model.Thresholds {
+			if wrapper.Threshold == nil {
+				continue
+			}
+			t := wrapper.Threshold
 			threshold := azionapi.NewThresholdsConfigFieldRequest(t.Threat.ValueString())
 			if !t.Sensitivity.IsNull() && !t.Sensitivity.IsUnknown() {
 				threshold.SetSensitivity(t.Sensitivity.ValueString())
@@ -643,7 +657,7 @@ func transformWAFEngineSettingsAttributesToResourceModel(attrs azionapi.WAFEngin
 	// Optional thresholds.
 	if attrs.HasThresholds() {
 		thresholds := attrs.GetThresholds()
-		var thresholdValues []WafThresholdConfigResourceModel
+		var thresholdValues []WafThresholdWrapperResourceModel
 		for _, t := range thresholds {
 			thresholdModel := WafThresholdConfigResourceModel{
 				Threat: types.StringValue(t.GetThreat()),
@@ -653,7 +667,9 @@ func transformWAFEngineSettingsAttributesToResourceModel(attrs azionapi.WAFEngin
 			} else {
 				thresholdModel.Sensitivity = types.StringNull()
 			}
-			thresholdValues = append(thresholdValues, thresholdModel)
+			thresholdValues = append(thresholdValues, WafThresholdWrapperResourceModel{
+				Threshold: &thresholdModel,
+			})
 		}
 		result.Thresholds = thresholdValues
 	} else {
