@@ -381,11 +381,20 @@ func (r *workloadDeploymentResource) Update(ctx context.Context, req resource.Up
 			plan.Deployment.Strategy.Attributes.Application.ValueInt64(),
 		)
 
-		if !plan.Deployment.Strategy.Attributes.Firewall.IsNull() && !plan.Deployment.Strategy.Attributes.Firewall.IsUnknown() {
+		switch {
+		case plan.Deployment.Strategy.Attributes.Firewall.IsUnknown():
+			// Unknown values are not yet resolved; skip.
+		case plan.Deployment.Strategy.Attributes.Firewall.IsNull():
+			strategyAttrs.SetFirewallNil()
+		default:
 			strategyAttrs.SetFirewall(plan.Deployment.Strategy.Attributes.Firewall.ValueInt64())
 		}
 
-		if !plan.Deployment.Strategy.Attributes.CustomPage.IsNull() && !plan.Deployment.Strategy.Attributes.CustomPage.IsUnknown() {
+		switch {
+		case plan.Deployment.Strategy.Attributes.CustomPage.IsUnknown():
+		case plan.Deployment.Strategy.Attributes.CustomPage.IsNull():
+			strategyAttrs.SetCustomPageNil()
+		default:
 			strategyAttrs.SetCustomPage(plan.Deployment.Strategy.Attributes.CustomPage.ValueInt64())
 		}
 
@@ -639,22 +648,4 @@ func populateDeploymentResults(response *azionapi.WorkloadDeploymentResponse) *W
 	result.Strategy = strategyModel
 
 	return result
-}
-
-// errPrintWorkloadDeploymentResource formats error messages for workload deployment resource.
-func errPrintWorkloadDeploymentResource(errCode int, err error) (string, string) {
-	var usrMsg string
-	switch errCode {
-	case 400:
-		usrMsg = "Bad Request"
-	case 401:
-		usrMsg = "Unauthorized Token"
-	case 404:
-		usrMsg = "No Workload Deployment found"
-	default:
-		usrMsg = err.Error()
-	}
-
-	errMsg := fmt.Sprintf("%d - %s", errCode, usrMsg)
-	return usrMsg, errMsg
 }
