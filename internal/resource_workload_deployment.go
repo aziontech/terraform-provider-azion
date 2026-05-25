@@ -381,9 +381,6 @@ func (r *workloadDeploymentResource) Update(ctx context.Context, req resource.Up
 			plan.Deployment.Strategy.Attributes.Application.ValueInt64(),
 		)
 
-		// On PATCH, an omitted field is preserved by the API. To let users clear
-		// a previously-set firewall by removing it from their config, send an
-		// explicit null when the planned value is null.
 		switch {
 		case plan.Deployment.Strategy.Attributes.Firewall.IsUnknown():
 			// Unknown values are not yet resolved; skip.
