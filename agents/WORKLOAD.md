@@ -274,8 +274,12 @@ type TLSWorkloadsModel struct {
                 },
                 "quic_ports": schema.ListAttribute{
                     ElementType: types.Int64Type,
-                    Description: "QUIC ports.",
+                    Description: "QUIC ports. Defaults to [443] when the http protocol block is set but this attribute is omitted, matching the API default.",
                     Optional:    true,
+                    Computed:    true,
+                    Default: listdefault.StaticValue(types.ListValueMust(types.Int64Type, []attr.Value{
+                        types.Int64Value(443),
+                    })),
                 },
             },
         },
