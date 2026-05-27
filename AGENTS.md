@@ -13,6 +13,7 @@ For detailed documentation on specific packages, see the `agents/` folder:
 - **[agents/APPLICATIONS.md](agents/APPLICATIONS.md)** - Applications (Main Settings)
 - **[agents/CACHE_SETTINGS.md](agents/CACHE_SETTINGS.md)** - Cache Settings
 - **[agents/RULES_ENGINE.md](agents/RULES_ENGINE.md)** - Rules Engine
+- **[agents/RULES_ENGINE_ORDER.md](agents/RULES_ENGINE_ORDER.md)** - Rules Engine Order (PUT-only ordering endpoint)
 - **[agents/DEVICE_GROUPS.md](agents/DEVICE_GROUPS.md)** - Device Groups
 - **[agents/FUNCTIONS_INSTANCES.md](agents/FUNCTIONS_INSTANCES.md)** - Application Function Instances
 
@@ -20,6 +21,7 @@ For detailed documentation on specific packages, see the `agents/` folder:
 - **[agents/FIREWALL.md](agents/FIREWALL.md)** - Firewall (Main Settings)
 - **[agents/FIREWALL_INSTANCE.md](agents/FIREWALL_INSTANCE.md)** - Firewall Function Instances
 - **[agents/FIREWALL_RULES_ENGINE.md](agents/FIREWALL_RULES_ENGINE.md)** - Firewall Rules Engine
+- **[agents/FIREWALL_RULES_ENGINE_ORDER.md](agents/FIREWALL_RULES_ENGINE_ORDER.md)** - Firewall Rules Engine Order (PUT-only ordering endpoint)
 
 ### Functions
 - **[agents/FUNCTIONS.md](agents/FUNCTIONS.md)** - Functions
