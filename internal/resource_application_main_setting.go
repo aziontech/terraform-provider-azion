@@ -48,6 +48,10 @@ type ApplicationResults struct {
 	Active         types.Bool          `tfsdk:"active"`
 	Debug          types.Bool          `tfsdk:"debug"`
 	ProductVersion types.String        `tfsdk:"product_version"`
+	IsVersioned    types.Bool          `tfsdk:"is_versioned"`
+	Version        types.Int64         `tfsdk:"version"`
+	VersionState   types.String        `tfsdk:"version_state"`
+	VersionID      types.String        `tfsdk:"version_id"`
 }
 
 func (r *applicationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -93,6 +97,22 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 					"product_version": schema.StringAttribute{
 						Computed:    true,
 						Description: "The product version.",
+					},
+					"is_versioned": schema.BoolAttribute{
+						Computed:    true,
+						Description: "Whether the application is versioned.",
+					},
+					"version": schema.Int64Attribute{
+						Computed:    true,
+						Description: "The current version of the application.",
+					},
+					"version_state": schema.StringAttribute{
+						Computed:    true,
+						Description: "The state of the current application version.",
+					},
+					"version_id": schema.StringAttribute{
+						Computed:    true,
+						Description: "The identifier of the current application version.",
 					},
 					"modules": schema.SingleNestedAttribute{
 						Optional: true,
@@ -206,6 +226,10 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
 		Active:         types.BoolValue(createApplication.Data.GetActive()),
 		Debug:          types.BoolValue(createApplication.Data.GetDebug()),
 		ProductVersion: types.StringValue(createApplication.Data.GetProductVersion()),
+		IsVersioned:    types.BoolValue(createApplication.Data.IsVersioned),
+		Version:        types.Int64Value(createApplication.Data.Version),
+		VersionState:   types.StringPointerValue(createApplication.Data.VersionState.Get()),
+		VersionID:      types.StringPointerValue(createApplication.Data.VersionId.Get()),
 		Modules:        plan.Application.Modules,
 	}
 
@@ -316,6 +340,10 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 		Active:         types.BoolValue(stateApplication.Data.GetActive()),
 		Debug:          types.BoolValue(stateApplication.Data.GetDebug()),
 		ProductVersion: types.StringValue(stateApplication.Data.GetProductVersion()),
+		IsVersioned:    types.BoolValue(stateApplication.Data.IsVersioned),
+		Version:        types.Int64Value(stateApplication.Data.Version),
+		VersionState:   types.StringPointerValue(stateApplication.Data.VersionState.Get()),
+		VersionID:      types.StringPointerValue(stateApplication.Data.VersionId.Get()),
 	}
 	state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
 
@@ -418,6 +446,10 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
 		Active:         types.BoolValue(updateApplication.Data.GetActive()),
 		Debug:          types.BoolValue(updateApplication.Data.GetDebug()),
 		ProductVersion: types.StringValue(updateApplication.Data.GetProductVersion()),
+		IsVersioned:    types.BoolValue(updateApplication.Data.IsVersioned),
+		Version:        types.Int64Value(updateApplication.Data.Version),
+		VersionState:   types.StringPointerValue(updateApplication.Data.VersionState.Get()),
+		VersionID:      types.StringPointerValue(updateApplication.Data.VersionId.Get()),
 		Modules:        modsPlan,
 	}
 

@@ -77,8 +77,12 @@ Read-Only:
 
 - `created_at` (String) Creation timestamp of the network list.
 - `id` (Number) Identification of this entry.
+- `is_versioned` (Boolean) Whether the network list is versioned.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
+- `version` (Number) The current version of the network list.
+- `version_id` (String) The identifier of the current network list version.
+- `version_state` (String) The state of the current network list version.
 
 ## Import
 

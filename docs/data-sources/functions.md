@@ -35,6 +35,7 @@ Read-Only:
 - `default_args` (String) Default arguments of the function as JSON.
 - `execution_environment` (String) Execution environment of the function.
 - `id` (Number) The function identifier.
+- `is_versioned` (Boolean) Whether the function is versioned.
 - `last_editor` (String) The last editor of the function.
 - `last_modified` (String) Last modified timestamp of the function.
 - `name` (String) Name of the function.
@@ -43,3 +44,6 @@ Read-Only:
 - `runtime` (String) Runtime of the function.
 - `vendor` (String) Vendor of the function.
 - `version` (String) Version of the function.
+- `version_id` (String) The identifier of the current function version.
+- `version_state` (String) The state of the current function version.
+- `resource_version` (Number) The resource version number of the function.

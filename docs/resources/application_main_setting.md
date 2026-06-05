@@ -107,6 +107,10 @@ Read-Only:
 
 - `application_id` (Number) The Application identifier.
 - `product_version` (String) The product version.
+- `is_versioned` (Boolean) Whether the application is versioned.
+- `version` (Number) The current version of the application.
+- `version_state` (String) The state of the current application version.
+- `version_id` (String) The identifier of the current application version.
 
 <a id="nestedatt--application--modules"></a>
 ### Nested Schema for `application.modules`

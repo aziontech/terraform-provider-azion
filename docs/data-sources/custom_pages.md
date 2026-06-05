@@ -38,6 +38,10 @@ Read-Only:
 - `last_modified` (String) Last modified timestamp of the custom page.
 - `active` (Boolean) Status of the custom page.
 - `product_version` (String) Product version of the custom page.
+- `is_versioned` (Boolean) Whether the custom page is versioned.
+- `version` (Number) The current version of the custom page.
+- `version_state` (String) The state of the current custom page version.
+- `version_id` (String) The identifier of the current custom page version.
 - `pages` (Attributes List) List of pages associated with the custom page. Each item contains a single `entry` object. (see [below for nested schema](#nestedatt--results--pages))
 
 <a id="nestedatt--results--pages"></a>

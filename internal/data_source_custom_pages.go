@@ -40,6 +40,10 @@ type CustomPagesResults struct {
 	CreatedAt      types.String             `tfsdk:"created_at"`
 	Active         types.Bool               `tfsdk:"active"`
 	ProductVersion types.String             `tfsdk:"product_version"`
+	IsVersioned    types.Bool               `tfsdk:"is_versioned"`
+	Version        types.Int64              `tfsdk:"version"`
+	VersionState   types.String             `tfsdk:"version_state"`
+	VersionID      types.String             `tfsdk:"version_id"`
 	Pages          []CustomPagesPageWrapper `tfsdk:"pages"`
 }
 
@@ -116,6 +120,22 @@ func (d *CustomPagesDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						},
 						"product_version": schema.StringAttribute{
 							Description: "Product version of the custom page.",
+							Computed:    true,
+						},
+						"is_versioned": schema.BoolAttribute{
+							Description: "Whether the custom page is versioned.",
+							Computed:    true,
+						},
+						"version": schema.Int64Attribute{
+							Description: "The current version of the custom page.",
+							Computed:    true,
+						},
+						"version_state": schema.StringAttribute{
+							Description: "The state of the current custom page version.",
+							Computed:    true,
+						},
+						"version_id": schema.StringAttribute{
+							Description: "The identifier of the current custom page version.",
 							Computed:    true,
 						},
 						"pages": schema.ListNestedAttribute{
@@ -213,6 +233,10 @@ func (d *CustomPagesDataSource) Read(ctx context.Context, req datasource.ReadReq
 			LastModified:   types.StringValue(resultCustomPage.LastModified.Format(time.RFC3339)),
 			CreatedAt:      types.StringValue(resultCustomPage.CreatedAt.Format(time.RFC3339)),
 			ProductVersion: types.StringValue(resultCustomPage.ProductVersion),
+			IsVersioned:    types.BoolValue(resultCustomPage.IsVersioned),
+			Version:        types.Int64PointerValue(resultCustomPage.Version.Get()),
+			VersionState:   types.StringPointerValue(resultCustomPage.VersionState.Get()),
+			VersionID:      types.StringPointerValue(resultCustomPage.VersionId.Get()),
 		}
 
 		// Handle optional active field.

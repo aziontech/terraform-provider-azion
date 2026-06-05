@@ -60,6 +60,10 @@ type WAF struct {
     LastEditor     string                      `json:"last_editor"`
     LastModified   time.Time                   `json:"last_modified"`
     ProductVersion NullableString              `json:"product_version,omitempty"`
+    IsVersioned    bool                        `json:"is_versioned"`
+    Version        NullableInt64               `json:"version,omitempty"`
+    VersionState   NullableString              `json:"version_state,omitempty"`
+    VersionId      NullableString              `json:"version_id,omitempty"`
     EngineSettings *WAFEngineSettingsField     `json:"engine_settings,omitempty"`
 }
 ```
@@ -152,6 +156,10 @@ type WafResultDataModel struct {
     LastEditor     types.String                `tfsdk:"last_editor"`
     LastModified   types.String                `tfsdk:"last_modified"`
     ProductVersion types.String                `tfsdk:"product_version"`
+    IsVersioned    types.Bool                  `tfsdk:"is_versioned"`
+    Version        types.Int64                 `tfsdk:"version"`
+    VersionState   types.String                `tfsdk:"version_state"`
+    VersionID      types.String                `tfsdk:"version_id"`
     EngineSettings *WafEngineSettingsModel     `tfsdk:"engine_settings"`
 }
 
@@ -197,6 +205,10 @@ type WafListItemModel struct {
     LastEditor     types.String                `tfsdk:"last_editor"`
     LastModified   types.String                `tfsdk:"last_modified"`
     ProductVersion types.String                `tfsdk:"product_version"`
+    IsVersioned    types.Bool                  `tfsdk:"is_versioned"`
+    Version        types.Int64                 `tfsdk:"version"`
+    VersionState   types.String                `tfsdk:"version_state"`
+    VersionID      types.String                `tfsdk:"version_id"`
     EngineSettings *WafEngineSettingsModel     `tfsdk:"engine_settings"`
 }
 ```
@@ -243,6 +255,22 @@ resp.Schema = schema.Schema{
                 },
                 "product_version": schema.StringAttribute{
                     Description: "Product version of the WAF.",
+                    Computed:    true,
+                },
+                "is_versioned": schema.BoolAttribute{
+                    Description: "Whether the WAF is versioned.",
+                    Computed:    true,
+                },
+                "version": schema.Int64Attribute{
+                    Description: "The current version of the WAF.",
+                    Computed:    true,
+                },
+                "version_state": schema.StringAttribute{
+                    Description: "The state of the current WAF version.",
+                    Computed:    true,
+                },
+                "version_id": schema.StringAttribute{
+                    Description: "The identifier of the current WAF version.",
                     Computed:    true,
                 },
                 "engine_settings": schema.SingleNestedAttribute{
@@ -353,6 +381,10 @@ func transformWAFToResultModel(waf azionapi.WAF) *WafResultDataModel {
         Name:         types.StringValue(waf.GetName()),
         LastEditor:   types.StringValue(waf.GetLastEditor()),
         LastModified: types.StringValue(waf.GetLastModified().Format(time.RFC3339)),
+        IsVersioned:  types.BoolValue(waf.IsVersioned),
+        Version:      types.Int64PointerValue(waf.Version.Get()),
+        VersionState: types.StringPointerValue(waf.VersionState.Get()),
+        VersionID:    types.StringPointerValue(waf.VersionId.Get()),
     }
 
     // Optional active
@@ -687,6 +719,10 @@ data "azion_waf" "example" {
   * `last_editor` - Last editor of the WAF.
   * `last_modified` - Last modified timestamp.
   * `product_version` - Product version of the WAF.
+  * `is_versioned` - Whether the WAF is versioned.
+  * `version` - The current version of the WAF.
+  * `version_state` - The state of the current WAF version.
+  * `version_id` - The identifier of the current WAF version.
   * `engine_settings` - Engine settings for the WAF.
     * `engine_version` - Engine version for the WAF.
     * `type` - Type of the WAF engine.
@@ -743,6 +779,10 @@ data "azion_wafs" "example" {
   * `last_editor` - Last editor of the WAF.
   * `last_modified` - Last modified timestamp.
   * `product_version` - Product version of the WAF.
+  * `is_versioned` - Whether the WAF is versioned.
+  * `version` - The current version of the WAF.
+  * `version_state` - The state of the current WAF version.
+  * `version_id` - The identifier of the current WAF version.
   * `engine_settings` - Engine settings for the WAF.
     * `engine_version` - Engine version for the WAF.
     * `type` - Type of the WAF engine.
@@ -791,6 +831,10 @@ type WafResourceResults struct {
     LastEditor     types.String                      `tfsdk:"last_editor"`
     LastModified   types.String                      `tfsdk:"last_modified"`
     ProductVersion types.String                      `tfsdk:"product_version"`
+    IsVersioned    types.Bool                        `tfsdk:"is_versioned"`
+    Version        types.Int64                       `tfsdk:"version"`
+    VersionState   types.String                      `tfsdk:"version_state"`
+    VersionID      types.String                      `tfsdk:"version_id"`
     EngineSettings *WafEngineSettingsResourceModel   `tfsdk:"engine_settings"`
 }
 
@@ -854,7 +898,23 @@ resp.Schema = schema.Schema{
                 },
                 "product_version": schema.StringAttribute{
                     Description: "Product version of the WAF.",
-                    Optional:    true,
+                    Computed:    true,
+                },
+                "is_versioned": schema.BoolAttribute{
+                    Description: "Whether the WAF is versioned.",
+                    Computed:    true,
+                },
+                "version": schema.Int64Attribute{
+                    Description: "The current version of the WAF.",
+                    Computed:    true,
+                },
+                "version_state": schema.StringAttribute{
+                    Description: "The state of the current WAF version.",
+                    Computed:    true,
+                },
+                "version_id": schema.StringAttribute{
+                    Description: "The identifier of the current WAF version.",
+                    Computed:    true,
                 },
                 "engine_settings": schema.SingleNestedAttribute{
                     Description: "Engine settings for the WAF.",
@@ -877,18 +937,24 @@ resp.Schema = schema.Schema{
                                     Optional:    true,
                                     ElementType: types.Int64Type,
                                 },
-                                "thresholds": schema.ListNestedAttribute{
-                                    Description: "Threshold configurations for the WAF.",
+                                "thresholds": schema.SetNestedAttribute{
+                                    Description: "Threshold configurations for the WAF. Order-insensitive; the API returns thresholds sorted alphabetically by threat.",
                                     Optional:    true,
                                     NestedObject: schema.NestedAttributeObject{
                                         Attributes: map[string]schema.Attribute{
-                                            "threat": schema.StringAttribute{
-                                                Description: "The threat type for the threshold.",
+                                            "threshold": schema.SingleNestedAttribute{
+                                                Description: "A single threshold configuration.",
                                                 Required:    true,
-                                            },
-                                            "sensitivity": schema.StringAttribute{
-                                                Description: "The sensitivity level for the threshold.",
-                                                Optional:    true,
+                                                Attributes: map[string]schema.Attribute{
+                                                    "threat": schema.StringAttribute{
+                                                        Description: "The threat type for the threshold.",
+                                                        Required:    true,
+                                                    },
+                                                    "sensitivity": schema.StringAttribute{
+                                                        Description: "The sensitivity level for the threshold.",
+                                                        Optional:    true,
+                                                    },
+                                                },
                                             },
                                         },
                                     },
@@ -1274,6 +1340,10 @@ terraform import azion_waf.example 12345
 * `last_editor` - Last editor of the WAF.
 * `last_modified` - Last modified timestamp.
 * `last_updated` - Timestamp of the last Terraform update of the resource.
+* `result.is_versioned` - Whether the WAF is versioned.
+* `result.version` - The current version of the WAF.
+* `result.version_state` - The state of the current WAF version.
+* `result.version_id` - The identifier of the current WAF version.
 ```
 
 ---

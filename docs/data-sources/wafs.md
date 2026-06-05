@@ -39,6 +39,10 @@ data "azion_wafs" "example" {
   * `last_editor` - Last editor of the WAF.
   * `last_modified` - Last modified timestamp.
   * `product_version` - Product version of the WAF.
+  * `is_versioned` - Whether the WAF is versioned.
+  * `version` - The current version of the WAF.
+  * `version_state` - The state of the current WAF version.
+  * `version_id` - The identifier of the current WAF version.
   * `engine_settings` - Engine settings for the WAF.
     * `engine_version` - Engine version for the WAF.
     * `type` - Type of the WAF engine.
