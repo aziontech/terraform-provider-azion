@@ -131,6 +131,10 @@ type EdgeFunctionResults struct {
     ReferenceCount       types.Int64  `tfsdk:"reference_count"`
     Version              types.String `tfsdk:"version"`
     Vendor               types.String `tfsdk:"vendor"`
+    IsVersioned          types.Bool   `tfsdk:"is_versioned"`
+    VersionState         types.String `tfsdk:"version_state"`
+    VersionID            types.String `tfsdk:"version_id"`
+    ResourceVersion      types.Int64  `tfsdk:"resource_version"`
 }
 
 // Configure - receives the API client
@@ -207,6 +211,22 @@ func (d *EdgeFunctionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
                     },
                     "vendor": schema.StringAttribute{
                         Description: "Vendor of the function.",
+                        Computed:    true,
+                    },
+                    "is_versioned": schema.BoolAttribute{
+                        Description: "Whether the function is versioned.",
+                        Computed:    true,
+                    },
+                    "version_state": schema.StringAttribute{
+                        Description: "The state of the current function version.",
+                        Computed:    true,
+                    },
+                    "version_id": schema.StringAttribute{
+                        Description: "The identifier of the current function version.",
+                        Computed:    true,
+                    },
+                    "resource_version": schema.Int64Attribute{
+                        Description: "The resource version number of the function.",
                         Computed:    true,
                     },
                 },
@@ -291,6 +311,10 @@ func (d *EdgeFunctionDataSource) Read(ctx context.Context, req datasource.ReadRe
             Version:              types.StringValue(functionsResponse.Data.Version),
             Vendor:               types.StringValue(functionsResponse.Data.Vendor),
             ReferenceCount:       types.Int64Value(functionsResponse.Data.ReferenceCount),
+            IsVersioned:          types.BoolValue(functionsResponse.Data.IsVersioned),
+            VersionState:         types.StringPointerValue(functionsResponse.Data.VersionState.Get()),
+            VersionID:            types.StringPointerValue(functionsResponse.Data.VersionId.Get()),
+            ResourceVersion:      types.Int64PointerValue(functionsResponse.Data.ResourceVersion.Get()),
         },
     }
 
@@ -797,6 +821,10 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 | `reference_count` | `reference_count` | `Int64` | Number of references |
 | `version` | `version` | `String` | Installed version |
 | `vendor` | `vendor` | `String` | Function vendor |
+| `is_versioned` | `is_versioned` | `Bool` | Whether the function is versioned |
+| `version_state` | `version_state` | `String` | The state of the current function version |
+| `version_id` | `version_id` | `String` | The identifier of the current function version |
+| `resource_version` | `resource_version` | `Int64` | The resource version number of the function |
 
 ### Handling Optional/Pointer Fields
 

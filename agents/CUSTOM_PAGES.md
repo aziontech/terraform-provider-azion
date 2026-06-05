@@ -118,6 +118,10 @@ type CustomPageResults struct {
     CreatedAt      types.String            `tfsdk:"created_at"`
     Active         types.Bool              `tfsdk:"active"`
     ProductVersion types.String            `tfsdk:"product_version"`
+    IsVersioned    types.Bool              `tfsdk:"is_versioned"`
+    Version        types.Int64             `tfsdk:"version"`
+    VersionState   types.String            `tfsdk:"version_state"`
+    VersionID      types.String            `tfsdk:"version_id"`
     Pages          []CustomPagePageWrapper `tfsdk:"pages"`
 }
 
@@ -183,6 +187,22 @@ func (d *CustomPageDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
                     },
                     "product_version": schema.StringAttribute{
                         Description: "Product version of the custom page.",
+                        Computed:    true,
+                    },
+                    "is_versioned": schema.BoolAttribute{
+                        Description: "Whether the custom page is versioned.",
+                        Computed:    true,
+                    },
+                    "version": schema.Int64Attribute{
+                        Description: "The current version of the custom page.",
+                        Computed:    true,
+                    },
+                    "version_state": schema.StringAttribute{
+                        Description: "The state of the current custom page version.",
+                        Computed:    true,
+                    },
+                    "version_id": schema.StringAttribute{
+                        Description: "The identifier of the current custom page version.",
                         Computed:    true,
                     },
                     "pages": schema.ListNestedAttribute{
@@ -296,6 +316,10 @@ func (d *CustomPageDataSource) Read(ctx context.Context, req datasource.ReadRequ
             LastModified:   types.StringValue(customPageResponse.Data.LastModified.Format(time.RFC3339)),
             CreatedAt:      types.StringValue(customPageResponse.Data.CreatedAt.Format(time.RFC3339)),
             ProductVersion: types.StringValue(customPageResponse.Data.ProductVersion),
+            IsVersioned:    types.BoolValue(customPageResponse.Data.IsVersioned),
+            Version:        types.Int64PointerValue(customPageResponse.Data.Version.Get()),
+            VersionState:   types.StringPointerValue(customPageResponse.Data.VersionState.Get()),
+            VersionID:      types.StringPointerValue(customPageResponse.Data.VersionId.Get()),
         },
     }
 
@@ -395,7 +419,11 @@ type CustomPagesResults struct {
     CreatedAt      types.String             `tfsdk:"created_at"`
     Active         types.Bool               `tfsdk:"active"`
     ProductVersion types.String             `tfsdk:"product_version"`
-    Pages          []CustomPagesPageResults `tfsdk:"pages"`
+    IsVersioned    types.Bool               `tfsdk:"is_versioned"`
+    Version        types.Int64              `tfsdk:"version"`
+    VersionState   types.String             `tfsdk:"version_state"`
+    VersionID      types.String             `tfsdk:"version_id"`
+    Pages          []CustomPagesPageWrapper `tfsdk:"pages"`
 }
 ```
 
@@ -440,6 +468,10 @@ func (d *CustomPagesDataSource) Read(ctx context.Context, req datasource.ReadReq
             LastModified:   types.StringValue(resultCustomPage.LastModified.Format(time.RFC3339)),
             CreatedAt:      types.StringValue(resultCustomPage.CreatedAt.Format(time.RFC3339)),
             ProductVersion: types.StringValue(resultCustomPage.ProductVersion),
+            IsVersioned:    types.BoolValue(resultCustomPage.IsVersioned),
+            Version:        types.Int64PointerValue(resultCustomPage.Version.Get()),
+            VersionState:   types.StringPointerValue(resultCustomPage.VersionState.Get()),
+            VersionID:      types.StringPointerValue(resultCustomPage.VersionId.Get()),
         }
 
         // Handle optional fields
@@ -544,6 +576,10 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
         LastModified:   types.StringValue(createResponse.Data.LastModified.Format(time.RFC3339)),
         CreatedAt:      types.StringValue(createResponse.Data.CreatedAt.Format(time.RFC3339)),
         ProductVersion: types.StringValue(createResponse.Data.ProductVersion),
+        IsVersioned:    types.BoolValue(createResponse.Data.IsVersioned),
+        Version:        types.Int64PointerValue(createResponse.Data.Version.Get()),
+        VersionState:   types.StringPointerValue(createResponse.Data.VersionState.Get()),
+        VersionID:      types.StringPointerValue(createResponse.Data.VersionId.Get()),
     }
     // ... handle Active and Pages from response
 }
@@ -771,6 +807,22 @@ func (r *CustomPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
                         Description: "Product version of the custom page.",
                         Computed:    true,
                     },
+                    "is_versioned": schema.BoolAttribute{
+                        Description: "Whether the custom page is versioned.",
+                        Computed:    true,
+                    },
+                    "version": schema.Int64Attribute{
+                        Description: "The current version of the custom page.",
+                        Computed:    true,
+                    },
+                    "version_state": schema.StringAttribute{
+                        Description: "The state of the current custom page version.",
+                        Computed:    true,
+                    },
+                    "version_id": schema.StringAttribute{
+                        Description: "The identifier of the current custom page version.",
+                        Computed:    true,
+                    },
                 },
             },
         },
@@ -794,6 +846,10 @@ func (r *CustomPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 | `last_modified` | Computed | Computed | Computed | Computed |
 | `created_at` | Computed | Computed | Computed | Computed |
 | `product_version` | Computed | Computed | Computed | Computed |
+| `is_versioned` | Computed | Computed | Computed | Computed |
+| `version` | Computed | Computed | Computed | Computed |
+| `version_state` | Computed | Computed | Computed | Computed |
+| `version_id` | Computed | Computed | Computed | Computed |
 
 ### Nested Object Patterns
 
@@ -900,14 +956,18 @@ if response.Data.Active != nil {
 
 ```go
 type CustomPage struct {
-    Id             int64       `json:"id"`
-    Name           string      `json:"name"`
-    LastEditor     string      `json:"last_editor"`
-    LastModified   time.Time   `json:"last_modified"`
-    CreatedAt      time.Time   `json:"created_at"`
-    Active         *bool       `json:"active,omitempty"`
-    ProductVersion string      `json:"product_version"`
-    Pages          []PageBase  `json:"pages"`
+    Id             int64          `json:"id"`
+    Name           string         `json:"name"`
+    LastEditor     string         `json:"last_editor"`
+    LastModified   time.Time      `json:"last_modified"`
+    CreatedAt      time.Time      `json:"created_at"`
+    Active         *bool          `json:"active,omitempty"`
+    ProductVersion string         `json:"product_version"`
+    IsVersioned    bool           `json:"is_versioned"`
+    Version        NullableInt64  `json:"version,omitempty"`
+    VersionState   NullableString `json:"version_state,omitempty"`
+    VersionId      NullableString `json:"version_id,omitempty"`
+    Pages          []PageBase     `json:"pages"`
 }
 ```
 

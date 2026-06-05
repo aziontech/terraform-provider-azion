@@ -68,4 +68,8 @@ Read-Only:
 - `last_modified` (String) Last modified timestamp of the connector.
 - `name` (String) Name of the connector.
 - `product_version` (String) Product version of the connector.
+- `is_versioned` (Boolean) Whether the connector is versioned.
+- `version` (Number) The current version of the connector.
+- `version_state` (String) The state of the current connector version.
+- `version_id` (String) The identifier of the current connector version.
 - `type` (String) Type of the connector (http, storage).

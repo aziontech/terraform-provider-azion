@@ -94,6 +94,10 @@ Application {
     LastEditor     string
     LastModified   time.Time
     ProductVersion string
+    IsVersioned    bool
+    Version        int64
+    VersionState   NullableString
+    VersionId      NullableString
     Active         bool
     Debug          bool
     Modules        *ApplicationModules
@@ -204,10 +208,14 @@ type ApplicationData struct {
     Active         types.Bool          `tfsdk:"active"`
     Debug          types.Bool          `tfsdk:"debug"`
     ProductVersion types.String        `tfsdk:"product_version"`
+    IsVersioned    types.Bool          `tfsdk:"is_versioned"`
+    Version        types.Int64         `tfsdk:"version"`
+    VersionState   types.String        `tfsdk:"version_state"`
+    VersionID      types.String        `tfsdk:"version_id"`
 }
 
 type ApplicationModules struct {
-    Cache                  *CacheModule                  `tfsdk:"edge_cache"`
+    Cache                  *CacheModule                  `tfsdk:"cache"`
     Functions              *FunctionModule               `tfsdk:"functions"`
     ApplicationAccelerator *ApplicationAcceleratorModule `tfsdk:"application_accelerator"`
     ImageProcessor         *ImageProcessorModule         `tfsdk:"image_processor"`
@@ -269,6 +277,22 @@ func (e *ApplicationDataSource) Schema(_ context.Context, _ datasource.SchemaReq
                         Description: "Product version.",
                         Computed:    true,
                     },
+                    "is_versioned": schema.BoolAttribute{
+                        Description: "Whether the application is versioned.",
+                        Computed:    true,
+                    },
+                    "version": schema.Int64Attribute{
+                        Description: "The current version of the application.",
+                        Computed:    true,
+                    },
+                    "version_state": schema.StringAttribute{
+                        Description: "The state of the current application version.",
+                        Computed:    true,
+                    },
+                    "version_id": schema.StringAttribute{
+                        Description: "The identifier of the current application version.",
+                        Computed:    true,
+                    },
                     "active": schema.BoolAttribute{
                         Computed:    true,
                         Description: "Whether the Application is active.",
@@ -280,7 +304,7 @@ func (e *ApplicationDataSource) Schema(_ context.Context, _ datasource.SchemaReq
                     "modules": schema.SingleNestedAttribute{
                         Computed: true,
                         Attributes: map[string]schema.Attribute{
-                            "edge_cache": schema.SingleNestedAttribute{
+                            "cache": schema.SingleNestedAttribute{
                                 Computed: true,
                                 Attributes: map[string]schema.Attribute{
                                     "enabled": schema.BoolAttribute{Computed: true},
@@ -420,6 +444,10 @@ func (e *ApplicationDataSource) Read(ctx context.Context, req datasource.ReadReq
             LastEditor:     types.StringValue(applicationsResponse.Data.GetLastEditor()),
             LastModified:   types.StringValue(applicationsResponse.Data.GetLastModified().Format(time.RFC3339)),
             ProductVersion: types.StringValue(applicationsResponse.Data.GetProductVersion()),
+            IsVersioned:    types.BoolValue(applicationsResponse.Data.IsVersioned),
+            Version:        types.Int64Value(applicationsResponse.Data.Version),
+            VersionState:   types.StringPointerValue(applicationsResponse.Data.VersionState.Get()),
+            VersionID:      types.StringPointerValue(applicationsResponse.Data.VersionId.Get()),
         },
     }
 
@@ -532,6 +560,22 @@ func (e *ApplicationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
                             Description: "Product version.",
                             Computed:    true,
                         },
+                        "is_versioned": schema.BoolAttribute{
+                            Description: "Whether the application is versioned.",
+                            Computed:    true,
+                        },
+                        "version": schema.Int64Attribute{
+                            Description: "The current version of the application.",
+                            Computed:    true,
+                        },
+                        "version_state": schema.StringAttribute{
+                            Description: "The state of the current application version.",
+                            Computed:    true,
+                        },
+                        "version_id": schema.StringAttribute{
+                            Description: "The identifier of the current application version.",
+                            Computed:    true,
+                        },
                         "active": schema.BoolAttribute{
                             Description: "Whether the Application is active.",
                             Computed:    true,
@@ -544,7 +588,7 @@ func (e *ApplicationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
                             Description: "Modules configuration.",
                             Computed:    true,
                             Attributes: map[string]schema.Attribute{
-                                "edge_cache": schema.SingleNestedAttribute{
+                                "cache": schema.SingleNestedAttribute{
                                     Computed: true,
                                     Attributes: map[string]schema.Attribute{
                                         "enabled": schema.BoolAttribute{Computed: true},
@@ -691,6 +735,10 @@ func (e *ApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRe
             LastModified:   types.StringValue(resultApplication.GetLastModified().Format(time.RFC3339)),
             Modules:        modules,
             ProductVersion: types.StringValue(resultApplication.GetProductVersion()),
+            IsVersioned:    types.BoolValue(resultApplication.IsVersioned),
+            Version:        types.Int64Value(resultApplication.Version),
+            VersionState:   types.StringPointerValue(resultApplication.VersionState.Get()),
+            VersionID:      types.StringPointerValue(resultApplication.VersionId.Get()),
             Active:         types.BoolValue(resultApplication.GetActive()),
             Debug:          types.BoolValue(resultApplication.GetDebug()),
         })
@@ -784,6 +832,10 @@ type ApplicationResults struct {
     Active         types.Bool          `tfsdk:"active"`
     Debug          types.Bool          `tfsdk:"debug"`
     ProductVersion types.String        `tfsdk:"product_version"`
+    IsVersioned    types.Bool          `tfsdk:"is_versioned"`
+    Version        types.Int64         `tfsdk:"version"`
+    VersionState   types.String        `tfsdk:"version_state"`
+    VersionID      types.String        `tfsdk:"version_id"`
 }
 
 // Metadata - sets the resource type name
@@ -845,10 +897,26 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
                         Computed:    true,
                         Description: "The product version.",
                     },
+                    "is_versioned": schema.BoolAttribute{
+                        Computed:    true,
+                        Description: "Whether the application is versioned.",
+                    },
+                    "version": schema.Int64Attribute{
+                        Computed:    true,
+                        Description: "The current version of the application.",
+                    },
+                    "version_state": schema.StringAttribute{
+                        Computed:    true,
+                        Description: "The state of the current application version.",
+                    },
+                    "version_id": schema.StringAttribute{
+                        Computed:    true,
+                        Description: "The identifier of the current application version.",
+                    },
                     "modules": schema.SingleNestedAttribute{
                         Optional: true,
                         Attributes: map[string]schema.Attribute{
-                            "edge_cache": schema.SingleNestedAttribute{
+                            "cache": schema.SingleNestedAttribute{
                                 Optional: true,
                                 Attributes: map[string]schema.Attribute{
                                     "enabled": schema.BoolAttribute{Optional: true},
@@ -962,6 +1030,10 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
         Active:         types.BoolValue(createApplication.Data.GetActive()),
         Debug:          types.BoolValue(createApplication.Data.GetDebug()),
         ProductVersion: types.StringValue(createApplication.Data.GetProductVersion()),
+        IsVersioned:    types.BoolValue(createApplication.Data.IsVersioned),
+        Version:        types.Int64Value(createApplication.Data.Version),
+        VersionState:   types.StringPointerValue(createApplication.Data.VersionState.Get()),
+        VersionID:      types.StringPointerValue(createApplication.Data.VersionId.Get()),
         Modules:        plan.Application.Modules,
     }
 
@@ -1079,6 +1151,10 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
         Active:         types.BoolValue(stateApplication.Data.GetActive()),
         Debug:          types.BoolValue(stateApplication.Data.GetDebug()),
         ProductVersion: types.StringValue(stateApplication.Data.GetProductVersion()),
+        IsVersioned:    types.BoolValue(stateApplication.Data.IsVersioned),
+        Version:        types.Int64Value(stateApplication.Data.Version),
+        VersionState:   types.StringPointerValue(stateApplication.Data.VersionState.Get()),
+        VersionID:      types.StringPointerValue(stateApplication.Data.VersionId.Get()),
     }
     state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
 
@@ -1200,6 +1276,10 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
         Active:         types.BoolValue(updateApplication.Data.GetActive()),
         Debug:          types.BoolValue(updateApplication.Data.GetDebug()),
         ProductVersion: types.StringValue(updateApplication.Data.GetProductVersion()),
+        IsVersioned:    types.BoolValue(updateApplication.Data.IsVersioned),
+        Version:        types.Int64Value(updateApplication.Data.Version),
+        VersionState:   types.StringPointerValue(updateApplication.Data.VersionState.Get()),
+        VersionID:      types.StringPointerValue(updateApplication.Data.VersionId.Get()),
         Modules:        modsPlan,
     }
 
@@ -1381,6 +1461,7 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 
 **IMPORTANT:** The OpenAPI `Application` schema only contains these fields:
 - `id`, `name`, `last_editor`, `last_modified`, `product_version` (required)
+- `is_versioned`, `version`, `version_state`, `version_id` (computed version fields)
 - `active`, `debug` (optional boolean)
 - `modules` (nested object)
 

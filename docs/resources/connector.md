@@ -183,6 +183,10 @@ terraform import azion_connector.example 12345
   * `last_editor` - (Computed) The last editor of the connector.
   * `last_modified` - (Computed) Last modified timestamp of the connector.
   * `product_version` - (Computed) Product version of the connector.
+  * `is_versioned` - (Computed) Whether the connector is versioned.
+  * `version` - (Computed) The current version of the connector.
+  * `version_state` - (Computed) The state of the current connector version.
+  * `version_id` - (Computed) The identifier of the current connector version.
 
 ### Storage Connector Arguments
 

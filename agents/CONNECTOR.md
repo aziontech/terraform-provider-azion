@@ -100,6 +100,10 @@ type connectorResourceResults struct {
     ProductVersion types.String            `tfsdk:"product_version"`
     Active         types.Bool              `tfsdk:"active"`
     Type           types.String            `tfsdk:"type"`
+    IsVersioned    types.Bool              `tfsdk:"is_versioned"`
+    Version        types.Int64             `tfsdk:"version"`
+    VersionState   types.String            `tfsdk:"version_state"`
+    VersionID      types.String            `tfsdk:"version_id"`
     StorageAttrs   *StorageAttributesModel `tfsdk:"storage_attributes"`
     HTTPAttrs      *HTTPAttributesModel    `tfsdk:"http_attributes"`
 }
@@ -149,6 +153,22 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
                 Attributes: map[string]schema.Attribute{
                     "name": schema.StringAttribute{Required: true},
                     "type": schema.StringAttribute{Required: true},
+                    "is_versioned": schema.BoolAttribute{
+                        Description: "Whether the connector is versioned.",
+                        Computed:    true,
+                    },
+                    "version": schema.Int64Attribute{
+                        Description: "The current version of the connector.",
+                        Computed:    true,
+                    },
+                    "version_state": schema.StringAttribute{
+                        Description: "The state of the current connector version.",
+                        Computed:    true,
+                    },
+                    "version_id": schema.StringAttribute{
+                        Description: "The identifier of the current connector version.",
+                        Computed:    true,
+                    },
                     // Storage attributes - nested inside connector
                     "storage_attributes": schema.SingleNestedAttribute{
                         Optional: true,
@@ -330,13 +350,13 @@ func buildStorageConnectorRequest(connector *connectorResourceResults) (azionapi
         attrs.SetPrefix(connector.StorageAttrs.Prefix.ValueString())
     }
 
-    req := azionapi.NewConnectorRequestBase(
+    req := azionapi.NewConnectorStorageRequest(
         connector.Name.ValueString(),
         connector.Type.ValueString(),
         attrs,
     )
 
-    return azionapi.ConnectorRequestBaseAsConnectorRequest(req), nil
+    return azionapi.ConnectorStorageRequestAsConnectorRequest(req), nil
 }
 
 func (r *connectorResource) buildHTTPConnectorRequest(ctx context.Context, connector *connectorResourceResults) (azionapi.ConnectorRequest, error) {
@@ -388,12 +408,16 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
     actualConnector := connector.GetActualInstance()
     
     switch c := actualConnector.(type) {
-    case *azionapi.ConnectorBase:
+    case *azionapi.ConnectorStorage:
         // Storage connector
         model.ID = types.Int64Value(c.Id)
         model.Name = types.StringValue(c.Name)
         model.Type = types.StringValue(c.Type)
-        // ...
+        model.Active = types.BoolPointerValue(c.Active)
+        model.IsVersioned = types.BoolValue(c.IsVersioned)
+        model.Version = types.Int64PointerValue(c.Version.Get())
+        model.VersionState = types.StringPointerValue(c.VersionState.Get())
+        model.VersionID = types.StringPointerValue(c.VersionId.Get())
         
         model.StorageAttrs = &StorageAttributesModel{
             Bucket: types.StringValue(c.Attributes.Bucket),
@@ -408,7 +432,11 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
         model.ID = types.Int64Value(c.Id)
         model.Name = types.StringValue(c.Name)
         model.Type = types.StringValue(c.Type)
-        // ...
+        model.Active = types.BoolPointerValue(c.Active)
+        model.IsVersioned = types.BoolValue(c.IsVersioned)
+        model.Version = types.Int64PointerValue(c.Version.Get())
+        model.VersionState = types.StringPointerValue(c.VersionState.Get())
+        model.VersionID = types.StringPointerValue(c.VersionId.Get())
         
         httpAttrs := &HTTPAttributesModel{}
         
@@ -417,19 +445,14 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
             // ... build address model
         }
         
-        // Populate connection_options (convert to types.Object)
+        // Populate connection_options
         if c.Attributes.ConnectionOptions != nil {
-            connOptsModel := HTTPConnectionOptionsModel{
-                DNSResolution: types.StringValue(*c.Attributes.ConnectionOptions.DnsResolution),
-                // ... other fields
-            }
-            connOptsValue, _ := types.ObjectValueFrom(ctx, HTTPConnectionOptionsModel{}.attrTypes(), connOptsModel)
-            httpAttrs.ConnectionOptions = connOptsValue
+            // ... build connection options model
         }
         
-        // Populate modules (convert to types.Object)
+        // Populate modules
         if c.Attributes.Modules != nil {
-            // ... build modules model and convert to types.Object
+            // ... build modules model
         }
         
         model.HTTPAttrs = httpAttrs
@@ -477,6 +500,10 @@ type ConnectorResults struct {
     ProductVersion types.String `tfsdk:"product_version"`
     Active         types.Bool   `tfsdk:"active"`
     Type           types.String `tfsdk:"type"`
+    IsVersioned    types.Bool   `tfsdk:"is_versioned"`
+    Version        types.Int64  `tfsdk:"version"`
+    VersionState   types.String `tfsdk:"version_state"`
+    VersionID      types.String `tfsdk:"version_id"`
     Attributes     types.String `tfsdk:"attributes"` // JSON string
 }
 ```
@@ -515,12 +542,12 @@ Connectors are polymorphic - they can be one of several types, each with differe
 ```go
 // Polymorphic wrapper - can contain any connector type
 type Connector struct {
-    ConnectorBase *ConnectorBase  // For storage type
-    ConnectorHTTP *ConnectorHTTP  // For HTTP type
+    ConnectorStorage *ConnectorStorage  // For storage type
+    ConnectorHTTP    *ConnectorHTTP     // For HTTP type
 }
 
 // Storage connector
-type ConnectorBase struct {
+type ConnectorStorage struct {
     Id             int64
     Name           string
     LastEditor     string
@@ -528,6 +555,10 @@ type ConnectorBase struct {
     Active         *bool
     ProductVersion string
     Type           string  // "storage"
+    IsVersioned    bool
+    Version        NullableInt64
+    VersionState   NullableString
+    VersionId      NullableString
     Attributes     ConnectorStorageAttributes
 }
 
@@ -545,6 +576,10 @@ type ConnectorHTTP struct {
     Active         *bool
     ProductVersion string
     Type           string  // "http"
+    IsVersioned    bool
+    Version        NullableInt64
+    VersionState   NullableString
+    VersionId      NullableString
     Attributes     ConnectorHTTPAttributes
 }
 
