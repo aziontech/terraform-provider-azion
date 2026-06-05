@@ -36,8 +36,12 @@ Read-Only:
 
 - `created_at` (String) Creation timestamp of the network list.
 - `id` (Number) ID of the network list.
+- `is_versioned` (Boolean) Whether the network list is versioned.
 - `items` (List of String) List of items in the network list. Contents depend on the type: country codes, IP addresses, or ASN numbers.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
 - `name` (String) Name of the network list.
 - `type` (String) Type of the network list. Can be: asn, countries, or ip_cidr.
+- `version` (Number) The current version of the network list.
+- `version_id` (String) The identifier of the current network list version.
+- `version_state` (String) The state of the current network list version.

@@ -77,9 +77,13 @@ Read-Only:
 
 - `created_at` (String) The creation timestamp of the custom page.
 - `id` (Number) The custom page identifier.
+- `is_versioned` (Boolean) Whether the custom page is versioned.
 - `last_editor` (String) The last editor of the custom page.
 - `last_modified` (String) Last modified timestamp of the custom page.
 - `product_version` (String) Product version of the custom page.
+- `version` (Number) The current version of the custom page.
+- `version_id` (String) The identifier of the current custom page version.
+- `version_state` (String) The state of the current custom page version.
 
 <a id="nestedatt--custom_page--pages"></a>
 ### Nested Schema for `pages`

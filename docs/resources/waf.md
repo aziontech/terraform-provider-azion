@@ -73,6 +73,11 @@ terraform import azion_waf.example 12345
 * `last_editor` - Last editor of the WAF.
 * `last_modified` - Last modified timestamp.
 * `last_updated` - Timestamp of the last Terraform update of the resource.
+* `result`
+  * `is_versioned` - Whether the WAF is versioned.
+  * `version` - The current version of the WAF.
+  * `version_state` - The state of the current WAF version.
+  * `version_id` - The identifier of the current WAF version.
 
 ## Related Resources
 

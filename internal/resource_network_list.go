@@ -47,6 +47,10 @@ type NetworkListResourceResults struct {
 	Type         types.String `tfsdk:"type"`
 	Name         types.String `tfsdk:"name"`
 	Items        types.Set    `tfsdk:"items"`
+	IsVersioned  types.Bool   `tfsdk:"is_versioned"`
+	Version      types.Int64  `tfsdk:"version"`
+	VersionState types.String `tfsdk:"version_state"`
+	VersionID    types.String `tfsdk:"version_id"`
 }
 
 func (r *networkListResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -100,6 +104,22 @@ func (r *networkListResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Required:    true,
 						ElementType: types.StringType,
 						Description: "List of items in the network list. Contents depend on the type: country codes, IP addresses, or ASN numbers.",
+					},
+					"is_versioned": schema.BoolAttribute{
+						Description: "Whether the network list is versioned.",
+						Computed:    true,
+					},
+					"version": schema.Int64Attribute{
+						Description: "The current version of the network list.",
+						Computed:    true,
+					},
+					"version_state": schema.StringAttribute{
+						Description: "The state of the current network list version.",
+						Computed:    true,
+					},
+					"version_id": schema.StringAttribute{
+						Description: "The identifier of the current network list version.",
+						Computed:    true,
 					},
 				},
 			},
@@ -193,6 +213,10 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		Type:         types.StringValue(data.GetType()),
 		Name:         types.StringValue(data.GetName()),
 		Items:        utils.SliceStringTypeToSet(sliceString),
+		IsVersioned:  types.BoolValue(data.IsVersioned),
+		Version:      types.Int64PointerValue(data.Version.Get()),
+		VersionState: types.StringPointerValue(data.VersionState.Get()),
+		VersionID:    types.StringPointerValue(data.VersionId.Get()),
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
@@ -290,6 +314,10 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 			Type:         types.StringValue(data.GetType()),
 			Name:         types.StringValue(data.GetName()),
 			Items:        utils.SliceStringTypeToSet(sliceString),
+			IsVersioned:  types.BoolValue(data.IsVersioned),
+			Version:      types.Int64PointerValue(data.Version.Get()),
+			VersionState: types.StringPointerValue(data.VersionState.Get()),
+			VersionID:    types.StringPointerValue(data.VersionId.Get()),
 		},
 		ID: types.StringValue(strconv.FormatInt(data.GetId(), 10)),
 	}
@@ -402,6 +430,10 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		Type:         types.StringValue(data.GetType()),
 		Name:         types.StringValue(data.GetName()),
 		Items:        utils.SliceStringTypeToSet(sliceString),
+		IsVersioned:  types.BoolValue(data.IsVersioned),
+		Version:      types.Int64PointerValue(data.Version.Get()),
+		VersionState: types.StringPointerValue(data.VersionState.Get()),
+		VersionID:    types.StringPointerValue(data.VersionId.Get()),
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))

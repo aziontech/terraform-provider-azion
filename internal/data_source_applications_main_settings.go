@@ -105,6 +105,22 @@ func (e *ApplicationsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Description: "Product version.",
 							Computed:    true,
 						},
+						"is_versioned": schema.BoolAttribute{
+							Description: "Whether the application is versioned.",
+							Computed:    true,
+						},
+						"version": schema.Int64Attribute{
+							Description: "The current version of the application.",
+							Computed:    true,
+						},
+						"version_state": schema.StringAttribute{
+							Description: "The state of the current application version.",
+							Computed:    true,
+						},
+						"version_id": schema.StringAttribute{
+							Description: "The identifier of the current application version.",
+							Computed:    true,
+						},
 						"active": schema.BoolAttribute{
 							Description: "Whether the Application is active.",
 							Computed:    true,
@@ -249,6 +265,10 @@ func (e *ApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 			LastModified:   types.StringValue(resultApplication.GetLastModified().Format(time.RFC3339)),
 			Modules:        modules,
 			ProductVersion: types.StringValue(resultApplication.GetProductVersion()),
+			IsVersioned:    types.BoolValue(resultApplication.IsVersioned),
+			Version:        types.Int64Value(resultApplication.Version),
+			VersionState:   types.StringPointerValue(resultApplication.VersionState.Get()),
+			VersionID:      types.StringPointerValue(resultApplication.VersionId.Get()),
 			Active:         types.BoolValue(resultApplication.GetActive()),
 			Debug:          types.BoolValue(resultApplication.GetDebug()),
 		})

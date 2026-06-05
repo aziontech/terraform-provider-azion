@@ -49,6 +49,10 @@ type WafListItemModel struct {
 	LastEditor     types.String            `tfsdk:"last_editor"`
 	LastModified   types.String            `tfsdk:"last_modified"`
 	ProductVersion types.String            `tfsdk:"product_version"`
+	IsVersioned    types.Bool              `tfsdk:"is_versioned"`
+	Version        types.Int64             `tfsdk:"version"`
+	VersionState   types.String            `tfsdk:"version_state"`
+	VersionID      types.String            `tfsdk:"version_id"`
 	EngineSettings *WafEngineSettingsModel `tfsdk:"engine_settings"`
 }
 
@@ -123,6 +127,22 @@ func (o *WafsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 						},
 						"product_version": schema.StringAttribute{
 							Description: "Product version of the WAF.",
+							Computed:    true,
+						},
+						"is_versioned": schema.BoolAttribute{
+							Description: "Whether the WAF is versioned.",
+							Computed:    true,
+						},
+						"version": schema.Int64Attribute{
+							Description: "The current version of the WAF.",
+							Computed:    true,
+						},
+						"version_state": schema.StringAttribute{
+							Description: "The state of the current WAF version.",
+							Computed:    true,
+						},
+						"version_id": schema.StringAttribute{
+							Description: "The identifier of the current WAF version.",
 							Computed:    true,
 						},
 						"engine_settings": schema.SingleNestedAttribute{
@@ -282,6 +302,10 @@ func transformWAFToListItemModel(waf azionapi.WAF) WafListItemModel {
 		Name:         types.StringValue(waf.GetName()),
 		LastEditor:   types.StringValue(waf.GetLastEditor()),
 		LastModified: types.StringValue(waf.GetLastModified().Format(time.RFC3339)),
+		IsVersioned:  types.BoolValue(waf.IsVersioned),
+		Version:      types.Int64PointerValue(waf.Version.Get()),
+		VersionState: types.StringPointerValue(waf.VersionState.Get()),
+		VersionID:    types.StringPointerValue(waf.VersionId.Get()),
 	}
 
 	// Optional active.

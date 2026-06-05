@@ -41,6 +41,10 @@ type CustomPageResults struct {
 	CreatedAt      types.String            `tfsdk:"created_at"`
 	Active         types.Bool              `tfsdk:"active"`
 	ProductVersion types.String            `tfsdk:"product_version"`
+	IsVersioned    types.Bool              `tfsdk:"is_versioned"`
+	Version        types.Int64             `tfsdk:"version"`
+	VersionState   types.String            `tfsdk:"version_state"`
+	VersionID      types.String            `tfsdk:"version_id"`
 	Pages          []CustomPagePageWrapper `tfsdk:"pages"`
 }
 
@@ -112,6 +116,22 @@ func (d *CustomPageDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 					},
 					"product_version": schema.StringAttribute{
 						Description: "Product version of the custom page.",
+						Computed:    true,
+					},
+					"is_versioned": schema.BoolAttribute{
+						Description: "Whether the custom page is versioned.",
+						Computed:    true,
+					},
+					"version": schema.Int64Attribute{
+						Description: "The current version of the custom page.",
+						Computed:    true,
+					},
+					"version_state": schema.StringAttribute{
+						Description: "The state of the current custom page version.",
+						Computed:    true,
+					},
+					"version_id": schema.StringAttribute{
+						Description: "The identifier of the current custom page version.",
 						Computed:    true,
 					},
 					"pages": schema.ListNestedAttribute{
@@ -221,6 +241,10 @@ func (d *CustomPageDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			LastModified:   types.StringValue(customPageResponse.Data.LastModified.Format(time.RFC3339)),
 			CreatedAt:      types.StringValue(customPageResponse.Data.CreatedAt.Format(time.RFC3339)),
 			ProductVersion: types.StringValue(customPageResponse.Data.ProductVersion),
+			IsVersioned:    types.BoolValue(customPageResponse.Data.IsVersioned),
+			Version:        types.Int64PointerValue(customPageResponse.Data.Version.Get()),
+			VersionState:   types.StringPointerValue(customPageResponse.Data.VersionState.Get()),
+			VersionID:      types.StringPointerValue(customPageResponse.Data.VersionId.Get()),
 		},
 	}
 

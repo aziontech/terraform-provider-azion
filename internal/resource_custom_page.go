@@ -46,6 +46,10 @@ type customPageResourceResults struct {
 	CreatedAt      types.String                    `tfsdk:"created_at"`
 	Active         types.Bool                      `tfsdk:"active"`
 	ProductVersion types.String                    `tfsdk:"product_version"`
+	IsVersioned    types.Bool                      `tfsdk:"is_versioned"`
+	Version        types.Int64                     `tfsdk:"version"`
+	VersionState   types.String                    `tfsdk:"version_state"`
+	VersionID      types.String                    `tfsdk:"version_id"`
 	Pages          []customPageResourcePageWrapper `tfsdk:"pages"`
 }
 
@@ -118,6 +122,22 @@ func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					},
 					"product_version": schema.StringAttribute{
 						Description: "Product version of the custom page.",
+						Computed:    true,
+					},
+					"is_versioned": schema.BoolAttribute{
+						Description: "Whether the custom page is versioned.",
+						Computed:    true,
+					},
+					"version": schema.Int64Attribute{
+						Description: "The current version of the custom page.",
+						Computed:    true,
+					},
+					"version_state": schema.StringAttribute{
+						Description: "The state of the current custom page version.",
+						Computed:    true,
+					},
+					"version_id": schema.StringAttribute{
+						Description: "The identifier of the current custom page version.",
 						Computed:    true,
 					},
 					"pages": schema.ListNestedAttribute{
@@ -283,6 +303,10 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 		LastModified:   types.StringValue(createCustomPage.Data.LastModified.Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(createCustomPage.Data.CreatedAt.Format(time.RFC3339)),
 		ProductVersion: types.StringValue(createCustomPage.Data.ProductVersion),
+		IsVersioned:    types.BoolValue(createCustomPage.Data.IsVersioned),
+		Version:        types.Int64PointerValue(createCustomPage.Data.Version.Get()),
+		VersionState:   types.StringPointerValue(createCustomPage.Data.VersionState.Get()),
+		VersionID:      types.StringPointerValue(createCustomPage.Data.VersionId.Get()),
 	}
 
 	if createCustomPage.Data.Active != nil {
@@ -395,6 +419,10 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 		LastModified:   types.StringValue(getCustomPage.Data.LastModified.Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(getCustomPage.Data.CreatedAt.Format(time.RFC3339)),
 		ProductVersion: types.StringValue(getCustomPage.Data.ProductVersion),
+		IsVersioned:    types.BoolValue(getCustomPage.Data.IsVersioned),
+		Version:        types.Int64PointerValue(getCustomPage.Data.Version.Get()),
+		VersionState:   types.StringPointerValue(getCustomPage.Data.VersionState.Get()),
+		VersionID:      types.StringPointerValue(getCustomPage.Data.VersionId.Get()),
 	}
 
 	if getCustomPage.Data.Active != nil {
@@ -557,6 +585,10 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 		LastModified:   types.StringValue(updateCustomPage.Data.LastModified.Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(updateCustomPage.Data.CreatedAt.Format(time.RFC3339)),
 		ProductVersion: types.StringValue(updateCustomPage.Data.ProductVersion),
+		IsVersioned:    types.BoolValue(updateCustomPage.Data.IsVersioned),
+		Version:        types.Int64PointerValue(updateCustomPage.Data.Version.Get()),
+		VersionState:   types.StringPointerValue(updateCustomPage.Data.VersionState.Get()),
+		VersionID:      types.StringPointerValue(updateCustomPage.Data.VersionId.Get()),
 	}
 
 	if updateCustomPage.Data.Active != nil {

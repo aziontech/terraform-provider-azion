@@ -42,6 +42,10 @@ type ConnectorsResults struct {
 	ProductVersion types.String `tfsdk:"product_version"`
 	Active         types.Bool   `tfsdk:"active"`
 	Type           types.String `tfsdk:"type"`
+	IsVersioned    types.Bool   `tfsdk:"is_versioned"`
+	Version        types.Int64  `tfsdk:"version"`
+	VersionState   types.String `tfsdk:"version_state"`
+	VersionID      types.String `tfsdk:"version_id"`
 	Attributes     types.String `tfsdk:"attributes"`
 }
 
@@ -101,6 +105,22 @@ func (d *ConnectorsDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 						},
 						"type": schema.StringAttribute{
 							Description: "Type of the connector (http, storage).",
+							Computed:    true,
+						},
+						"is_versioned": schema.BoolAttribute{
+							Description: "Whether the connector is versioned.",
+							Computed:    true,
+						},
+						"version": schema.Int64Attribute{
+							Description: "The current version of the connector.",
+							Computed:    true,
+						},
+						"version_state": schema.StringAttribute{
+							Description: "The state of the current connector version.",
+							Computed:    true,
+						},
+						"version_id": schema.StringAttribute{
+							Description: "The identifier of the current connector version.",
 							Computed:    true,
 						},
 						"attributes": schema.StringAttribute{
@@ -181,7 +201,7 @@ func populateConnectorsResults(connector azionapi.Connector) (ConnectorsResults,
 
 	// Handle different connector types.
 	switch c := actualConnector.(type) {
-	case *azionapi.ConnectorBase:
+	case *azionapi.ConnectorStorage:
 		// Storage connector.
 		result = ConnectorsResults{
 			ID:             types.Int64Value(c.Id),
@@ -192,6 +212,10 @@ func populateConnectorsResults(connector azionapi.Connector) (ConnectorsResults,
 			ProductVersion: types.StringValue(c.ProductVersion),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),
+			IsVersioned:    types.BoolValue(c.IsVersioned),
+			Version:        types.Int64PointerValue(c.Version.Get()),
+			VersionState:   types.StringPointerValue(c.VersionState.Get()),
+			VersionID:      types.StringPointerValue(c.VersionId.Get()),
 		}
 
 		// Marshal attributes to JSON string.
@@ -212,6 +236,10 @@ func populateConnectorsResults(connector azionapi.Connector) (ConnectorsResults,
 			ProductVersion: types.StringValue(c.ProductVersion),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),
+			IsVersioned:    types.BoolValue(c.IsVersioned),
+			Version:        types.Int64PointerValue(c.Version.Get()),
+			VersionState:   types.StringPointerValue(c.VersionState.Get()),
+			VersionID:      types.StringPointerValue(c.VersionId.Get()),
 		}
 
 		// Marshal attributes to JSON string.

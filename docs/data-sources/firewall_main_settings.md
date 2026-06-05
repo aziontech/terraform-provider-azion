@@ -41,11 +41,15 @@ Read-Only:
 - `created_at` (String) The creation timestamp of the firewall.
 - `debug` (Boolean) Whether debug is enabled for the rule set.
 - `id` (Number) ID of the firewall rule set.
+- `is_versioned` (Boolean) Whether the firewall is versioned.
 - `last_editor` (String) Last editor of the firewall rule set.
 - `last_modified` (String) Last modified timestamp of the firewall rule set.
 - `modules` (Attributes) Modules configuration for the firewall. (see [below for nested schema](#nestedatt--results--modules))
 - `name` (String) Name of the firewall rule set.
 - `product_version` (String) Product version of the firewall rule set.
+- `version` (Number) The current version of the firewall.
+- `version_id` (String) The identifier of the current firewall version.
+- `version_state` (String) The state of the current firewall version.
 
 <a id="nestedatt--results--modules"></a>
 ### Nested Schema for `results.modules`

@@ -47,9 +47,13 @@ Read-Only:
 Read-Only:
 
 - `id` (Number) ID of the network list.
+- `is_versioned` (Boolean) Whether the network list is versioned.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
 - `type` (String) Type of the network list. Can be: asn, countries, or ip_cidr.
 - `name` (String) Name of the network list.
+- `version` (Number) The current version of the network list.
+- `version_id` (String) The identifier of the current network list version.
+- `version_state` (String) The state of the current network list version.
 
 **Note:** The plural data source returns a summary of network lists without the `items` field. Use the singular `azion_network_list` data source to get the full list of items in a network list.

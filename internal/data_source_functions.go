@@ -49,6 +49,10 @@ type functionsResults struct {
 	ReferenceCount       types.Int64  `tfsdk:"reference_count"`
 	Version              types.String `tfsdk:"version"`
 	Vendor               types.String `tfsdk:"vendor"`
+	IsVersioned          types.Bool   `tfsdk:"is_versioned"`
+	VersionState         types.String `tfsdk:"version_state"`
+	VersionID            types.String `tfsdk:"version_id"`
+	ResourceVersion      types.Int64  `tfsdk:"resource_version"`
 }
 
 func (d *functionsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -125,6 +129,22 @@ func (d *functionsDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 							Description: "Vendor of the function.",
 							Computed:    true,
 						},
+						"is_versioned": schema.BoolAttribute{
+							Description: "Whether the function is versioned.",
+							Computed:    true,
+						},
+						"version_state": schema.StringAttribute{
+							Description: "The state of the current function version.",
+							Computed:    true,
+						},
+						"version_id": schema.StringAttribute{
+							Description: "The identifier of the current function version.",
+							Computed:    true,
+						},
+						"resource_version": schema.Int64Attribute{
+							Description: "The resource version number of the function.",
+							Computed:    true,
+						},
 					},
 				},
 			},
@@ -197,15 +217,19 @@ func (d *functionsDataSource) Read(ctx context.Context, req datasource.ReadReque
 		}
 
 		result := functionsResults{
-			ID:             types.Int64Value(resultFunctions.Id),
-			Name:           types.StringValue(resultFunctions.Name),
-			DefaultArgs:    types.StringValue(defaultArgsStr),
-			Active:         types.BoolValue(*resultFunctions.Active),
-			LastEditor:     types.StringValue(resultFunctions.LastEditor),
-			ProductVersion: types.StringValue(resultFunctions.ProductVersion),
-			Version:        types.StringValue(resultFunctions.Version),
-			Vendor:         types.StringValue(resultFunctions.Vendor),
-			ReferenceCount: types.Int64Value(resultFunctions.ReferenceCount),
+			ID:              types.Int64Value(resultFunctions.Id),
+			Name:            types.StringValue(resultFunctions.Name),
+			DefaultArgs:     types.StringValue(defaultArgsStr),
+			Active:          types.BoolValue(*resultFunctions.Active),
+			LastEditor:      types.StringValue(resultFunctions.LastEditor),
+			ProductVersion:  types.StringValue(resultFunctions.ProductVersion),
+			Version:         types.StringValue(resultFunctions.Version),
+			Vendor:          types.StringValue(resultFunctions.Vendor),
+			ReferenceCount:  types.Int64Value(resultFunctions.ReferenceCount),
+			IsVersioned:     types.BoolValue(resultFunctions.IsVersioned),
+			VersionState:    types.StringPointerValue(resultFunctions.VersionState.Get()),
+			VersionID:       types.StringPointerValue(resultFunctions.VersionId.Get()),
+			ResourceVersion: types.Int64PointerValue(resultFunctions.ResourceVersion.Get()),
 		}
 
 		// Set optional fields if they exist in the response

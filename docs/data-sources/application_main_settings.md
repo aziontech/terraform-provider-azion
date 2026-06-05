@@ -43,6 +43,10 @@ Read-Only:
 - `modules` (Attributes) (see [below for nested schema](#nestedatt--data--modules))
 - `name` (String) The name of the Application.
 - `product_version` (String) Product version.
+- `is_versioned` (Boolean) Whether the application is versioned.
+- `version` (Number) The current version of the application.
+- `version_state` (String) The state of the current application version.
+- `version_id` (String) The identifier of the current application version.
 
 <a id="nestedatt--data--modules"></a>
 ### Nested Schema for `data.modules`

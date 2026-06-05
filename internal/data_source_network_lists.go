@@ -48,6 +48,10 @@ type NetworkListsResults struct {
 	CreatedAt    types.String `tfsdk:"created_at"`
 	Type         types.String `tfsdk:"type"`
 	Name         types.String `tfsdk:"name"`
+	IsVersioned  types.Bool   `tfsdk:"is_versioned"`
+	Version      types.Int64  `tfsdk:"version"`
+	VersionState types.String `tfsdk:"version_state"`
+	VersionID    types.String `tfsdk:"version_id"`
 }
 
 func (n *NetworkListsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -117,6 +121,22 @@ func (n *NetworkListsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						},
 						"name": schema.StringAttribute{
 							Description: "Name of the network list.",
+							Computed:    true,
+						},
+						"is_versioned": schema.BoolAttribute{
+							Description: "Whether the network list is versioned.",
+							Computed:    true,
+						},
+						"version": schema.Int64Attribute{
+							Description: "The current version of the network list.",
+							Computed:    true,
+						},
+						"version_state": schema.StringAttribute{
+							Description: "The state of the current network list version.",
+							Computed:    true,
+						},
+						"version_id": schema.StringAttribute{
+							Description: "The identifier of the current network list version.",
 							Computed:    true,
 						},
 					},
@@ -195,6 +215,10 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 			CreatedAt:    types.StringValue(nl.GetCreatedAt().Format(time.RFC3339)),
 			Type:         types.StringValue(nl.GetType()),
 			Name:         types.StringValue(nl.GetName()),
+			IsVersioned:  types.BoolValue(nl.IsVersioned),
+			Version:      types.Int64PointerValue(nl.Version.Get()),
+			VersionState: types.StringPointerValue(nl.VersionState.Get()),
+			VersionID:    types.StringPointerValue(nl.VersionId.Get()),
 		}
 		networkLists = append(networkLists, networkList)
 	}
