@@ -1,12 +1,15 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aziontech/azionapi-go-sdk/edgeapplications"
@@ -224,30 +227,66 @@ func RetryOn429[T any](apiCall func() (T, *http.Response, error), maxRetries int
 	return result, response, errors.New("max retries exceeded for API request")
 }
 
-// RetryOn429 retries an API call if the response status is 429.
-func RetryOn429Delete(apiCall func() (*http.Response, error), maxRetries int) (*http.Response, error) {
+// referencedByAnotherResourceMsg is the API error fragment returned when a
+// resource cannot be deleted because another resource still references it.
+const referencedByAnotherResourceMsg = "referenced by another resource"
+
+// RetryOn429Delete retries a delete API call when the response is a 429, a 500,
+// or a 400 whose error indicates the resource is still referenced by another
+// resource (API eventual-consistency lag after the referencing resource is
+// destroyed). It sleeps 10s before the first retry, increasing by 1s on each
+// subsequent retry.
+//
+// The apiCall's first return value (the response body) may be nil for delete
+// endpoints that do not return a body.
+func RetryOn429Delete[T any](apiCall func() (T, *http.Response, error), maxRetries int) (T, *http.Response, error) {
+	var result T
 	var response *http.Response
 	var err error
 
 	for i := 0; i < maxRetries; i++ {
-		// Call the API function
-		response, err = apiCall()
+		// Call the API function.
+		result, response, err = apiCall()
 
-		// If no error and not a 429, return successfully
-		if err == nil && response.StatusCode != http.StatusTooManyRequests {
-			return response, nil
+		// Success.
+		if err == nil {
+			return result, response, nil
 		}
 
-		// If error is not 429, return immediately
-		if response.StatusCode != http.StatusTooManyRequests {
-			return response, err
+		// No response to inspect, return immediately.
+		if response == nil {
+			return result, response, err
 		}
 
-		// Sleep before retrying
-		if sleepErr := SleepAfter429(response); sleepErr != nil {
-			return response, sleepErr
+		// Only retry on a 429, a 500, or a 400 caused by the resource still being referenced.
+		if response.StatusCode != http.StatusTooManyRequests &&
+			response.StatusCode != http.StatusInternalServerError &&
+			!(response.StatusCode == http.StatusBadRequest && isReferencedByAnotherResource(response, err)) {
+			return result, response, err
 		}
+
+		// Sleep 10s before the first retry, increasing by 1s each subsequent retry.
+		time.Sleep(time.Duration(10+i) * time.Second)
 	}
 
-	return response, errors.New("max retries exceeded for API request")
+	return result, response, errors.New("max retries exceeded for API request")
+}
+
+// isReferencedByAnotherResource reports whether a delete failure was caused by
+// the resource still being referenced by another resource. It inspects both the
+// error and the response body, restoring the body so the caller can still read it.
+func isReferencedByAnotherResource(response *http.Response, err error) bool {
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), referencedByAnotherResourceMsg) {
+		return true
+	}
+	if response == nil || response.Body == nil {
+		return false
+	}
+	bodyBytes, readErr := io.ReadAll(response.Body)
+	if readErr != nil {
+		return false
+	}
+	// Restore the body so callers can still read it for error reporting.
+	response.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	return strings.Contains(strings.ToLower(string(bodyBytes)), referencedByAnotherResourceMsg)
 }

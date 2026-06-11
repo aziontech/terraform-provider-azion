@@ -391,49 +391,34 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	dnssecReq := azionapi.NewDNSSECRequest(false)
 
-	_, response, err := r.client.api.DNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
-	if err != nil {
-		// Check if the error is due to JSON unmarshaling (unknown field) but HTTP request was successful
-		if response != nil && response.StatusCode >= 200 && response.StatusCode < 300 {
-			// HTTP request was successful, proceed (delete doesn't need response body)
-		} else if response != nil && response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*azionapi.DNSSECResponse, *http.Response, error) {
-				return r.client.api.DNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
-			}, 5) // Maximum 5 retries
-
-			if response != nil {
-				defer response.Body.Close()
-			}
-
-			if err != nil {
-				// Check again if it's a successful response after retry
-				if response == nil || response.StatusCode < 200 || response.StatusCode >= 300 {
-					resp.Diagnostics.AddError(
-						err.Error(),
-						"API request failed after too many retries",
-					)
-					return
-				}
-			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
-			return
-		}
-	}
-
+	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DNSSECResponse, *http.Response, error) {
+		return r.client.api.DNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
+	}, 5) // Maximum 5 retries
 	if response != nil {
 		defer response.Body.Close()
+	}
+	if err != nil {
+		// HTTP request succeeded but the body failed to unmarshal (unknown field);
+		// the delete doesn't need the response body, so treat it as success.
+		if response != nil && response.StatusCode >= 200 && response.StatusCode < 300 {
+			return
+		}
+		if response != nil && response.StatusCode == http.StatusNotFound {
+			return
+		}
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
+			resp.Diagnostics.AddError(
+				errReadAll.Error(),
+				"err",
+			)
+		}
+		bodyString := string(bodyBytes)
+		resp.Diagnostics.AddError(
+			err.Error(),
+			bodyString,
+		)
+		return
 	}
 }
 

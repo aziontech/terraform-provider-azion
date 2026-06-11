@@ -404,33 +404,19 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	recordId := state.Record.Id.ValueInt64()
 
 	// Execute delete request.
-	_, httpResponse, err := r.client.api.DNSRecordsAPI.DeleteDnsRecord(ctx, recordId, zoneId).Execute() //nolint
-	if err != nil {
-		if httpResponse.StatusCode == 429 {
-			_, httpResponse, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
-				return r.client.api.DNSRecordsAPI.DeleteDnsRecord(ctx, recordId, zoneId).Execute()
-			}, 5) // Maximum 5 retries
-
-			if httpResponse != nil {
-				defer httpResponse.Body.Close()
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			usrMsg, errMsg := errorPrintRecord(httpResponse.StatusCode, err)
-			resp.Diagnostics.AddError(usrMsg, errMsg)
-			return
-		}
-	}
-
+	_, httpResponse, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
+		return r.client.api.DNSRecordsAPI.DeleteDnsRecord(ctx, recordId, zoneId).Execute()
+	}, 5) // Maximum 5 retries
 	if httpResponse != nil {
 		defer httpResponse.Body.Close()
+	}
+	if err != nil {
+		if httpResponse != nil && httpResponse.StatusCode == http.StatusNotFound {
+			return
+		}
+		usrMsg, errMsg := errorPrintRecord(httpResponse.StatusCode, err)
+		resp.Diagnostics.AddError(usrMsg, errMsg)
+		return
 	}
 }
 

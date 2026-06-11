@@ -469,46 +469,36 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 		networkListId = id
 	}
 
-	_, response, err := r.client.api.NetworkListsAPI.DeleteNetworkList(ctx, networkListId).Execute() //nolint
+	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
+		return r.client.api.NetworkListsAPI.DeleteNetworkList(ctx, networkListId).Execute() //nolint
+	}, 5) // Maximum 5 retries
+	if response != nil {
+		defer response.Body.Close()
+	}
 	if err != nil {
-		if response != nil && response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
-				return r.client.api.NetworkListsAPI.DeleteNetworkList(ctx, networkListId).Execute() //nolint
-			}, 5) // Maximum 5 retries
-
-			if response != nil {
-				defer response.Body.Close()
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			if response != nil && response.Body != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"error reading response from API",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
-			} else {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed",
-				)
-			}
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
+		if response != nil && response.Body != nil {
+			bodyBytes, errReadAll := io.ReadAll(response.Body)
+			if errReadAll != nil {
+				resp.Diagnostics.AddError(
+					errReadAll.Error(),
+					"error reading response from API",
+				)
+			}
+			bodyString := string(bodyBytes)
+			resp.Diagnostics.AddError(
+				err.Error(),
+				bodyString,
+			)
+		} else {
+			resp.Diagnostics.AddError(
+				err.Error(),
+				"API request failed",
+			)
+		}
+		return
 	}
 }
 

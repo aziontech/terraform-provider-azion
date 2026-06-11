@@ -529,34 +529,19 @@ func (r *firewallRuleEngineResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	_, response, err := r.client.api.FirewallsRulesEngineAPI.
-		DeleteFirewallRule(ctx, state.FirewallID.ValueInt64(), state.Results.ID.ValueInt64()).
-		Execute()
+	_, response, err := utils.RetryOn429Delete(func() (interface{}, *http.Response, error) {
+		_, httpResp, e := r.client.api.FirewallsRulesEngineAPI.
+			DeleteFirewallRule(ctx, state.FirewallID.ValueInt64(), state.Results.ID.ValueInt64()).
+			Execute()
+		return nil, httpResp, e
+	}, 5)
 	if response != nil {
 		defer response.Body.Close()
 	}
 	if err != nil {
 		if response != nil && response.StatusCode != http.StatusNotFound {
-			if response.StatusCode == 429 {
-				_, response, err = utils.RetryOn429(func() (*interface{}, *http.Response, error) {
-					_, resp, err := r.client.api.FirewallsRulesEngineAPI.
-						DeleteFirewallRule(ctx, state.FirewallID.ValueInt64(), state.Results.ID.ValueInt64()).
-						Execute()
-					return nil, resp, err
-				}, 5)
-
-				if response != nil {
-					defer response.Body.Close()
-				}
-
-				if err != nil {
-					resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
-					return
-				}
-			} else {
-				handleFirewallRuleResourceAPIError(resp, response, err)
-				return
-			}
+			handleFirewallRuleResourceAPIError(resp, response, err)
+			return
 		}
 	}
 }

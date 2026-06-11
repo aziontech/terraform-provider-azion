@@ -386,33 +386,19 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	_, response, err := r.client.api.DNSZonesAPI.DeleteDnsZone(ctx, zoneId).Execute()
-	if err != nil {
-		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
-				return r.client.api.DNSZonesAPI.DeleteDnsZone(ctx, zoneId).Execute()
-			}, 5)
-
-			if response != nil {
-				defer response.Body.Close()
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
-			resp.Diagnostics.AddError(usrMsg, errMsg)
-			return
-		}
-	}
-
+	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
+		return r.client.api.DNSZonesAPI.DeleteDnsZone(ctx, zoneId).Execute()
+	}, 5)
 	if response != nil {
 		defer response.Body.Close()
+	}
+	if err != nil {
+		if response != nil && response.StatusCode == http.StatusNotFound {
+			return
+		}
+		usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
+		resp.Diagnostics.AddError(usrMsg, errMsg)
+		return
 	}
 }
 
