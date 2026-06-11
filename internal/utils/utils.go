@@ -227,18 +227,8 @@ func RetryOn429[T any](apiCall func() (T, *http.Response, error), maxRetries int
 	return result, response, errors.New("max retries exceeded for API request")
 }
 
-// referencedByAnotherResourceMsg is the API error fragment returned when a
-// resource cannot be deleted because another resource still references it.
 const referencedByAnotherResourceMsg = "referenced by another resource"
 
-// RetryOn429Delete retries a delete API call when the response is a 429, a 500,
-// or a 400 whose error indicates the resource is still referenced by another
-// resource (API eventual-consistency lag after the referencing resource is
-// destroyed). It sleeps 10s before the first retry, increasing by 1s on each
-// subsequent retry.
-//
-// The apiCall's first return value (the response body) may be nil for delete
-// endpoints that do not return a body.
 func RetryOn429Delete[T any](apiCall func() (T, *http.Response, error), maxRetries int) (T, *http.Response, error) {
 	var result T
 	var response *http.Response
