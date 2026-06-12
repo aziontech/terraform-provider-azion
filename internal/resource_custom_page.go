@@ -655,39 +655,29 @@ func (r *customPageResource) Delete(ctx context.Context, req resource.DeleteRequ
 		}
 	}
 
-	_, response, err := r.client.api.CustomPagesAPI.DeleteCustomPage(ctx, customPageId).Execute() //nolint
+	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
+		return r.client.api.CustomPagesAPI.DeleteCustomPage(ctx, customPageId).Execute() //nolint
+	}, 5) // Maximum 5 retries
+	if response != nil {
+		defer response.Body.Close()
+	}
 	if err != nil {
-		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
-				return r.client.api.CustomPagesAPI.DeleteCustomPage(ctx, customPageId).Execute() //nolint
-			}, 5) // Maximum 5 retries
-
-			if response != nil {
-				defer response.Body.Close()
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
+			resp.Diagnostics.AddError(
+				errReadAll.Error(),
+				"err",
+			)
+		}
+		bodyString := string(bodyBytes)
+		resp.Diagnostics.AddError(
+			err.Error(),
+			bodyString,
+		)
+		return
 	}
 }
 

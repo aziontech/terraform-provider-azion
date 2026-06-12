@@ -441,50 +441,31 @@ func (r *wafRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequ
 		}
 	}
 
-	deleteResponse, response, err := r.client.api.WAFsExceptionsAPI.DeleteWafException(ctx, exceptionID, state.WafID.ValueInt64()).Execute()
-	if err != nil {
-		if response.StatusCode == 429 {
-			response, err = utils.RetryOn429Delete(func() (*http.Response, error) {
-				delResp, resp, err := r.client.api.WAFsExceptionsAPI.DeleteWafException(ctx, exceptionID, state.WafID.ValueInt64()).Execute()
-				_ = delResp // Ignore the delete response in retry.
-				return resp, err
-			}, 5)
-
-			if response != nil {
-				defer response.Body.Close()
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
-			return
-		}
-	}
-
-	// Close response body if not nil.
+	_, response, err := utils.RetryOn429Delete(func() (interface{}, *http.Response, error) {
+		delResp, httpResp, e := r.client.api.WAFsExceptionsAPI.DeleteWafException(ctx, exceptionID, state.WafID.ValueInt64()).Execute()
+		return delResp, httpResp, e
+	}, 5)
 	if response != nil {
 		defer response.Body.Close()
 	}
-
-	// Use deleteResponse to avoid unused variable error.
-	_ = deleteResponse
+	if err != nil {
+		if response != nil && response.StatusCode == http.StatusNotFound {
+			return
+		}
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
+			resp.Diagnostics.AddError(
+				errReadAll.Error(),
+				"err",
+			)
+		}
+		bodyString := string(bodyBytes)
+		resp.Diagnostics.AddError(
+			err.Error(),
+			bodyString,
+		)
+		return
+	}
 }
 
 func (r *wafRuleSetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

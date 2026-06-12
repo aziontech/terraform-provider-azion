@@ -448,43 +448,30 @@ func (r *functionInstanceResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	_, response, err := r.client.api.ApplicationsFunctionAPI.DeleteApplicationFunctionInstance(ctx, state.ApplicationID.ValueInt64(), state.Function.ID.ValueInt64()).Execute() //nolint
+	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
+		return r.client.api.ApplicationsFunctionAPI.DeleteApplicationFunctionInstance(ctx, state.ApplicationID.ValueInt64(), state.Function.ID.ValueInt64()).Execute() //nolint
+	}, 5) // Maximum 5 retries
+	if response != nil {
+		defer response.Body.Close()
+	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			// Resource already deleted, consider this a success
 			return
 		}
-		if response.StatusCode == 429 {
-			_, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
-				return r.client.api.ApplicationsFunctionAPI.DeleteApplicationFunctionInstance(ctx, state.ApplicationID.ValueInt64(), state.Function.ID.ValueInt64()).Execute() //nolint
-			}, 5) // Maximum 5 retries
-
-			if response != nil {
-				defer response.Body.Close()
-			}
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+		bodyBytes, errReadAll := io.ReadAll(response.Body)
+		if errReadAll != nil {
 			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
+				errReadAll.Error(),
+				"err",
 			)
-			return
 		}
+		bodyString := string(bodyBytes)
+		resp.Diagnostics.AddError(
+			err.Error(),
+			bodyString,
+		)
+		return
 	}
 }
 

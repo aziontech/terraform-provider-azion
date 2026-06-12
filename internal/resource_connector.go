@@ -781,7 +781,9 @@ func (r *connectorResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	connectorId := state.Connector.ID.ValueInt64()
 
-	_, response, err := r.client.api.ConnectorsAPI.DeleteConnector(ctx, connectorId).Execute() //nolint
+	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
+		return r.client.api.ConnectorsAPI.DeleteConnector(ctx, connectorId).Execute()
+	}, 5)
 	if response != nil {
 		defer response.Body.Close()
 	}
@@ -789,21 +791,8 @@ func (r *connectorResource) Delete(ctx context.Context, req resource.DeleteReque
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		if response != nil && response.StatusCode == http.StatusTooManyRequests {
-			_, response, err = utils.RetryOn429(func() (*azionapi.DeleteResponse, *http.Response, error) {
-				return r.client.api.ConnectorsAPI.DeleteConnector(ctx, connectorId).Execute()
-			}, 5)
-			if response != nil {
-				defer response.Body.Close()
-			}
-			if err != nil {
-				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
-				return
-			}
-		} else {
-			addConnectorAPIError(&resp.Diagnostics, err, response, "delete")
-			return
-		}
+		addConnectorAPIError(&resp.Diagnostics, err, response, "delete")
+		return
 	}
 }
 

@@ -746,13 +746,19 @@ func (r *rulesEngineResource) Delete(ctx context.Context, req resource.DeleteReq
 		var err error
 
 		if phase == "request" {
-			_, response, err = r.client.api.ApplicationsRequestRulesAPI.
-				DeleteApplicationRequestRule(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.ID.ValueInt64()).
-				Execute()
+			_, response, err = utils.RetryOn429Delete(func() (interface{}, *http.Response, error) {
+				_, httpResp, e := r.client.api.ApplicationsRequestRulesAPI.
+					DeleteApplicationRequestRule(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.ID.ValueInt64()).
+					Execute()
+				return nil, httpResp, e
+			}, 5)
 		} else if phase == "response" {
-			_, response, err = r.client.api.ApplicationsResponseRulesAPI.
-				DeleteApplicationResponseRule(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.ID.ValueInt64()).
-				Execute()
+			_, response, err = utils.RetryOn429Delete(func() (interface{}, *http.Response, error) {
+				_, httpResp, e := r.client.api.ApplicationsResponseRulesAPI.
+					DeleteApplicationResponseRule(ctx, state.ApplicationID.ValueInt64(), state.RulesEngine.ID.ValueInt64()).
+					Execute()
+				return nil, httpResp, e
+			}, 5)
 		}
 
 		if response != nil {
