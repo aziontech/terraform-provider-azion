@@ -70,6 +70,16 @@ TESTARGS='-run "^<regex target of tests>" -count 1 -parallel 1' make testacc
 *Note:* Acceptance tests create real resources, and often cost money to run. You should expect that the full acceptance test suite will take hours to run.
 
 
+## Troubleshooting
+
+### Difficulties destroying resources
+
+If you run into errors while running `terraform destroy`, try lowering the parallelism so Terraform destroys resources one at a time:
+
+```sh
+$ terraform destroy -parallelism=1
+```
+
 ## License
 This project is licensed under the terms of the [MIT](LICENSE) license.
 
