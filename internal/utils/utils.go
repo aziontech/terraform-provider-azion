@@ -227,7 +227,12 @@ func RetryOn429[T any](apiCall func() (T, *http.Response, error), maxRetries int
 	return result, response, errors.New("max retries exceeded for API request")
 }
 
-const referencedByAnotherResourceMsg = "referenced by another resource"
+var stillInUseMsgs = []string{
+	"referenced by another resource",
+	"you must first remove its usage",
+	"workloads_using_firewall",
+	"in use",
+}
 
 func RetryOn429Delete[T any](apiCall func() (T, *http.Response, error), maxRetries int) (T, *http.Response, error) {
 	var result T
@@ -262,11 +267,8 @@ func RetryOn429Delete[T any](apiCall func() (T, *http.Response, error), maxRetri
 	return result, response, errors.New("max retries exceeded for API request")
 }
 
-// isReferencedByAnotherResource reports whether a delete failure was caused by
-// the resource still being referenced by another resource. It inspects both the
-// error and the response body, restoring the body so the caller can still read it.
 func isReferencedByAnotherResource(response *http.Response, err error) bool {
-	if err != nil && strings.Contains(strings.ToLower(err.Error()), referencedByAnotherResourceMsg) {
+	if err != nil && containsStillInUseMsg(err.Error()) {
 		return true
 	}
 	if response == nil || response.Body == nil {
@@ -278,5 +280,15 @@ func isReferencedByAnotherResource(response *http.Response, err error) bool {
 	}
 	// Restore the body so callers can still read it for error reporting.
 	response.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-	return strings.Contains(strings.ToLower(string(bodyBytes)), referencedByAnotherResourceMsg)
+	return containsStillInUseMsg(string(bodyBytes))
+}
+
+func containsStillInUseMsg(s string) bool {
+	lower := strings.ToLower(s)
+	for _, msg := range stillInUseMsgs {
+		if strings.Contains(lower, msg) {
+			return true
+		}
+	}
+	return false
 }
