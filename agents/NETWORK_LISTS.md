@@ -116,9 +116,7 @@ type NetworkListResult struct {
     Type         types.String `tfsdk:"type"`
     Name         types.String `tfsdk:"name"`
     Items        types.List   `tfsdk:"items"`
-    IsVersioned  types.Bool   `tfsdk:"is_versioned"`
-    Version      types.Int64  `tfsdk:"version"`
-    VersionState types.String `tfsdk:"version_state"`
+    State        types.String `tfsdk:"state"`
     VersionID    types.String `tfsdk:"version_id"`
 }
 
@@ -175,15 +173,7 @@ func (n *NetworkListDataSource) Schema(_ context.Context, _ datasource.SchemaReq
                         ElementType: types.StringType,
                         Description: "List of items in the network list. Contents depend on the type: country codes, IP addresses, or ASN numbers.",
                     },
-                    "is_versioned": schema.BoolAttribute{
-                        Description: "Whether the network list is versioned.",
-                        Computed:    true,
-                    },
-                    "version": schema.Int64Attribute{
-                        Description: "The current version of the network list.",
-                        Computed:    true,
-                    },
-                    "version_state": schema.StringAttribute{
+                    "state": schema.StringAttribute{
                         Description: "The state of the current network list version.",
                         Computed:    true,
                     },
@@ -258,9 +248,7 @@ func populateNetworkListResult(data azionapi.NetworkList) NetworkListDataSourceM
             Type:         types.StringValue(data.GetType()),
             Name:         types.StringValue(data.GetName()),
             Items:        utils.SliceStringTypeToList(itemsSlice),
-            IsVersioned:  types.BoolValue(data.IsVersioned),
-            Version:      types.Int64PointerValue(data.Version.Get()),
-            VersionState: types.StringPointerValue(data.VersionState.Get()),
+            State:        types.StringPointerValue(data.State.Get()),
             VersionID:    types.StringPointerValue(data.VersionId.Get()),
         },
     }
@@ -327,9 +315,7 @@ type NetworkListsResults struct {
     CreatedAt    types.String `tfsdk:"created_at"`
     Type         types.String `tfsdk:"type"`
     Name         types.String `tfsdk:"name"`
-    IsVersioned  types.Bool   `tfsdk:"is_versioned"`
-    Version      types.Int64  `tfsdk:"version"`
-    VersionState types.String `tfsdk:"version_state"`
+    State        types.String `tfsdk:"state"`
     VersionID    types.String `tfsdk:"version_id"`
 }
 
@@ -373,9 +359,7 @@ func (n *NetworkListsDataSource) Schema(_ context.Context, _ datasource.SchemaRe
                         "created_at":    schema.StringAttribute{Computed: true},
                         "type":          schema.StringAttribute{Computed: true},
                         "name":          schema.StringAttribute{Computed: true},
-                        "is_versioned":  schema.BoolAttribute{Computed: true},
-                        "version":       schema.Int64Attribute{Computed: true},
-                        "version_state": schema.StringAttribute{Computed: true},
+                        "state":         schema.StringAttribute{Computed: true},
                         "version_id":    schema.StringAttribute{Computed: true},
                     },
                 },
@@ -441,9 +425,7 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
             CreatedAt:    types.StringValue(nl.GetCreatedAt().Format(time.RFC3339)),
             Type:         types.StringValue(nl.GetType()),
             Name:         types.StringValue(nl.GetName()),
-            IsVersioned:  types.BoolValue(nl.IsVersioned),
-            Version:      types.Int64PointerValue(nl.Version.Get()),
-            VersionState: types.StringPointerValue(nl.VersionState.Get()),
+            State:        types.StringPointerValue(nl.State.Get()),
             VersionID:    types.StringPointerValue(nl.VersionId.Get()),
         }
         networkLists = append(networkLists, networkList)
@@ -534,9 +516,7 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
         Type:         types.StringValue(data.GetType()),
         Name:         types.StringValue(data.GetName()),
         Items:        utils.SliceStringTypeToSet(sliceString),
-        IsVersioned:  types.BoolValue(data.IsVersioned),
-        Version:      types.Int64PointerValue(data.Version.Get()),
-        VersionState: types.StringPointerValue(data.VersionState.Get()),
+        State:        types.StringPointerValue(data.State.Get()),
         VersionID:    types.StringPointerValue(data.VersionId.Get()),
     }
     plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
@@ -609,9 +589,7 @@ For `ip_cidr` type, items can include:
 | `items` | `items` | List of items (use `types.Set`) |
 | `last_editor` | `last_editor` | Last editor (computed) |
 | `last_modified` | `last_modified` | Last modified timestamp (computed) |
-| `is_versioned` | `is_versioned` | Whether the network list is versioned (computed) |
-| `version` | `version` | The current version of the network list (computed) |
-| `version_state` | `version_state` | The state of the current network list version (computed) |
+| `state` | `state` | The state of the current network list version (computed) |
 | `version_id` | `version_id` | The identifier of the current network list version (computed) |
 
 ---

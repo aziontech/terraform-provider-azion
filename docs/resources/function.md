@@ -81,7 +81,6 @@ Optional:
 Read-Only:
 
 - `id` (Number) The function identifier.
-- `is_versioned` (Boolean) Whether the function is versioned.
 - `last_editor` (String) The last editor of the function.
 - `last_modified` (String) Last modified timestamp of the function.
 - `product_version` (String) Product version of the function.
@@ -89,8 +88,7 @@ Read-Only:
 - `vendor` (String) Vendor of the function.
 - `version` (String) Version of the function.
 - `version_id` (String) The identifier of the current function version.
-- `version_state` (String) The state of the current function version.
-- `resource_version` (Number) The resource version number of the function.
+- `state` (String) The state of the current function version.
 
 ## Import
 

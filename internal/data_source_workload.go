@@ -274,13 +274,13 @@ func (d *WorkloadDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	workloadState := WorkloadDataSourceModel{
 		Data: WorkloadResults{
-			ID:             types.Int64Value(workloadResponse.Data.Id),
+			ID:             types.Int64Value(workloadResponse.Data.GetId()),
 			Name:           types.StringValue(workloadResponse.Data.Name),
-			LastEditor:     types.StringValue(workloadResponse.Data.LastEditor),
+			LastEditor:     types.StringValue(workloadResponse.Data.GetLastEditor()),
 			LastModified:   types.StringValue(workloadResponse.Data.LastModified.Format(time.RFC850)),
 			CreatedAt:      types.StringValue(workloadResponse.Data.CreatedAt.Format(time.RFC3339)),
-			ProductVersion: types.StringValue(workloadResponse.Data.ProductVersion),
-			WorkloadDomain: types.StringValue(workloadResponse.Data.WorkloadDomain),
+			ProductVersion: types.StringValue(workloadResponse.Data.GetProductVersion()),
+			WorkloadDomain: types.StringValue(workloadResponse.Data.GetWorkloadDomain()),
 		},
 	}
 

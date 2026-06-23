@@ -413,7 +413,7 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 
 	// Populate the state from the response, preserving plan values for optional nested fields.
 	plan.Workload = populateWorkloadResults(ctx, createWorkload, plan.Workload)
-	plan.ID = types.StringValue(strconv.FormatInt(createWorkload.Data.Id, 10))
+	plan.ID = types.StringValue(strconv.FormatInt(createWorkload.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -489,7 +489,7 @@ func (r *workloadResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	state.Workload = populateWorkloadResults(ctx, getWorkload, state.Workload)
-	state.ID = types.StringValue(strconv.FormatInt(getWorkload.Data.Id, 10))
+	state.ID = types.StringValue(strconv.FormatInt(getWorkload.Data.GetId(), 10))
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -676,7 +676,7 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	plan.Workload = populateWorkloadResults(ctx, updateWorkload, plan.Workload)
-	plan.ID = types.StringValue(strconv.FormatInt(updateWorkload.Data.Id, 10))
+	plan.ID = types.StringValue(strconv.FormatInt(updateWorkload.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -741,13 +741,13 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 	}
 
 	result := &workloadResourceResults{
-		ID:             types.Int64Value(response.Data.Id),
+		ID:             types.Int64Value(response.Data.GetId()),
 		Name:           types.StringValue(response.Data.Name),
-		LastEditor:     types.StringValue(response.Data.LastEditor),
+		LastEditor:     types.StringValue(response.Data.GetLastEditor()),
 		LastModified:   types.StringValue(response.Data.LastModified.Format(time.RFC850)),
 		CreatedAt:      types.StringValue(response.Data.CreatedAt.Format(time.RFC3339)),
-		ProductVersion: types.StringValue(response.Data.ProductVersion),
-		WorkloadDomain: types.StringValue(response.Data.WorkloadDomain),
+		ProductVersion: types.StringValue(response.Data.GetProductVersion()),
+		WorkloadDomain: types.StringValue(response.Data.GetWorkloadDomain()),
 	}
 
 	if response.Data.Active != nil {

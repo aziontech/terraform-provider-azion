@@ -46,9 +46,7 @@ type customPageResourceResults struct {
 	CreatedAt      types.String                    `tfsdk:"created_at"`
 	Active         types.Bool                      `tfsdk:"active"`
 	ProductVersion types.String                    `tfsdk:"product_version"`
-	IsVersioned    types.Bool                      `tfsdk:"is_versioned"`
-	Version        types.Int64                     `tfsdk:"version"`
-	VersionState   types.String                    `tfsdk:"version_state"`
+	State          types.String                    `tfsdk:"state"`
 	VersionID      types.String                    `tfsdk:"version_id"`
 	Pages          []customPageResourcePageWrapper `tfsdk:"pages"`
 }
@@ -124,15 +122,7 @@ func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Description: "Product version of the custom page.",
 						Computed:    true,
 					},
-					"is_versioned": schema.BoolAttribute{
-						Description: "Whether the custom page is versioned.",
-						Computed:    true,
-					},
-					"version": schema.Int64Attribute{
-						Description: "The current version of the custom page.",
-						Computed:    true,
-					},
-					"version_state": schema.StringAttribute{
+					"state": schema.StringAttribute{
 						Description: "The state of the current custom page version.",
 						Computed:    true,
 					},
@@ -297,15 +287,13 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 
 	// Populate the state from the response.
 	plan.CustomPage = &customPageResourceResults{
-		ID:             types.Int64Value(createCustomPage.Data.Id),
+		ID:             types.Int64Value(createCustomPage.Data.GetId()),
 		Name:           types.StringValue(createCustomPage.Data.Name),
-		LastEditor:     types.StringValue(createCustomPage.Data.LastEditor),
+		LastEditor:     types.StringValue(createCustomPage.Data.GetLastEditor()),
 		LastModified:   types.StringValue(createCustomPage.Data.LastModified.Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(createCustomPage.Data.CreatedAt.Format(time.RFC3339)),
-		ProductVersion: types.StringValue(createCustomPage.Data.ProductVersion),
-		IsVersioned:    types.BoolValue(createCustomPage.Data.IsVersioned),
-		Version:        types.Int64PointerValue(createCustomPage.Data.Version.Get()),
-		VersionState:   types.StringPointerValue(createCustomPage.Data.VersionState.Get()),
+		ProductVersion: types.StringValue(createCustomPage.Data.GetProductVersion()),
+		State:          types.StringPointerValue(createCustomPage.Data.State.Get()),
 		VersionID:      types.StringPointerValue(createCustomPage.Data.VersionId.Get()),
 	}
 
@@ -340,7 +328,7 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 		plan.CustomPage.Pages = append(plan.CustomPage.Pages, customPageResourcePageWrapper{Entry: &pageResult})
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(createCustomPage.Data.Id, 10))
+	plan.ID = types.StringValue(strconv.FormatInt(createCustomPage.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -413,15 +401,13 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	state.CustomPage = &customPageResourceResults{
-		ID:             types.Int64Value(getCustomPage.Data.Id),
+		ID:             types.Int64Value(getCustomPage.Data.GetId()),
 		Name:           types.StringValue(getCustomPage.Data.Name),
-		LastEditor:     types.StringValue(getCustomPage.Data.LastEditor),
+		LastEditor:     types.StringValue(getCustomPage.Data.GetLastEditor()),
 		LastModified:   types.StringValue(getCustomPage.Data.LastModified.Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(getCustomPage.Data.CreatedAt.Format(time.RFC3339)),
-		ProductVersion: types.StringValue(getCustomPage.Data.ProductVersion),
-		IsVersioned:    types.BoolValue(getCustomPage.Data.IsVersioned),
-		Version:        types.Int64PointerValue(getCustomPage.Data.Version.Get()),
-		VersionState:   types.StringPointerValue(getCustomPage.Data.VersionState.Get()),
+		ProductVersion: types.StringValue(getCustomPage.Data.GetProductVersion()),
+		State:          types.StringPointerValue(getCustomPage.Data.State.Get()),
 		VersionID:      types.StringPointerValue(getCustomPage.Data.VersionId.Get()),
 	}
 
@@ -456,7 +442,7 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 		state.CustomPage.Pages = append(state.CustomPage.Pages, customPageResourcePageWrapper{Entry: &pageResult})
 	}
 
-	state.ID = types.StringValue(strconv.FormatInt(getCustomPage.Data.Id, 10))
+	state.ID = types.StringValue(strconv.FormatInt(getCustomPage.Data.GetId(), 10))
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -579,15 +565,13 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	// Populate the state from the response.
 	plan.CustomPage = &customPageResourceResults{
-		ID:             types.Int64Value(updateCustomPage.Data.Id),
+		ID:             types.Int64Value(updateCustomPage.Data.GetId()),
 		Name:           types.StringValue(updateCustomPage.Data.Name),
-		LastEditor:     types.StringValue(updateCustomPage.Data.LastEditor),
+		LastEditor:     types.StringValue(updateCustomPage.Data.GetLastEditor()),
 		LastModified:   types.StringValue(updateCustomPage.Data.LastModified.Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(updateCustomPage.Data.CreatedAt.Format(time.RFC3339)),
-		ProductVersion: types.StringValue(updateCustomPage.Data.ProductVersion),
-		IsVersioned:    types.BoolValue(updateCustomPage.Data.IsVersioned),
-		Version:        types.Int64PointerValue(updateCustomPage.Data.Version.Get()),
-		VersionState:   types.StringPointerValue(updateCustomPage.Data.VersionState.Get()),
+		ProductVersion: types.StringValue(updateCustomPage.Data.GetProductVersion()),
+		State:          types.StringPointerValue(updateCustomPage.Data.State.Get()),
 		VersionID:      types.StringPointerValue(updateCustomPage.Data.VersionId.Get()),
 	}
 
@@ -622,7 +606,7 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 		plan.CustomPage.Pages = append(plan.CustomPage.Pages, customPageResourcePageWrapper{Entry: &pageResult})
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(updateCustomPage.Data.Id, 10))
+	plan.ID = types.StringValue(strconv.FormatInt(updateCustomPage.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)

@@ -588,9 +588,9 @@ func (r *workloadDeploymentResource) ImportState(ctx context.Context, req resour
 // populateDeploymentResults populates the deployment results model from the API response.
 func populateDeploymentResults(response *azionapi.WorkloadDeploymentResponse) *WorkloadDeploymentResourceResults {
 	result := &WorkloadDeploymentResourceResults{
-		ID:           types.Int64Value(response.Data.Id),
+		ID:           types.Int64Value(response.Data.GetId()),
 		Name:         types.StringValue(response.Data.Name),
-		LastEditor:   types.StringValue(response.Data.LastEditor),
+		LastEditor:   types.StringValue(response.Data.GetLastEditor()),
 		LastModified: types.StringValue(response.Data.LastModified.Format(time.RFC850)),
 		CreatedAt:    types.StringValue(response.Data.CreatedAt.Format(time.RFC3339)),
 	}

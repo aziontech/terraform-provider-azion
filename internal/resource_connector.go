@@ -51,9 +51,7 @@ type connectorResourceResults struct {
 	ProductVersion types.String            `tfsdk:"product_version"`
 	Active         types.Bool              `tfsdk:"active"`
 	Type           types.String            `tfsdk:"type"`
-	IsVersioned    types.Bool              `tfsdk:"is_versioned"`
-	Version        types.Int64             `tfsdk:"version"`
-	VersionState   types.String            `tfsdk:"version_state"`
+	State          types.String            `tfsdk:"state"`
 	VersionID      types.String            `tfsdk:"version_id"`
 	StorageAttrs   *StorageAttributesModel `tfsdk:"storage_attributes"`
 	HTTPAttrs      *HTTPAttributesModel    `tfsdk:"http_attributes"`
@@ -223,15 +221,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Description: "Type of the connector (http or storage).",
 						Required:    true,
 					},
-					"is_versioned": schema.BoolAttribute{
-						Description: "Whether the connector is versioned.",
-						Computed:    true,
-					},
-					"version": schema.Int64Attribute{
-						Description: "The current version of the connector.",
-						Computed:    true,
-					},
-					"version_state": schema.StringAttribute{
+					"state": schema.StringAttribute{
 						Description: "The state of the current connector version.",
 						Computed:    true,
 					},
@@ -600,9 +590,9 @@ func getConnectorId(connector azionapi.Connector) int64 {
 
 	switch c := actualConnector.(type) {
 	case *azionapi.ConnectorStorage:
-		return c.Id
+		return c.GetId()
 	case *azionapi.ConnectorHTTP:
-		return c.Id
+		return c.GetId()
 	default:
 		return 0
 	}
@@ -1101,17 +1091,15 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 	switch c := actualConnector.(type) {
 	case *azionapi.ConnectorStorage:
 		// Storage connector.
-		model.ID = types.Int64Value(c.Id)
+		model.ID = types.Int64Value(c.GetId())
 		model.Name = types.StringValue(c.Name)
-		model.LastEditor = types.StringValue(c.LastEditor)
+		model.LastEditor = types.StringValue(c.GetLastEditor())
 		model.LastModified = types.StringValue(c.LastModified.Format(time.RFC850))
 		model.CreatedAt = types.StringValue(c.CreatedAt.Format(time.RFC850))
-		model.ProductVersion = types.StringValue(c.ProductVersion)
+		model.ProductVersion = types.StringValue(c.GetProductVersion())
 		model.Type = types.StringValue(c.Type)
 		model.Active = types.BoolPointerValue(c.Active)
-		model.IsVersioned = types.BoolValue(c.IsVersioned)
-		model.Version = types.Int64PointerValue(c.Version.Get())
-		model.VersionState = types.StringPointerValue(c.VersionState.Get())
+		model.State = types.StringPointerValue(c.State.Get())
 		model.VersionID = types.StringPointerValue(c.VersionId.Get())
 
 		// Populate storage attributes
@@ -1131,17 +1119,15 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 		// drift on subsequent plans.
 		priorHTTPAttrs := model.HTTPAttrs
 
-		model.ID = types.Int64Value(c.Id)
+		model.ID = types.Int64Value(c.GetId())
 		model.Name = types.StringValue(c.Name)
-		model.LastEditor = types.StringValue(c.LastEditor)
+		model.LastEditor = types.StringValue(c.GetLastEditor())
 		model.LastModified = types.StringValue(c.LastModified.Format(time.RFC850))
 		model.CreatedAt = types.StringValue(c.CreatedAt.Format(time.RFC850))
-		model.ProductVersion = types.StringValue(c.ProductVersion)
+		model.ProductVersion = types.StringValue(c.GetProductVersion())
 		model.Type = types.StringValue(c.Type)
 		model.Active = types.BoolPointerValue(c.Active)
-		model.IsVersioned = types.BoolValue(c.IsVersioned)
-		model.Version = types.Int64PointerValue(c.Version.Get())
-		model.VersionState = types.StringPointerValue(c.VersionState.Get())
+		model.State = types.StringPointerValue(c.State.Get())
 		model.VersionID = types.StringPointerValue(c.VersionId.Get())
 
 		httpAttrs := &HTTPAttributesModel{

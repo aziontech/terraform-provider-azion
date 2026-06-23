@@ -246,13 +246,13 @@ func (d *WorkloadsDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	for _, resultWorkload := range workloadsResponse.GetResults() {
 		result := WorkloadsResults{
-			ID:             types.Int64Value(resultWorkload.Id),
+			ID:             types.Int64Value(resultWorkload.GetId()),
 			Name:           types.StringValue(resultWorkload.Name),
-			LastEditor:     types.StringValue(resultWorkload.LastEditor),
+			LastEditor:     types.StringValue(resultWorkload.GetLastEditor()),
 			LastModified:   types.StringValue(resultWorkload.LastModified.Format(time.RFC850)),
 			CreatedAt:      types.StringValue(resultWorkload.CreatedAt.Format(time.RFC3339)),
-			ProductVersion: types.StringValue(resultWorkload.ProductVersion),
-			WorkloadDomain: types.StringValue(resultWorkload.WorkloadDomain),
+			ProductVersion: types.StringValue(resultWorkload.GetProductVersion()),
+			WorkloadDomain: types.StringValue(resultWorkload.GetWorkloadDomain()),
 		}
 
 		// Set optional fields

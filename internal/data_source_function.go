@@ -52,10 +52,8 @@ type functionResults struct {
 	ReferenceCount       types.Int64  `tfsdk:"reference_count"`
 	Version              types.String `tfsdk:"version"`
 	Vendor               types.String `tfsdk:"vendor"`
-	IsVersioned          types.Bool   `tfsdk:"is_versioned"`
-	VersionState         types.String `tfsdk:"version_state"`
+	State                types.String `tfsdk:"state"`
 	VersionID            types.String `tfsdk:"version_id"`
-	ResourceVersion      types.Int64  `tfsdk:"resource_version"`
 }
 
 func (d *functionDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, _ *datasource.ConfigureResponse) {
@@ -131,20 +129,12 @@ func (d *functionDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: "Vendor of the function.",
 						Computed:    true,
 					},
-					"is_versioned": schema.BoolAttribute{
-						Description: "Whether the function is versioned.",
-						Computed:    true,
-					},
-					"version_state": schema.StringAttribute{
+					"state": schema.StringAttribute{
 						Description: "The state of the current function version.",
 						Computed:    true,
 					},
 					"version_id": schema.StringAttribute{
 						Description: "The identifier of the current function version.",
-						Computed:    true,
-					},
-					"resource_version": schema.Int64Attribute{
-						Description: "The resource version number of the function.",
 						Computed:    true,
 					},
 				},
@@ -211,22 +201,20 @@ func (d *functionDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	FunctionState := functionDataSourceModel{
 		Data: functionResults{
-			ID:                   types.Int64Value(functionsResponse.Data.Id),
+			ID:                   types.Int64Value(functionsResponse.Data.GetId()),
 			Name:                 types.StringValue(functionsResponse.Data.Name),
 			Code:                 types.StringValue(functionsResponse.Data.Code),
 			DefaultArgs:          types.StringValue(defaultArgsStr),
 			ExecutionEnvironment: types.StringValue(*functionsResponse.Data.ExecutionEnvironment),
 			Active:               types.BoolValue(*functionsResponse.Data.Active),
-			LastEditor:           types.StringValue(functionsResponse.Data.LastEditor),
+			LastEditor:           types.StringValue(functionsResponse.Data.GetLastEditor()),
 			LastModified:         types.StringValue(functionsResponse.Data.LastModified.Format(time.RFC850)),
-			ProductVersion:       types.StringValue(functionsResponse.Data.ProductVersion),
-			Version:              types.StringValue(functionsResponse.Data.Version),
-			Vendor:               types.StringValue(functionsResponse.Data.Vendor),
-			ReferenceCount:       types.Int64Value(functionsResponse.Data.ReferenceCount),
-			IsVersioned:          types.BoolValue(functionsResponse.Data.IsVersioned),
-			VersionState:         types.StringPointerValue(functionsResponse.Data.VersionState.Get()),
+			ProductVersion:       types.StringValue(functionsResponse.Data.GetProductVersion()),
+			Version:              types.StringValue(functionsResponse.Data.GetVersion()),
+			Vendor:               types.StringValue(functionsResponse.Data.GetVendor()),
+			ReferenceCount:       types.Int64Value(functionsResponse.Data.GetReferenceCount()),
+			State:                types.StringPointerValue(functionsResponse.Data.State.Get()),
 			VersionID:            types.StringPointerValue(functionsResponse.Data.VersionId.Get()),
-			ResourceVersion:      types.Int64PointerValue(functionsResponse.Data.ResourceVersion.Get()),
 		},
 	}
 

@@ -52,10 +52,8 @@ type functionResourceResults struct {
 	ReferenceCount       types.Int64  `tfsdk:"reference_count"`
 	Version              types.String `tfsdk:"version"`
 	Vendor               types.String `tfsdk:"vendor"`
-	IsVersioned          types.Bool   `tfsdk:"is_versioned"`
-	VersionState         types.String `tfsdk:"version_state"`
+	State                types.String `tfsdk:"state"`
 	VersionID            types.String `tfsdk:"version_id"`
-	ResourceVersion      types.Int64  `tfsdk:"resource_version"`
 }
 
 func (r *functionResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -139,20 +137,12 @@ func (r *functionResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: "Vendor of the function.",
 						Computed:    true,
 					},
-					"is_versioned": schema.BoolAttribute{
-						Description: "Whether the function is versioned.",
-						Computed:    true,
-					},
-					"version_state": schema.StringAttribute{
+					"state": schema.StringAttribute{
 						Description: "The state of the current function version.",
 						Computed:    true,
 					},
 					"version_id": schema.StringAttribute{
 						Description: "The identifier of the current function version.",
-						Computed:    true,
-					},
-					"resource_version": schema.Int64Attribute{
-						Description: "The resource version number of the function.",
 						Computed:    true,
 					},
 				},
@@ -253,29 +243,27 @@ func (r *functionResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	plan.Function = &functionResourceResults{
-		ID:                   types.Int64Value(createFunction.Data.Id),
+		ID:                   types.Int64Value(createFunction.Data.GetId()),
 		Name:                 types.StringValue(createFunction.Data.Name),
 		Code:                 types.StringValue(createFunction.Data.Code),
 		DefaultArgs:          types.StringValue(jsonArgsStr),
 		ExecutionEnvironment: types.StringValue(*createFunction.Data.ExecutionEnvironment),
 		Active:               types.BoolValue(*createFunction.Data.Active),
-		LastEditor:           types.StringValue(createFunction.Data.LastEditor),
+		LastEditor:           types.StringValue(createFunction.Data.GetLastEditor()),
 		LastModified:         types.StringValue(createFunction.Data.LastModified.Format(time.RFC850)),
-		ProductVersion:       types.StringValue(createFunction.Data.ProductVersion),
-		Version:              types.StringValue(createFunction.Data.Version),
-		Vendor:               types.StringValue(createFunction.Data.Vendor),
-		ReferenceCount:       types.Int64Value(createFunction.Data.ReferenceCount),
-		IsVersioned:          types.BoolValue(createFunction.Data.IsVersioned),
-		VersionState:         types.StringPointerValue(createFunction.Data.VersionState.Get()),
+		ProductVersion:       types.StringValue(createFunction.Data.GetProductVersion()),
+		Version:              types.StringValue(createFunction.Data.GetVersion()),
+		Vendor:               types.StringValue(createFunction.Data.GetVendor()),
+		ReferenceCount:       types.Int64Value(createFunction.Data.GetReferenceCount()),
+		State:                types.StringPointerValue(createFunction.Data.State.Get()),
 		VersionID:            types.StringPointerValue(createFunction.Data.VersionId.Get()),
-		ResourceVersion:      types.Int64PointerValue(createFunction.Data.ResourceVersion.Get()),
 	}
 
 	if createFunction.Data.Runtime != nil {
 		plan.Function.Runtime = types.StringValue(*createFunction.Data.Runtime)
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(createFunction.Data.Id, 10))
+	plan.ID = types.StringValue(strconv.FormatInt(createFunction.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -359,28 +347,26 @@ func (r *functionResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	state.Function = &functionResourceResults{
-		ID:                   types.Int64Value(getFunction.Data.Id),
+		ID:                   types.Int64Value(getFunction.Data.GetId()),
 		Name:                 types.StringValue(getFunction.Data.Name),
 		Code:                 types.StringValue(getFunction.Data.Code),
 		DefaultArgs:          types.StringValue(jsonArgsStr),
 		ExecutionEnvironment: types.StringValue(*getFunction.Data.ExecutionEnvironment),
 		Active:               types.BoolValue(*getFunction.Data.Active),
-		LastEditor:           types.StringValue(getFunction.Data.LastEditor),
+		LastEditor:           types.StringValue(getFunction.Data.GetLastEditor()),
 		LastModified:         types.StringValue(getFunction.Data.LastModified.Format(time.RFC850)),
-		ProductVersion:       types.StringValue(getFunction.Data.ProductVersion),
-		Version:              types.StringValue(getFunction.Data.Version),
-		Vendor:               types.StringValue(getFunction.Data.Vendor),
-		ReferenceCount:       types.Int64Value(getFunction.Data.ReferenceCount),
-		IsVersioned:          types.BoolValue(getFunction.Data.IsVersioned),
-		VersionState:         types.StringPointerValue(getFunction.Data.VersionState.Get()),
+		ProductVersion:       types.StringValue(getFunction.Data.GetProductVersion()),
+		Version:              types.StringValue(getFunction.Data.GetVersion()),
+		Vendor:               types.StringValue(getFunction.Data.GetVendor()),
+		ReferenceCount:       types.Int64Value(getFunction.Data.GetReferenceCount()),
+		State:                types.StringPointerValue(getFunction.Data.State.Get()),
 		VersionID:            types.StringPointerValue(getFunction.Data.VersionId.Get()),
-		ResourceVersion:      types.Int64PointerValue(getFunction.Data.ResourceVersion.Get()),
 	}
 
 	if getFunction.Data.Runtime != nil {
 		state.Function.Runtime = types.StringValue(*getFunction.Data.Runtime)
 	}
-	state.ID = types.StringValue(strconv.FormatInt(getFunction.Data.Id, 10))
+	state.ID = types.StringValue(strconv.FormatInt(getFunction.Data.GetId(), 10))
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -501,29 +487,27 @@ func (r *functionResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	plan.Function = &functionResourceResults{
-		ID:                   types.Int64Value(updateFunction.Data.Id),
+		ID:                   types.Int64Value(updateFunction.Data.GetId()),
 		Name:                 types.StringValue(updateFunction.Data.Name),
 		Code:                 types.StringValue(updateFunction.Data.Code),
 		DefaultArgs:          types.StringValue(jsonArgsStr),
 		ExecutionEnvironment: types.StringValue(*updateFunction.Data.ExecutionEnvironment),
 		Active:               types.BoolValue(*updateFunction.Data.Active),
-		LastEditor:           types.StringValue(updateFunction.Data.LastEditor),
+		LastEditor:           types.StringValue(updateFunction.Data.GetLastEditor()),
 		LastModified:         types.StringValue(updateFunction.Data.LastModified.Format(time.RFC850)),
-		ProductVersion:       types.StringValue(updateFunction.Data.ProductVersion),
-		Version:              types.StringValue(updateFunction.Data.Version),
-		Vendor:               types.StringValue(updateFunction.Data.Vendor),
-		ReferenceCount:       types.Int64Value(updateFunction.Data.ReferenceCount),
-		IsVersioned:          types.BoolValue(updateFunction.Data.IsVersioned),
-		VersionState:         types.StringPointerValue(updateFunction.Data.VersionState.Get()),
+		ProductVersion:       types.StringValue(updateFunction.Data.GetProductVersion()),
+		Version:              types.StringValue(updateFunction.Data.GetVersion()),
+		Vendor:               types.StringValue(updateFunction.Data.GetVendor()),
+		ReferenceCount:       types.Int64Value(updateFunction.Data.GetReferenceCount()),
+		State:                types.StringPointerValue(updateFunction.Data.State.Get()),
 		VersionID:            types.StringPointerValue(updateFunction.Data.VersionId.Get()),
-		ResourceVersion:      types.Int64PointerValue(updateFunction.Data.ResourceVersion.Get()),
 	}
 
 	if updateFunction.Data.Runtime != nil {
 		plan.Function.Runtime = types.StringValue(*updateFunction.Data.Runtime)
 	}
 
-	plan.ID = types.StringValue(strconv.FormatInt(updateFunction.Data.Id, 10))
+	plan.ID = types.StringValue(strconv.FormatInt(updateFunction.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)

@@ -64,7 +64,7 @@ func Client(APIToken string, userAgent string) *apiClient {
 	}
 
 	envApiEntrypoint := os.Getenv("AZION_API_ENTRYPOINT")
-	v4url := "https://api.azion.com/v4"
+	v4url := "https://stage-api.azion.com/v4"
 
 	// Always set v4 URL for V4 SDKs (azion-api and edge-api)
 	client.apiConfig.Servers[0].URL = v4url

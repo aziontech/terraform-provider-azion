@@ -100,9 +100,7 @@ type connectorResourceResults struct {
     ProductVersion types.String            `tfsdk:"product_version"`
     Active         types.Bool              `tfsdk:"active"`
     Type           types.String            `tfsdk:"type"`
-    IsVersioned    types.Bool              `tfsdk:"is_versioned"`
-    Version        types.Int64             `tfsdk:"version"`
-    VersionState   types.String            `tfsdk:"version_state"`
+    State          types.String            `tfsdk:"state"`
     VersionID      types.String            `tfsdk:"version_id"`
     StorageAttrs   *StorageAttributesModel `tfsdk:"storage_attributes"`
     HTTPAttrs      *HTTPAttributesModel    `tfsdk:"http_attributes"`
@@ -153,15 +151,7 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
                 Attributes: map[string]schema.Attribute{
                     "name": schema.StringAttribute{Required: true},
                     "type": schema.StringAttribute{Required: true},
-                    "is_versioned": schema.BoolAttribute{
-                        Description: "Whether the connector is versioned.",
-                        Computed:    true,
-                    },
-                    "version": schema.Int64Attribute{
-                        Description: "The current version of the connector.",
-                        Computed:    true,
-                    },
-                    "version_state": schema.StringAttribute{
+                    "state": schema.StringAttribute{
                         Description: "The state of the current connector version.",
                         Computed:    true,
                     },
@@ -414,9 +404,7 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
         model.Name = types.StringValue(c.Name)
         model.Type = types.StringValue(c.Type)
         model.Active = types.BoolPointerValue(c.Active)
-        model.IsVersioned = types.BoolValue(c.IsVersioned)
-        model.Version = types.Int64PointerValue(c.Version.Get())
-        model.VersionState = types.StringPointerValue(c.VersionState.Get())
+        model.State = types.StringPointerValue(c.State.Get())
         model.VersionID = types.StringPointerValue(c.VersionId.Get())
         
         model.StorageAttrs = &StorageAttributesModel{
@@ -433,9 +421,7 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
         model.Name = types.StringValue(c.Name)
         model.Type = types.StringValue(c.Type)
         model.Active = types.BoolPointerValue(c.Active)
-        model.IsVersioned = types.BoolValue(c.IsVersioned)
-        model.Version = types.Int64PointerValue(c.Version.Get())
-        model.VersionState = types.StringPointerValue(c.VersionState.Get())
+        model.State = types.StringPointerValue(c.State.Get())
         model.VersionID = types.StringPointerValue(c.VersionId.Get())
         
         httpAttrs := &HTTPAttributesModel{}
@@ -500,9 +486,7 @@ type ConnectorResults struct {
     ProductVersion types.String `tfsdk:"product_version"`
     Active         types.Bool   `tfsdk:"active"`
     Type           types.String `tfsdk:"type"`
-    IsVersioned    types.Bool   `tfsdk:"is_versioned"`
-    Version        types.Int64  `tfsdk:"version"`
-    VersionState   types.String `tfsdk:"version_state"`
+    State          types.String `tfsdk:"state"`
     VersionID      types.String `tfsdk:"version_id"`
     Attributes     types.String `tfsdk:"attributes"` // JSON string
 }
@@ -555,9 +539,7 @@ type ConnectorStorage struct {
     Active         *bool
     ProductVersion string
     Type           string  // "storage"
-    IsVersioned    bool
-    Version        NullableInt64
-    VersionState   NullableString
+    State          NullableString
     VersionId      NullableString
     Attributes     ConnectorStorageAttributes
 }
@@ -576,9 +558,7 @@ type ConnectorHTTP struct {
     Active         *bool
     ProductVersion string
     Type           string  // "http"
-    IsVersioned    bool
-    Version        NullableInt64
-    VersionState   NullableString
+    State          NullableString
     VersionId      NullableString
     Attributes     ConnectorHTTPAttributes
 }

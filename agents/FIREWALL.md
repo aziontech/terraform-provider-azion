@@ -230,9 +230,7 @@ type FirewallResults struct {
 	LastModified   types.String    `tfsdk:"last_modified"`
 	ProductVersion types.String    `tfsdk:"product_version"`
 	CreatedAt      types.String    `tfsdk:"created_at"`
-	IsVersioned    types.Bool      `tfsdk:"is_versioned"`
-	Version        types.Int64     `tfsdk:"version"`
-	VersionState   types.String    `tfsdk:"version_state"`
+	State          types.String    `tfsdk:"state"`
 	VersionID      types.String    `tfsdk:"version_id"`
 }
 
@@ -342,9 +340,7 @@ func (f *FirewallDataSource) Read(ctx context.Context, req datasource.ReadReques
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
 		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
-		IsVersioned:    types.BoolValue(firewallResponse.Data.IsVersioned),
-		Version:        types.Int64PointerValue(firewallResponse.Data.Version.Get()),
-		VersionState:   types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
+		State:          types.StringPointerValue(firewallResponse.Data.State.Get()),
 		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
 	}
 
@@ -412,9 +408,7 @@ type FirewallsResults struct {
 	LastModified   types.String    `tfsdk:"last_modified"`
 	ProductVersion types.String    `tfsdk:"product_version"`
 	CreatedAt      types.String    `tfsdk:"created_at"`
-	IsVersioned    types.Bool      `tfsdk:"is_versioned"`
-	Version        types.Int64     `tfsdk:"version"`
-	VersionState   types.String    `tfsdk:"version_state"`
+	State          types.String    `tfsdk:"state"`
 	VersionID      types.String    `tfsdk:"version_id"`
 }
 
@@ -522,9 +516,7 @@ type FirewallResourceResults struct {
 	LastModified   types.String             `tfsdk:"last_modified"`
 	CreatedAt      types.String             `tfsdk:"created_at"`
 	ProductVersion types.String             `tfsdk:"product_version"`
-	IsVersioned    types.Bool               `tfsdk:"is_versioned"`
-	Version        types.Int64              `tfsdk:"version"`
-	VersionState   types.String             `tfsdk:"version_state"`
+	State          types.String             `tfsdk:"state"`
 	VersionID      types.String             `tfsdk:"version_id"`
 }
 ```
