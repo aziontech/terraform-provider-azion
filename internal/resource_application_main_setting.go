@@ -48,9 +48,7 @@ type ApplicationResults struct {
 	Active         types.Bool          `tfsdk:"active"`
 	Debug          types.Bool          `tfsdk:"debug"`
 	ProductVersion types.String        `tfsdk:"product_version"`
-	IsVersioned    types.Bool          `tfsdk:"is_versioned"`
-	Version        types.Int64         `tfsdk:"version"`
-	VersionState   types.String        `tfsdk:"version_state"`
+	State          types.String        `tfsdk:"state"`
 	VersionID      types.String        `tfsdk:"version_id"`
 }
 
@@ -98,15 +96,7 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Computed:    true,
 						Description: "The product version.",
 					},
-					"is_versioned": schema.BoolAttribute{
-						Computed:    true,
-						Description: "Whether the application is versioned.",
-					},
-					"version": schema.Int64Attribute{
-						Computed:    true,
-						Description: "The current version of the application.",
-					},
-					"version_state": schema.StringAttribute{
+					"state": schema.StringAttribute{
 						Computed:    true,
 						Description: "The state of the current application version.",
 					},
@@ -226,9 +216,7 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
 		Active:         types.BoolValue(createApplication.Data.GetActive()),
 		Debug:          types.BoolValue(createApplication.Data.GetDebug()),
 		ProductVersion: types.StringValue(createApplication.Data.GetProductVersion()),
-		IsVersioned:    types.BoolValue(createApplication.Data.IsVersioned),
-		Version:        types.Int64Value(createApplication.Data.Version),
-		VersionState:   types.StringPointerValue(createApplication.Data.VersionState.Get()),
+		State:          types.StringPointerValue(createApplication.Data.State.Get()),
 		VersionID:      types.StringPointerValue(createApplication.Data.VersionId.Get()),
 		Modules:        plan.Application.Modules,
 	}
@@ -340,9 +328,7 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 		Active:         types.BoolValue(stateApplication.Data.GetActive()),
 		Debug:          types.BoolValue(stateApplication.Data.GetDebug()),
 		ProductVersion: types.StringValue(stateApplication.Data.GetProductVersion()),
-		IsVersioned:    types.BoolValue(stateApplication.Data.IsVersioned),
-		Version:        types.Int64Value(stateApplication.Data.Version),
-		VersionState:   types.StringPointerValue(stateApplication.Data.VersionState.Get()),
+		State:          types.StringPointerValue(stateApplication.Data.State.Get()),
 		VersionID:      types.StringPointerValue(stateApplication.Data.VersionId.Get()),
 	}
 	state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
@@ -446,9 +432,7 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
 		Active:         types.BoolValue(updateApplication.Data.GetActive()),
 		Debug:          types.BoolValue(updateApplication.Data.GetDebug()),
 		ProductVersion: types.StringValue(updateApplication.Data.GetProductVersion()),
-		IsVersioned:    types.BoolValue(updateApplication.Data.IsVersioned),
-		Version:        types.Int64Value(updateApplication.Data.Version),
-		VersionState:   types.StringPointerValue(updateApplication.Data.VersionState.Get()),
+		State:          types.StringPointerValue(updateApplication.Data.State.Get()),
 		VersionID:      types.StringPointerValue(updateApplication.Data.VersionId.Get()),
 		Modules:        modsPlan,
 	}

@@ -40,9 +40,7 @@ type NetworkListResult struct {
 	Type         types.String `tfsdk:"type"`
 	Name         types.String `tfsdk:"name"`
 	Items        types.List   `tfsdk:"items"`
-	IsVersioned  types.Bool   `tfsdk:"is_versioned"`
-	Version      types.Int64  `tfsdk:"version"`
-	VersionState types.String `tfsdk:"version_state"`
+	State        types.String `tfsdk:"state"`
 	VersionID    types.String `tfsdk:"version_id"`
 }
 
@@ -96,15 +94,7 @@ func (n *NetworkListDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						ElementType: types.StringType,
 						Description: "List of items in the network list. Contents depend on the type: country codes, IP addresses, or ASN numbers.",
 					},
-					"is_versioned": schema.BoolAttribute{
-						Description: "Whether the network list is versioned.",
-						Computed:    true,
-					},
-					"version": schema.Int64Attribute{
-						Description: "The current version of the network list.",
-						Computed:    true,
-					},
-					"version_state": schema.StringAttribute{
+					"state": schema.StringAttribute{
 						Description: "The state of the current network list version.",
 						Computed:    true,
 					},
@@ -192,9 +182,7 @@ func populateNetworkListResult(data azionapi.NetworkList) NetworkListDataSourceM
 			Type:         types.StringValue(data.GetType()),
 			Name:         types.StringValue(data.GetName()),
 			Items:        utils.SliceStringTypeToList(itemsSlice),
-			IsVersioned:  types.BoolValue(data.IsVersioned),
-			Version:      types.Int64PointerValue(data.Version.Get()),
-			VersionState: types.StringPointerValue(data.VersionState.Get()),
+			State:        types.StringPointerValue(data.State.Get()),
 			VersionID:    types.StringPointerValue(data.VersionId.Get()),
 		},
 	}

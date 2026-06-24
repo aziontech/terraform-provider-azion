@@ -59,10 +59,8 @@ type WAF struct {
     Name           string                      `json:"name"`
     LastEditor     string                      `json:"last_editor"`
     LastModified   time.Time                   `json:"last_modified"`
-    ProductVersion NullableString              `json:"product_version,omitempty"`
-    IsVersioned    bool                        `json:"is_versioned"`
-    Version        NullableInt64               `json:"version,omitempty"`
-    VersionState   NullableString              `json:"version_state,omitempty"`
+    ProductVersion NullableString              `json:"product_version"`
+    State          NullableString              `json:"state,omitempty"`
     VersionId      NullableString              `json:"version_id,omitempty"`
     EngineSettings *WAFEngineSettingsField     `json:"engine_settings,omitempty"`
 }
@@ -156,9 +154,7 @@ type WafResultDataModel struct {
     LastEditor     types.String                `tfsdk:"last_editor"`
     LastModified   types.String                `tfsdk:"last_modified"`
     ProductVersion types.String                `tfsdk:"product_version"`
-    IsVersioned    types.Bool                  `tfsdk:"is_versioned"`
-    Version        types.Int64                 `tfsdk:"version"`
-    VersionState   types.String                `tfsdk:"version_state"`
+    State          types.String                `tfsdk:"state"`
     VersionID      types.String                `tfsdk:"version_id"`
     EngineSettings *WafEngineSettingsModel     `tfsdk:"engine_settings"`
 }
@@ -205,9 +201,7 @@ type WafListItemModel struct {
     LastEditor     types.String                `tfsdk:"last_editor"`
     LastModified   types.String                `tfsdk:"last_modified"`
     ProductVersion types.String                `tfsdk:"product_version"`
-    IsVersioned    types.Bool                  `tfsdk:"is_versioned"`
-    Version        types.Int64                 `tfsdk:"version"`
-    VersionState   types.String                `tfsdk:"version_state"`
+    State          types.String                `tfsdk:"state"`
     VersionID      types.String                `tfsdk:"version_id"`
     EngineSettings *WafEngineSettingsModel     `tfsdk:"engine_settings"`
 }
@@ -257,15 +251,7 @@ resp.Schema = schema.Schema{
                     Description: "Product version of the WAF.",
                     Computed:    true,
                 },
-                "is_versioned": schema.BoolAttribute{
-                    Description: "Whether the WAF is versioned.",
-                    Computed:    true,
-                },
-                "version": schema.Int64Attribute{
-                    Description: "The current version of the WAF.",
-                    Computed:    true,
-                },
-                "version_state": schema.StringAttribute{
+                "state": schema.StringAttribute{
                     Description: "The state of the current WAF version.",
                     Computed:    true,
                 },
@@ -381,9 +367,7 @@ func transformWAFToResultModel(waf azionapi.WAF) *WafResultDataModel {
         Name:         types.StringValue(waf.GetName()),
         LastEditor:   types.StringValue(waf.GetLastEditor()),
         LastModified: types.StringValue(waf.GetLastModified().Format(time.RFC3339)),
-        IsVersioned:  types.BoolValue(waf.IsVersioned),
-        Version:      types.Int64PointerValue(waf.Version.Get()),
-        VersionState: types.StringPointerValue(waf.VersionState.Get()),
+        State:        types.StringPointerValue(waf.State.Get()),
         VersionID:    types.StringPointerValue(waf.VersionId.Get()),
     }
 
@@ -394,12 +378,8 @@ func transformWAFToResultModel(waf azionapi.WAF) *WafResultDataModel {
         result.Active = types.BoolNull()
     }
 
-    // Optional product_version
-    if waf.HasProductVersion() {
-        result.ProductVersion = types.StringValue(waf.GetProductVersion())
-    } else {
-        result.ProductVersion = types.StringNull()
-    }
+    // product_version (read-only)
+    result.ProductVersion = types.StringPointerValue(waf.ProductVersion.Get())
 
     // Optional engine_settings
     if waf.HasEngineSettings() {
@@ -719,9 +699,7 @@ data "azion_waf" "example" {
   * `last_editor` - Last editor of the WAF.
   * `last_modified` - Last modified timestamp.
   * `product_version` - Product version of the WAF.
-  * `is_versioned` - Whether the WAF is versioned.
-  * `version` - The current version of the WAF.
-  * `version_state` - The state of the current WAF version.
+  * `state` - The state of the current WAF version.
   * `version_id` - The identifier of the current WAF version.
   * `engine_settings` - Engine settings for the WAF.
     * `engine_version` - Engine version for the WAF.
@@ -779,9 +757,7 @@ data "azion_wafs" "example" {
   * `last_editor` - Last editor of the WAF.
   * `last_modified` - Last modified timestamp.
   * `product_version` - Product version of the WAF.
-  * `is_versioned` - Whether the WAF is versioned.
-  * `version` - The current version of the WAF.
-  * `version_state` - The state of the current WAF version.
+  * `state` - The state of the current WAF version.
   * `version_id` - The identifier of the current WAF version.
   * `engine_settings` - Engine settings for the WAF.
     * `engine_version` - Engine version for the WAF.
@@ -831,9 +807,7 @@ type WafResourceResults struct {
     LastEditor     types.String                      `tfsdk:"last_editor"`
     LastModified   types.String                      `tfsdk:"last_modified"`
     ProductVersion types.String                      `tfsdk:"product_version"`
-    IsVersioned    types.Bool                        `tfsdk:"is_versioned"`
-    Version        types.Int64                       `tfsdk:"version"`
-    VersionState   types.String                      `tfsdk:"version_state"`
+    State          types.String                      `tfsdk:"state"`
     VersionID      types.String                      `tfsdk:"version_id"`
     EngineSettings *WafEngineSettingsResourceModel   `tfsdk:"engine_settings"`
 }
@@ -900,15 +874,7 @@ resp.Schema = schema.Schema{
                     Description: "Product version of the WAF.",
                     Computed:    true,
                 },
-                "is_versioned": schema.BoolAttribute{
-                    Description: "Whether the WAF is versioned.",
-                    Computed:    true,
-                },
-                "version": schema.Int64Attribute{
-                    Description: "The current version of the WAF.",
-                    Computed:    true,
-                },
-                "version_state": schema.StringAttribute{
+                "state": schema.StringAttribute{
                     Description: "The state of the current WAF version.",
                     Computed:    true,
                 },
@@ -986,10 +952,6 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
     // Set optional fields.
     if !plan.Result.Active.IsNull() && !plan.Result.Active.IsUnknown() {
         wafRequest.SetActive(plan.Result.Active.ValueBool())
-    }
-
-    if !plan.Result.ProductVersion.IsNull() && !plan.Result.ProductVersion.IsUnknown() {
-        wafRequest.SetProductVersion(plan.Result.ProductVersion.ValueString())
     }
 
     // Set engine settings if provided.
@@ -1091,10 +1053,6 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
     // Set optional fields.
     if !plan.Result.Active.IsNull() && !plan.Result.Active.IsUnknown() {
         wafRequest.SetActive(plan.Result.Active.ValueBool())
-    }
-
-    if !plan.Result.ProductVersion.IsNull() && !plan.Result.ProductVersion.IsUnknown() {
-        wafRequest.SetProductVersion(plan.Result.ProductVersion.ValueString())
     }
 
     // Set engine settings if provided.
@@ -1323,7 +1281,7 @@ terraform import azion_waf.example 12345
 * `result` - (Required) The WAF configuration.
   * `name` - (Required) Name of the WAF.
   * `active` - (Optional) Whether the WAF is active.
-  * `product_version` - (Optional) Product version of the WAF.
+  * `product_version` - (Computed) Product version of the WAF.
   * `engine_settings` - (Optional) Engine settings for the WAF.
     * `engine_version` - (Optional) Engine version for the WAF.
     * `type` - (Optional) Type of the WAF engine.
@@ -1340,9 +1298,7 @@ terraform import azion_waf.example 12345
 * `last_editor` - Last editor of the WAF.
 * `last_modified` - Last modified timestamp.
 * `last_updated` - Timestamp of the last Terraform update of the resource.
-* `result.is_versioned` - Whether the WAF is versioned.
-* `result.version` - The current version of the WAF.
-* `result.version_state` - The state of the current WAF version.
+* `result.state` - The state of the current WAF version.
 * `result.version_id` - The identifier of the current WAF version.
 ```
 

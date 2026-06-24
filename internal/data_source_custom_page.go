@@ -41,9 +41,7 @@ type CustomPageResults struct {
 	CreatedAt      types.String            `tfsdk:"created_at"`
 	Active         types.Bool              `tfsdk:"active"`
 	ProductVersion types.String            `tfsdk:"product_version"`
-	IsVersioned    types.Bool              `tfsdk:"is_versioned"`
-	Version        types.Int64             `tfsdk:"version"`
-	VersionState   types.String            `tfsdk:"version_state"`
+	State          types.String            `tfsdk:"state"`
 	VersionID      types.String            `tfsdk:"version_id"`
 	Pages          []CustomPagePageWrapper `tfsdk:"pages"`
 }
@@ -118,15 +116,7 @@ func (d *CustomPageDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 						Description: "Product version of the custom page.",
 						Computed:    true,
 					},
-					"is_versioned": schema.BoolAttribute{
-						Description: "Whether the custom page is versioned.",
-						Computed:    true,
-					},
-					"version": schema.Int64Attribute{
-						Description: "The current version of the custom page.",
-						Computed:    true,
-					},
-					"version_state": schema.StringAttribute{
+					"state": schema.StringAttribute{
 						Description: "The state of the current custom page version.",
 						Computed:    true,
 					},
@@ -235,15 +225,13 @@ func (d *CustomPageDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	customPageState := CustomPageDataSourceModel{
 		Data: CustomPageResults{
-			ID:             types.Int64Value(customPageResponse.Data.Id),
+			ID:             types.Int64Value(customPageResponse.Data.GetId()),
 			Name:           types.StringValue(customPageResponse.Data.Name),
-			LastEditor:     types.StringValue(customPageResponse.Data.LastEditor),
+			LastEditor:     types.StringValue(customPageResponse.Data.GetLastEditor()),
 			LastModified:   types.StringValue(customPageResponse.Data.LastModified.Format(time.RFC3339)),
 			CreatedAt:      types.StringValue(customPageResponse.Data.CreatedAt.Format(time.RFC3339)),
-			ProductVersion: types.StringValue(customPageResponse.Data.ProductVersion),
-			IsVersioned:    types.BoolValue(customPageResponse.Data.IsVersioned),
-			Version:        types.Int64PointerValue(customPageResponse.Data.Version.Get()),
-			VersionState:   types.StringPointerValue(customPageResponse.Data.VersionState.Get()),
+			ProductVersion: types.StringValue(customPageResponse.Data.GetProductVersion()),
+			State:          types.StringPointerValue(customPageResponse.Data.State.Get()),
 			VersionID:      types.StringPointerValue(customPageResponse.Data.VersionId.Get()),
 		},
 	}

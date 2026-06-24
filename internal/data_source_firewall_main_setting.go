@@ -61,9 +61,7 @@ type FirewallResults struct {
 	LastModified   types.String    `tfsdk:"last_modified"`
 	ProductVersion types.String    `tfsdk:"product_version"`
 	CreatedAt      types.String    `tfsdk:"created_at"`
-	IsVersioned    types.Bool      `tfsdk:"is_versioned"`
-	Version        types.Int64     `tfsdk:"version"`
-	VersionState   types.String    `tfsdk:"version_state"`
+	State          types.String    `tfsdk:"state"`
 	VersionID      types.String    `tfsdk:"version_id"`
 }
 
@@ -170,15 +168,7 @@ func (f *FirewallDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: "The creation timestamp of the firewall.",
 						Computed:    true,
 					},
-					"is_versioned": schema.BoolAttribute{
-						Description: "Whether the firewall is versioned.",
-						Computed:    true,
-					},
-					"version": schema.Int64Attribute{
-						Description: "The current version of the firewall.",
-						Computed:    true,
-					},
-					"version_state": schema.StringAttribute{
+					"state": schema.StringAttribute{
 						Description: "The state of the current firewall version.",
 						Computed:    true,
 					},
@@ -266,9 +256,7 @@ func (f *FirewallDataSource) Read(ctx context.Context, req datasource.ReadReques
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
 		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
-		IsVersioned:    types.BoolValue(firewallResponse.Data.IsVersioned),
-		Version:        types.Int64PointerValue(firewallResponse.Data.Version.Get()),
-		VersionState:   types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
+		State:          types.StringPointerValue(firewallResponse.Data.State.Get()),
 		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
 	}
 

@@ -44,9 +44,7 @@ type ApplicationData struct {
 	Active         types.Bool          `tfsdk:"active"`
 	Debug          types.Bool          `tfsdk:"debug"`
 	ProductVersion types.String        `tfsdk:"product_version"`
-	IsVersioned    types.Bool          `tfsdk:"is_versioned"`
-	Version        types.Int64         `tfsdk:"version"`
-	VersionState   types.String        `tfsdk:"version_state"`
+	State          types.String        `tfsdk:"state"`
 	VersionID      types.String        `tfsdk:"version_id"`
 }
 
@@ -118,15 +116,7 @@ func (e *ApplicationDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 						Description: "Product version.",
 						Computed:    true,
 					},
-					"is_versioned": schema.BoolAttribute{
-						Description: "Whether the application is versioned.",
-						Computed:    true,
-					},
-					"version": schema.Int64Attribute{
-						Description: "The current version of the application.",
-						Computed:    true,
-					},
-					"version_state": schema.StringAttribute{
+					"state": schema.StringAttribute{
 						Description: "The state of the current application version.",
 						Computed:    true,
 					},
@@ -270,9 +260,7 @@ func (e *ApplicationDataSource) Read(ctx context.Context, req datasource.ReadReq
 			LastEditor:     types.StringValue(applicationsResponse.Data.GetLastEditor()),
 			LastModified:   types.StringValue(applicationsResponse.Data.GetLastModified().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(applicationsResponse.Data.GetProductVersion()),
-			IsVersioned:    types.BoolValue(applicationsResponse.Data.IsVersioned),
-			Version:        types.Int64Value(applicationsResponse.Data.Version),
-			VersionState:   types.StringPointerValue(applicationsResponse.Data.VersionState.Get()),
+			State:          types.StringPointerValue(applicationsResponse.Data.State.Get()),
 			VersionID:      types.StringPointerValue(applicationsResponse.Data.VersionId.Get()),
 		},
 	}

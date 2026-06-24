@@ -56,7 +56,7 @@ terraform import azion_waf.example 12345
 * `result` - (Required) The WAF configuration.
   * `name` - (Required) Name of the WAF.
   * `active` - (Optional) Whether the WAF is active.
-  * `product_version` - (Optional) Product version of the WAF.
+  * `product_version` - (Computed) Product version of the WAF.
   * `engine_settings` - (Optional) Engine settings for the WAF.
     * `engine_version` - (Optional) Engine version for the WAF (e.g., `2021-Q3`).
     * `type` - (Optional) Type of the WAF engine (e.g., `score`).
@@ -74,9 +74,7 @@ terraform import azion_waf.example 12345
 * `last_modified` - Last modified timestamp.
 * `last_updated` - Timestamp of the last Terraform update of the resource.
 * `result`
-  * `is_versioned` - Whether the WAF is versioned.
-  * `version` - The current version of the WAF.
-  * `version_state` - The state of the current WAF version.
+  * `state` - The state of the current WAF version.
   * `version_id` - The identifier of the current WAF version.
 
 ## Related Resources

@@ -42,9 +42,7 @@ type ConnectorsResults struct {
 	ProductVersion types.String `tfsdk:"product_version"`
 	Active         types.Bool   `tfsdk:"active"`
 	Type           types.String `tfsdk:"type"`
-	IsVersioned    types.Bool   `tfsdk:"is_versioned"`
-	Version        types.Int64  `tfsdk:"version"`
-	VersionState   types.String `tfsdk:"version_state"`
+	State          types.String `tfsdk:"state"`
 	VersionID      types.String `tfsdk:"version_id"`
 	Attributes     types.String `tfsdk:"attributes"`
 }
@@ -107,15 +105,7 @@ func (d *ConnectorsDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 							Description: "Type of the connector (http, storage).",
 							Computed:    true,
 						},
-						"is_versioned": schema.BoolAttribute{
-							Description: "Whether the connector is versioned.",
-							Computed:    true,
-						},
-						"version": schema.Int64Attribute{
-							Description: "The current version of the connector.",
-							Computed:    true,
-						},
-						"version_state": schema.StringAttribute{
+						"state": schema.StringAttribute{
 							Description: "The state of the current connector version.",
 							Computed:    true,
 						},
@@ -204,17 +194,15 @@ func populateConnectorsResults(connector azionapi.Connector) (ConnectorsResults,
 	case *azionapi.ConnectorStorage:
 		// Storage connector.
 		result = ConnectorsResults{
-			ID:             types.Int64Value(c.Id),
+			ID:             types.Int64Value(c.GetId()),
 			Name:           types.StringValue(c.Name),
-			LastEditor:     types.StringValue(c.LastEditor),
+			LastEditor:     types.StringValue(c.GetLastEditor()),
 			LastModified:   types.StringValue(c.LastModified.Format(time.RFC850)),
 			CreatedAt:      types.StringValue(c.CreatedAt.Format(time.RFC850)),
-			ProductVersion: types.StringValue(c.ProductVersion),
+			ProductVersion: types.StringValue(c.GetProductVersion()),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),
-			IsVersioned:    types.BoolValue(c.IsVersioned),
-			Version:        types.Int64PointerValue(c.Version.Get()),
-			VersionState:   types.StringPointerValue(c.VersionState.Get()),
+			State:          types.StringPointerValue(c.State.Get()),
 			VersionID:      types.StringPointerValue(c.VersionId.Get()),
 		}
 
@@ -228,17 +216,15 @@ func populateConnectorsResults(connector azionapi.Connector) (ConnectorsResults,
 	case *azionapi.ConnectorHTTP:
 		// HTTP connector.
 		result = ConnectorsResults{
-			ID:             types.Int64Value(c.Id),
+			ID:             types.Int64Value(c.GetId()),
 			Name:           types.StringValue(c.Name),
-			LastEditor:     types.StringValue(c.LastEditor),
+			LastEditor:     types.StringValue(c.GetLastEditor()),
 			LastModified:   types.StringValue(c.LastModified.Format(time.RFC850)),
 			CreatedAt:      types.StringValue(c.CreatedAt.Format(time.RFC850)),
-			ProductVersion: types.StringValue(c.ProductVersion),
+			ProductVersion: types.StringValue(c.GetProductVersion()),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),
-			IsVersioned:    types.BoolValue(c.IsVersioned),
-			Version:        types.Int64PointerValue(c.Version.Get()),
-			VersionState:   types.StringPointerValue(c.VersionState.Get()),
+			State:          types.StringPointerValue(c.State.Get()),
 			VersionID:      types.StringPointerValue(c.VersionId.Get()),
 		}
 
