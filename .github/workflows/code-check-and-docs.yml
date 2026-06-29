@@ -90,6 +90,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
       - uses: golangci/golangci-lint-action@v3
+        env:
+          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
         with:
           version: latest
           args: "--config .golintci.yml"
