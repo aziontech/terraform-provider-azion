@@ -84,6 +84,8 @@ jobs:
     name: golangcli-lint
     needs: [ build ]
     runs-on: ubuntu-latest
+    container:
+      image: ubuntu:24.04
     steps:
       - name: Setting GIT
         run: git config --global url."https://${{ secrets.GLOBAL_TOKEN }}:x-oauth-basic@github.com/aziontech".insteadOf "https://github.com/aziontech"
