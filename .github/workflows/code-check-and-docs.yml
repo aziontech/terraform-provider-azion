@@ -87,6 +87,10 @@ jobs:
     container:
       image: ubuntu:24.04
     steps:
+      - name: Install git
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
       - name: Setting GIT
         run: git config --global url."https://${{ secrets.GLOBAL_TOKEN }}:x-oauth-basic@github.com/aziontech".insteadOf "https://github.com/aziontech"
       - uses: actions/checkout@v4
