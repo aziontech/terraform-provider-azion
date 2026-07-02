@@ -2,10 +2,12 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
@@ -547,18 +549,12 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Read the connector back to ensure we have the complete state with all API defaults.
-	getConnector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute() //nolint
-	if response != nil {
-		defer response.Body.Close()
-	}
+	connectorData, response, err := retrieveConnectorRaw(ctx, r.client, connectorId)
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
-			getConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
-				return r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+			connectorData, response, err = utils.RetryOn429(func() (*connectorRawData, *http.Response, error) {
+				return retrieveConnectorRaw(ctx, r.client, connectorId)
 			}, 5)
-			if response != nil {
-				defer response.Body.Close()
-			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
 				return
@@ -569,7 +565,7 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 		}
 	}
 
-	r.populateConnectorFromResponse(ctx, plan.Connector, getConnector.GetData())
+	r.populateConnectorFromRaw(plan.Connector, connectorData)
 	plan.ID = types.StringValue(strconv.FormatInt(plan.Connector.ID.ValueInt64(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.SchemaVersion = types.Int64Value(0)
@@ -598,6 +594,151 @@ func getConnectorId(connector azionapi.Connector) int64 {
 	}
 }
 
+type connectorRawResponse struct {
+	Data connectorRawData `json:"data"`
+}
+
+type connectorRawData struct {
+	ID             int64           `json:"id"`
+	Name           string          `json:"name"`
+	LastEditor     string          `json:"last_editor"`
+	LastModified   *time.Time      `json:"last_modified"`
+	CreatedAt      *time.Time      `json:"created_at"`
+	ProductVersion string          `json:"product_version"`
+	Active         *bool           `json:"active"`
+	Type           string          `json:"type"`
+	State          *string         `json:"version_state"`
+	VersionID      *string         `json:"version_id"`
+	Attributes     json.RawMessage `json:"attributes"`
+}
+
+type storageConnectorRawAttributes struct {
+	Bucket string  `json:"bucket"`
+	Prefix *string `json:"prefix"`
+}
+
+type httpConnectorRawAttributes struct {
+	Addresses         []httpConnectorRawAddress `json:"addresses"`
+	ConnectionOptions *httpConnectorRawOptions  `json:"connection_options"`
+	Modules           *httpConnectorRawModules  `json:"modules"`
+}
+
+type httpConnectorRawAddress struct {
+	Active    *bool                           `json:"active"`
+	Address   string                          `json:"address"`
+	HTTPPort  *int64                          `json:"http_port"`
+	HTTPSPort *int64                          `json:"https_port"`
+	Modules   *httpConnectorRawAddressModules `json:"modules"`
+}
+
+type httpConnectorRawAddressModules struct {
+	LoadBalancer *httpConnectorRawAddressLoadBalancer `json:"load_balancer"`
+}
+
+type httpConnectorRawAddressLoadBalancer struct {
+	ServerRole *string `json:"server_role"`
+	Weight     *int64  `json:"weight"`
+}
+
+type httpConnectorRawOptions struct {
+	DNSResolution     *string `json:"dns_resolution"`
+	FollowingRedirect *bool   `json:"following_redirect"`
+	Host              *string `json:"host"`
+	HTTPVersionPolicy *string `json:"http_version_policy"`
+	PathPrefix        *string `json:"path_prefix"`
+	RealIPHeader      *string `json:"real_ip_header"`
+	RealPortHeader    *string `json:"real_port_header"`
+	TransportPolicy   *string `json:"transport_policy"`
+}
+
+type httpConnectorRawModules struct {
+	LoadBalancer *httpConnectorRawLoadBalancer `json:"load_balancer"`
+	OriginShield *httpConnectorRawOriginShield `json:"origin_shield"`
+}
+
+type httpConnectorRawLoadBalancer struct {
+	Enabled *bool                               `json:"enabled"`
+	Config  *httpConnectorRawLoadBalancerConfig `json:"config"`
+}
+
+type httpConnectorRawLoadBalancerConfig struct {
+	Method            *string `json:"method"`
+	MaxRetries        *int64  `json:"max_retries"`
+	ConnectionTimeout *int64  `json:"connection_timeout"`
+	ReadWriteTimeout  *int64  `json:"read_write_timeout"`
+}
+
+type httpConnectorRawOriginShield struct {
+	Enabled *bool                         `json:"enabled"`
+	Config  *httpConnectorRawOriginConfig `json:"config"`
+}
+
+type httpConnectorRawOriginConfig struct {
+	OriginIPAcl *httpConnectorRawOriginIPAcl `json:"origin_ip_acl"`
+	Hmac        *httpConnectorRawHMAC        `json:"hmac"`
+}
+
+type httpConnectorRawOriginIPAcl struct {
+	Enabled *bool `json:"enabled"`
+}
+
+type httpConnectorRawHMAC struct {
+	Enabled *bool                       `json:"enabled"`
+	Config  *httpConnectorRawHMACConfig `json:"config"`
+}
+
+type httpConnectorRawHMACConfig struct {
+	Type       *string                    `json:"type"`
+	Attributes *httpConnectorRawHMACAttrs `json:"attributes"`
+}
+
+type httpConnectorRawHMACAttrs struct {
+	Region    *string `json:"region"`
+	Service   *string `json:"service"`
+	AccessKey *string `json:"access_key"`
+	SecretKey *string `json:"secret_key"`
+}
+
+func retrieveConnectorRaw(ctx context.Context, client *apiClient, connectorID int64) (*connectorRawData, *http.Response, error) {
+	baseURL := strings.TrimRight(client.apiConfig.Servers[0].URL, "/")
+	url := fmt.Sprintf("%s/workspace/connectors/%d", baseURL, connectorID)
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	for k, v := range client.apiConfig.DefaultHeader {
+		httpReq.Header.Set(k, v)
+	}
+	httpReq.Header.Set("User-Agent", client.apiConfig.UserAgent)
+
+	httpClient := client.apiConfig.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	httpResp, err := httpClient.Do(httpReq)
+	if err != nil {
+		return nil, httpResp, err
+	}
+	defer httpResp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, httpResp, err
+	}
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		return nil, httpResp, fmt.Errorf("API returned status %d: %s", httpResp.StatusCode, string(bodyBytes))
+	}
+
+	var raw connectorRawResponse
+	if err := json.Unmarshal(bodyBytes, &raw); err != nil {
+		return nil, httpResp, err
+	}
+
+	return &raw.Data, httpResp, nil
+}
+
 func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state connectorResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -621,22 +762,16 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 	}
 
-	getConnector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute() //nolint
-	if response != nil {
-		defer response.Body.Close()
-	}
+	connectorData, response, err := retrieveConnectorRaw(ctx, r.client, connectorId)
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
-			getConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
-				return r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+			connectorData, response, err = utils.RetryOn429(func() (*connectorRawData, *http.Response, error) {
+				return retrieveConnectorRaw(ctx, r.client, connectorId)
 			}, 5)
-			if response != nil {
-				defer response.Body.Close()
-			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
 				return
@@ -647,7 +782,10 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 	}
 
-	r.populateConnectorFromResponse(ctx, state.Connector, getConnector.GetData())
+	if state.Connector == nil {
+		state.Connector = &connectorResourceResults{}
+	}
+	r.populateConnectorFromRaw(state.Connector, connectorData)
 	state.ID = types.StringValue(strconv.FormatInt(state.Connector.ID.ValueInt64(), 10))
 	state.SchemaVersion = types.Int64Value(0)
 
@@ -673,7 +811,17 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	connectorId := state.Connector.ID.ValueInt64()
+	var connectorId int64
+	if state.Connector != nil && !state.Connector.ID.IsNull() {
+		connectorId = state.Connector.ID.ValueInt64()
+	} else {
+		parsedID, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError("Value Conversion error ", "Could not convert Connector ID")
+			return
+		}
+		connectorId = parsedID
+	}
 	connectorType := plan.Connector.Type.ValueString()
 
 	// Build and send the appropriate update request based on connector type.
@@ -769,7 +917,17 @@ func (r *connectorResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	connectorId := state.Connector.ID.ValueInt64()
+	var connectorId int64
+	if state.Connector != nil && !state.Connector.ID.IsNull() {
+		connectorId = state.Connector.ID.ValueInt64()
+	} else {
+		parsedID, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError("Value Conversion error ", "Could not convert Connector ID")
+			return
+		}
+		connectorId = parsedID
+	}
 
 	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
 		return r.client.api.ConnectorsAPI.DeleteConnector(ctx, connectorId).Execute()
@@ -796,36 +954,13 @@ func (r *connectorResource) ImportState(ctx context.Context, req resource.Import
 		return
 	}
 
-	// First, get the connector from API to determine its type
-	getConnector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
-	if response != nil {
-		defer response.Body.Close()
-	}
-	if err != nil {
-		if response != nil && response.StatusCode == http.StatusTooManyRequests {
-			getConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
-				return r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
-			}, 5)
-			if response != nil {
-				defer response.Body.Close()
-			}
-			if err != nil {
-				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
-				return
-			}
-		} else {
-			addConnectorAPIError(&resp.Diagnostics, err, response, "import")
-			return
-		}
-	}
-
-	// Create the model and populate it from response
 	state := &connectorResourceModel{
-		Connector: &connectorResourceResults{},
+		ID:            types.StringValue(req.ID),
+		SchemaVersion: types.Int64Value(0),
+		Connector: &connectorResourceResults{
+			ID: types.Int64Value(connectorId),
+		},
 	}
-	r.populateConnectorFromResponse(ctx, state.Connector, getConnector.GetData())
-	state.ID = types.StringValue(strconv.FormatInt(connectorId, 10))
-	state.SchemaVersion = types.Int64Value(0)
 
 	diags := resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
@@ -1154,6 +1289,156 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 		// Clear storage attributes
 		model.StorageAttrs = nil
 	}
+}
+
+func (r *connectorResource) populateConnectorFromRaw(model *connectorResourceResults, connector *connectorRawData) {
+	if model == nil || connector == nil {
+		return
+	}
+
+	model.ID = types.Int64Value(connector.ID)
+	model.Name = types.StringValue(connector.Name)
+	model.LastEditor = types.StringValue(connector.LastEditor)
+	if connector.LastModified != nil {
+		model.LastModified = types.StringValue(connector.LastModified.Format(time.RFC850))
+	}
+	if connector.CreatedAt != nil {
+		model.CreatedAt = types.StringValue(connector.CreatedAt.Format(time.RFC850))
+	} else {
+		model.CreatedAt = types.StringNull()
+	}
+	model.ProductVersion = types.StringValue(connector.ProductVersion)
+	model.Active = types.BoolPointerValue(connector.Active)
+	model.Type = types.StringValue(connector.Type)
+	model.State = types.StringPointerValue(connector.State)
+	model.VersionID = types.StringPointerValue(connector.VersionID)
+
+	switch connector.Type {
+	case "storage":
+		var attrs storageConnectorRawAttributes
+		if err := json.Unmarshal(connector.Attributes, &attrs); err == nil {
+			model.StorageAttrs = &StorageAttributesModel{
+				Bucket: types.StringValue(attrs.Bucket),
+				Prefix: types.StringPointerValue(attrs.Prefix),
+			}
+		}
+		model.HTTPAttrs = nil
+	case "http":
+		var attrs httpConnectorRawAttributes
+		if err := json.Unmarshal(connector.Attributes, &attrs); err == nil {
+			model.HTTPAttrs = populateHTTPAttrsFromRaw(model.HTTPAttrs, &attrs)
+		}
+		model.StorageAttrs = nil
+	}
+}
+
+func populateHTTPAttrsFromRaw(prior *HTTPAttributesModel, attrs *httpConnectorRawAttributes) *HTTPAttributesModel {
+	if attrs == nil {
+		return nil
+	}
+	out := &HTTPAttributesModel{
+		Addresses: populateAddressesFromRaw(attrs.Addresses),
+	}
+	if shouldPopulate(prior, func(p *HTTPAttributesModel) bool { return p.ConnectionOptions != nil }) && attrs.ConnectionOptions != nil {
+		out.ConnectionOptions = populateConnectionOptionsFromRaw(nilIfNil(prior, func(p *HTTPAttributesModel) *HTTPConnectionOptionsModel { return p.ConnectionOptions }), attrs.ConnectionOptions)
+	}
+	if shouldPopulate(prior, func(p *HTTPAttributesModel) bool { return p.Modules != nil }) && attrs.Modules != nil {
+		out.Modules = populateHTTPModulesFromRaw(nilIfNil(prior, func(p *HTTPAttributesModel) *HTTPModulesModel { return p.Modules }), attrs.Modules)
+	}
+	return out
+}
+
+func nilIfNil[T any, R any](value *T, getter func(*T) *R) *R {
+	if value == nil {
+		return nil
+	}
+	return getter(value)
+}
+
+func populateAddressesFromRaw(in []httpConnectorRawAddress) []AddressWrapperModel {
+	out := make([]AddressWrapperModel, 0, len(in))
+	for _, addr := range in {
+		addrModel := AddressModel{
+			Address:   types.StringValue(addr.Address),
+			Active:    types.BoolPointerValue(addr.Active),
+			HTTPPort:  types.Int64PointerValue(addr.HTTPPort),
+			HTTPSPort: types.Int64PointerValue(addr.HTTPSPort),
+		}
+		if addr.Modules != nil && addr.Modules.LoadBalancer != nil {
+			addrModel.Modules = &AddressModulesModel{
+				LoadBalancer: &AddressLoadBalancerModel{
+					ServerRole: types.StringPointerValue(addr.Modules.LoadBalancer.ServerRole),
+					Weight:     types.Int64PointerValue(addr.Modules.LoadBalancer.Weight),
+				},
+			}
+		}
+		out = append(out, AddressWrapperModel{Endpoint: &addrModel})
+	}
+	return out
+}
+
+func populateConnectionOptionsFromRaw(prior *HTTPConnectionOptionsModel, co *httpConnectorRawOptions) *HTTPConnectionOptionsModel {
+	out := &HTTPConnectionOptionsModel{}
+	if prior != nil {
+		*out = *prior
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.DNSResolution.IsNull() }) {
+		out.DNSResolution = types.StringPointerValue(co.DNSResolution)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.FollowingRedirect.IsNull() }) {
+		out.FollowingRedirect = types.BoolPointerValue(co.FollowingRedirect)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.Host.IsNull() }) {
+		out.Host = types.StringPointerValue(co.Host)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.HTTPVersionPolicy.IsNull() }) {
+		out.HTTPVersionPolicy = types.StringPointerValue(co.HTTPVersionPolicy)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.PathPrefix.IsNull() }) {
+		out.PathPrefix = types.StringPointerValue(co.PathPrefix)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.RealIPHeader.IsNull() }) {
+		out.RealIPHeader = types.StringPointerValue(co.RealIPHeader)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.RealPortHeader.IsNull() }) {
+		out.RealPortHeader = types.StringPointerValue(co.RealPortHeader)
+	}
+	if shouldPopulate(prior, func(p *HTTPConnectionOptionsModel) bool { return !p.TransportPolicy.IsNull() }) {
+		out.TransportPolicy = types.StringPointerValue(co.TransportPolicy)
+	}
+	return out
+}
+
+func populateHTTPModulesFromRaw(prior *HTTPModulesModel, modules *httpConnectorRawModules) *HTTPModulesModel {
+	out := &HTTPModulesModel{}
+	if shouldPopulate(prior, func(p *HTTPModulesModel) bool { return p.LoadBalancer != nil }) && modules.LoadBalancer != nil {
+		out.LoadBalancer = &LoadBalancerModuleModel{
+			Enabled: types.BoolPointerValue(modules.LoadBalancer.Enabled),
+		}
+		if shouldPopulate(nilIfNil(prior, func(p *HTTPModulesModel) *LoadBalancerModuleModel { return p.LoadBalancer }), func(p *LoadBalancerModuleModel) bool { return p.Config != nil }) && modules.LoadBalancer.Config != nil {
+			out.LoadBalancer.Config = &LoadBalancerConfigModel{
+				Method:            types.StringPointerValue(modules.LoadBalancer.Config.Method),
+				MaxRetries:        types.Int64PointerValue(modules.LoadBalancer.Config.MaxRetries),
+				ConnectionTimeout: types.Int64PointerValue(modules.LoadBalancer.Config.ConnectionTimeout),
+				ReadWriteTimeout:  types.Int64PointerValue(modules.LoadBalancer.Config.ReadWriteTimeout),
+			}
+		}
+	}
+	if shouldPopulate(prior, func(p *HTTPModulesModel) bool { return p.OriginShield != nil }) && modules.OriginShield != nil {
+		out.OriginShield = &OriginShieldModuleModel{
+			Enabled: types.BoolPointerValue(modules.OriginShield.Enabled),
+		}
+		if shouldPopulate(nilIfNil(prior, func(p *HTTPModulesModel) *OriginShieldModuleModel { return p.OriginShield }), func(p *OriginShieldModuleModel) bool { return p.Config != nil }) && modules.OriginShield.Config != nil {
+			out.OriginShield.Config = &OriginShieldConfigModel{}
+			if modules.OriginShield.Config.OriginIPAcl != nil {
+				out.OriginShield.Config.OriginIPAcl = &OriginIPAclModel{Enabled: types.BoolPointerValue(modules.OriginShield.Config.OriginIPAcl.Enabled)}
+			}
+			if modules.OriginShield.Config.Hmac != nil {
+				out.OriginShield.Config.Hmac = &HMACConfigModel{Enabled: types.BoolPointerValue(modules.OriginShield.Config.Hmac.Enabled)}
+			}
+		}
+	}
+	return out
 }
 
 // shouldPopulate returns true when prior is nil (e.g. fresh import) or when
