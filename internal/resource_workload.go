@@ -2,14 +2,12 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -375,7 +373,7 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 
 	createWorkload, response, err := r.client.api.WorkloadsAPI.CreateWorkload(ctx).WorkloadRequest(*workload).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			createWorkload, response, err = utils.RetryOn429(func() (*azionapi.WorkloadResponse, *http.Response, error) {
 				return r.client.api.WorkloadsAPI.CreateWorkload(ctx).WorkloadRequest(*workload).Execute()
 			}, 5)
@@ -392,14 +390,7 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -448,11 +439,11 @@ func (r *workloadResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	getWorkload, response, err := r.client.api.WorkloadsAPI.RetrieveWorkload(ctx, workloadId).Execute()
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			getWorkload, response, err = utils.RetryOn429(func() (*azionapi.WorkloadResponse, *http.Response, error) {
 				return r.client.api.WorkloadsAPI.RetrieveWorkload(ctx, workloadId).Execute()
 			}, 5)
@@ -469,14 +460,7 @@ func (r *workloadResource) Read(ctx context.Context, req resource.ReadRequest, r
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -513,7 +497,20 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	workloadId := state.Workload.ID.ValueInt64()
+	var workloadId int64
+	if state.Workload != nil && !state.Workload.ID.IsNull() {
+		workloadId = state.Workload.ID.ValueInt64()
+	} else {
+		parsedID, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Value Conversion error ",
+				"Could not convert Workload ID",
+			)
+			return
+		}
+		workloadId = parsedID
+	}
 	updateWorkloadRequest := azionapi.NewPatchedWorkloadRequest()
 
 	// Set optional fields
@@ -639,7 +636,7 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 
 	updateWorkload, response, err := r.client.api.WorkloadsAPI.PartialUpdateWorkload(ctx, workloadId).PatchedWorkloadRequest(*updateWorkloadRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			updateWorkload, response, err = utils.RetryOn429(func() (*azionapi.WorkloadResponse, *http.Response, error) {
 				return r.client.api.WorkloadsAPI.PartialUpdateWorkload(ctx, workloadId).PatchedWorkloadRequest(*updateWorkloadRequest).Execute()
 			}, 5)
@@ -656,14 +653,7 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -694,7 +684,20 @@ func (r *workloadResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	workloadId := state.Workload.ID.ValueInt64()
+	var workloadId int64
+	if state.Workload != nil && !state.Workload.ID.IsNull() {
+		workloadId = state.Workload.ID.ValueInt64()
+	} else {
+		parsedID, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Value Conversion error ",
+				"Could not convert Workload ID",
+			)
+			return
+		}
+		workloadId = parsedID
+	}
 
 	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
 		return r.client.api.WorkloadsAPI.DeleteWorkload(ctx, workloadId).Execute()
@@ -706,14 +709,7 @@ func (r *workloadResource) Delete(ctx context.Context, req resource.DeleteReques
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
+		bodyString := readAPIErrorBody(response)
 		resp.Diagnostics.AddError(
 			err.Error(),
 			bodyString,
@@ -723,7 +719,22 @@ func (r *workloadResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 func (r *workloadResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	workloadID, err := strconv.ParseInt(req.ID, 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid workload ID format", err.Error())
+		return
+	}
+
+	state := workloadResourceModel{
+		ID: types.StringValue(req.ID),
+		Workload: &workloadResourceResults{
+			ID:      types.Int64Value(workloadID),
+			Domains: types.SetNull(types.StringType),
+		},
+	}
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }
 
 // Helper function to populate workload results from API response.
@@ -744,8 +755,8 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 		ID:             types.Int64Value(response.Data.GetId()),
 		Name:           types.StringValue(response.Data.Name),
 		LastEditor:     types.StringValue(response.Data.GetLastEditor()),
-		LastModified:   types.StringValue(response.Data.LastModified.Format(time.RFC850)),
-		CreatedAt:      types.StringValue(response.Data.CreatedAt.Format(time.RFC3339)),
+		LastModified:   types.StringValue(response.Data.GetLastModified().Format(time.RFC850)),
+		CreatedAt:      types.StringValue(response.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(response.Data.GetProductVersion()),
 		WorkloadDomain: types.StringValue(response.Data.GetWorkloadDomain()),
 	}
@@ -862,8 +873,11 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 
 	// Handle Domains.
 	if response.Data.Domains != nil {
-		domainsSet, _ := types.SetValueFrom(ctx, types.StringType, response.Data.Domains)
-		result.Domains = domainsSet
+		domains := make([]types.String, 0, len(response.Data.Domains))
+		for _, domain := range response.Data.Domains {
+			domains = append(domains, types.StringValue(domain))
+		}
+		result.Domains = utils.SliceStringTypeToSet(domains)
 	} else {
 		result.Domains = types.SetNull(types.StringType)
 	}
