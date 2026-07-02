@@ -141,6 +141,13 @@ func (r *functionInstanceResource) Create(ctx context.Context, req resource.Crea
 
 	functionInstanceResponse, response, err := r.client.api.ApplicationsFunctionAPI.CreateApplicationFunctionInstance(ctx, plan.ApplicationID.ValueInt64()).FunctionInstanceRequest(functionInstanceRequest).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			functionInstanceResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionInstanceResponse, *http.Response, error) {
 				return r.client.api.ApplicationsFunctionAPI.CreateApplicationFunctionInstance(ctx, plan.ApplicationID.ValueInt64()).FunctionInstanceRequest(functionInstanceRequest).Execute() //nolint
@@ -362,6 +369,13 @@ func (r *functionInstanceResource) Update(ctx context.Context, req resource.Upda
 
 	functionInstanceUpdateResponse, response, err := r.client.api.ApplicationsFunctionAPI.PartialUpdateApplicationFunctionInstance(ctx, plan.ApplicationID.ValueInt64(), functionInstanceID.ValueInt64()).PatchedFunctionInstanceRequest(patchRequest).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			functionInstanceUpdateResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionInstanceResponse, *http.Response, error) {
 				return r.client.api.ApplicationsFunctionAPI.PartialUpdateApplicationFunctionInstance(ctx, plan.ApplicationID.ValueInt64(), functionInstanceID.ValueInt64()).PatchedFunctionInstanceRequest(patchRequest).Execute() //nolint

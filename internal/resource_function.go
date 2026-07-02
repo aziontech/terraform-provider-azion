@@ -198,6 +198,13 @@ func (r *functionResource) Create(ctx context.Context, req resource.CreateReques
 
 	createFunction, response, err := r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			createFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
 				return r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
@@ -250,7 +257,7 @@ func (r *functionResource) Create(ctx context.Context, req resource.CreateReques
 		ExecutionEnvironment: types.StringValue(*createFunction.Data.ExecutionEnvironment),
 		Active:               types.BoolValue(*createFunction.Data.Active),
 		LastEditor:           types.StringValue(createFunction.Data.GetLastEditor()),
-		LastModified:         types.StringValue(createFunction.Data.LastModified.Format(time.RFC850)),
+		LastModified:         types.StringValue(createFunction.Data.GetLastModified().Format(time.RFC850)),
 		ProductVersion:       types.StringValue(createFunction.Data.GetProductVersion()),
 		Version:              types.StringValue(createFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(createFunction.Data.GetVendor()),
@@ -298,6 +305,13 @@ func (r *functionResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	getFunction, response, err := r.client.api.FunctionsAPI.RetrieveFunction(ctx, functionId).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
@@ -354,7 +368,7 @@ func (r *functionResource) Read(ctx context.Context, req resource.ReadRequest, r
 		ExecutionEnvironment: types.StringValue(*getFunction.Data.ExecutionEnvironment),
 		Active:               types.BoolValue(*getFunction.Data.Active),
 		LastEditor:           types.StringValue(getFunction.Data.GetLastEditor()),
-		LastModified:         types.StringValue(getFunction.Data.LastModified.Format(time.RFC850)),
+		LastModified:         types.StringValue(getFunction.Data.GetLastModified().Format(time.RFC850)),
 		ProductVersion:       types.StringValue(getFunction.Data.GetProductVersion()),
 		Version:              types.StringValue(getFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(getFunction.Data.GetVendor()),
@@ -442,6 +456,13 @@ func (r *functionResource) Update(ctx context.Context, req resource.UpdateReques
 
 	updateFunction, response, err := r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, functionId).PatchedFunctionsRequest(updateFunctionRequest).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			updateFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
 				return r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, functionId).PatchedFunctionsRequest(updateFunctionRequest).Execute() //nolint
@@ -494,7 +515,7 @@ func (r *functionResource) Update(ctx context.Context, req resource.UpdateReques
 		ExecutionEnvironment: types.StringValue(*updateFunction.Data.ExecutionEnvironment),
 		Active:               types.BoolValue(*updateFunction.Data.Active),
 		LastEditor:           types.StringValue(updateFunction.Data.GetLastEditor()),
-		LastModified:         types.StringValue(updateFunction.Data.LastModified.Format(time.RFC850)),
+		LastModified:         types.StringValue(updateFunction.Data.GetLastModified().Format(time.RFC850)),
 		ProductVersion:       types.StringValue(updateFunction.Data.GetProductVersion()),
 		Version:              types.StringValue(updateFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(updateFunction.Data.GetVendor()),

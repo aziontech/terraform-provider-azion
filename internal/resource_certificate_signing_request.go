@@ -301,6 +301,13 @@ func (r *certificateSigningRequestResource) Create(ctx context.Context, req reso
 	// Call the V4 API.
 	certificateResponse, response, err := r.client.api.DigitalCertificatesCertificateSigningRequestsAPI.CreateCertificateSigningRequest(ctx).CertificateSigningRequest(csrRequest).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			certificateResponse, response, err = utils.RetryOn429(func() (*azionapi.CertificateResponse, *http.Response, error) {
 				return r.client.api.DigitalCertificatesCertificateSigningRequestsAPI.CreateCertificateSigningRequest(ctx).CertificateSigningRequest(csrRequest).Execute()
@@ -373,6 +380,13 @@ func (r *certificateSigningRequestResource) Read(ctx context.Context, req resour
 	// Call the V4 API - Use the regular certificates endpoint to read.
 	certificateResponse, response, err := r.client.api.DigitalCertificatesCertificatesAPI.RetrieveCertificate(ctx, certificateID).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return

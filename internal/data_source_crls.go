@@ -163,6 +163,13 @@ func (d *CrlsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 func (d *CrlsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	crlsResponse, response, err := d.client.api.DigitalCertificatesCertificateRevocationListsAPI.ListCertificateRevocationLists(ctx).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			crlsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedCertificateRevocationList, *http.Response, error) {
 				return d.client.api.DigitalCertificatesCertificateRevocationListsAPI.ListCertificateRevocationLists(ctx).Execute()

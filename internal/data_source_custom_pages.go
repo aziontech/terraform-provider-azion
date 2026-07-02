@@ -188,6 +188,13 @@ func (d *CustomPagesDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 func (d *CustomPagesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	customPagesResponse, response, err := d.client.api.CustomPagesAPI.ListCustomPages(ctx).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			customPagesResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedCustomPageList, *http.Response, error) {
 				return d.client.api.CustomPagesAPI.ListCustomPages(ctx).Execute() //nolint
@@ -220,8 +227,8 @@ func (d *CustomPagesDataSource) Read(ctx context.Context, req datasource.ReadReq
 			ID:             types.Int64Value(resultCustomPage.GetId()),
 			Name:           types.StringValue(resultCustomPage.Name),
 			LastEditor:     types.StringValue(resultCustomPage.GetLastEditor()),
-			LastModified:   types.StringValue(resultCustomPage.LastModified.Format(time.RFC3339)),
-			CreatedAt:      types.StringValue(resultCustomPage.CreatedAt.Format(time.RFC3339)),
+			LastModified:   types.StringValue(resultCustomPage.GetLastModified().Format(time.RFC3339)),
+			CreatedAt:      types.StringValue(resultCustomPage.GetCreatedAt().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(resultCustomPage.GetProductVersion()),
 			State:          types.StringPointerValue(resultCustomPage.State.Get()),
 			VersionID:      types.StringPointerValue(resultCustomPage.VersionId.Get()),

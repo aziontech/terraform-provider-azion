@@ -367,7 +367,7 @@ func populateBucketResults(response *azionapi.BucketCreateResponse) *bucketResou
 		Name:            types.StringValue(response.Data.Name),
 		WorkloadsAccess: types.StringValue(response.Data.WorkloadsAccess),
 		LastEditor:      types.StringValue(response.Data.LastEditor),
-		LastModified:    types.StringValue(response.Data.LastModified.Format(time.RFC3339)),
+		LastModified:    types.StringValue(response.Data.GetLastModified().Format(time.RFC3339)),
 		ProductVersion:  types.StringValue(response.Data.ProductVersion),
 	}
 	return result

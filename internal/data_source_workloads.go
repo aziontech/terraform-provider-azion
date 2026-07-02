@@ -215,6 +215,13 @@ func (d *WorkloadsDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 func (d *WorkloadsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	workloadsResponse, response, err := d.client.api.WorkloadsAPI.ListWorkloads(ctx).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			workloadsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedWorkloadList, *http.Response, error) {
 				return d.client.api.WorkloadsAPI.ListWorkloads(ctx).Execute() //nolint
@@ -249,8 +256,8 @@ func (d *WorkloadsDataSource) Read(ctx context.Context, req datasource.ReadReque
 			ID:             types.Int64Value(resultWorkload.GetId()),
 			Name:           types.StringValue(resultWorkload.Name),
 			LastEditor:     types.StringValue(resultWorkload.GetLastEditor()),
-			LastModified:   types.StringValue(resultWorkload.LastModified.Format(time.RFC850)),
-			CreatedAt:      types.StringValue(resultWorkload.CreatedAt.Format(time.RFC3339)),
+			LastModified:   types.StringValue(resultWorkload.GetLastModified().Format(time.RFC850)),
+			CreatedAt:      types.StringValue(resultWorkload.GetCreatedAt().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(resultWorkload.GetProductVersion()),
 			WorkloadDomain: types.StringValue(resultWorkload.GetWorkloadDomain()),
 		}

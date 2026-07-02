@@ -216,6 +216,13 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 
 	firewallResponse, response, err := r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(firewallRequest).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(firewallRequest).Execute() //nolint
@@ -483,6 +490,13 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 
 	firewallResponse, response, err := r.client.api.FirewallsAPI.PartialUpdateFirewall(ctx, firewallID).PatchedFirewallRequest(firewallRequest).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.PartialUpdateFirewall(ctx, firewallID).PatchedFirewallRequest(firewallRequest).Execute() //nolint

@@ -186,6 +186,13 @@ func (o *WafDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	wafResponse, response, err := o.client.api.WAFsAPI.RetrieveWaf(ctx, wafID.ValueInt64()).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFResponse, *http.Response, error) {
 				return o.client.api.WAFsAPI.RetrieveWaf(ctx, wafID.ValueInt64()).Execute()

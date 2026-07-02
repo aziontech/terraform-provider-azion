@@ -375,6 +375,13 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 
 	createWorkload, response, err := r.client.api.WorkloadsAPI.CreateWorkload(ctx).WorkloadRequest(*workload).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			createWorkload, response, err = utils.RetryOn429(func() (*azionapi.WorkloadResponse, *http.Response, error) {
 				return r.client.api.WorkloadsAPI.CreateWorkload(ctx).WorkloadRequest(*workload).Execute()
@@ -448,6 +455,13 @@ func (r *workloadResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	getWorkload, response, err := r.client.api.WorkloadsAPI.RetrieveWorkload(ctx, workloadId).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
@@ -639,6 +653,13 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 
 	updateWorkload, response, err := r.client.api.WorkloadsAPI.PartialUpdateWorkload(ctx, workloadId).PatchedWorkloadRequest(*updateWorkloadRequest).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			updateWorkload, response, err = utils.RetryOn429(func() (*azionapi.WorkloadResponse, *http.Response, error) {
 				return r.client.api.WorkloadsAPI.PartialUpdateWorkload(ctx, workloadId).PatchedWorkloadRequest(*updateWorkloadRequest).Execute()
@@ -744,8 +765,8 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 		ID:             types.Int64Value(response.Data.GetId()),
 		Name:           types.StringValue(response.Data.Name),
 		LastEditor:     types.StringValue(response.Data.GetLastEditor()),
-		LastModified:   types.StringValue(response.Data.LastModified.Format(time.RFC850)),
-		CreatedAt:      types.StringValue(response.Data.CreatedAt.Format(time.RFC3339)),
+		LastModified:   types.StringValue(response.Data.GetLastModified().Format(time.RFC850)),
+		CreatedAt:      types.StringValue(response.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(response.Data.GetProductVersion()),
 		WorkloadDomain: types.StringValue(response.Data.GetWorkloadDomain()),
 	}

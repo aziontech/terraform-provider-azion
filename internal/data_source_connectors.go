@@ -127,6 +127,13 @@ func (d *ConnectorsDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 func (d *ConnectorsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	connectorsResponse, response, err := d.client.api.ConnectorsAPI.ListConnectors(ctx).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			connectorsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedConnectorList, *http.Response, error) {
 				return d.client.api.ConnectorsAPI.ListConnectors(ctx).Execute() //nolint
@@ -197,8 +204,8 @@ func populateConnectorsResults(connector azionapi.Connector) (ConnectorsResults,
 			ID:             types.Int64Value(c.GetId()),
 			Name:           types.StringValue(c.Name),
 			LastEditor:     types.StringValue(c.GetLastEditor()),
-			LastModified:   types.StringValue(c.LastModified.Format(time.RFC850)),
-			CreatedAt:      types.StringValue(c.CreatedAt.Format(time.RFC850)),
+			LastModified:   types.StringValue(c.GetLastModified().Format(time.RFC850)),
+			CreatedAt:      types.StringValue(c.GetCreatedAt().Format(time.RFC850)),
 			ProductVersion: types.StringValue(c.GetProductVersion()),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),
@@ -219,8 +226,8 @@ func populateConnectorsResults(connector azionapi.Connector) (ConnectorsResults,
 			ID:             types.Int64Value(c.GetId()),
 			Name:           types.StringValue(c.Name),
 			LastEditor:     types.StringValue(c.GetLastEditor()),
-			LastModified:   types.StringValue(c.LastModified.Format(time.RFC850)),
-			CreatedAt:      types.StringValue(c.CreatedAt.Format(time.RFC850)),
+			LastModified:   types.StringValue(c.GetLastModified().Format(time.RFC850)),
+			CreatedAt:      types.StringValue(c.GetCreatedAt().Format(time.RFC850)),
 			ProductVersion: types.StringValue(c.GetProductVersion()),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),

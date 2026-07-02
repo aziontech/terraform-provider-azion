@@ -112,6 +112,13 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	zoneResponse, response, err := d.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
 				return d.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()

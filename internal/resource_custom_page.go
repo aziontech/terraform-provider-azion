@@ -252,6 +252,13 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 
 	createCustomPage, response, err := r.client.api.CustomPagesAPI.CreateCustomPage(ctx).CustomPageRequest(customPageRequest).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			createCustomPage, response, err = utils.RetryOn429(func() (*azionapi.CustomPageResponse, *http.Response, error) {
 				return r.client.api.CustomPagesAPI.CreateCustomPage(ctx).CustomPageRequest(customPageRequest).Execute() //nolint
@@ -290,8 +297,8 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 		ID:             types.Int64Value(createCustomPage.Data.GetId()),
 		Name:           types.StringValue(createCustomPage.Data.Name),
 		LastEditor:     types.StringValue(createCustomPage.Data.GetLastEditor()),
-		LastModified:   types.StringValue(createCustomPage.Data.LastModified.Format(time.RFC3339)),
-		CreatedAt:      types.StringValue(createCustomPage.Data.CreatedAt.Format(time.RFC3339)),
+		LastModified:   types.StringValue(createCustomPage.Data.GetLastModified().Format(time.RFC3339)),
+		CreatedAt:      types.StringValue(createCustomPage.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(createCustomPage.Data.GetProductVersion()),
 		State:          types.StringPointerValue(createCustomPage.Data.State.Get()),
 		VersionID:      types.StringPointerValue(createCustomPage.Data.VersionId.Get()),
@@ -363,6 +370,13 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	getCustomPage, response, err := r.client.api.CustomPagesAPI.RetrieveCustomPage(ctx, customPageId).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
@@ -404,8 +418,8 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 		ID:             types.Int64Value(getCustomPage.Data.GetId()),
 		Name:           types.StringValue(getCustomPage.Data.Name),
 		LastEditor:     types.StringValue(getCustomPage.Data.GetLastEditor()),
-		LastModified:   types.StringValue(getCustomPage.Data.LastModified.Format(time.RFC3339)),
-		CreatedAt:      types.StringValue(getCustomPage.Data.CreatedAt.Format(time.RFC3339)),
+		LastModified:   types.StringValue(getCustomPage.Data.GetLastModified().Format(time.RFC3339)),
+		CreatedAt:      types.StringValue(getCustomPage.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(getCustomPage.Data.GetProductVersion()),
 		State:          types.StringPointerValue(getCustomPage.Data.State.Get()),
 		VersionID:      types.StringPointerValue(getCustomPage.Data.VersionId.Get()),
@@ -530,6 +544,13 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 	// Custom Pages API uses PUT for full update.
 	updateCustomPage, response, err := r.client.api.CustomPagesAPI.UpdateCustomPage(ctx, customPageId).CustomPageRequest(customPageRequest).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			updateCustomPage, response, err = utils.RetryOn429(func() (*azionapi.CustomPageResponse, *http.Response, error) {
 				return r.client.api.CustomPagesAPI.UpdateCustomPage(ctx, customPageId).CustomPageRequest(customPageRequest).Execute() //nolint
@@ -568,8 +589,8 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 		ID:             types.Int64Value(updateCustomPage.Data.GetId()),
 		Name:           types.StringValue(updateCustomPage.Data.Name),
 		LastEditor:     types.StringValue(updateCustomPage.Data.GetLastEditor()),
-		LastModified:   types.StringValue(updateCustomPage.Data.LastModified.Format(time.RFC3339)),
-		CreatedAt:      types.StringValue(updateCustomPage.Data.CreatedAt.Format(time.RFC3339)),
+		LastModified:   types.StringValue(updateCustomPage.Data.GetLastModified().Format(time.RFC3339)),
+		CreatedAt:      types.StringValue(updateCustomPage.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(updateCustomPage.Data.GetProductVersion()),
 		State:          types.StringPointerValue(updateCustomPage.Data.State.Get()),
 		VersionID:      types.StringPointerValue(updateCustomPage.Data.VersionId.Get()),

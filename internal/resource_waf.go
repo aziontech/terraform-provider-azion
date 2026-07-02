@@ -213,6 +213,13 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 	// Create the WAF.
 	wafResponse, response, err := r.client.api.WAFsAPI.CreateWaf(ctx).WAFRequest(*wafRequest).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFResponse, *http.Response, error) {
 				return r.client.api.WAFsAPI.CreateWaf(ctx).WAFRequest(*wafRequest).Execute()
@@ -278,11 +285,18 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	// Save the state's engine_settings to preserve it if it was null.
-	stateEngineSettings := state.Result.EngineSettings
+	var stateEngineSettings *WafEngineSettingsResourceModel
+	if state.Result != nil {
+		stateEngineSettings = state.Result.EngineSettings
+	}
 
 	var wafID int64
 	var err error
 	if state.ID.IsNull() {
+		if state.Result == nil {
+			resp.Diagnostics.AddError("Missing WAF ID", "state.result is nil and state.id is not set")
+			return
+		}
 		wafID = state.Result.ID.ValueInt64()
 	} else {
 		wafID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -297,6 +311,13 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	wafResponse, response, err := r.client.api.WAFsAPI.RetrieveWaf(ctx, wafID).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
@@ -373,6 +394,10 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	var wafID int64
 	var err error
 	if state.ID.IsNull() {
+		if state.Result == nil {
+			resp.Diagnostics.AddError("Missing WAF ID", "state.result is nil and state.id is not set")
+			return
+		}
 		wafID = state.Result.ID.ValueInt64()
 	} else {
 		wafID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -405,6 +430,13 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	// Update the WAF.
 	wafResponse, response, err := r.client.api.WAFsAPI.UpdateWaf(ctx, wafID).WAFRequest(*wafRequest).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFResponse, *http.Response, error) {
 				return r.client.api.WAFsAPI.UpdateWaf(ctx, wafID).WAFRequest(*wafRequest).Execute()
@@ -472,6 +504,10 @@ func (r *wafResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	var wafID int64
 	var err error
 	if state.ID.IsNull() {
+		if state.Result == nil {
+			resp.Diagnostics.AddError("Missing WAF ID", "state.result is nil and state.id is not set")
+			return
+		}
 		wafID = state.Result.ID.ValueInt64()
 	} else {
 		wafID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)

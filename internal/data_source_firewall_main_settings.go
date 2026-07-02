@@ -191,6 +191,13 @@ func (f *FirewallsDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	firewallsResponse, response, err := f.client.api.FirewallsAPI.ListFirewalls(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			firewallsResponse, response, err = utils.RetryOn429(func() (*sdk.PaginatedFirewallList, *http.Response, error) {
 				return f.client.api.FirewallsAPI.ListFirewalls(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint

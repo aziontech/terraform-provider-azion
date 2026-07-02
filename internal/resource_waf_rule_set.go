@@ -185,6 +185,13 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 	// Create the WAF exception.
 	exceptionResponse, response, err := r.client.api.WAFsExceptionsAPI.CreateWafException(ctx, plan.WafID.ValueInt64()).WAFRuleRequest(*wafRuleRequest).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			exceptionResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFRuleResponse, *http.Response, error) {
 				return r.client.api.WAFsExceptionsAPI.CreateWafException(ctx, plan.WafID.ValueInt64()).WAFRuleRequest(*wafRuleRequest).Execute()
@@ -260,6 +267,13 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	exceptionResponse, response, err := r.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID, state.WafID.ValueInt64()).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
@@ -368,6 +382,13 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 	// Update the WAF exception.
 	exceptionResponse, response, err := r.client.api.WAFsExceptionsAPI.UpdateWafException(ctx, exceptionID, plan.WafID.ValueInt64()).WAFRuleRequest(*wafRuleRequest).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			exceptionResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFRuleResponse, *http.Response, error) {
 				return r.client.api.WAFsExceptionsAPI.UpdateWafException(ctx, exceptionID, plan.WafID.ValueInt64()).WAFRuleRequest(*wafRuleRequest).Execute()

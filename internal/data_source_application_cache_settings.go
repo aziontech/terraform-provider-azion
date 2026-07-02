@@ -246,6 +246,13 @@ func (d *CacheSettingsDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	listResponse, response, err := d.client.api.ApplicationsCacheSettingsAPI.ListCacheSettings(ctx, applicationID.ValueInt64()).Page(page.ValueInt64()).PageSize(pageSize.ValueInt64()).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			listResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedCacheSettingList, *http.Response, error) {
 				return d.client.api.ApplicationsCacheSettingsAPI.ListCacheSettings(ctx, applicationID.ValueInt64()).Page(page.ValueInt64()).PageSize(pageSize.ValueInt64()).Execute()

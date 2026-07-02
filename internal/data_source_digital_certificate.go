@@ -188,6 +188,13 @@ func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	certificateResponse, response, err := c.client.api.DigitalCertificatesCertificatesAPI.RetrieveCertificate(ctx, getCertificateID.ValueInt64()).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			certificateResponse, response, err = utils.RetryOn429(func() (*azionapi.CertificateResponse, *http.Response, error) {
 				return c.client.api.DigitalCertificatesCertificatesAPI.RetrieveCertificate(ctx, getCertificateID.ValueInt64()).Execute()
