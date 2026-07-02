@@ -2,14 +2,12 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
 
 	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -216,7 +214,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 
 	firewallResponse, response, err := r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(firewallRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(firewallRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -233,14 +231,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -316,6 +307,10 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 	var firewallID int64
 	if state.ID.IsNull() {
+		if state.Firewall == nil || state.Firewall.ID.IsNull() {
+			resp.Diagnostics.AddError("Failed to parse firewall ID", "Firewall ID cannot be empty")
+			return
+		}
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
 		var err error
@@ -329,11 +324,11 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 	firewallResponse, response, err := r.client.api.FirewallsAPI.
 		RetrieveFirewall(ctx, firewallID).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.RetrieveFirewall(ctx, firewallID).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -350,14 +345,7 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -445,6 +433,10 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 
 	var firewallID int64
 	if state.ID.IsNull() {
+		if state.Firewall == nil || state.Firewall.ID.IsNull() {
+			resp.Diagnostics.AddError("Failed to parse firewall ID", "Firewall ID cannot be empty")
+			return
+		}
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
 		var err error
@@ -483,7 +475,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 
 	firewallResponse, response, err := r.client.api.FirewallsAPI.PartialUpdateFirewall(ctx, firewallID).PatchedFirewallRequest(firewallRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.PartialUpdateFirewall(ctx, firewallID).PatchedFirewallRequest(firewallRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -500,14 +492,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -585,6 +570,10 @@ func (r *firewallResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	var firewallID int64
 	if state.ID.IsNull() {
+		if state.Firewall == nil || state.Firewall.ID.IsNull() {
+			resp.Diagnostics.AddError("Failed to parse firewall ID", "Firewall ID cannot be empty")
+			return
+		}
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
 		var err error
@@ -605,14 +594,7 @@ func (r *firewallResource) Delete(ctx context.Context, req resource.DeleteReques
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
+		bodyString := readAPIErrorBody(response)
 		resp.Diagnostics.AddError(
 			err.Error(),
 			bodyString,
@@ -622,5 +604,19 @@ func (r *firewallResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 func (r *firewallResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	firewallID, err := strconv.ParseInt(req.ID, 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid firewall ID format", err.Error())
+		return
+	}
+
+	state := FirewallResourceModel{
+		ID: types.StringValue(req.ID),
+		Firewall: &FirewallResourceResults{
+			ID: types.Int64Value(firewallID),
+		},
+	}
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }
