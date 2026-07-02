@@ -3,14 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -125,7 +123,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	zoneResponse, response, err := r.client.api.DNSZonesAPI.CreateDnsZone(ctx).
 		ZoneRequest(*zoneRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
 				return r.client.api.DNSZonesAPI.CreateDnsZone(ctx).
 					ZoneRequest(*zoneRequest).Execute()
@@ -143,14 +141,13 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(errReadAll.Error(), "err")
-				return
+			bodyString := readAPIErrorBody(response)
+			if response == nil {
+				resp.Diagnostics.AddError(err.Error(), bodyString)
+			} else {
+				usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
+				resp.Diagnostics.AddError(usrMsg, fmt.Sprintf("%s\nDetails: %s", errMsg, bodyString))
 			}
-			bodyString := string(bodyBytes)
-			usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
-			resp.Diagnostics.AddError(usrMsg, fmt.Sprintf("%s\nDetails: %s", errMsg, bodyString))
 			return
 		}
 	}
@@ -215,11 +212,11 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	zoneResponse, response, err := r.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
 				return r.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 			}, 5)
@@ -236,8 +233,12 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
-			resp.Diagnostics.AddError(usrMsg, errMsg)
+			if response == nil {
+				resp.Diagnostics.AddError(err.Error(), "")
+			} else {
+				usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
+				resp.Diagnostics.AddError(usrMsg, errMsg)
+			}
 			return
 		}
 	}
@@ -305,7 +306,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	zoneResponse, response, err := r.client.api.DNSZonesAPI.UpdateDnsZone(ctx, zoneId).
 		UpdateZoneRequest(*updateRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
 				return r.client.api.DNSZonesAPI.UpdateDnsZone(ctx, zoneId).
 					UpdateZoneRequest(*updateRequest).Execute()
@@ -323,8 +324,12 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
-			resp.Diagnostics.AddError(usrMsg, errMsg)
+			if response == nil {
+				resp.Diagnostics.AddError(err.Error(), "")
+			} else {
+				usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
+				resp.Diagnostics.AddError(usrMsg, errMsg)
+			}
 			return
 		}
 	}
@@ -396,14 +401,33 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
-		resp.Diagnostics.AddError(usrMsg, errMsg)
+		if response == nil {
+			resp.Diagnostics.AddError(err.Error(), "")
+		} else {
+			usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
+			resp.Diagnostics.AddError(usrMsg, errMsg)
+		}
 		return
 	}
 }
 
 func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	zoneID, err := strconv.ParseInt(req.ID, 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid zone ID format", err.Error())
+		return
+	}
+
+	state := zoneResourceModel{
+		ID: types.StringValue(req.ID),
+		Zone: &zoneModel{
+			ID:          types.Int64Value(zoneID),
+			Nameservers: types.ListNull(types.StringType),
+		},
+	}
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }
 
 func errPrintZoneResource(errCode int, err error) (string, string) {
