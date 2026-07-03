@@ -186,8 +186,11 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 	}
 
 	functionInstanceResponse, response, err := r.createFirewallFunction(ctx, firewallID.ValueInt64(), functionInstanceRequest)
+	if response != nil {
+		defer response.Body.Close()
+	}
 	if err != nil {
-		if response.StatusCode == 429 {
+		if isHTTPStatus(response, http.StatusTooManyRequests) {
 			functionInstanceResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallFunctionInstanceResponse, *http.Response, error) {
 				return r.createFirewallFunction(ctx, firewallID.ValueInt64(), functionInstanceRequest)
 			}, 5) // Maximum 5 retries
@@ -204,18 +207,7 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			addFirewallFunctionAPIError(&resp.Diagnostics, err, response)
 			return
 		}
 	}
@@ -534,11 +526,17 @@ func (r *FirewallFunctionsInstanceResource) ImportState(ctx context.Context, req
 	}
 
 	functionInstanceResponse, response, err := r.retrieveFirewallFunction(ctx, firewallID, functionInstanceID)
+	if response != nil {
+		defer response.Body.Close()
+	}
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
 			functionInstanceResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallFunctionInstanceResponse, *http.Response, error) {
 				return r.retrieveFirewallFunction(ctx, firewallID, functionInstanceID)
 			}, 5)
+			if response != nil {
+				defer response.Body.Close()
+			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
 				return
@@ -635,6 +633,10 @@ func closeResponseBody(response *http.Response) {
 	if response != nil && response.Body != nil {
 		_ = response.Body.Close()
 	}
+}
+
+func isHTTPStatus(response *http.Response, status int) bool {
+	return response != nil && response.StatusCode == status
 }
 
 func addFirewallFunctionAPIError(diagnostics *diag.Diagnostics, err error, response *http.Response) {

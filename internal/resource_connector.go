@@ -592,7 +592,7 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 		}
 	}
 
-	r.populateConnectorFromResponse(ctx, plan.Connector, getConnector.GetData())
+	r.populateConnectorFromResponse(plan.Connector, getConnector.GetData())
 	plan.ID = types.StringValue(strconv.FormatInt(plan.Connector.ID.ValueInt64(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.SchemaVersion = types.Int64Value(0)
@@ -670,7 +670,7 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 	}
 
-	r.populateConnectorFromResponse(ctx, state.Connector, getConnector.GetData())
+	r.populateConnectorFromResponse(state.Connector, getConnector.GetData())
 	state.ID = types.StringValue(strconv.FormatInt(state.Connector.ID.ValueInt64(), 10))
 	state.SchemaVersion = types.Int64Value(0)
 
@@ -710,14 +710,14 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 			)
 			return
 		}
-		updateConnector, response, err := r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute() //nolint
+		updateConnector, response, err := r.partialUpdateConnector(ctx, connectorId, connectorReq)
 		if response != nil {
 			defer response.Body.Close()
 		}
 		if err != nil {
 			if response != nil && response.StatusCode == http.StatusTooManyRequests {
 				updateConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
-					return r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute()
+					return r.partialUpdateConnector(ctx, connectorId, connectorReq)
 				}, 5)
 				if response != nil {
 					defer response.Body.Close()
@@ -731,7 +731,7 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 				return
 			}
 		}
-		r.populateConnectorFromResponse(ctx, plan.Connector, updateConnector.GetData())
+		r.populateConnectorFromResponse(plan.Connector, updateConnector.GetData())
 
 	case "http":
 		connectorReq, err := r.buildHTTPPatchedConnectorRequest(ctx, plan.Connector)
@@ -742,14 +742,14 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 			)
 			return
 		}
-		updateConnector, response, err := r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute() //nolint
+		updateConnector, response, err := r.partialUpdateConnector(ctx, connectorId, connectorReq)
 		if response != nil {
 			defer response.Body.Close()
 		}
 		if err != nil {
 			if response != nil && response.StatusCode == http.StatusTooManyRequests {
 				updateConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
-					return r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute()
+					return r.partialUpdateConnector(ctx, connectorId, connectorReq)
 				}, 5)
 				if response != nil {
 					defer response.Body.Close()
@@ -763,7 +763,7 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 				return
 			}
 		}
-		r.populateConnectorFromResponse(ctx, plan.Connector, updateConnector.GetData())
+		r.populateConnectorFromResponse(plan.Connector, updateConnector.GetData())
 
 	default:
 		resp.Diagnostics.AddError(
@@ -846,7 +846,7 @@ func (r *connectorResource) ImportState(ctx context.Context, req resource.Import
 	state := &connectorResourceModel{
 		Connector: &connectorResourceResults{},
 	}
-	r.populateConnectorFromResponse(ctx, state.Connector, getConnector.GetData())
+	r.populateConnectorFromResponse(state.Connector, getConnector.GetData())
 	state.ID = types.StringValue(strconv.FormatInt(connectorId, 10))
 	state.SchemaVersion = types.Int64Value(0)
 
@@ -856,6 +856,27 @@ func (r *connectorResource) ImportState(ctx context.Context, req resource.Import
 
 func (r *connectorResource) retrieveConnector(ctx context.Context, connectorId int64) (*azionapi.ConnectorResponse, *http.Response, error) {
 	connector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+	if err == nil || response == nil || response.Body == nil {
+		return connector, response, err
+	}
+
+	bodyBytes, readErr := io.ReadAll(response.Body)
+	response.Body.Close()
+	response.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	if readErr != nil || len(bodyBytes) == 0 {
+		return connector, response, err
+	}
+
+	decoded, decodeErr := decodeConnectorResponse(bodyBytes)
+	if decodeErr != nil {
+		return connector, response, err
+	}
+
+	return decoded, response, nil
+}
+
+func (r *connectorResource) partialUpdateConnector(ctx context.Context, connectorId int64, connectorReq azionapi.PatchedConnectorRequest) (*azionapi.ConnectorResponse, *http.Response, error) {
+	connector, response, err := r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute() //nolint
 	if err == nil || response == nil || response.Body == nil {
 		return connector, response, err
 	}
@@ -1220,7 +1241,7 @@ func (r *connectorResource) buildHTTPPatchedConnectorRequest(_ context.Context, 
 	return azionapi.PatchedConnectorHTTPRequestAsPatchedConnectorRequest(req), nil
 }
 
-func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, model *connectorResourceResults, connector azionapi.Connector) {
+func (r *connectorResource) populateConnectorFromResponse(model *connectorResourceResults, connector azionapi.Connector) {
 	actualConnector := connector.GetActualInstance()
 	if actualConnector == nil {
 		return

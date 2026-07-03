@@ -133,6 +133,61 @@ func TestConnectorResponseUnmarshalAcceptsHTTPNullMetadata(t *testing.T) {
 	}
 }
 
+func TestConnectorResponseUnmarshalAcceptsPendingHTTPUpdateResponse(t *testing.T) {
+	input := []byte(`{
+		"state": "pending",
+		"data": {
+			"id": 56609,
+			"name": "My - test - Critical\nAPI",
+			"last_editor": "artur.rossa+test1@azion.com",
+			"last_modified": "2026-07-03T01:53:59.360533Z",
+			"created_at": "2026-07-03T00:06:31.459693Z",
+			"active": true,
+			"product_version": "1.0",
+			"type": "http",
+			"is_versioned": false,
+			"version": null,
+			"version_state": null,
+			"version_id": null,
+			"attributes": {
+				"addresses": [
+					{"active": true, "address": "example.com", "http_port": 80, "https_port": 443, "modules": {"load_balancer": {"server_role": "backup", "weight": 3}}},
+					{"active": true, "address": "example2.com", "http_port": 80, "https_port": 443, "modules": {"load_balancer": {"server_role": "primary", "weight": 1}}}
+				],
+				"connection_options": {
+					"dns_resolution": "both",
+					"transport_policy": "force_https",
+					"http_version_policy": "http1_1",
+					"host": "httpbingo.org",
+					"path_prefix": "",
+					"following_redirect": false,
+					"real_ip_header": "X-Real-IP",
+					"real_port_header": "X-Real-PORT"
+				},
+				"modules": {
+					"load_balancer": {"enabled": true, "config": {"method": "round_robin", "max_retries": 3, "connection_timeout": 30, "read_write_timeout": 60}},
+					"origin_shield": {"enabled": true, "config": {"origin_ip_acl": {"enabled": true}, "hmac": {"enabled": false, "config": null}}}
+				}
+			}
+		}
+	}`)
+
+	connector, err := decodeConnectorResponse(input)
+	if err != nil {
+		t.Fatalf("decodeConnectorResponse() returned error: %v", err)
+	}
+
+	if connector.Data.ConnectorHTTP == nil {
+		t.Fatalf("expected HTTP connector, got %#v", connector.Data.GetActualInstance())
+	}
+	if got := connector.GetState(); got != "pending" {
+		t.Fatalf("expected pending state, got %q", got)
+	}
+	if got := connector.Data.ConnectorHTTP.GetId(); got != 56609 {
+		t.Fatalf("expected id 56609, got %d", got)
+	}
+}
+
 func TestConnectorResponseUnmarshalAcceptsLiveIngestNullMetadata(t *testing.T) {
 	input := []byte(`{
 		"data": {
@@ -212,5 +267,61 @@ func TestRetrieveConnectorFallbackRewindsResponseBody(t *testing.T) {
 	}
 	if string(body) != string(input) {
 		t.Fatalf("expected rewound response body %s, got %s", input, body)
+	}
+}
+
+func TestPartialUpdateConnectorFallbackAcceptsPendingHTTPResponse(t *testing.T) {
+	input := []byte(`{
+		"state": "pending",
+		"data": {
+			"id": 56609,
+			"name": "My - test - Critical\nAPI",
+			"last_editor": "artur.rossa+test1@azion.com",
+			"last_modified": "2026-07-03T01:53:59.360533Z",
+			"created_at": "2026-07-03T00:06:31.459693Z",
+			"active": true,
+			"product_version": "1.0",
+			"type": "http",
+			"is_versioned": false,
+			"version": null,
+			"version_state": null,
+			"version_id": null,
+			"attributes": {
+				"addresses": [{"active": true, "address": "example.com", "http_port": 80, "https_port": 443, "modules": {"load_balancer": {"server_role": "backup", "weight": 3}}}],
+				"connection_options": {"dns_resolution": "both", "transport_policy": "force_https", "http_version_policy": "http1_1", "host": "httpbingo.org", "path_prefix": "", "following_redirect": false, "real_ip_header": "X-Real-IP", "real_port_header": "X-Real-PORT"},
+				"modules": {"load_balancer": {"enabled": true, "config": {"method": "round_robin", "max_retries": 3, "connection_timeout": 30, "read_write_timeout": 60}}, "origin_shield": {"enabled": true, "config": {"origin_ip_acl": {"enabled": true}, "hmac": {"enabled": false, "config": null}}}}
+			}
+		}
+	}`)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Fatalf("unexpected method %s", r.Method)
+		}
+		if r.URL.Path != "/workspace/connectors/56609" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(input)
+	}))
+	defer server.Close()
+
+	config := azionapi.NewConfiguration()
+	config.Servers[0].URL = server.URL
+	resource := connectorResource{client: &apiClient{api: azionapi.NewAPIClient(config)}}
+	req := azionapi.NewPatchedConnectorHTTPRequest("http")
+	req.SetName("My - test - Critical\nAPI")
+	connectorReq := azionapi.PatchedConnectorHTTPRequestAsPatchedConnectorRequest(req)
+
+	connector, response, err := resource.partialUpdateConnector(t.Context(), 56609, connectorReq)
+	if err != nil {
+		t.Fatalf("partialUpdateConnector() returned error: %v", err)
+	}
+	defer response.Body.Close()
+	if got := connector.GetState(); got != "pending" {
+		t.Fatalf("expected pending state, got %q", got)
+	}
+	if connector.Data.ConnectorHTTP == nil {
+		t.Fatalf("expected HTTP connector, got %#v", connector.Data.GetActualInstance())
 	}
 }
