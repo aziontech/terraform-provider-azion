@@ -214,7 +214,7 @@ func (d *WorkloadDeploymentDataSource) Read(ctx context.Context, req datasource.
 			ID:           types.Int64Value(deploymentResponse.Data.GetId()),
 			Name:         types.StringValue(deploymentResponse.Data.Name),
 			LastEditor:   types.StringValue(deploymentResponse.Data.GetLastEditor()),
-			LastModified: types.StringValue(deploymentResponse.Data.LastModified.Format(time.RFC850)),
+			LastModified: types.StringValue(deploymentResponse.Data.GetLastModified().Format(time.RFC850)),
 			CreatedAt:    types.StringValue(deploymentResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		},
 	}

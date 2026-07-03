@@ -744,8 +744,8 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 		ID:             types.Int64Value(response.Data.GetId()),
 		Name:           types.StringValue(response.Data.Name),
 		LastEditor:     types.StringValue(response.Data.GetLastEditor()),
-		LastModified:   types.StringValue(response.Data.LastModified.Format(time.RFC850)),
-		CreatedAt:      types.StringValue(response.Data.CreatedAt.Format(time.RFC3339)),
+		LastModified:   types.StringValue(response.Data.GetLastModified().Format(time.RFC850)),
+		CreatedAt:      types.StringValue(response.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(response.Data.GetProductVersion()),
 		WorkloadDomain: types.StringValue(response.Data.GetWorkloadDomain()),
 	}
