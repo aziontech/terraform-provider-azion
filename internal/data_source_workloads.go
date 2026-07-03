@@ -249,8 +249,8 @@ func (d *WorkloadsDataSource) Read(ctx context.Context, req datasource.ReadReque
 			ID:             types.Int64Value(resultWorkload.GetId()),
 			Name:           types.StringValue(resultWorkload.Name),
 			LastEditor:     types.StringValue(resultWorkload.GetLastEditor()),
-			LastModified:   types.StringValue(resultWorkload.LastModified.Format(time.RFC850)),
-			CreatedAt:      types.StringValue(resultWorkload.CreatedAt.Format(time.RFC3339)),
+			LastModified:   types.StringValue(resultWorkload.GetLastModified().Format(time.RFC850)),
+			CreatedAt:      types.StringValue(resultWorkload.GetCreatedAt().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(resultWorkload.GetProductVersion()),
 			WorkloadDomain: types.StringValue(resultWorkload.GetWorkloadDomain()),
 		}

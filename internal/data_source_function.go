@@ -208,7 +208,7 @@ func (d *functionDataSource) Read(ctx context.Context, req datasource.ReadReques
 			ExecutionEnvironment: types.StringValue(*functionsResponse.Data.ExecutionEnvironment),
 			Active:               types.BoolValue(*functionsResponse.Data.Active),
 			LastEditor:           types.StringValue(functionsResponse.Data.GetLastEditor()),
-			LastModified:         types.StringValue(functionsResponse.Data.LastModified.Format(time.RFC850)),
+			LastModified:         types.StringValue(functionsResponse.Data.GetLastModified().Format(time.RFC850)),
 			ProductVersion:       types.StringValue(functionsResponse.Data.GetProductVersion()),
 			Version:              types.StringValue(functionsResponse.Data.GetVersion()),
 			Vendor:               types.StringValue(functionsResponse.Data.GetVendor()),
