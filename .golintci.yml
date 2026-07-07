@@ -1,25 +1,16 @@
+version: "2"
+
 run:
   timeout: 5m
   issues-exit-code: 1
   tests: true
-  skip-dirs-use-default: true
   modules-download-mode: readonly
 
-issues:
-  max-per-linter: 0
-  max-same-issues: 0
-  exclude:
-    # no way to flag these paths as ignore in contextcheck
-    - "Function `toRuleset->toRulesetRule->StringSet` should pass the context parameter"
-    - "Function `toRulesetResourceModel` should pass the context parameter"
-    - "Function `remapPreservedRuleIDs->toRuleset->toRulesetRule->StringSet` should pass the context parameter"
-
 linters:
-  disable-all: true
+  default: none
   enable:
     - bodyclose    # ensure HTTP response bodies are successfully closed.
     - contextcheck # check we are passing context an inherited context.
-    - gofmt        # checks whether code was gofmt-ed. By default this tool runs with -s option to check for code simplification.
     - errname      # checks that sentinel errors are prefixed with the `Err` and error types are suffixed with the `Error`.
     - errcheck     # a program for checking for unchecked errors in go programs. These unchecked errors can be critical bugs in some cases.
     - errorlint    # used to find code that will cause problems with the error wrapping scheme introduced in Go 1.13.
@@ -29,7 +20,29 @@ linters:
     - tparallel    # detects inappropriate usage of t.Parallel() method in your Go test codes.
     - unparam      # reports unused function parameters.
     - whitespace   # detection of leading and trailing whitespace.
+  exclusions:
+    # no way to flag these paths as ignore in contextcheck.
+    rules:
+      - linters:
+          - contextcheck
+        text: "Function `toRuleset->toRulesetRule->StringSet` should pass the context parameter"
+      - linters:
+          - contextcheck
+        text: "Function `toRulesetResourceModel` should pass the context parameter"
+      - linters:
+          - contextcheck
+        text: "Function `remapPreservedRuleIDs->toRuleset->toRulesetRule->StringSet` should pass the context parameter"
 
+formatters:
+  enable:
+    - gofmt        # checks whether code was gofmt-ed. By default this tool runs with -s option to check for code simplification.
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
 
 output:
-  format: colored-line-number
+  formats:
+    text:
+      path: stdout
+      colors: true
