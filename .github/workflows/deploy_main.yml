@@ -6,11 +6,12 @@ on:
     branches:
       - main
 
+permissions: {}
+
 jobs:
   build:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     runs-on: ubuntu-latest
     container:
       image: golang:1.19

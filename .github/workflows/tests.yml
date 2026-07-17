@@ -4,11 +4,12 @@ on:
   pull_request:
     types: [opened, synchronize, labeled, unlabeled]
 
+permissions: {}
+
 jobs:
   tflint:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     name: Lint .tf examples
     runs-on: ubuntu-latest
     steps:
@@ -44,8 +45,7 @@ jobs:
           exit $exit_code
   validate-terraform:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     name: Check fmt and Validate .tf examples
     runs-on: ubuntu-latest
     steps:
@@ -101,8 +101,7 @@ jobs:
             done
   func-tests:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     name: Terraform Functional Tests
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
     timeout-minutes: 60
