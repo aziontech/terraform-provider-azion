@@ -23,10 +23,10 @@ jobs:
         run: git config --global url."https://${{ secrets.GLOBAL_TOKEN }}:x-oauth-basic@github.com/aziontech".insteadOf "https://github.com/aziontech"
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
         with:
           fetch-depth: 0
 
       - name: Go Report
-        uses: creekorful/goreportcard-action@v1.0
+        uses: creekorful/goreportcard-action@1f35ced8cdac2cba28c9a2f2288a16aacfd507f9 # v1.0
 

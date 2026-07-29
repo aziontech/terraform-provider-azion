@@ -13,16 +13,16 @@ jobs:
     name: Lint .tf examples
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@be3c94b385c4f180051c996d336f57a34c397495 # v3.6.1
         with:
           go-version-file: 'go.mod'
 
       - name: install tflint
-        uses: terraform-linters/setup-tflint@v2
+        uses: terraform-linters/setup-tflint@444635365d380c7363d1eaee4267317c2445717d # v2.0.1
 
       - run: tflint --init
 
@@ -49,11 +49,11 @@ jobs:
     name: Check fmt and Validate .tf examples
     runs-on: ubuntu-latest
     steps:
-        - uses: actions/checkout@v3
+        - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
           with:
             fetch-depth: 0
         
-        - uses: actions/setup-go@v3
+        - uses: actions/setup-go@be3c94b385c4f180051c996d336f57a34c397495 # v3.6.1
           with:
             go-version-file: 'go.mod'
 
@@ -65,7 +65,7 @@ jobs:
             mkdir -p ~/.terraform.d/plugins/github.com/aziontech/azion/0.1.0/"$(go env GOOS)"_"$(go env GOARCH)"/
             ls -lh ~/.terraform.d/plugins/github.com/aziontech/azion/0.1.0/linux_amd64
 
-        - uses: hashicorp/setup-terraform@v2
+        - uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
           with:
            terraform_version: 1.4.6
            terraform_wrapper: false
@@ -110,11 +110,11 @@ jobs:
       AZION_API_ENTRYPOINT: "https://api.azionapi.net"
     runs-on: ubuntu-latest
     steps:
-        - uses: actions/checkout@v3
+        - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
           with:
             fetch-depth: 0
         
-        - uses: actions/setup-go@v3
+        - uses: actions/setup-go@be3c94b385c4f180051c996d336f57a34c397495 # v3.6.1
           with:
             go-version-file: 'go.mod'
 
@@ -126,7 +126,7 @@ jobs:
             mkdir -p ~/.terraform.d/plugins/github.com/aziontech/azion/0.1.0/"$(go env GOOS)"_"$(go env GOARCH)"/
             ls -lh ~/.terraform.d/plugins/github.com/aziontech/azion/0.1.0/linux_amd64
 
-        - uses: hashicorp/setup-terraform@v2
+        - uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
           with:
            terraform_version: 1.4.6
            terraform_wrapper: false
