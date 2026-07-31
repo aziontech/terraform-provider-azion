@@ -2,6 +2,12 @@
 
 This document provides comprehensive guidance for AI agents generating Terraform provider code for Application Rules Engine from the OpenAPI specification (V4 SDK).
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ---
 
 ## Table of Contents
@@ -1481,7 +1487,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent application
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
   }
@@ -1490,31 +1496,25 @@ resource "azion_application_main_setting" "example" {
 # Then create the rule engine for that application
 resource "azion_application_rule_engine" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  results = {
+  results {
     name        = "Terraform Example"
     phase       = "request"
     description = "My rule engine"
-    behaviors = [
-      {
-        behavior = {
-          type = "deliver"
+    behaviors {
+      behavior {
+        type = "deliver"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "is_equal"
+          conditional = "if"
+          argument    = "/"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "is_equal"
-              conditional = "if"
-              argument    = "/"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 ```

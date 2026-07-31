@@ -2,6 +2,12 @@
 
 This document provides detailed information about the `azion_firewall_rule_engine_order` resource implementation for AI agents working on this Terraform provider. It is the firewall counterpart of [RULES_ENGINE_ORDER.md](RULES_ENGINE_ORDER.md) and follows the same architectural pattern.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Overview
 
 The `azion_firewall_rule_engine_order` resource manages the evaluation order of the rule-engine rules of an Azion Firewall.

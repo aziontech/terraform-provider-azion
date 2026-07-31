@@ -9,11 +9,13 @@ import (
 
 	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -76,8 +78,12 @@ func (r *firewallResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"data": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"data": schema.SingleNestedBlock{
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "ID of the firewall rule set.",
@@ -86,52 +92,6 @@ func (r *firewallResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"name": schema.StringAttribute{
 						Description: "Name of the firewall rule set.",
 						Required:    true,
-					},
-					"modules": schema.SingleNestedAttribute{
-						Description: "Modules configuration for the firewall.",
-						Optional:    true,
-						Attributes: map[string]schema.Attribute{
-							"ddos_protection": schema.SingleNestedAttribute{
-								Description: "DDoS protection module configuration.",
-								Optional:    true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{
-										Description: "Whether DDoS protection is enabled.",
-										Optional:    true,
-									},
-								},
-							},
-							"functions": schema.SingleNestedAttribute{
-								Description: "Functions module configuration.",
-								Optional:    true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{
-										Description: "Whether functions are enabled.",
-										Optional:    true,
-									},
-								},
-							},
-							"network_protection": schema.SingleNestedAttribute{
-								Description: "Network protection module configuration.",
-								Optional:    true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{
-										Description: "Whether network protection is enabled.",
-										Optional:    true,
-									},
-								},
-							},
-							"waf": schema.SingleNestedAttribute{
-								Description: "WAF module configuration.",
-								Optional:    true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{
-										Description: "Whether WAF is enabled.",
-										Optional:    true,
-									},
-								},
-							},
-						},
 					},
 					"debug": schema.BoolAttribute{
 						Description: "Whether debug is enabled for the rule set.",
@@ -166,6 +126,49 @@ func (r *firewallResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"version_id": schema.StringAttribute{
 						Description: "The identifier of the current firewall version.",
 						Computed:    true,
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"modules": schema.SingleNestedBlock{
+						Description: "Modules configuration for the firewall.",
+						Blocks: map[string]schema.Block{
+							"ddos_protection": schema.SingleNestedBlock{
+								Description: "DDoS protection module configuration.",
+								Attributes: map[string]schema.Attribute{
+									"enabled": schema.BoolAttribute{
+										Description: "Whether DDoS protection is enabled.",
+										Optional:    true,
+									},
+								},
+							},
+							"functions": schema.SingleNestedBlock{
+								Description: "Functions module configuration.",
+								Attributes: map[string]schema.Attribute{
+									"enabled": schema.BoolAttribute{
+										Description: "Whether functions are enabled.",
+										Optional:    true,
+									},
+								},
+							},
+							"network_protection": schema.SingleNestedBlock{
+								Description: "Network protection module configuration.",
+								Attributes: map[string]schema.Attribute{
+									"enabled": schema.BoolAttribute{
+										Description: "Whether network protection is enabled.",
+										Optional:    true,
+									},
+								},
+							},
+							"waf": schema.SingleNestedBlock{
+								Description: "WAF module configuration.",
+								Attributes: map[string]schema.Attribute{
+									"enabled": schema.BoolAttribute{
+										Description: "Whether WAF is enabled.",
+										Optional:    true,
+									},
+								},
+							},
+						},
 					},
 				},
 			},

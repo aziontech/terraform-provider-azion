@@ -38,16 +38,8 @@ data "azion_application_rules_engine" "example" {
 
 - `counter` (Number) The total number of rules.
 - `id` (String) Identifier of the data source.
-- `links` (Attributes) Pagination links. (see [below for nested schema](#nestedatt--links))
+- `links` (Attributes) (see [below for nested schema](#nestedatt--links))
 - `total_pages` (Number) The total number of pages.
-
-<a id="nestedatt--links"></a>
-### Nested Schema for `links`
-
-Read-Only:
-
-- `next` (String) Link to next page.
-- `previous` (String) Link to previous page.
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
@@ -59,7 +51,7 @@ Required:
 Read-Only:
 
 - `active` (Boolean) Whether the rule is active.
-- `behaviors` (Attributes List) Behaviors for the rule. Each item contains a single `behavior` object. (see [below for nested schema](#nestedatt--results--behaviors))
+- `behaviors` (Attributes List) Behaviors for the rule. (see [below for nested schema](#nestedatt--results--behaviors))
 - `criteria` (Attributes List) Criteria for the rule. (see [below for nested schema](#nestedatt--results--criteria))
 - `description` (String) Description of the rule.
 - `id` (Number) The ID of the rules engine rule.
@@ -85,14 +77,15 @@ Read-Only:
 - `type` (String) Type of behavior.
 
 <a id="nestedatt--results--behaviors--behavior--attributes"></a>
-### Nested Schema for `results.behaviors.behavior.attributes`
+### Nested Schema for `results.behaviors.behavior.type`
 
 Read-Only:
 
 - `value` (String) Value for the behavior.
 
+
 <a id="nestedatt--results--behaviors--behavior--capture_attributes"></a>
-### Nested Schema for `results.behaviors.behavior.capture_attributes`
+### Nested Schema for `results.behaviors.behavior.type`
 
 Read-Only:
 
@@ -100,12 +93,15 @@ Read-Only:
 - `regex` (String) Regex pattern.
 - `subject` (String) Subject for capture.
 
+
+
+
 <a id="nestedatt--results--criteria"></a>
 ### Nested Schema for `results.criteria`
 
 Read-Only:
 
-- `entries` (Attributes List) Criteria entries. Each item contains a single `criterion` object. (see [below for nested schema](#nestedatt--results--criteria--entries))
+- `entries` (Attributes List) Criteria entries. (see [below for nested schema](#nestedatt--results--criteria--entries))
 
 <a id="nestedatt--results--criteria--entries"></a>
 ### Nested Schema for `results.criteria.entries`
@@ -123,3 +119,15 @@ Read-Only:
 - `conditional` (String) Conditional operator (if, and, or).
 - `operator` (String) Comparison operator.
 - `variable` (String) Variable to evaluate.
+
+
+
+
+
+<a id="nestedatt--links"></a>
+### Nested Schema for `links`
+
+Read-Only:
+
+- `next` (String)
+- `previous` (String)

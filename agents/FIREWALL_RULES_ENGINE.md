@@ -2,6 +2,12 @@
 
 This document provides comprehensive guidance for AI agents generating Terraform provider data sources and resources for Firewall Rules Engine from the Azion OpenAPI specification. It documents the patterns, conventions, and implementation details used in the Firewall Rules Engine data sources and resource.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Overview
 
 The Firewall Rules Engine is a feature within Azion Firewalls that allows you to create conditional rules with behaviors. Unlike the Application Rules Engine, the Firewall Rules Engine:
@@ -326,7 +332,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent firewall
 resource "azion_firewall_main_setting" "example" {
-  data = {
+  data {
     name   = "My Firewall"
     active = true
   }
@@ -335,31 +341,25 @@ resource "azion_firewall_main_setting" "example" {
 # Then create the rule engine for that firewall
 resource "azion_firewall_rule_engine" "example" {
   firewall_id = azion_firewall_main_setting.example.data.id
-  results = {
+  results {
     name        = "Block Specific Path"
     description = "Block requests to specific path"
     active      = true
-    behaviors = [
-      {
-        behavior = {
-          type = "drop"
+    behaviors {
+      behavior {
+        type = "drop"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "${request_uri}"
+          operator    = "matches"
+          conditional = "if"
+          argument    = "/admin.*"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "${request_uri}"
-              operator    = "matches"
-              conditional = "if"
-              argument    = "/admin.*"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 ```

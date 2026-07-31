@@ -2,6 +2,12 @@
 
 This document provides specific guidance for implementing Network Lists resources and data sources in the Terraform provider using the V4 SDK (`azion-api`).
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Table of Contents
 
 1. [SDK Selection](#sdk-selection)
@@ -681,7 +687,7 @@ id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
 ```terraform
 # Network List with country codes
 resource "azion_network_list" "countries_example" {
-  results = {
+  results {
     name = "Blocked Countries"
     type = "countries"
     items = [
@@ -694,7 +700,7 @@ resource "azion_network_list" "countries_example" {
 
 # Network List with IP CIDR addresses
 resource "azion_network_list" "ip_cidr_example" {
-  results = {
+  results {
     name = "Allowed IPs"
     type = "ip_cidr"
     items = [
@@ -707,7 +713,7 @@ resource "azion_network_list" "ip_cidr_example" {
 
 # Network List with ASN numbers
 resource "azion_network_list" "asn_example" {
-  results = {
+  results {
     name = "Allowed ASNs"
     type = "asn"
     items = [

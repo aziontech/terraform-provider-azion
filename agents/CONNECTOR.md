@@ -2,6 +2,12 @@
 
 This document provides specific guidance for implementing Connectors resources and data sources in the Terraform provider.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Table of Contents
 
 1. [SDK Selection](#sdk-selection)
@@ -588,11 +594,11 @@ type ConnectorHTTPAttributes struct {
 #   1. Use an existing bucket name directly (string value)
 #   2. Reference a bucket created via azion_bucket resource
 resource "azion_connector" "storage_connector" {
-  connector = {
+  connector {
     name   = "tf-test-storage-connector"
     type   = "storage"
     active = true
-    storage_attributes = {
+    storage_attributes {
       # Option 1: Use an existing bucket name directly
       # bucket = "my-existing-bucket"
       
@@ -620,48 +626,44 @@ resource "azion_connector" "storage_connector" {
 # HTTP Connector Example
 # Used to connect to HTTP origins
 resource "azion_connector" "http_connector" {
-  connector = {
+  connector {
     name   = "tf-test-http-connector"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          endpoint = {
-            address   = "192.168.1.100"
-            http_port = 80
-            active    = true
-          }
+    http_attributes {
+      addresses {
+        endpoint {
+          address   = "192.168.1.100"
+          http_port = 80
+          active    = true
         }
-      ]
+      }
     }
   }
 }
 
 # HTTP Connector with all options
 resource "azion_connector" "http_connector_full" {
-  connector = {
+  connector {
     name   = "tf-test-http-connector-full"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          endpoint = {
-            address    = "192.168.1.100"
-            http_port  = 80
-            https_port = 443
-            active     = true
-            modules = {
-              load_balancer = {
-                server_role = "primary"
-                weight      = 1
-              }
+    http_attributes {
+      addresses {
+        endpoint {
+          address    = "192.168.1.100"
+          http_port  = 80
+          https_port = 443
+          active     = true
+          modules {
+            load_balancer {
+              server_role = "primary"
+              weight      = 1
             }
           }
         }
-      ]
-      connection_options = {
+      }
+      connection_options {
         dns_resolution      = "both"
         following_redirect  = false
         host                = "$${host}"
@@ -671,17 +673,17 @@ resource "azion_connector" "http_connector_full" {
         real_port_header    = "X-Real-PORT"
         transport_policy    = "preserve"
       }
-      modules = {
-        load_balancer = {
+      modules {
+        load_balancer {
           enabled = true
-          config = {
+          config {
             method              = "round_robin"
             max_retries         = 3
             connection_timeout  = 60
             read_write_timeout  = 120
           }
         }
-        origin_shield = {
+        origin_shield {
           enabled = false
         }
       }

@@ -9,11 +9,14 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -73,8 +76,12 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"result": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"result": schema.SingleNestedBlock{
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"exception_id": schema.Int64Attribute{
 						Description: "The ID of the WAF exception.",
@@ -92,14 +99,36 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Description: "Path pattern for the exception.",
 						Optional:    true,
 					},
-					"conditions": schema.ListNestedAttribute{
+					"operator": schema.StringAttribute{
+						Description: "The operator for the exception (regex or contains).",
+						Optional:    true,
+					},
+					"active": schema.BoolAttribute{
+						Description: "Whether the exception is active.",
+						Optional:    true,
+					},
+					"last_editor": schema.StringAttribute{
+						Description: "Last editor of the exception.",
+						Computed:    true,
+					},
+					"last_modified": schema.StringAttribute{
+						Description: "Last modified timestamp.",
+						Computed:    true,
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"conditions": schema.ListNestedBlock{
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
+						},
 						Description: "Conditions for the WAF exception.",
-						Required:    true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"condition": schema.SingleNestedAttribute{
+						NestedObject: schema.NestedBlockObject{
+							Blocks: map[string]schema.Block{
+								"condition": schema.SingleNestedBlock{
+									Validators: []validator.Object{
+										objectvalidator.IsRequired(),
+									},
 									Description: "A single condition for the WAF exception.",
-									Required:    true,
 									Attributes: map[string]schema.Attribute{
 										"match": schema.StringAttribute{
 											Description: "The match type for the condition.",
@@ -121,22 +150,6 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 								},
 							},
 						},
-					},
-					"operator": schema.StringAttribute{
-						Description: "The operator for the exception (regex or contains).",
-						Optional:    true,
-					},
-					"active": schema.BoolAttribute{
-						Description: "Whether the exception is active.",
-						Optional:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the exception.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp.",
-						Computed:    true,
 					},
 				},
 			},

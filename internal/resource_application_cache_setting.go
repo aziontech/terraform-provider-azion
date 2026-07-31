@@ -10,11 +10,13 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -126,8 +128,12 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"cache_setting": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"cache_setting": schema.SingleNestedBlock{
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "Cache setting identifier.",
@@ -137,9 +143,14 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 						Description: "Name of the cache setting.",
 						Required:    true,
 					},
-					"browser_cache": schema.SingleNestedAttribute{
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp.",
+						Computed:    true,
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"browser_cache": schema.SingleNestedBlock{
 						Description: "Browser cache settings.",
-						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"behavior": schema.StringAttribute{
 								Description: "Browser cache behavior: override, honor, no-cache.",
@@ -151,13 +162,11 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 							},
 						},
 					},
-					"modules": schema.SingleNestedAttribute{
+					"modules": schema.SingleNestedBlock{
 						Description: "Cache settings modules.",
-						Optional:    true,
-						Attributes: map[string]schema.Attribute{
-							"cache": schema.SingleNestedAttribute{
+						Blocks: map[string]schema.Block{
+							"cache": schema.SingleNestedBlock{
 								Description: "Edge cache module settings.",
-								Optional:    true,
 								Attributes: map[string]schema.Attribute{
 									"behavior": schema.StringAttribute{
 										Description: "Cache behavior: honor, override.",
@@ -167,18 +176,18 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 										Description: "Maximum TTL for edge cache.",
 										Optional:    true,
 									},
-									"stale_cache": schema.SingleNestedAttribute{
+								},
+								Blocks: map[string]schema.Block{
+									"stale_cache": schema.SingleNestedBlock{
 										Description: "Stale cache settings.",
-										Optional:    true,
 										Attributes: map[string]schema.Attribute{
 											"enabled": schema.BoolAttribute{
 												Optional: true,
 											},
 										},
 									},
-									"large_file_cache": schema.SingleNestedAttribute{
+									"large_file_cache": schema.SingleNestedBlock{
 										Description: "Large file cache settings.",
-										Optional:    true,
 										Attributes: map[string]schema.Attribute{
 											"enabled": schema.BoolAttribute{
 												Optional: true,
@@ -188,9 +197,8 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 											},
 										},
 									},
-									"tiered_cache": schema.SingleNestedAttribute{
+									"tiered_cache": schema.SingleNestedBlock{
 										Description: "Tiered cache settings.",
-										Optional:    true,
 										Attributes: map[string]schema.Attribute{
 											"topology": schema.StringAttribute{
 												Description: "Tiered cache topology: nearest-region, br-east-1, us-east-1.",
@@ -203,16 +211,16 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 									},
 								},
 							},
-							"application_accelerator": schema.SingleNestedAttribute{
+							"application_accelerator": schema.SingleNestedBlock{
 								Description: "Application accelerator module settings.",
-								Optional:    true,
 								Attributes: map[string]schema.Attribute{
 									"cache_vary_by_method": schema.ListAttribute{
 										ElementType: types.StringType,
 										Optional:    true,
 									},
-									"cache_vary_by_querystring": schema.SingleNestedAttribute{
-										Optional: true,
+								},
+								Blocks: map[string]schema.Block{
+									"cache_vary_by_querystring": schema.SingleNestedBlock{
 										Attributes: map[string]schema.Attribute{
 											"behavior": schema.StringAttribute{
 												Description: "Query string behavior: ignore, all, allowlist, denylist.",
@@ -227,8 +235,7 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 											},
 										},
 									},
-									"cache_vary_by_cookies": schema.SingleNestedAttribute{
-										Optional: true,
+									"cache_vary_by_cookies": schema.SingleNestedBlock{
 										Attributes: map[string]schema.Attribute{
 											"behavior": schema.StringAttribute{
 												Description: "Cookies behavior: ignore, all, allowlist, denylist.",
@@ -240,8 +247,7 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 											},
 										},
 									},
-									"cache_vary_by_devices": schema.SingleNestedAttribute{
-										Optional: true,
+									"cache_vary_by_devices": schema.SingleNestedBlock{
 										Attributes: map[string]schema.Attribute{
 											"behavior": schema.StringAttribute{
 												Description: "Devices behavior: ignore, allowlist.",
@@ -256,10 +262,6 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 								},
 							},
 						},
-					},
-					"created_at": schema.StringAttribute{
-						Description: "The creation timestamp.",
-						Computed:    true,
 					},
 				},
 			},

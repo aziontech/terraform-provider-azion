@@ -2,6 +2,12 @@
 
 This document provides specific guidance for implementing Cache Settings data sources and resources in the Terraform provider using the V4 SDK.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Table of Contents
 
 1. [SDK Selection](#sdk-selection)
@@ -1748,10 +1754,10 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent application with edge cache enabled
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
-    modules = {
+    modules {
       edge_cache = {
         enabled = true
       }
@@ -1762,9 +1768,9 @@ resource "azion_application_main_setting" "example" {
 # Then create the cache setting for that application
 resource "azion_application_cache_setting" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  cache_setting = {
+  cache_setting {
     name = "My Cache Setting"
-    browser_cache = {
+    browser_cache {
       behavior = "override"
       max_age  = 3600
     }

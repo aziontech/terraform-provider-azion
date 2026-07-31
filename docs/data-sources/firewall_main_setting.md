@@ -44,8 +44,8 @@ Read-Only:
 - `modules` (Attributes) Modules configuration for the firewall. (see [below for nested schema](#nestedatt--data--modules))
 - `name` (String) Name of the firewall rule set.
 - `product_version` (String) Product version of the firewall rule set.
-- `version_id` (String) The identifier of the current firewall version.
 - `state` (String) The state of the current firewall version.
+- `version_id` (String) The identifier of the current firewall version.
 
 <a id="nestedatt--data--modules"></a>
 ### Nested Schema for `data.modules`

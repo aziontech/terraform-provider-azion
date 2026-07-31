@@ -9,11 +9,13 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -101,8 +103,12 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"workload": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"workload": schema.SingleNestedBlock{
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The workload identifier.",
@@ -134,9 +140,29 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"tls": schema.SingleNestedAttribute{
-						Description: "TLS configuration for the workload.",
+					"domains": schema.SetAttribute{
+						ElementType: types.StringType,
+						Description: "Set of domains associated with the workload.",
 						Optional:    true,
+						Computed:    true,
+					},
+					"workload_domain_allow_access": schema.BoolAttribute{
+						Description: "Whether domain access is allowed.",
+						Optional:    true,
+						Computed:    true,
+					},
+					"workload_domain": schema.StringAttribute{
+						Description: "The workload domain.",
+						Computed:    true,
+					},
+					"product_version": schema.StringAttribute{
+						Description: "Product version of the workload.",
+						Computed:    true,
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"tls": schema.SingleNestedBlock{
+						Description: "TLS configuration for the workload.",
 						Attributes: map[string]schema.Attribute{
 							"certificate": schema.Int64Attribute{
 								Description: "Certificate ID for TLS.",
@@ -152,13 +178,11 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
-					"protocols": schema.SingleNestedAttribute{
+					"protocols": schema.SingleNestedBlock{
 						Description: "Protocol configurations for the workload.",
-						Optional:    true,
-						Attributes: map[string]schema.Attribute{
-							"http": schema.SingleNestedAttribute{
+						Blocks: map[string]schema.Block{
+							"http": schema.SingleNestedBlock{
 								Description: "HTTP protocol configuration.",
-								Optional:    true,
 								Attributes: map[string]schema.Attribute{
 									"versions": schema.ListAttribute{
 										ElementType: types.StringType,
@@ -185,17 +209,17 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
-					"mtls": schema.SingleNestedAttribute{
+					"mtls": schema.SingleNestedBlock{
 						Description: "Mutual TLS configuration for the workload.",
-						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: "Whether MTLS is enabled.",
 								Optional:    true,
 							},
-							"config": schema.SingleNestedAttribute{
+						},
+						Blocks: map[string]schema.Block{
+							"config": schema.SingleNestedBlock{
 								Description: "MTLS configuration.",
-								Optional:    true,
 								Attributes: map[string]schema.Attribute{
 									"certificate": schema.Int64Attribute{
 										Description: "MTLS certificate ID.",
@@ -213,25 +237,6 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								},
 							},
 						},
-					},
-					"domains": schema.SetAttribute{
-						ElementType: types.StringType,
-						Description: "Set of domains associated with the workload.",
-						Optional:    true,
-						Computed:    true,
-					},
-					"workload_domain_allow_access": schema.BoolAttribute{
-						Description: "Whether domain access is allowed.",
-						Optional:    true,
-						Computed:    true,
-					},
-					"workload_domain": schema.StringAttribute{
-						Description: "The workload domain.",
-						Computed:    true,
-					},
-					"product_version": schema.StringAttribute{
-						Description: "Product version of the workload.",
-						Computed:    true,
 					},
 				},
 			},

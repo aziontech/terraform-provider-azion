@@ -1,7 +1,7 @@
 # Example: Complete setup with parent application
 # First, create the parent application
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
   }
@@ -10,182 +10,152 @@ resource "azion_application_main_setting" "example" {
 # Then create the rule engine for that application
 resource "azion_application_rule_engine" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  results = {
+  results {
     name        = "Terraform Example"
     phase       = "request"
     description = "My rule engine"
-    behaviors = [
-      {
-        behavior = {
-          type = "deliver"
-        }
-      },
-      {
-        behavior = {
-          type = "bypass_cache"
+    behaviors {
+      behavior {
+        type = "deliver"
+      }
+    }
+    behaviors {
+      behavior {
+        type = "bypass_cache"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "is_equal"
+          conditional = "if"
+          argument    = "/"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "is_equal"
-              conditional = "if"
-              argument    = "/"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 
 # Example 1: Request phase rule with no-args behavior
 resource "azion_application_rule_engine" "example_simple" {
   application_id = 1234567890
-  results = {
+  results {
     name        = "Terraform Example"
     phase       = "request"
     description = "My rule engine"
-    behaviors = [
-      {
-        behavior = {
-          type = "deliver"
-        }
-      },
-      {
-        behavior = {
-          type = "bypass_cache"
+    behaviors {
+      behavior {
+        type = "deliver"
+      }
+    }
+    behaviors {
+      behavior {
+        type = "bypass_cache"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "is_equal"
+          conditional = "if"
+          argument    = "/"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "is_equal"
-              conditional = "if"
-              argument    = "/"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 
 # Example 2: Request phase rule with behavior that has arguments
 resource "azion_application_rule_engine" "example_with_args" {
   application_id = 1234567890
-  results = {
+  results {
     name        = "Add Header Example"
     phase       = "request"
     active      = true
     description = "Rule with behavior that has arguments"
 
-    behaviors = [
-      {
-        behavior = {
-          type = "add_request_header"
-          attributes = {
-            value = "X-Custom-Header: MyValue"
-          }
+    behaviors {
+      behavior {
+        type = "add_request_header"
+        attributes {
+          value = "X-Custom-Header: MyValue"
         }
       }
-    ]
+    }
 
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "starts_with"
-              conditional = "if"
-              argument    = "/api/"
-            }
-          }
-        ]
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "starts_with"
+          conditional = "if"
+          argument    = "/api/"
+        }
       }
-    ]
+    }
   }
 }
 
 # Example 3: Request phase rule with capture_match_groups behavior
 resource "azion_application_rule_engine" "example_capture" {
   application_id = 1234567890
-  results = {
+  results {
     name        = "Capture Match Groups Example"
     phase       = "request"
     description = "Rule with capture_match_groups behavior"
 
-    behaviors = [
-      {
-        behavior = {
-          type = "capture_match_groups"
-          capture_attributes = {
-            subject        = "$${uri}"
-            regex          = "/api/([a-z]+)"
-            captured_array = "api_paths"
-          }
+    behaviors {
+      behavior {
+        type = "capture_match_groups"
+        capture_attributes {
+          subject        = "$${uri}"
+          regex          = "/api/([a-z]+)"
+          captured_array = "api_paths"
         }
       }
-    ]
+    }
 
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "matches"
-              conditional = "if"
-              argument    = "^/api/"
-            }
-          }
-        ]
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "matches"
+          conditional = "if"
+          argument    = "^/api/"
+        }
       }
-    ]
+    }
   }
 }
 
 # Example 4: Response phase rule
 resource "azion_application_rule_engine" "example_response" {
   application_id = 1234567890
-  results = {
+  results {
     name        = "Response Phase Example"
     phase       = "response"
     description = "Response phase rule"
 
-    behaviors = [
-      {
-        behavior = {
-          type = "add_response_header"
-          attributes = {
-            value = "X-Response-Processed: true"
-          }
+    behaviors {
+      behavior {
+        type = "add_response_header"
+        attributes {
+          value = "X-Response-Processed: true"
         }
       }
-    ]
+    }
 
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${status}"
-              operator    = "is_equal"
-              conditional = "if"
-              argument    = "200"
-            }
-          }
-        ]
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${status}"
+          operator    = "is_equal"
+          conditional = "if"
+          argument    = "200"
+        }
       }
-    ]
+    }
   }
 }

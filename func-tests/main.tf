@@ -156,7 +156,7 @@ locals {
 # }
 
 resource "azion_function" "testfunc" {
-  function = {
+  function {
     name                  = "Terraform Function ${local.name_suffix}"
     code                  = trimspace(file("${path.module}/mock_files/dummy_script.txt"))
     active                = true
@@ -167,7 +167,7 @@ resource "azion_function" "testfunc" {
 }
 
 resource "azion_function" "testfunc2firewall" {
-  function = {
+  function {
     name                  = "Terraform Function 2 Firewall ${local.name_suffix}"
     code                  = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
     active                = true
@@ -262,10 +262,10 @@ resource "azion_function" "testfunc2firewall" {
 # }
 
 resource "azion_intelligent_dns_zone" "testfunc" {
-  zone = {
-    domain : "terraformtest-func-${local.timestamp}.qa",
-    active : true,
-    name : "example"
+  zone {
+    domain = "terraformtest-func-${local.timestamp}.qa"
+    active = true
+    name   = "example"
   }
 }
 
@@ -279,7 +279,7 @@ resource "azion_intelligent_dns_zone" "testfunc" {
 
 resource "azion_intelligent_dns_record" "testfunc" {
   zone_id = azion_intelligent_dns_zone.testfunc.zone.id
-  record = {
+  record {
     type = "A"
     name = "site"
     rdata = [
@@ -294,7 +294,7 @@ resource "azion_intelligent_dns_record" "testfunc" {
 }
 
 resource "azion_network_list" "exampleOne" {
-  results = {
+  results {
     name = "NetworkList Terraform ${local.name_suffix} Countries"
     type = "countries"
     items = [
@@ -306,7 +306,7 @@ resource "azion_network_list" "exampleOne" {
 }
 
 resource "azion_network_list" "exampleTwo" {
-  results = {
+  results {
     name = "NetworkList Terraform ${local.name_suffix} ip_cidr"
     type = "ip_cidr"
     items = [

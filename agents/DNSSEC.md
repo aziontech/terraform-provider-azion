@@ -2,6 +2,12 @@
 
 This document provides specific guidance for implementing DNSSEC resources and data sources in the Terraform provider.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Important: Data Source vs Resource Differences
 
 The DNSSEC data source and resource have **different zone_id types**:
@@ -921,7 +927,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent DNS zone
 resource "azion_intelligent_dns_zone" "example" {
-  zone = {
+  zone {
     name    = "example.com"
     active  = true
     domain  = "example.com"
@@ -931,7 +937,7 @@ resource "azion_intelligent_dns_zone" "example" {
 # Then configure DNSSEC for that zone
 resource "azion_intelligent_dns_dnssec" "example" {
   zone_id = azion_intelligent_dns_zone.example.id
-  dnssec = {
+  dnssec {
     is_enabled = true
   }
 }

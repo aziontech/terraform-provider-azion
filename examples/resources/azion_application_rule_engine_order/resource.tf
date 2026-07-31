@@ -1,7 +1,7 @@
 # Example: ordering rule engine rules for an application
 # First, create the parent application
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
   }
@@ -10,59 +10,47 @@ resource "azion_application_main_setting" "example" {
 # Create two request-phase rules
 resource "azion_application_rule_engine" "first" {
   application_id = azion_application_main_setting.example.application.application_id
-  results = {
+  results {
     name  = "First rule"
     phase = "request"
-    behaviors = [
-      {
-        behavior = {
-          type = "deliver"
+    behaviors {
+      behavior {
+        type = "deliver"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "starts_with"
+          conditional = "if"
+          argument    = "/a/"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "starts_with"
-              conditional = "if"
-              argument    = "/a/"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 
 resource "azion_application_rule_engine" "second" {
   application_id = azion_application_main_setting.example.application.application_id
-  results = {
+  results {
     name  = "Second rule"
     phase = "request"
-    behaviors = [
-      {
-        behavior = {
-          type = "deliver"
+    behaviors {
+      behavior {
+        type = "deliver"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "starts_with"
+          conditional = "if"
+          argument    = "/b/"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "starts_with"
-              conditional = "if"
-              argument    = "/b/"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 

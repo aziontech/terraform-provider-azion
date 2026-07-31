@@ -9,11 +9,13 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -89,9 +91,13 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"result": schema.SingleNestedAttribute{
+		},
+		Blocks: map[string]schema.Block{
+			"result": schema.SingleNestedBlock{
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Description: "The WAF configuration.",
-				Required:    true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The ID of the WAF.",
@@ -125,9 +131,10 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 						Description: "The identifier of the current WAF version.",
 						Computed:    true,
 					},
-					"engine_settings": schema.SingleNestedAttribute{
+				},
+				Blocks: map[string]schema.Block{
+					"engine_settings": schema.SingleNestedBlock{
 						Description: "Engine settings for the WAF.",
-						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"engine_version": schema.StringAttribute{
 								Description: "Engine version for the WAF.",
@@ -137,23 +144,27 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 								Description: "Type of the WAF engine.",
 								Optional:    true,
 							},
-							"attributes": schema.SingleNestedAttribute{
+						},
+						Blocks: map[string]schema.Block{
+							"attributes": schema.SingleNestedBlock{
 								Description: "Attributes for the WAF engine settings.",
-								Optional:    true,
 								Attributes: map[string]schema.Attribute{
 									"rulesets": schema.ListAttribute{
 										Description: "List of ruleset IDs.",
 										Optional:    true,
 										ElementType: types.Int64Type,
 									},
-									"thresholds": schema.SetNestedAttribute{
+								},
+								Blocks: map[string]schema.Block{
+									"thresholds": schema.SetNestedBlock{
 										Description: "Threshold configurations for the WAF. Order-insensitive; the API returns thresholds sorted alphabetically by threat.",
-										Optional:    true,
-										NestedObject: schema.NestedAttributeObject{
-											Attributes: map[string]schema.Attribute{
-												"threshold": schema.SingleNestedAttribute{
+										NestedObject: schema.NestedBlockObject{
+											Blocks: map[string]schema.Block{
+												"threshold": schema.SingleNestedBlock{
+													Validators: []validator.Object{
+														objectvalidator.IsRequired(),
+													},
 													Description: "A single threshold configuration.",
-													Required:    true,
 													Attributes: map[string]schema.Attribute{
 														"threat": schema.StringAttribute{
 															Description: "The threat type for the threshold.",

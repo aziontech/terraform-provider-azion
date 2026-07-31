@@ -6,11 +6,11 @@
 # Used to connect to object storage services
 # NOTE: The bucket name must be a valid, existing bucket
 resource "azion_connector" "storage_connector" {
-  connector = {
+  connector {
     name   = "My Storage Connector"
     type   = "storage"
     active = true
-    storage_attributes = {
+    storage_attributes {
       # Replace with a valid bucket name
       bucket = "my-bucket"
       prefix = "path/to/files/"
@@ -21,48 +21,44 @@ resource "azion_connector" "storage_connector" {
 # HTTP Connector Example
 # Used to connect to HTTP origins
 resource "azion_connector" "http_connector" {
-  connector = {
+  connector {
     name   = "My HTTP Connector"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          endpoint = {
-            address   = "192.168.1.100"
-            http_port = 80
-            active    = true
-          }
+    http_attributes {
+      addresses {
+        endpoint {
+          address   = "192.168.1.100"
+          http_port = 80
+          active    = true
         }
-      ]
+      }
     }
   }
 }
 
 # HTTP Connector with all options
 resource "azion_connector" "http_connector_full" {
-  connector = {
+  connector {
     name   = "My HTTP Connector Full"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          endpoint = {
-            address    = "192.168.1.100"
-            http_port  = 80
-            https_port = 443
-            active     = true
-            modules = {
-              load_balancer = {
-                server_role = "primary"
-                weight      = 1
-              }
+    http_attributes {
+      addresses {
+        endpoint {
+          address    = "192.168.1.100"
+          http_port  = 80
+          https_port = 443
+          active     = true
+          modules {
+            load_balancer {
+              server_role = "primary"
+              weight      = 1
             }
           }
         }
-      ]
-      connection_options = {
+      }
+      connection_options {
         dns_resolution      = "both"
         following_redirect  = false
         host                = "$${host}"
@@ -72,17 +68,17 @@ resource "azion_connector" "http_connector_full" {
         real_port_header    = "X-Real-PORT"
         transport_policy    = "preserve"
       }
-      modules = {
-        load_balancer = {
+      modules {
+        load_balancer {
           enabled = true
-          config = {
+          config {
             method             = "round_robin"
             max_retries        = 3
             connection_timeout = 60
             read_write_timeout = 120
           }
         }
-        origin_shield = {
+        origin_shield {
           enabled = false
         }
       }
@@ -93,34 +89,32 @@ resource "azion_connector" "http_connector_full" {
 # HTTP Connector with HMAC Origin Shield (S3-compatible)
 # Used to connect to S3-compatible origins with HMAC authentication
 resource "azion_connector" "s3_with_hmac" {
-  connector = {
+  connector {
     name   = "S3 Connector with HMAC"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          endpoint = {
-            address    = "my-bucket.s3.us-east-1.amazonaws.com"
-            http_port  = 80
-            https_port = 443
-            active     = true
-          }
+    http_attributes {
+      addresses {
+        endpoint {
+          address    = "my-bucket.s3.us-east-1.amazonaws.com"
+          http_port  = 80
+          https_port = 443
+          active     = true
         }
-      ]
-      connection_options = {
+      }
+      connection_options {
         host             = "my-bucket.s3.amazonaws.com"
         transport_policy = "force_https"
       }
-      modules = {
-        origin_shield = {
+      modules {
+        origin_shield {
           enabled = true
-          config = {
-            hmac = {
+          config {
+            hmac {
               enabled = true
-              config = {
+              config {
                 type = "aws4_hmac_sha256"
-                attributes = {
+                attributes {
                   region     = "us-east-1"
                   service    = "s3"
                   access_key = "YOUR_ACCESS_KEY"

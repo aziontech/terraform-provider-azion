@@ -8,7 +8,7 @@ description: |-
 
 # azion_custom_page (Data Source)
 
-Use this data source to read a specific custom page from your Azion account.
+
 
 ## Example Usage
 
@@ -34,26 +34,26 @@ data "azion_custom_page" "example" {
 
 Read-Only:
 
+- `active` (Boolean) Status of the custom page.
 - `created_at` (String) The creation timestamp of the custom page.
 - `id` (Number) The custom page identifier.
-- `name` (String) Name of the custom page.
 - `last_editor` (String) The last editor of the custom page.
 - `last_modified` (String) Last modified timestamp of the custom page.
-- `active` (Boolean) Status of the custom page.
+- `name` (String) Name of the custom page.
+- `pages` (Attributes List) List of pages associated with the custom page. (see [below for nested schema](#nestedatt--data--pages))
 - `product_version` (String) Product version of the custom page.
 - `state` (String) The state of the current custom page version.
 - `version_id` (String) The identifier of the current custom page version.
-- `pages` (Attributes List) List of pages associated with the custom page. Each item contains a single `entry` object. (see [below for nested schema](#nestedatt--data--pages))
 
 <a id="nestedatt--data--pages"></a>
-### Nested Schema for `pages`
+### Nested Schema for `data.pages`
 
 Read-Only:
 
 - `entry` (Attributes) A single page entry — pairs an HTTP status code with its connector configuration. (see [below for nested schema](#nestedatt--data--pages--entry))
 
 <a id="nestedatt--data--pages--entry"></a>
-### Nested Schema for `entry`
+### Nested Schema for `data.pages.entry`
 
 Read-Only:
 
@@ -61,19 +61,19 @@ Read-Only:
 - `page` (Attributes) Page connector configuration. (see [below for nested schema](#nestedatt--data--pages--entry--page))
 
 <a id="nestedatt--data--pages--entry--page"></a>
-### Nested Schema for `entry.page`
+### Nested Schema for `data.pages.entry.page`
 
 Read-Only:
 
-- `type` (String) Type of the page connector.
 - `attributes` (Attributes) Attributes of the page connector. (see [below for nested schema](#nestedatt--data--pages--entry--page--attributes))
+- `type` (String) Type of the page connector.
 
 <a id="nestedatt--data--pages--entry--page--attributes"></a>
-### Nested Schema for `attributes`
+### Nested Schema for `data.pages.entry.page.attributes`
 
 Read-Only:
 
 - `connector` (Number) Connector ID.
+- `custom_status_code` (Number) Custom status code for the page.
 - `ttl` (Number) Time to live for the page.
 - `uri` (String) URI for the page.
-- `custom_status_code` (Number) Custom status code for the page.

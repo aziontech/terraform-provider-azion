@@ -29,7 +29,7 @@ resource "tls_self_signed_cert" "example" {
 
 # Create a digital certificate in Azion
 resource "azion_digital_certificate" "example" {
-  results = {
+  results {
     name                = "My Certificate"
     certificate_content = tls_self_signed_cert.example.cert_pem
     private_key         = tls_private_key.example.private_key_pem
@@ -39,7 +39,7 @@ resource "azion_digital_certificate" "example" {
 # Example using local files for certificate and private key
 # This requires you to have the dummy_certificate.pem and dummy_private_key.pem files in the same directory
 resource "azion_digital_certificate" "from_file" {
-  results = {
+  results {
     name                = "My Certificate from File"
     certificate_content = file("${path.module}/dummy_certificate.pem")
     private_key         = file("${path.module}/dummy_private_key.pem")

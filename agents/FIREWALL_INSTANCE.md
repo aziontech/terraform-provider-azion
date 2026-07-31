@@ -2,6 +2,12 @@
 
 This document provides specific guidance for implementing Firewall Function Instance resources and data sources in the Terraform provider.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Table of Contents
 
 1. [SDK Selection](#sdk-selection)
@@ -1159,11 +1165,11 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent firewall with functions module enabled
 resource "azion_firewall_main_setting" "example" {
-  data = {
+  data {
     name   = "My Firewall"
     active = true
-    modules = {
-      functions = {
+    modules {
+      functions {
         enabled = true
       }
     }
@@ -1173,7 +1179,7 @@ resource "azion_firewall_main_setting" "example" {
 # Then create the function instance for that firewall
 resource "azion_firewall_functions_instance" "example" {
   firewall_id = azion_firewall_main_setting.example.data.id
-  data = {
+  data {
     name     = "Terraform Test"
     function = 9359
     args = jsonencode({

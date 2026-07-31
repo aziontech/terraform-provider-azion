@@ -3,19 +3,19 @@
 page_title: "azion_waf_rule_set Data Source - terraform-provider-azion"
 subcategory: ""
 description: |-
-  Provides a data source for reading a WAF exception (rule set) by ID.
+  
 ---
 
 # azion_waf_rule_set (Data Source)
 
-Provides a data source for reading a WAF exception (rule set) by ID.
+
 
 ## Example Usage
 
 ```terraform
 data "azion_waf_rule_set" "example" {
-  waf_id       = 12345
-  exception_id = 67890
+  waf_id       = 6105
+  exception_id = 1234
 }
 ```
 
@@ -24,13 +24,13 @@ data "azion_waf_rule_set" "example" {
 
 ### Required
 
-- `waf_id` (Number) The WAF identifier.
 - `exception_id` (Number) The WAF exception (rule set) identifier.
+- `waf_id` (Number) The WAF identifier.
 
 ### Read-Only
 
 - `id` (String) Identifier of the data source.
-- `results` (Attributes) The WAF exception data. (see [below for nested schema](#nestedatt--results))
+- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
@@ -38,7 +38,7 @@ data "azion_waf_rule_set" "example" {
 Read-Only:
 
 - `active` (Boolean) Whether the exception is active.
-- `conditions` (Attributes List) Conditions for the WAF exception. Each item contains a single `condition` object. (see [below for nested schema](#nestedatt--results--conditions))
+- `conditions` (Attributes List) Conditions for the WAF exception. (see [below for nested schema](#nestedatt--results--conditions))
 - `id` (Number) The ID of the WAF exception.
 - `last_editor` (String) Last editor of the exception.
 - `last_modified` (String) Last modified timestamp.
@@ -63,35 +63,3 @@ Read-Only:
 - `match` (String) The match type for the condition.
 - `name` (String) The name for specific condition on name.
 - `value` (String) The value for specific condition on value.
-
-## Condition Match Types
-
-### Generic Condition Match Types
-
-When `condition_type = "generic"`, the following match types are available:
-
-- `any_http_header_name` - Any HTTP header name
-- `any_http_header_value` - Any HTTP header value
-- `any_query_string_name` - Any query string parameter name
-- `any_query_string_value` - Any query string parameter value
-- `any_url` - Any URL
-- `body_form_field_name` - Body form field name
-- `body_form_field_value` - Body form field value
-- `file_extension` - File extension
-- `raw_body` - Raw request body
-
-### Specific Condition on Name Match Types
-
-When `condition_type = "specific_on_name"`, the `name` field is populated and the following match types are available:
-
-- `specific_body_form_field_name` - Specific body form field name
-- `specific_http_header_name` - Specific HTTP header name
-- `specific_query_string_name` - Specific query string name
-
-### Specific Condition on Value Match Types
-
-When `condition_type = "specific_on_value"`, the `value` field is populated and the following match types are available:
-
-- `specific_body_form_field_value` - Specific body form field value
-- `specific_http_header_value` - Specific HTTP header value
-- `specific_query_string_value` - Specific query string value

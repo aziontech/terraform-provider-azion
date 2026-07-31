@@ -11,12 +11,14 @@ import (
 
 	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -69,8 +71,12 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"application": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"application": schema.SingleNestedBlock{
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"application_id": schema.Int64Attribute{
 						Description: "The Application identifier.",
@@ -104,29 +110,26 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Computed:    true,
 						Description: "The identifier of the current application version.",
 					},
-					"modules": schema.SingleNestedAttribute{
-						Optional: true,
-						Attributes: map[string]schema.Attribute{
-							"cache": schema.SingleNestedAttribute{
-								Optional: true,
+				},
+				Blocks: map[string]schema.Block{
+					"modules": schema.SingleNestedBlock{
+						Blocks: map[string]schema.Block{
+							"cache": schema.SingleNestedBlock{
 								Attributes: map[string]schema.Attribute{
 									"enabled": schema.BoolAttribute{Optional: true},
 								},
 							},
-							"functions": schema.SingleNestedAttribute{
-								Optional: true,
+							"functions": schema.SingleNestedBlock{
 								Attributes: map[string]schema.Attribute{
 									"enabled": schema.BoolAttribute{Optional: true},
 								},
 							},
-							"application_accelerator": schema.SingleNestedAttribute{
-								Optional: true,
+							"application_accelerator": schema.SingleNestedBlock{
 								Attributes: map[string]schema.Attribute{
 									"enabled": schema.BoolAttribute{Optional: true},
 								},
 							},
-							"image_processor": schema.SingleNestedAttribute{
-								Optional: true,
+							"image_processor": schema.SingleNestedBlock{
 								Attributes: map[string]schema.Attribute{
 									"enabled": schema.BoolAttribute{Optional: true},
 								},

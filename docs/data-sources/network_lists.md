@@ -3,12 +3,12 @@
 page_title: "azion_network_lists Data Source - terraform-provider-azion"
 subcategory: ""
 description: |-
-  Provides a Network Lists data source for listing multiple network lists.
+  
 ---
 
 # azion_network_lists (Data Source)
 
-Use this data source to list multiple Network Lists with pagination.
+
 
 ## Example Usage
 
@@ -29,29 +29,29 @@ data "azion_network_lists" "example" {
 ### Read-Only
 
 - `counter` (Number) The total number of network lists.
+- `links` (Attributes) (see [below for nested schema](#nestedatt--links))
+- `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
 - `total_pages` (Number) The total number of pages.
-- `links` (Attributes) Pagination links. (see [below for nested schema](#nestedatt--links))
-- `results` (Attributes List) List of network lists. (see [below for nested schema](#nestedatt--results))
 
 <a id="nestedatt--links"></a>
 ### Nested Schema for `links`
 
 Read-Only:
 
-- `next` (String) URL to the next page of results.
-- `previous` (String) URL to the previous page of results.
+- `next` (String)
+- `previous` (String)
+
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
 
 Read-Only:
 
+- `created_at` (String) Creation timestamp of the network list.
 - `id` (Number) ID of the network list.
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
-- `type` (String) Type of the network list. Can be: asn, countries, or ip_cidr.
 - `name` (String) Name of the network list.
-- `version_id` (String) The identifier of the current network list version.
 - `state` (String) The state of the current network list version.
-
-**Note:** The plural data source returns a summary of network lists without the `items` field. Use the singular `azion_network_list` data source to get the full list of items in a network list.
+- `type` (String) Type of the network list. Can be: asn, countries, or ip_cidr.
+- `version_id` (String) The identifier of the current network list version.

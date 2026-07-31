@@ -55,11 +55,12 @@ For detailed documentation on specific packages, see the `agents/` folder:
 
 1. [Project Structure](#project-structure)
 2. [SDK and API Client Configuration](#sdk-and-api-client-configuration)
-3. [Error Handling](#error-handling)
-4. [Type Conversions](#type-conversions)
-5. [Testing Patterns](#testing-patterns)
-6. [Documentation Generation](#documentation-generation)
-7. [Provider Registration](#provider-registration)
+3. [Resource Schemas Use Nested Blocks](#resource-schemas-use-nested-blocks)
+4. [Error Handling](#error-handling)
+5. [Type Conversions](#type-conversions)
+6. [Testing Patterns](#testing-patterns)
+7. [Documentation Generation](#documentation-generation)
+8. [Provider Registration](#provider-registration)
 
 ---
 
@@ -184,6 +185,73 @@ func Client(APIToken string, userAgent string) *apiClient {
     return client
 }
 ```
+
+---
+
+## Resource Schemas Use Nested Blocks
+
+**Every nested object in a `resource` schema MUST be a nested block (`schema.SingleNestedBlock`,
+`schema.ListNestedBlock`, `schema.SetNestedBlock`) — never a nested attribute.**
+
+### Why
+
+Terraform decodes nested *attributes* as a single cty value, and cty silently **drops** object
+keys that are not in the schema. A user typo inside `application = { ... }` was accepted without
+any error, the value was discarded before the provider ever saw it, and no provider-side
+validation could detect it (`ValidateConfig` receives the already-stripped config). Nested
+*blocks* are decoded through the HCL body schema instead, so an unknown key fails with
+`Error: Unsupported argument — An argument named "x" is not expected here.`
+
+This is why the HCL syntax is `application { ... }`, not `application = { ... }`.
+
+**Data sources keep nested attributes.** Their nested objects are `Computed` outputs that users
+never write, and blocks cannot be `Computed`.
+
+### Required blocks
+
+`SingleNestedBlock` has no `Required` field. Express it with a validator:
+
+```go
+"application": schema.SingleNestedBlock{
+    Validators: []validator.Object{
+        objectvalidator.IsRequired(),
+    },
+    Attributes: map[string]schema.Attribute{ /* ... */ },
+    Blocks:     map[string]schema.Block{ /* ... */ },
+},
+```
+
+For list and set blocks, use `listvalidator.SizeAtLeast(1)` / `setvalidator.SizeAtLeast(1)`.
+
+### Pitfall: `Required` attributes inside an OPTIONAL single nested block
+
+The framework enforces a block's `Required` attributes **even when the block itself is absent**
+from the configuration. A `Required` attribute inside an optional `SingleNestedBlock` therefore
+makes that block impossible to omit.
+
+Mark such attributes `Optional` and require them only when the block is present:
+
+```go
+"storage_attributes": schema.SingleNestedBlock{
+    Validators: []validator.Object{
+        objectvalidator.AlsoRequires(path.MatchRelative().AtName("bucket")),
+    },
+    Attributes: map[string]schema.Attribute{
+        "bucket": schema.StringAttribute{
+            Optional: true, // Required is enforced by AlsoRequires above.
+        },
+    },
+},
+```
+
+This does not apply to attributes inside `ListNestedBlock` / `SetNestedBlock` elements, which are
+only validated for elements the user actually wrote, nor to blocks whose every single-nesting
+ancestor is mandatory.
+
+### Verifying
+
+`terraform validate` against a config using the resource must reject unknown arguments at every
+depth, and must still accept a config that omits every optional block.
 
 ---
 
@@ -473,7 +541,7 @@ Example for a child resource (`azion_application_rule_engine`):
 ```terraform
 # First, create the parent application
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
   }
@@ -482,7 +550,7 @@ resource "azion_application_main_setting" "example" {
 # Then create the rule engine for that application
 resource "azion_application_rule_engine" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  results = {
+  results {
     name  = "My Rule"
     phase = "request"
     # ... rest of configuration
@@ -531,7 +599,8 @@ When generating a new resource or data source from OpenAPI:
 2. **Determine ID types**: `int64` or `string` based on SDK
 3. **Determine update method**: PUT (full update) or PATCH (partial update)
 4. **Create model structs**: With appropriate `tfsdk` tags
-5. **Implement schema**: With correct Required/Optional/Computed
+5. **Implement schema**: With correct Required/Optional/Computed. For **resources**, every nested
+   object must be a nested **block** — see [Resource Schemas Use Nested Blocks](#resource-schemas-use-nested-blocks)
 6. **Implement all methods**: Create, Read, Update, Delete, ImportState (for resources)
 7. **Handle 429 errors**: Use `utils.RetryOn429`
 8. **Handle optional fields**: Check `IsNull()` and `IsUnknown()`

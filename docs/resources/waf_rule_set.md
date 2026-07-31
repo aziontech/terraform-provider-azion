@@ -3,110 +3,125 @@
 page_title: "azion_waf_rule_set Resource - terraform-provider-azion"
 subcategory: ""
 description: |-
-  Creates a WAF exception (rule set) resource.
+  
 ---
 
 # azion_waf_rule_set (Resource)
 
-Creates a WAF exception (rule set) resource. WAF exceptions allow you to bypass certain WAF rules for specific conditions.
+
 
 ## Example Usage
 
-### With Parent WAF
-
 ```terraform
+# Example: Complete setup with parent WAF
 # First, create the parent WAF
 resource "azion_waf" "example" {
-  result = {
+  result {
     name   = "My WAF"
     active = true
   }
 }
 
 # Then create the rule set for that WAF
-resource "azion_waf_rule_set" "example" {
+resource "azion_waf_rule_set" "example_with_parent" {
   waf_id = azion_waf.example.id
-  result = {
+  result {
     name     = "My WAF Exception"
     path     = "/api/*"
     active   = true
     operator = "regex"
     rule_id  = 0
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
+
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
-```
 
-### Generic Condition Example
-
-```terraform
+# Create a WAF rule set with a generic condition
+# Generic conditions only use the 'match' field
 resource "azion_waf_rule_set" "example" {
   waf_id = 12345
-  result = {
+  result {
     name     = "My WAF Exception"
     path     = "/api/*"
     active   = true
     operator = "regex"
     rule_id  = 0
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
+
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
-```
 
-### Specific Condition on Name Example
-
-```terraform
+# Create a WAF rule set with specific condition on name
+# Specific on name conditions require the 'name' field
 resource "azion_waf_rule_set" "header_example" {
   waf_id = 12345
-  result = {
+  result {
     name    = "Header Exception"
     active  = true
     rule_id = 0
-    conditions = [
-      {
-        condition = {
-          match          = "specific_http_header_name"
-          name           = "X-Custom-Header"
-          condition_type = "specific_on_name"
-        }
+
+    conditions {
+      condition {
+        match          = "specific_http_header_name"
+        name           = "X-Custom-Header"
+        condition_type = "specific_on_name"
       }
-    ]
+    }
   }
 }
-```
 
-### Specific Condition on Value Example
-
-```terraform
+# Create a WAF rule set with specific condition on value
+# Specific on value conditions require the 'value' field
 resource "azion_waf_rule_set" "value_example" {
   waf_id = 12345
-  result = {
+  result {
     name    = "Query String Exception"
     active  = true
     rule_id = 0
-    conditions = [
-      {
-        condition = {
-          match          = "specific_query_string_value"
-          value          = "trusted_value"
-          condition_type = "specific_on_value"
-        }
+
+    conditions {
+      condition {
+        match          = "specific_query_string_value"
+        value          = "trusted_value"
+        condition_type = "specific_on_value"
       }
-    ]
+    }
+  }
+}
+
+# Create a WAF rule set with multiple conditions
+resource "azion_waf_rule_set" "multi_condition_example" {
+  waf_id = 12345
+  result {
+    name     = "Multi Condition Exception"
+    path     = "/api/v1/*"
+    operator = "regex"
+    active   = true
+    rule_id  = 0
+
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
+      }
+    }
+    conditions {
+      condition {
+        match          = "specific_http_header_name"
+        name           = "Authorization"
+        condition_type = "specific_on_name"
+      }
+    }
   }
 }
 ```
@@ -117,24 +132,27 @@ resource "azion_waf_rule_set" "value_example" {
 ### Required
 
 - `waf_id` (Number) The WAF identifier.
-- `result` (Attributes) The WAF exception configuration. (see [below for nested schema](#nestedatt--result))
+
+### Optional
+
+- `result` (Block, Optional) (see [below for nested schema](#nestedblock--result))
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) Identifier of the resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
-<a id="nestedatt--result"></a>
+<a id="nestedblock--result"></a>
 ### Nested Schema for `result`
 
 Required:
 
 - `name` (String) Name of the WAF exception.
-- `conditions` (Attributes List) Conditions for the WAF exception. Each item must contain a single `condition` object. (see [below for nested schema](#nestedatt--result--conditions))
 
 Optional:
 
 - `active` (Boolean) Whether the exception is active.
+- `conditions` (Block List) Conditions for the WAF exception. (see [below for nested schema](#nestedblock--result--conditions))
 - `operator` (String) The operator for the exception (regex or contains).
 - `path` (String) Path pattern for the exception.
 - `rule_id` (Number) The rule ID that this exception applies to. 0 means all rules.
@@ -145,14 +163,14 @@ Read-Only:
 - `last_editor` (String) Last editor of the exception.
 - `last_modified` (String) Last modified timestamp.
 
-<a id="nestedatt--result--conditions"></a>
+<a id="nestedblock--result--conditions"></a>
 ### Nested Schema for `result.conditions`
 
-Required:
+Optional:
 
-- `condition` (Attributes) A single condition for the WAF exception. (see [below for nested schema](#nestedatt--result--conditions--condition))
+- `condition` (Block, Optional) A single condition for the WAF exception. (see [below for nested schema](#nestedblock--result--conditions--condition))
 
-<a id="nestedatt--result--conditions--condition"></a>
+<a id="nestedblock--result--conditions--condition"></a>
 ### Nested Schema for `result.conditions.condition`
 
 Required:
@@ -165,44 +183,10 @@ Optional:
 - `name` (String) The name for specific condition on name.
 - `value` (String) The value for specific condition on value.
 
-## Condition Match Types
-
-### Generic Condition Match Types
-
-When `condition_type = "generic"`, the following match types are valid:
-
-- `any_http_header_name` - Any HTTP header name
-- `any_http_header_value` - Any HTTP header value
-- `any_query_string_name` - Any query string parameter name
-- `any_query_string_value` - Any query string parameter value
-- `any_url` - Any URL
-- `body_form_field_name` - Body form field name
-- `body_form_field_value` - Body form field value
-- `file_extension` - File extension
-- `raw_body` - Raw request body
-
-### Specific Condition on Name Match Types
-
-When `condition_type = "specific_on_name"`, the `name` field is required and the following match types are valid:
-
-- `specific_body_form_field_name` - Specific body form field name
-- `specific_http_header_name` - Specific HTTP header name
-- `specific_query_string_name` - Specific query string name
-
-### Specific Condition on Value Match Types
-
-When `condition_type = "specific_on_value"`, the `value` field is required and the following match types are valid:
-
-- `specific_body_form_field_value` - Specific body form field value
-- `specific_http_header_value` - Specific HTTP header value
-- `specific_query_string_value` - Specific query string value
-
 ## Import
 
 Import is supported using the following syntax:
 
 ```shell
-terraform import azion_waf_rule_set.example <exception_id>
+terraform import azion_waf_rule_set.example 6061
 ```
-
-**Note**: The `waf_id` must be provided in the Terraform configuration for the imported resource to be properly managed.
