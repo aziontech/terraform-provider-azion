@@ -71,21 +71,19 @@ Each WAF Tuning recommendation can be converted to an `azion_waf_rule_set` resou
 resource "azion_waf_rule_set" "tuning_recommendation" {
   waf_id = azion_waf.main.id
   
-  result = {
+  result {
     name       = "Description from WAF Tuning"
     active     = true
     rule_id    = 0  # 0 = applies to all rules, or specify a rule ID
     path       = "/api/*"  # Optional: path pattern
     operator   = "regex"   # "regex" or "contains"
     
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
 ```
@@ -102,21 +100,19 @@ resource "azion_waf_rule_set" "tuning_recommendation" {
 resource "azion_waf_rule_set" "health_endpoint" {
   waf_id = azion_waf.main.id
   
-  result = {
+  result {
     name     = "Allow Health Check Endpoint"
     active   = true
     rule_id  = 0
     path     = "/api/health"
     operator = "regex"
     
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
 ```
@@ -131,20 +127,18 @@ resource "azion_waf_rule_set" "health_endpoint" {
 resource "azion_waf_rule_set" "internal_service_header" {
   waf_id = azion_waf.main.id
   
-  result = {
+  result {
     name     = "Allow Internal Service Header"
     active   = true
     rule_id  = 0
     
-    conditions = [
-      {
-        condition = {
-          match          = "specific_http_header_name"
-          name           = "X-Internal-Service"
-          condition_type = "specific_on_name"
-        }
+    conditions {
+      condition {
+        match          = "specific_http_header_name"
+        name           = "X-Internal-Service"
+        condition_type = "specific_on_name"
       }
-    ]
+    }
   }
 }
 ```
@@ -159,20 +153,18 @@ resource "azion_waf_rule_set" "internal_service_header" {
 resource "azion_waf_rule_set" "jsonp_callback" {
   waf_id = azion_waf.main.id
   
-  result = {
+  result {
     name     = "Allow JSONP Callback Parameter"
     active   = true
     rule_id  = 0
     
-    conditions = [
-      {
-        condition = {
-          match          = "specific_query_string_name"
-          name           = "callback"
-          condition_type = "specific_on_name"
-        }
+    conditions {
+      condition {
+        match          = "specific_query_string_name"
+        name           = "callback"
+        condition_type = "specific_on_name"
       }
-    ]
+    }
   }
 }
 ```
@@ -187,21 +179,19 @@ resource "azion_waf_rule_set" "jsonp_callback" {
 resource "azion_waf_rule_set" "file_upload_exception" {
   waf_id = azion_waf.main.id
   
-  result = {
+  result {
     name     = "Allow File Uploads"
     active   = true
     rule_id  = 1001234  # Specific rule ID from recommendation
     path     = "/upload"
     operator = "regex"
     
-    conditions = [
-      {
-        condition = {
-          match          = "file_extension"
-          condition_type = "generic"
-        }
+    conditions {
+      condition {
+        match          = "file_extension"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
 ```
@@ -216,29 +206,27 @@ resource "azion_waf_rule_set" "file_upload_exception" {
 resource "azion_waf_rule_set" "internal_api" {
   waf_id = azion_waf.main.id
   
-  result = {
+  result {
     name     = "Allow Internal API Access"
     active   = true
     rule_id  = 0
     path     = "/internal/*"
     operator = "regex"
     
-    conditions = [
-      {
-        condition = {
-          match          = "specific_http_header_name"
-          name           = "X-Internal-Auth"
-          condition_type = "specific_on_name"
-        }
-      },
-      {
-        condition = {
-          match          = "specific_http_header_value"
-          value          = "trusted-service"
-          condition_type = "specific_on_value"
-        }
+    conditions {
+      condition {
+        match          = "specific_http_header_name"
+        name           = "X-Internal-Auth"
+        condition_type = "specific_on_name"
       }
-    ]
+    }
+    conditions {
+      condition {
+        match          = "specific_http_header_value"
+        value          = "trusted-service"
+        condition_type = "specific_on_value"
+      }
+    }
   }
 }
 ```
@@ -304,7 +292,7 @@ variable "environment" {
 resource "azion_waf_rule_set" "health_check" {
   waf_id = azion_waf.production.id
   
-  result = {
+  result {
     name   = "WAF Tuning (${var.environment}): Health Check Endpoint"
     # ...
   }

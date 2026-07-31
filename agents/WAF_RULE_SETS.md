@@ -2,6 +2,12 @@
 
 This document provides comprehensive guidance for AI agents generating Terraform provider code for WAF Rule Sets (called "WAF Exceptions" in the V4 SDK) from the Azion API.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Overview
 
 In the Azion API V4 SDK, WAF Rule Sets are referred to as **WAF Exceptions**. These are rules that define exceptions to the WAF's normal behavior, allowing specific traffic patterns to bypass certain WAF rules.
@@ -974,7 +980,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent WAF
 resource "azion_waf" "example" {
-  result = {
+  result {
     name   = "My WAF"
     active = true
   }
@@ -983,20 +989,18 @@ resource "azion_waf" "example" {
 # Then create the rule set for that WAF
 resource "azion_waf_rule_set" "example" {
   waf_id = azion_waf.example.id
-  result = {
+  result {
     name     = "My WAF Exception"
     path     = "/api/*"
     active   = true
     operator = "regex"
     rule_id  = 0
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
 ```

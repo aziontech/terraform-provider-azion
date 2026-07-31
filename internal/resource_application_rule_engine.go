@@ -11,11 +11,14 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -115,8 +118,12 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"results": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"results": schema.SingleNestedBlock{
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The ID of the rules engine rule.",
@@ -135,43 +142,88 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Optional:    true,
 						Computed:    true,
 					},
-					"behaviors": schema.ListNestedAttribute{
-						Required: true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"behavior": schema.SingleNestedAttribute{
+					"description": schema.StringAttribute{
+						Description: "The description of the rules engine rule.",
+						Optional:    true,
+						Computed:    true,
+					},
+					"order": schema.Int64Attribute{
+						Description: "The order of the rule in the rules engine.",
+						Computed:    true,
+					},
+					"last_editor": schema.StringAttribute{
+						Description: "The last editor of the rule.",
+						Computed:    true,
+					},
+					"last_modified": schema.StringAttribute{
+						Description: "The last modified timestamp.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp.",
+						Computed:    true,
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"behaviors": schema.ListNestedBlock{
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
+						},
+						NestedObject: schema.NestedBlockObject{
+							Blocks: map[string]schema.Block{
+								"behavior": schema.SingleNestedBlock{
+									Validators: []validator.Object{
+										objectvalidator.IsRequired(),
+									},
 									Description: "A single behavior to apply on this rule.",
-									Required:    true,
 									Attributes: map[string]schema.Attribute{
 										"type": schema.StringAttribute{
 											Description: "The type of behavior.",
 											Required:    true,
 										},
-										"attributes": schema.SingleNestedAttribute{
+									},
+									Blocks: map[string]schema.Block{
+										"attributes": schema.SingleNestedBlock{
 											Description: "Behavior attributes (for behaviors with args).",
-											Optional:    true,
+											// value is Optional rather than Required because the framework
+											// enforces required attributes of a single nested block even when
+											// the block itself is absent. AlsoRequires enforces it only when
+											// the block is configured.
+											Validators: []validator.Object{
+												objectvalidator.AlsoRequires(path.MatchRelative().AtName("value")),
+											},
 											Attributes: map[string]schema.Attribute{
 												"value": schema.StringAttribute{
 													Description: "Value for the behavior.",
-													Required:    true,
+													Optional:    true,
 												},
 											},
 										},
-										"capture_attributes": schema.SingleNestedAttribute{
+										"capture_attributes": schema.SingleNestedBlock{
 											Description: "Capture attributes (for capture_match_groups).",
-											Optional:    true,
+											// These are Optional rather than Required because the framework
+											// enforces required attributes of a single nested block even when
+											// the block itself is absent. AlsoRequires enforces them only
+											// when the block is configured.
+											Validators: []validator.Object{
+												objectvalidator.AlsoRequires(
+													path.MatchRelative().AtName("subject"),
+													path.MatchRelative().AtName("regex"),
+													path.MatchRelative().AtName("captured_array"),
+												),
+											},
 											Attributes: map[string]schema.Attribute{
 												"subject": schema.StringAttribute{
 													Description: "Subject for capture.",
-													Required:    true,
+													Optional:    true,
 												},
 												"regex": schema.StringAttribute{
 													Description: "Regex pattern.",
-													Required:    true,
+													Optional:    true,
 												},
 												"captured_array": schema.StringAttribute{
 													Description: "Captured array name.",
-													Required:    true,
+													Optional:    true,
 												},
 											},
 										},
@@ -180,17 +232,23 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 							},
 						},
 					},
-					"criteria": schema.ListNestedAttribute{
-						Required: true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"entries": schema.ListNestedAttribute{
-									Required: true,
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: map[string]schema.Attribute{
-											"criterion": schema.SingleNestedAttribute{
+					"criteria": schema.ListNestedBlock{
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
+						},
+						NestedObject: schema.NestedBlockObject{
+							Blocks: map[string]schema.Block{
+								"entries": schema.ListNestedBlock{
+									Validators: []validator.List{
+										listvalidator.SizeAtLeast(1),
+									},
+									NestedObject: schema.NestedBlockObject{
+										Blocks: map[string]schema.Block{
+											"criterion": schema.SingleNestedBlock{
+												Validators: []validator.Object{
+													objectvalidator.IsRequired(),
+												},
 												Description: "A single criterion entry.",
-												Required:    true,
 												Attributes: map[string]schema.Attribute{
 													"conditional": schema.StringAttribute{
 														Description: "The conditional operator used in the rule's criteria (e.g., if, and, or).",
@@ -215,27 +273,6 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 								},
 							},
 						},
-					},
-					"description": schema.StringAttribute{
-						Description: "The description of the rules engine rule.",
-						Optional:    true,
-						Computed:    true,
-					},
-					"order": schema.Int64Attribute{
-						Description: "The order of the rule in the rules engine.",
-						Computed:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the rule.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "The last modified timestamp.",
-						Computed:    true,
-					},
-					"created_at": schema.StringAttribute{
-						Description: "The creation timestamp.",
-						Computed:    true,
 					},
 				},
 			},

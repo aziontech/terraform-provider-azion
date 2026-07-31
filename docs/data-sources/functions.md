@@ -41,7 +41,7 @@ Read-Only:
 - `product_version` (String) Product version of the function.
 - `reference_count` (Number) The reference count of the function.
 - `runtime` (String) Runtime of the function.
+- `state` (String) The state of the current function version.
 - `vendor` (String) Vendor of the function.
 - `version` (String) Version of the function.
 - `version_id` (String) The identifier of the current function version.
-- `state` (String) The state of the current function version.

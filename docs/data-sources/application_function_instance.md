@@ -3,12 +3,12 @@
 page_title: "azion_application_function_instance Data Source - terraform-provider-azion"
 subcategory: ""
 description: |-
-  Provides a data source to retrieve a specific Application Function Instance.
+  
 ---
 
 # azion_application_function_instance (Data Source)
 
-Provides a data source to retrieve a specific Function Instance from an Application.
+
 
 ## Example Usage
 

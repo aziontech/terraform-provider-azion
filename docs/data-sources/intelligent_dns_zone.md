@@ -39,4 +39,4 @@ Read-Only:
 - `name` (String) The name of the zone.
 - `nameservers` (List of String) List of nameservers for the zone.
 - `product_version` (String) Product version of the zone.
-- `zone_id` (Number) The zone identifier.
+- `zone_id` (Number) The zone identifier to target for the resource.

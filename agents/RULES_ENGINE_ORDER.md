@@ -2,6 +2,12 @@
 
 This document provides detailed information about the `azion_application_rule_engine_order` resource implementation for AI agents working on this Terraform provider. It is intentionally separate from `RULES_ENGINE.md`: the two resources share a problem domain but have completely different API shapes and lifecycle semantics.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Overview
 
 The `azion_application_rule_engine_order` resource manages the evaluation order of an Azion Application's rule-engine rules for a single phase (`request` or `response`).

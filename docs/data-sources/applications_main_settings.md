@@ -24,14 +24,14 @@ data "azion_applications_main_settings" "example" {
 
 ### Optional
 
-- `page` (Number) The page number of applications.
-- `page_size` (Number) The Page Size number of applications.
+- `page` (Number) The page number of edge applications.
+- `page_size` (Number) The Page Size number of edge applications.
 
 ### Read-Only
 
 - `id` (String) Identifier of the data source.
 - `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
-- `total_count` (Number) The total number of applications.
+- `total_count` (Number) The total number of edge applications.
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
@@ -55,7 +55,7 @@ Read-Only:
 Read-Only:
 
 - `application_accelerator` (Attributes) (see [below for nested schema](#nestedatt--results--modules--application_accelerator))
-- `edge_cache` (Attributes) (see [below for nested schema](#nestedatt--results--modules--edge_cache))
+- `cache` (Attributes) (see [below for nested schema](#nestedatt--results--modules--cache))
 - `functions` (Attributes) (see [below for nested schema](#nestedatt--results--modules--functions))
 - `image_processor` (Attributes) (see [below for nested schema](#nestedatt--results--modules--image_processor))
 
@@ -67,8 +67,8 @@ Read-Only:
 - `enabled` (Boolean)
 
 
-<a id="nestedatt--results--modules--edge_cache"></a>
-### Nested Schema for `results.modules.edge_cache`
+<a id="nestedatt--results--modules--cache"></a>
+### Nested Schema for `results.modules.cache`
 
 Read-Only:
 

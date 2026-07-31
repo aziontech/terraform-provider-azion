@@ -2,6 +2,12 @@
 
 This document provides specific guidance for implementing Application Function Instance resources and data sources in the Terraform provider. It serves as a comprehensive reference for generating and maintaining these files based on the latest Azion API SDK.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -1074,11 +1080,11 @@ When updating documentation, always include:
 ```terraform
 # First, create the parent application with functions module enabled
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
-    modules = {
-      functions = {
+    modules {
+      functions {
         enabled = true
       }
     }
@@ -1088,7 +1094,7 @@ resource "azion_application_main_setting" "example" {
 # Then create the function instance for that application
 resource "azion_application_function_instance" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  data = {
+  data {
     name        = "Terraform Example"
     function_id = 12345
     active      = true
@@ -1105,7 +1111,7 @@ resource "azion_application_function_instance" "example" {
 ```terraform
 resource "azion_application_function_instance" "example" {
   application_id = 1234567890
-  data = {
+  data {
     name        = "Terraform Example"
     function_id = 12345
     active      = true
@@ -1250,7 +1256,7 @@ applicationID := ...
 # WRONG - will fail with 400 Bad Request
 resource "azion_application_function_instance" "example" {
   application_id = 1234567890
-  data = {
+  data {
     name        = "example"
     function_id = 12345
     active      = false  # This is not allowed during creation
@@ -1260,7 +1266,7 @@ resource "azion_application_function_instance" "example" {
 # CORRECT - omit active field, let API compute it
 resource "azion_application_function_instance" "example" {
   application_id = 1234567890
-  data = {
+  data {
     name        = "example"
     function_id = 12345
     # active is computed by API (always true for new instances)

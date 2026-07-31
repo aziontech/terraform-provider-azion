@@ -2,6 +2,12 @@
 
 This document provides specific guidance for implementing DNS Records data sources and resources in the Terraform provider.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Table of Contents
 
 1. [SDK Selection](#sdk-selection)
@@ -860,7 +866,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent DNS zone
 resource "azion_intelligent_dns_zone" "example" {
-  zone = {
+  zone {
     name    = "example.com"
     active  = true
     domain  = "example.com"
@@ -870,7 +876,7 @@ resource "azion_intelligent_dns_zone" "example" {
 # Then create the DNS record for that zone
 resource "azion_intelligent_dns_record" "example" {
   zone_id = azion_intelligent_dns_zone.example.id
-  record = {
+  record {
     type = "A"
     name = "site"
     rdata = [

@@ -25,7 +25,7 @@ data "azion_firewall_functions_instance" "example" {
 
 ### Required
 
-- `firewall_id` (Number) Identifier of the Firewall
+- `firewall_id` (Number) Numeric identifier of the Firewall
 
 ### Optional
 

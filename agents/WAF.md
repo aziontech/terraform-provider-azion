@@ -2,6 +2,12 @@
 
 This document provides comprehensive guidance for AI agents generating Terraform provider code for WAF (Web Application Firewall) from the Azion API.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## Overview
 
 In the Azion API V4 SDK, WAF is a top-level resource that represents a Web Application Firewall configuration. WAF Rule Sets (called "WAF Exceptions" in the SDK) are child resources that belong to a WAF.
@@ -1245,25 +1251,23 @@ Creates a WAF (Web Application Firewall) resource.
 
 ```hcl
 resource "azion_waf" "example" {
-  result = {
+  result {
     name   = "My WAF"
     active = true
     
-    engine_settings = {
+    engine_settings {
       engine_version = "2021-Q3"
       type           = "score"
       
-      attributes = {
+      attributes {
         rulesets = [1, 2, 3]
         
-        thresholds = [
-          {
-            threshold = {
-              threat      = "sql_injection"
-              sensitivity = "high"
-            }
+        thresholds {
+          threshold {
+            threat      = "sql_injection"
+            sensitivity = "high"
           }
-        ]
+        }
       }
     }
   }

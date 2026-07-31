@@ -3,12 +3,12 @@
 page_title: "azion_network_list Data Source - terraform-provider-azion"
 subcategory: ""
 description: |-
-  Provides a Network List data source.
+  
 ---
 
 # azion_network_list (Data Source)
 
-Use this data source to read a specific Network List by its ID.
+
 
 ## Example Usage
 
@@ -27,7 +27,7 @@ data "azion_network_list" "example" {
 
 ### Read-Only
 
-- `results` (Attributes) The network list details. (see [below for nested schema](#nestedatt--results))
+- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
 
 <a id="nestedatt--results"></a>
 ### Nested Schema for `results`
@@ -40,6 +40,6 @@ Read-Only:
 - `last_editor` (String) Last editor of the network list.
 - `last_modified` (String) Last modified timestamp of the network list.
 - `name` (String) Name of the network list.
+- `state` (String) The state of the current network list version.
 - `type` (String) Type of the network list. Can be: asn, countries, or ip_cidr.
 - `version_id` (String) The identifier of the current network list version.
-- `state` (String) The state of the current network list version.

@@ -1,14 +1,14 @@
 resource "azion_workload_deployment" "example" {
   workload_id = 12345
 
-  deployment = {
+  deployment {
     name    = "My Deployment"
     current = true
     active  = true
 
-    strategy = {
+    strategy {
       type = "default"
-      attributes = {
+      attributes {
         application = 67890
       }
     }

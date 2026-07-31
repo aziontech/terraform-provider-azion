@@ -11,11 +11,14 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -116,8 +119,12 @@ func (r *firewallRuleEngineResource) Schema(_ context.Context, _ resource.Schema
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"results": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"results": schema.SingleNestedBlock{
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The ID of the rules engine rule.",
@@ -132,18 +139,47 @@ func (r *firewallRuleEngineResource) Schema(_ context.Context, _ resource.Schema
 						Optional:    true,
 						Computed:    true,
 					},
-					"criteria": schema.ListNestedAttribute{
+					"description": schema.StringAttribute{
+						Description: "Description of the rule.",
+						Optional:    true,
+						Computed:    true,
+					},
+					"order": schema.Int64Attribute{
+						Description: "Order of the rule.",
+						Computed:    true,
+					},
+					"last_editor": schema.StringAttribute{
+						Description: "Last editor of the rule.",
+						Computed:    true,
+					},
+					"last_modified": schema.StringAttribute{
+						Description: "Last modified timestamp.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "Creation timestamp.",
+						Computed:    true,
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"criteria": schema.ListNestedBlock{
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
+						},
 						Description: "Criteria for the rule.",
-						Required:    true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"entries": schema.ListNestedAttribute{
-									Required: true,
-									NestedObject: schema.NestedAttributeObject{
-										Attributes: map[string]schema.Attribute{
-											"criterion": schema.SingleNestedAttribute{
+						NestedObject: schema.NestedBlockObject{
+							Blocks: map[string]schema.Block{
+								"entries": schema.ListNestedBlock{
+									Validators: []validator.List{
+										listvalidator.SizeAtLeast(1),
+									},
+									NestedObject: schema.NestedBlockObject{
+										Blocks: map[string]schema.Block{
+											"criterion": schema.SingleNestedBlock{
+												Validators: []validator.Object{
+													objectvalidator.IsRequired(),
+												},
 												Description: "A single criterion entry.",
-												Required:    true,
 												Attributes: map[string]schema.Attribute{
 													"conditional": schema.StringAttribute{
 														Description: "The conditional operator used in the rule's criteria (e.g., if, and, or).",
@@ -169,22 +205,27 @@ func (r *firewallRuleEngineResource) Schema(_ context.Context, _ resource.Schema
 							},
 						},
 					},
-					"behaviors": schema.ListNestedAttribute{
+					"behaviors": schema.ListNestedBlock{
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
+						},
 						Description: "Behaviors for the rule.",
-						Required:    true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"behavior": schema.SingleNestedAttribute{
+						NestedObject: schema.NestedBlockObject{
+							Blocks: map[string]schema.Block{
+								"behavior": schema.SingleNestedBlock{
+									Validators: []validator.Object{
+										objectvalidator.IsRequired(),
+									},
 									Description: "A single behavior to apply on this rule.",
-									Required:    true,
 									Attributes: map[string]schema.Attribute{
 										"type": schema.StringAttribute{
 											Description: "Type of behavior (e.g., run_function, set_custom_response, set_waf, set_rate_limit, drop).",
 											Required:    true,
 										},
-										"attributes": schema.SingleNestedAttribute{
+									},
+									Blocks: map[string]schema.Block{
+										"attributes": schema.SingleNestedBlock{
 											Description: "Behavior attributes (depends on behavior type).",
-											Optional:    true,
 											Attributes: map[string]schema.Attribute{
 												"value": schema.Int64Attribute{
 													Description: "Value for run_function behavior (function instance ID).",
@@ -232,27 +273,6 @@ func (r *firewallRuleEngineResource) Schema(_ context.Context, _ resource.Schema
 								},
 							},
 						},
-					},
-					"description": schema.StringAttribute{
-						Description: "Description of the rule.",
-						Optional:    true,
-						Computed:    true,
-					},
-					"order": schema.Int64Attribute{
-						Description: "Order of the rule.",
-						Computed:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the rule.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp.",
-						Computed:    true,
-					},
-					"created_at": schema.StringAttribute{
-						Description: "Creation timestamp.",
-						Computed:    true,
 					},
 				},
 			},

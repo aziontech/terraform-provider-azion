@@ -2,6 +2,12 @@
 
 This document provides guidance for implementing the Certificate Signing Request (CSR) resource in the Terraform provider.
 
+> **Resource schemas use nested blocks.** The Go schema snippets below may still show
+> `schema.SingleNestedAttribute` / `schema.ListNestedAttribute` for resources. Resources now use
+> `schema.SingleNestedBlock` / `schema.ListNestedBlock` (HCL `foo { ... }`, not `foo = { ... }`) so that
+> unknown arguments are rejected instead of silently dropped. Data sources keep nested attributes.
+> See [Resource Schemas Use Nested Blocks](../AGENTS.md#resource-schemas-use-nested-blocks).
+
 ## API Information
 
 - **SDK Package**: `github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api`
@@ -451,7 +457,7 @@ func (r *csrResource) ImportState(ctx context.Context, req resource.ImportStateR
 
 ```hcl
 resource "azion_certificate_signing_request" "example" {
-  results = {
+  results {
     name              = "my-certificate"
     common_name       = "example.com"
     country           = "US"

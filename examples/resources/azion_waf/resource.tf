@@ -1,6 +1,6 @@
 # Create a WAF with basic settings
 resource "azion_waf" "example" {
-  result = {
+  result {
     name   = "My WAF"
     active = true
   }
@@ -8,37 +8,35 @@ resource "azion_waf" "example" {
 
 # Create a WAF with full engine settings
 resource "azion_waf" "full_example" {
-  result = {
+  result {
     name   = "My Full WAF"
     active = true
 
-    engine_settings = {
+    engine_settings {
       engine_version = "2021-Q3"
       type           = "score"
 
-      attributes = {
+      attributes {
         rulesets = [1, 2, 3]
 
-        thresholds = [
-          {
-            threshold = {
-              threat      = "sql_injection"
-              sensitivity = "high"
-            }
-          },
-          {
-            threshold = {
-              threat      = "cross_site_scripting"
-              sensitivity = "highest"
-            }
-          },
-          {
-            threshold = {
-              threat      = "directory_traversal"
-              sensitivity = "medium"
-            }
+        thresholds {
+          threshold {
+            threat      = "sql_injection"
+            sensitivity = "high"
           }
-        ]
+        }
+        thresholds {
+          threshold {
+            threat      = "cross_site_scripting"
+            sensitivity = "highest"
+          }
+        }
+        thresholds {
+          threshold {
+            threat      = "directory_traversal"
+            sensitivity = "medium"
+          }
+        }
       }
     }
   }

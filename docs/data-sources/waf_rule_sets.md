@@ -3,18 +3,20 @@
 page_title: "azion_waf_rule_sets Data Source - terraform-provider-azion"
 subcategory: ""
 description: |-
-  Provides a data source for listing all WAF exceptions (rule sets) for a WAF.
+  
 ---
 
 # azion_waf_rule_sets (Data Source)
 
-Provides a data source for listing all WAF exceptions (rule sets) for a WAF.
+
 
 ## Example Usage
 
 ```terraform
 data "azion_waf_rule_sets" "example" {
-  waf_id = 12345
+  waf_id    = 12345
+  page      = 1
+  page_size = 10
 }
 ```
 
@@ -34,8 +36,8 @@ data "azion_waf_rule_sets" "example" {
 
 - `counter` (Number) The total number of WAF exceptions.
 - `id` (String) Identifier of the data source.
-- `links` (Attributes) Pagination links. (see [below for nested schema](#nestedatt--links))
-- `results` (Attributes List) List of WAF exceptions. (see [below for nested schema](#nestedatt--results))
+- `links` (Attributes) (see [below for nested schema](#nestedatt--links))
+- `results` (Attributes List) (see [below for nested schema](#nestedatt--results))
 - `total_pages` (Number) The total number of pages.
 
 <a id="nestedatt--links"></a>
@@ -53,7 +55,7 @@ Read-Only:
 Read-Only:
 
 - `active` (Boolean) Whether the exception is active.
-- `conditions` (Attributes List) Conditions for the WAF exception. Each item contains a single `condition` object. (see [below for nested schema](#nestedatt--results--conditions))
+- `conditions` (Attributes List) Conditions for the WAF exception. (see [below for nested schema](#nestedatt--results--conditions))
 - `id` (Number) The ID of the WAF exception.
 - `last_editor` (String) Last editor of the exception.
 - `last_modified` (String) Last modified timestamp.
