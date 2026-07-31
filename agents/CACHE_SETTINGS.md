@@ -1811,3 +1811,66 @@ When implementing or updating Cache Settings resources and data sources:
 8. **Transform nested objects**: Use helper functions for complex module structures
 9. **Register in provider.go**: Add to both DataSources() and Resources()
 10. **Run linters**: `golangci-lint run --config .golintci.yml ./internal/...`
+11. **Keep drift detectable**: every optional attribute is also `Computed` with
+    `UseStateForUnknown()`, `Read` writes back the full API response, and requests are
+    built from `req.Config` (see [Drift Detection](#drift-detection))
+
+---
+
+## Drift Detection
+
+The API fills in every cache setting attribute the configuration omits and echoes them
+back on every response. Two rules keep those API-supplied values from either hiding
+remote changes or causing perpetual diffs:
+
+**1. Schema — optional means optional *and* computed.**
+
+```go
+"max_age": schema.Int64Attribute{
+    Optional: true,
+    Computed: true, // the API supplies a value when the configuration omits one
+    PlanModifiers: []planmodifier.Int64{
+        int64planmodifier.UseStateForUnknown(),
+    },
+},
+```
+
+An `Optional`-only attribute plans as null whenever the configuration omits it, so an
+API-supplied value in state produces a diff on every plan. Adding `Computed` lets state
+hold the API value; `UseStateForUnknown()` keeps the attribute out of
+`(known after apply)` on unrelated updates.
+
+**2. `Read` writes the whole response — never gate on prior state.**
+
+```go
+state.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSettingData)
+```
+
+Populating only the fields prior state already held is what makes remote changes to
+unconfigured attributes invisible: the refresh cannot report a change it never read.
+
+### Consequences for Create/Update
+
+Because unconfigured attributes plan as unknown, the plan cannot be decoded into the
+model's nested pointer structs (`reflect.Into` rejects unknown values for
+`*StructModel` and Go slices). So:
+
+* Build requests from `req.Config`, not `req.Plan` — the configuration holds no
+  unknowns and is exactly what should be sent to the API.
+* Guard every value with `isSet()` (`!IsNull() && !IsUnknown()`) so an unknown is never
+  sent as its Go zero value.
+* Model list attributes as `types.List`, not `[]types.String`, so unknown lists decode.
+* Build state from the API response and close the gaps with `fillMissingFromConfig`: an
+  applied value may not contradict a known planned value, so a configured attribute the
+  response omits has to keep the configured value.
+
+### What the practitioner sees
+
+| Attribute | Remote change is reported | Remote change is reverted on apply |
+|-----------|---------------------------|------------------------------------|
+| Set in the configuration | Yes, as a planned change | Yes |
+| Omitted from the configuration | Yes, under *Objects have changed outside of Terraform* in `terraform plan -refresh-only` | No — the API owns it |
+
+Reverting an unconfigured attribute would require a `Default` matching the API's own
+default. Only add one where that default is confirmed: a wrong `Default` makes apply
+overwrite the remote configuration.

@@ -531,7 +531,7 @@ When generating a new resource or data source from OpenAPI:
 2. **Determine ID types**: `int64` or `string` based on SDK
 3. **Determine update method**: PUT (full update) or PATCH (partial update)
 4. **Create model structs**: With appropriate `tfsdk` tags
-5. **Implement schema**: With correct Required/Optional/Computed
+5. **Implement schema**: With correct Required/Optional/Computed — see [Drift Detection for API-Supplied Attributes](#drift-detection-for-api-supplied-attributes)
 6. **Implement all methods**: Create, Read, Update, Delete, ImportState (for resources)
 7. **Handle 429 errors**: Use `utils.RetryOn429`
 8. **Handle optional fields**: Check `IsNull()` and `IsUnknown()`
@@ -541,6 +541,43 @@ When generating a new resource or data source from OpenAPI:
 12. **Generate documentation**: Create docs and examples
 13. **Update example/test files**: After any schema changes, update the corresponding files
 14. **Run linters**: After any change, run `golangci-lint run --config .golintci.yml ./internal/...`
+
+---
+
+## Drift Detection for API-Supplied Attributes
+
+Azion APIs fill in the attributes a configuration omits and echo them back on every
+response. Handling that wrong makes `terraform plan` silently ignore remote changes to
+any attribute that was not declared locally. The rules:
+
+1. **Any attribute the API can supply is `Optional` *and* `Computed`**, with the
+   matching `UseStateForUnknown()` plan modifier. `Optional`-only attributes plan as
+   null when omitted, so an API-supplied value in state diffs on every plan — which is
+   what historically led to `Read` implementations that discarded the API response.
+2. **`Read` writes the entire API response into state.** Never gate population on what
+   prior state already held: a refresh cannot report a change it did not read.
+3. **Build requests from `req.Config`, not `req.Plan`.** With computed attributes the
+   plan carries unknowns, and unknown values cannot be decoded into `*StructModel`
+   fields or Go slices (`reflect.Into` rejects them). The configuration holds no
+   unknowns and is exactly what should be sent to the API.
+4. **Model list attributes as `types.List`**, not `[]types.String`, so unknown lists
+   decode.
+5. **Guard every value with `!IsNull() && !IsUnknown()`** before sending it, so unknown
+   is never transmitted as a Go zero value.
+6. **Build state from the API response, then fill gaps from the configuration.** An
+   applied value may not contradict a known planned value, so a configured attribute the
+   response omits must keep its configured value.
+
+An attribute set in the configuration is owned by Terraform and remote changes to it are
+reverted on apply. An attribute omitted from the configuration is owned by the API:
+remote changes are adopted into state and reported under *Objects have changed outside
+of Terraform* by `terraform plan -refresh-only` (a regular plan only renders the changes
+it will act on), but they are not reverted. Reverting those too requires a `Default` matching
+the API's own default — only add one where that default is confirmed, since a wrong
+`Default` makes apply overwrite the remote configuration.
+
+Reference implementation: [resource_application_cache_setting.go](internal/resource_application_cache_setting.go)
+and [agents/CACHE_SETTINGS.md](agents/CACHE_SETTINGS.md#drift-detection).
 
 ---
 
