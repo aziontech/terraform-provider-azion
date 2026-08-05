@@ -255,7 +255,7 @@ func (r *functionResource) Create(ctx context.Context, req resource.CreateReques
 		Version:              types.StringValue(createFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(createFunction.Data.GetVendor()),
 		ReferenceCount:       types.Int64Value(createFunction.Data.GetReferenceCount()),
-		State:                types.StringPointerValue(createFunction.Data.State.Get()),
+		State:                types.StringPointerValue(createFunction.Data.VersionState.Get()),
 		VersionID:            types.StringPointerValue(createFunction.Data.VersionId.Get()),
 	}
 
@@ -359,7 +359,7 @@ func (r *functionResource) Read(ctx context.Context, req resource.ReadRequest, r
 		Version:              types.StringValue(getFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(getFunction.Data.GetVendor()),
 		ReferenceCount:       types.Int64Value(getFunction.Data.GetReferenceCount()),
-		State:                types.StringPointerValue(getFunction.Data.State.Get()),
+		State:                types.StringPointerValue(getFunction.Data.VersionState.Get()),
 		VersionID:            types.StringPointerValue(getFunction.Data.VersionId.Get()),
 	}
 
@@ -499,7 +499,7 @@ func (r *functionResource) Update(ctx context.Context, req resource.UpdateReques
 		Version:              types.StringValue(updateFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(updateFunction.Data.GetVendor()),
 		ReferenceCount:       types.Int64Value(updateFunction.Data.GetReferenceCount()),
-		State:                types.StringPointerValue(updateFunction.Data.State.Get()),
+		State:                types.StringPointerValue(updateFunction.Data.VersionState.Get()),
 		VersionID:            types.StringPointerValue(updateFunction.Data.VersionId.Get()),
 	}
 

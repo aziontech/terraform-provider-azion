@@ -256,7 +256,7 @@ func (f *FirewallDataSource) Read(ctx context.Context, req datasource.ReadReques
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
 		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
-		State:          types.StringPointerValue(firewallResponse.Data.State.Get()),
+		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
 	}
 

@@ -1099,7 +1099,7 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 		model.ProductVersion = types.StringValue(c.GetProductVersion())
 		model.Type = types.StringValue(c.Type)
 		model.Active = types.BoolPointerValue(c.Active)
-		model.State = types.StringPointerValue(c.State.Get())
+		model.State = types.StringPointerValue(c.VersionState.Get())
 		model.VersionID = types.StringPointerValue(c.VersionId.Get())
 
 		// Populate storage attributes
@@ -1127,7 +1127,7 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 		model.ProductVersion = types.StringValue(c.GetProductVersion())
 		model.Type = types.StringValue(c.Type)
 		model.Active = types.BoolPointerValue(c.Active)
-		model.State = types.StringPointerValue(c.State.Get())
+		model.State = types.StringPointerValue(c.VersionState.Get())
 		model.VersionID = types.StringPointerValue(c.VersionId.Get())
 
 		httpAttrs := &HTTPAttributesModel{

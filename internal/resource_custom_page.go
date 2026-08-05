@@ -293,7 +293,7 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 		LastModified:   types.StringValue(createCustomPage.Data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(createCustomPage.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(createCustomPage.Data.GetProductVersion()),
-		State:          types.StringPointerValue(createCustomPage.Data.State.Get()),
+		State:          types.StringPointerValue(createCustomPage.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(createCustomPage.Data.VersionId.Get()),
 	}
 
@@ -407,7 +407,7 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 		LastModified:   types.StringValue(getCustomPage.Data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(getCustomPage.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(getCustomPage.Data.GetProductVersion()),
-		State:          types.StringPointerValue(getCustomPage.Data.State.Get()),
+		State:          types.StringPointerValue(getCustomPage.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(getCustomPage.Data.VersionId.Get()),
 	}
 
@@ -571,7 +571,7 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 		LastModified:   types.StringValue(updateCustomPage.Data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(updateCustomPage.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(updateCustomPage.Data.GetProductVersion()),
-		State:          types.StringPointerValue(updateCustomPage.Data.State.Get()),
+		State:          types.StringPointerValue(updateCustomPage.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(updateCustomPage.Data.VersionId.Get()),
 	}
 

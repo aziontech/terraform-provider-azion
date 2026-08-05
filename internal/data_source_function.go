@@ -213,7 +213,7 @@ func (d *functionDataSource) Read(ctx context.Context, req datasource.ReadReques
 			Version:              types.StringValue(functionsResponse.Data.GetVersion()),
 			Vendor:               types.StringValue(functionsResponse.Data.GetVendor()),
 			ReferenceCount:       types.Int64Value(functionsResponse.Data.GetReferenceCount()),
-			State:                types.StringPointerValue(functionsResponse.Data.State.Get()),
+			State:                types.StringPointerValue(functionsResponse.Data.VersionState.Get()),
 			VersionID:            types.StringPointerValue(functionsResponse.Data.VersionId.Get()),
 		},
 	}

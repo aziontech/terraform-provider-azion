@@ -293,7 +293,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
-		State:          types.StringPointerValue(firewallResponse.Data.State.Get()),
+		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
 	}
 
@@ -416,7 +416,7 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 		Debug:          types.BoolValue(firewallResponse.Data.GetDebug()),
 		Modules:        modulesResponsePtr,
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
-		State:          types.StringPointerValue(firewallResponse.Data.State.Get()),
+		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
 	}
 	state.ID = types.StringValue(strconv.FormatInt(firewallID, 10))
@@ -561,7 +561,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 		Debug:          types.BoolValue(firewallResponse.Data.GetDebug()),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
 		Modules:        responseModulesPtr,
-		State:          types.StringPointerValue(firewallResponse.Data.State.Get()),
+		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
 	}
 

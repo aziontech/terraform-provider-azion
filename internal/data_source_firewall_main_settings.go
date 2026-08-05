@@ -257,7 +257,7 @@ func (f *FirewallsDataSource) Read(ctx context.Context, req datasource.ReadReque
 			LastModified:   types.StringValue(results.GetLastModified().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(results.GetProductVersion()),
 			CreatedAt:      types.StringValue(results.GetCreatedAt().Format(time.RFC3339)),
-			State:          types.StringPointerValue(results.State.Get()),
+			State:          types.StringPointerValue(results.VersionState.Get()),
 			VersionID:      types.StringPointerValue(results.VersionId.Get()),
 		}
 		firewallsResults = append(firewallsResults, firewallResult)

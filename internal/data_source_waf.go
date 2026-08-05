@@ -246,7 +246,7 @@ func transformWAFToResultModel(waf azionapi.WAF) *WafResultDataModel {
 		Name:         types.StringValue(waf.GetName()),
 		LastEditor:   types.StringValue(waf.GetLastEditor()),
 		LastModified: types.StringValue(waf.GetLastModified().Format(time.RFC3339)),
-		State:        types.StringPointerValue(waf.State.Get()),
+		State:        types.StringPointerValue(waf.VersionState.Get()),
 		VersionID:    types.StringPointerValue(waf.VersionId.Get()),
 	}
 

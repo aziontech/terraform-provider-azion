@@ -182,7 +182,7 @@ func populateNetworkListResult(data azionapi.NetworkList) NetworkListDataSourceM
 			Type:         types.StringValue(data.GetType()),
 			Name:         types.StringValue(data.GetName()),
 			Items:        utils.SliceStringTypeToList(itemsSlice),
-			State:        types.StringPointerValue(data.State.Get()),
+			State:        types.StringPointerValue(data.VersionState.Get()),
 			VersionID:    types.StringPointerValue(data.VersionId.Get()),
 		},
 	}

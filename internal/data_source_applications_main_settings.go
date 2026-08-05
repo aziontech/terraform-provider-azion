@@ -257,7 +257,7 @@ func (e *ApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 			LastModified:   types.StringValue(resultApplication.GetLastModified().Format(time.RFC3339)),
 			Modules:        modules,
 			ProductVersion: types.StringValue(resultApplication.GetProductVersion()),
-			State:          types.StringPointerValue(resultApplication.State.Get()),
+			State:          types.StringPointerValue(resultApplication.VersionState.Get()),
 			VersionID:      types.StringPointerValue(resultApplication.VersionId.Get()),
 			Active:         types.BoolValue(resultApplication.GetActive()),
 			Debug:          types.BoolValue(resultApplication.GetDebug()),

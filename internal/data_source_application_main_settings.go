@@ -260,7 +260,7 @@ func (e *ApplicationDataSource) Read(ctx context.Context, req datasource.ReadReq
 			LastEditor:     types.StringValue(applicationsResponse.Data.GetLastEditor()),
 			LastModified:   types.StringValue(applicationsResponse.Data.GetLastModified().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(applicationsResponse.Data.GetProductVersion()),
-			State:          types.StringPointerValue(applicationsResponse.Data.State.Get()),
+			State:          types.StringPointerValue(applicationsResponse.Data.VersionState.Get()),
 			VersionID:      types.StringPointerValue(applicationsResponse.Data.VersionId.Get()),
 		},
 	}

@@ -223,7 +223,7 @@ func (d *CustomPagesDataSource) Read(ctx context.Context, req datasource.ReadReq
 			LastModified:   types.StringValue(resultCustomPage.GetLastModified().Format(time.RFC3339)),
 			CreatedAt:      types.StringValue(resultCustomPage.GetCreatedAt().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(resultCustomPage.GetProductVersion()),
-			State:          types.StringPointerValue(resultCustomPage.State.Get()),
+			State:          types.StringPointerValue(resultCustomPage.VersionState.Get()),
 			VersionID:      types.StringPointerValue(resultCustomPage.VersionId.Get()),
 		}
 

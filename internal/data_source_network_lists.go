@@ -205,7 +205,7 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 			CreatedAt:    types.StringValue(nl.GetCreatedAt().Format(time.RFC3339)),
 			Type:         types.StringValue(nl.GetType()),
 			Name:         types.StringValue(nl.GetName()),
-			State:        types.StringPointerValue(nl.State.Get()),
+			State:        types.StringPointerValue(nl.VersionState.Get()),
 			VersionID:    types.StringPointerValue(nl.VersionId.Get()),
 		}
 		networkLists = append(networkLists, networkList)

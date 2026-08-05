@@ -203,7 +203,7 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		Type:         types.StringValue(data.GetType()),
 		Name:         types.StringValue(data.GetName()),
 		Items:        utils.SliceStringTypeToSet(sliceString),
-		State:        types.StringPointerValue(data.State.Get()),
+		State:        types.StringPointerValue(data.VersionState.Get()),
 		VersionID:    types.StringPointerValue(data.VersionId.Get()),
 	}
 
@@ -302,7 +302,7 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 			Type:         types.StringValue(data.GetType()),
 			Name:         types.StringValue(data.GetName()),
 			Items:        utils.SliceStringTypeToSet(sliceString),
-			State:        types.StringPointerValue(data.State.Get()),
+			State:        types.StringPointerValue(data.VersionState.Get()),
 			VersionID:    types.StringPointerValue(data.VersionId.Get()),
 		},
 		ID: types.StringValue(strconv.FormatInt(data.GetId(), 10)),
@@ -416,7 +416,7 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		Type:         types.StringValue(data.GetType()),
 		Name:         types.StringValue(data.GetName()),
 		Items:        utils.SliceStringTypeToSet(sliceString),
-		State:        types.StringPointerValue(data.State.Get()),
+		State:        types.StringPointerValue(data.VersionState.Get()),
 		VersionID:    types.StringPointerValue(data.VersionId.Get()),
 	}
 

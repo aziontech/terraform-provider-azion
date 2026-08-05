@@ -205,7 +205,7 @@ func populateConnectorResults(_ context.Context, connector azionapi.Connector) (
 			ProductVersion: types.StringValue(c.GetProductVersion()),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),
-			State:          types.StringPointerValue(c.State.Get()),
+			State:          types.StringPointerValue(c.VersionState.Get()),
 			VersionID:      types.StringPointerValue(c.VersionId.Get()),
 		}
 
@@ -227,7 +227,7 @@ func populateConnectorResults(_ context.Context, connector azionapi.Connector) (
 			ProductVersion: types.StringValue(c.GetProductVersion()),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),
-			State:          types.StringPointerValue(c.State.Get()),
+			State:          types.StringPointerValue(c.VersionState.Get()),
 			VersionID:      types.StringPointerValue(c.VersionId.Get()),
 		}
 
