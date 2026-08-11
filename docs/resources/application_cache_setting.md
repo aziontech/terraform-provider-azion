@@ -8,6 +8,54 @@ description: |-
 
 Creates and manages an Application Cache Setting using the Azion V4 API.
 
+## Configuration is the desired state
+
+This resource asserts the **complete** cache setting on every apply, using a full
+replacement (`PUT`) rather than a partial update. Two things follow from that, and
+both are intentional:
+
+- A change made outside Terraform — in Azion Console, for example — is **reverted**
+  on the next `terraform apply`, and appears in `terraform plan` as a diff. This
+  holds for fields you declare and for fields you leave out.
+- Leaving a field out of your configuration is not "don't care". It means "use the
+  Azion default", and the field is reset to that default. To keep a non-default
+  value, declare it explicitly.
+
+The defaults enforced for omitted fields are:
+
+| Field | Enforced default |
+|---|---|
+| `browser_cache.behavior` | `honor` |
+| `browser_cache.max_age` | `0` |
+| `modules.cache.behavior` | `override` |
+| `modules.cache.max_age` | `60` |
+| `modules.cache.stale_cache.enabled` | `true` |
+| `modules.cache.large_file_cache.enabled` | `false` |
+| `modules.cache.large_file_cache.offset` | `1024` |
+| `modules.cache.tiered_cache.enabled` | `false` |
+| `modules.cache.tiered_cache.topology` | null (see below) |
+| `modules.application_accelerator.cache_vary_by_method` | `[]` |
+| `modules.application_accelerator.cache_vary_by_querystring.behavior` | `ignore` |
+| `modules.application_accelerator.cache_vary_by_querystring.fields` | `[]` |
+| `modules.application_accelerator.cache_vary_by_querystring.sort_enabled` | `false` |
+| `modules.application_accelerator.cache_vary_by_cookies.behavior` | `ignore` |
+| `modules.application_accelerator.cache_vary_by_cookies.cookie_names` | `[]` |
+| `modules.application_accelerator.cache_vary_by_devices.behavior` | `ignore` |
+| `modules.application_accelerator.cache_vary_by_devices.device_group` | `[]` |
+
+`modules.cache.tiered_cache.topology` is the one exception to the table above. It
+is enforced as null only while tiered cache is disabled, which matches what the
+API reports for a tiered cache that was never configured. If you enable tiered
+cache without naming a topology, the API assigns one and Terraform keeps it.
+
+Note that drift is only reverted when an apply runs, and only when state is
+refreshed — `terraform plan -refresh=false` will not detect it. Terraform also
+cannot remove cache settings that were created outside Terraform, since those are
+not in state.
+
+Because every apply sends the complete object, any API field this provider does
+not model is also reset to its API default.
+
 ## Example Usage
 
 ### With Parent Application

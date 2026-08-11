@@ -10,11 +10,18 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -104,6 +111,221 @@ type LargeFileCacheResourceModel struct {
 	Offset  types.Int64 `tfsdk:"offset"`
 }
 
+// Azion API defaults for cache setting fields.
+//
+// The configuration is the desired state: any field a practitioner leaves out is
+// reset to the value below on every apply, so a console change to an undeclared
+// field is undone instead of being silently adopted. That makes these values
+// enforcement targets, not cosmetics.
+//
+// The Azion OpenAPI specification declares no `default:` for these fields (the
+// generated NewXWithDefaults constructors are empty), so they mirror what the
+// API applies when a field is omitted from the request. A value that disagrees
+// with the API surfaces as a diff on the first plan against a field nobody
+// touched — loud rather than silent, but it must be corrected here.
+//
+// Every optional attribute needs one. A Computed attribute with no default is
+// unknown in the plan whenever the configuration omits it, and reading an
+// unknown object into the pointer fields of this model is a hard error
+// ("the target type cannot handle unknown values"), so a missing default breaks
+// Create rather than merely weakening enforcement.
+const (
+	defaultBrowserCacheBehavior = "honor"
+	defaultBrowserCacheMaxAge   = int64(0)
+	defaultCacheBehavior        = "override"
+	defaultCacheMaxAge          = int64(60)
+	defaultStaleCacheEnabled    = true
+	defaultLargeFileEnabled     = false
+	defaultLargeFileOffset      = int64(1024)
+	defaultTieredCacheEnabled   = false
+	defaultVaryBehavior         = "ignore"
+	defaultQuerystringSort      = false
+)
+
+// Attribute types for the nested objects, needed to build object defaults whose
+// types must match the schema exactly.
+var (
+	browserCacheAttrTypes = map[string]attr.Type{
+		"behavior": types.StringType,
+		"max_age":  types.Int64Type,
+	}
+
+	staleCacheAttrTypes = map[string]attr.Type{
+		"enabled": types.BoolType,
+	}
+
+	largeFileCacheAttrTypes = map[string]attr.Type{
+		"enabled": types.BoolType,
+		"offset":  types.Int64Type,
+	}
+
+	tieredCacheAttrTypes = map[string]attr.Type{
+		"topology": types.StringType,
+		"enabled":  types.BoolType,
+	}
+
+	cacheModuleAttrTypes = map[string]attr.Type{
+		"behavior":         types.StringType,
+		"max_age":          types.Int64Type,
+		"stale_cache":      types.ObjectType{AttrTypes: staleCacheAttrTypes},
+		"large_file_cache": types.ObjectType{AttrTypes: largeFileCacheAttrTypes},
+		"tiered_cache":     types.ObjectType{AttrTypes: tieredCacheAttrTypes},
+	}
+
+	varyByQuerystringAttrTypes = map[string]attr.Type{
+		"behavior":     types.StringType,
+		"fields":       types.ListType{ElemType: types.StringType},
+		"sort_enabled": types.BoolType,
+	}
+
+	varyByCookiesAttrTypes = map[string]attr.Type{
+		"behavior":     types.StringType,
+		"cookie_names": types.ListType{ElemType: types.StringType},
+	}
+
+	varyByDevicesAttrTypes = map[string]attr.Type{
+		"behavior":     types.StringType,
+		"device_group": types.ListType{ElemType: types.Int64Type},
+	}
+
+	appAcceleratorAttrTypes = map[string]attr.Type{
+		"cache_vary_by_method":      types.ListType{ElemType: types.StringType},
+		"cache_vary_by_querystring": types.ObjectType{AttrTypes: varyByQuerystringAttrTypes},
+		"cache_vary_by_cookies":     types.ObjectType{AttrTypes: varyByCookiesAttrTypes},
+		"cache_vary_by_devices":     types.ObjectType{AttrTypes: varyByDevicesAttrTypes},
+	}
+
+	modulesAttrTypes = map[string]attr.Type{
+		"cache":                   types.ObjectType{AttrTypes: cacheModuleAttrTypes},
+		"application_accelerator": types.ObjectType{AttrTypes: appAcceleratorAttrTypes},
+	}
+)
+
+var (
+	browserCacheDefault = types.ObjectValueMust(browserCacheAttrTypes, map[string]attr.Value{
+		"behavior": types.StringValue(defaultBrowserCacheBehavior),
+		"max_age":  types.Int64Value(defaultBrowserCacheMaxAge),
+	})
+
+	staleCacheDefault = types.ObjectValueMust(staleCacheAttrTypes, map[string]attr.Value{
+		"enabled": types.BoolValue(defaultStaleCacheEnabled),
+	})
+
+	largeFileCacheDefault = types.ObjectValueMust(largeFileCacheAttrTypes, map[string]attr.Value{
+		"enabled": types.BoolValue(defaultLargeFileEnabled),
+		"offset":  types.Int64Value(defaultLargeFileOffset),
+	})
+
+	// The API returns a null topology for a cache setting whose tiered cache was
+	// never configured, so null is the value to enforce. Enforcing a concrete
+	// topology instead makes every apply fail with "unexpected new value:
+	// .tiered_cache.topology: was ..., but now null".
+	tieredCacheDefault = types.ObjectValueMust(tieredCacheAttrTypes, map[string]attr.Value{
+		"topology": types.StringNull(),
+		"enabled":  types.BoolValue(defaultTieredCacheEnabled),
+	})
+
+	cacheModuleDefault = types.ObjectValueMust(cacheModuleAttrTypes, map[string]attr.Value{
+		"behavior":         types.StringValue(defaultCacheBehavior),
+		"max_age":          types.Int64Value(defaultCacheMaxAge),
+		"stale_cache":      staleCacheDefault,
+		"large_file_cache": largeFileCacheDefault,
+		"tiered_cache":     tieredCacheDefault,
+	})
+
+	varyByQuerystringDefault = types.ObjectValueMust(varyByQuerystringAttrTypes, map[string]attr.Value{
+		"behavior":     types.StringValue(defaultVaryBehavior),
+		"fields":       types.ListValueMust(types.StringType, []attr.Value{}),
+		"sort_enabled": types.BoolValue(defaultQuerystringSort),
+	})
+
+	varyByCookiesDefault = types.ObjectValueMust(varyByCookiesAttrTypes, map[string]attr.Value{
+		"behavior":     types.StringValue(defaultVaryBehavior),
+		"cookie_names": types.ListValueMust(types.StringType, []attr.Value{}),
+	})
+
+	varyByDevicesDefault = types.ObjectValueMust(varyByDevicesAttrTypes, map[string]attr.Value{
+		"behavior":     types.StringValue(defaultVaryBehavior),
+		"device_group": types.ListValueMust(types.Int64Type, []attr.Value{}),
+	})
+
+	appAcceleratorDefault = types.ObjectValueMust(appAcceleratorAttrTypes, map[string]attr.Value{
+		"cache_vary_by_method":      types.ListValueMust(types.StringType, []attr.Value{}),
+		"cache_vary_by_querystring": varyByQuerystringDefault,
+		"cache_vary_by_cookies":     varyByCookiesDefault,
+		"cache_vary_by_devices":     varyByDevicesDefault,
+	})
+
+	modulesDefault = types.ObjectValueMust(modulesAttrTypes, map[string]attr.Value{
+		"cache":                   cacheModuleDefault,
+		"application_accelerator": appAcceleratorDefault,
+	})
+)
+
+// nullStringDefault enforces null for an omitted attribute. The framework ships
+// stringdefault.StaticString only, but null is a real desired value here: the API
+// reports no topology for a tiered cache that was never configured, and a
+// Computed attribute left without any default would instead be unknown on every
+// plan whose prior state is null, showing a change that never settles.
+type nullStringDefault struct{}
+
+func (d nullStringDefault) Description(_ context.Context) string {
+	return "value defaults to null"
+}
+
+func (d nullStringDefault) MarkdownDescription(ctx context.Context) string {
+	return d.Description(ctx)
+}
+
+func (d nullStringDefault) DefaultString(_ context.Context, _ defaults.StringRequest, resp *defaults.StringResponse) {
+	resp.PlanValue = types.StringNull()
+}
+
+// topologyFollowsTieredCache defers to the API for a topology the configuration
+// does not declare while tiered cache is being enabled. Defaulting it to null
+// would be wrong there — the API assigns a topology when the module is on — and
+// an attribute default cannot make that distinction, since defaults.StringRequest
+// carries only a path, not the configuration.
+type topologyFollowsTieredCache struct{}
+
+func (m topologyFollowsTieredCache) Description(_ context.Context) string {
+	return "leaves topology to the API when tiered cache is enabled without one"
+}
+
+func (m topologyFollowsTieredCache) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m topologyFollowsTieredCache) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	// An explicitly configured topology is the desired state; leave it alone.
+	if !req.ConfigValue.IsNull() {
+		return
+	}
+
+	var enabled types.Bool
+	diags := req.Plan.GetAttribute(ctx, req.Path.ParentPath().AtName("enabled"), &enabled)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Tiered cache off: the API reports no topology, so keep the null default and
+	// reset a topology somebody set out-of-band.
+	if !enabled.IsUnknown() && !enabled.ValueBool() {
+		return
+	}
+
+	// Tiered cache on. The API owns the topology, so follow the value already in
+	// state; forcing unknown once it is known would show "known after apply" on
+	// every plan.
+	if !req.StateValue.IsNull() && !req.StateValue.IsUnknown() {
+		resp.PlanValue = req.StateValue
+		return
+	}
+
+	resp.PlanValue = types.StringUnknown()
+}
+
 func (r *applicationCacheSettingsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_application_cache_setting"
 }
@@ -138,118 +360,175 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 						Required:    true,
 					},
 					"browser_cache": schema.SingleNestedAttribute{
-						Description: "Browser cache settings.",
+						Description: "Browser cache settings. Omitting this block resets it to the Azion defaults on every apply.",
 						Optional:    true,
+						Computed:    true,
+						Default:     objectdefault.StaticValue(browserCacheDefault),
 						Attributes: map[string]schema.Attribute{
 							"behavior": schema.StringAttribute{
 								Description: "Browser cache behavior: override, honor, no-cache.",
 								Optional:    true,
+								Computed:    true,
+								Default:     stringdefault.StaticString(defaultBrowserCacheBehavior),
 							},
 							"max_age": schema.Int64Attribute{
 								Description: "Maximum TTL for browser cache.",
 								Optional:    true,
+								Computed:    true,
+								Default:     int64default.StaticInt64(defaultBrowserCacheMaxAge),
 							},
 						},
 					},
 					"modules": schema.SingleNestedAttribute{
 						Description: "Cache settings modules.",
 						Optional:    true,
+						Computed:    true,
+						Default:     objectdefault.StaticValue(modulesDefault),
 						Attributes: map[string]schema.Attribute{
 							"cache": schema.SingleNestedAttribute{
 								Description: "Edge cache module settings.",
 								Optional:    true,
+								Computed:    true,
+								Default:     objectdefault.StaticValue(cacheModuleDefault),
 								Attributes: map[string]schema.Attribute{
 									"behavior": schema.StringAttribute{
 										Description: "Cache behavior: honor, override.",
 										Optional:    true,
+										Computed:    true,
+										Default:     stringdefault.StaticString(defaultCacheBehavior),
 									},
 									"max_age": schema.Int64Attribute{
 										Description: "Maximum TTL for edge cache.",
 										Optional:    true,
+										Computed:    true,
+										Default:     int64default.StaticInt64(defaultCacheMaxAge),
 									},
 									"stale_cache": schema.SingleNestedAttribute{
 										Description: "Stale cache settings.",
 										Optional:    true,
+										Computed:    true,
+										Default:     objectdefault.StaticValue(staleCacheDefault),
 										Attributes: map[string]schema.Attribute{
 											"enabled": schema.BoolAttribute{
 												Optional: true,
+												Computed: true,
+												Default:  booldefault.StaticBool(defaultStaleCacheEnabled),
 											},
 										},
 									},
 									"large_file_cache": schema.SingleNestedAttribute{
 										Description: "Large file cache settings.",
 										Optional:    true,
+										Computed:    true,
+										Default:     objectdefault.StaticValue(largeFileCacheDefault),
 										Attributes: map[string]schema.Attribute{
 											"enabled": schema.BoolAttribute{
 												Optional: true,
+												Computed: true,
+												Default:  booldefault.StaticBool(defaultLargeFileEnabled),
 											},
 											"offset": schema.Int64Attribute{
 												Optional: true,
+												Computed: true,
+												Default:  int64default.StaticInt64(defaultLargeFileOffset),
 											},
 										},
 									},
 									"tiered_cache": schema.SingleNestedAttribute{
-										Description: "Tiered cache settings.",
+										Description: "Tiered cache settings. Requires the tiered cache module on the application.",
 										Optional:    true,
+										Computed:    true,
+										Default:     objectdefault.StaticValue(tieredCacheDefault),
 										Attributes: map[string]schema.Attribute{
 											"topology": schema.StringAttribute{
 												Description: "Tiered cache topology: nearest-region, br-east-1, us-east-1.",
 												Optional:    true,
+												Computed:    true,
+												Default:     nullStringDefault{},
+												PlanModifiers: []planmodifier.String{
+													topologyFollowsTieredCache{},
+												},
 											},
 											"enabled": schema.BoolAttribute{
 												Optional: true,
+												Computed: true,
+												Default:  booldefault.StaticBool(defaultTieredCacheEnabled),
 											},
 										},
 									},
 								},
 							},
 							"application_accelerator": schema.SingleNestedAttribute{
-								Description: "Application accelerator module settings.",
+								Description: "Application accelerator module settings. Requires the application accelerator module on the application.",
 								Optional:    true,
+								Computed:    true,
+								Default:     objectdefault.StaticValue(appAcceleratorDefault),
 								Attributes: map[string]schema.Attribute{
 									"cache_vary_by_method": schema.ListAttribute{
 										ElementType: types.StringType,
 										Optional:    true,
+										Computed:    true,
+										Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 									},
 									"cache_vary_by_querystring": schema.SingleNestedAttribute{
 										Optional: true,
+										Computed: true,
+										Default:  objectdefault.StaticValue(varyByQuerystringDefault),
 										Attributes: map[string]schema.Attribute{
 											"behavior": schema.StringAttribute{
 												Description: "Query string behavior: ignore, all, allowlist, denylist.",
 												Optional:    true,
+												Computed:    true,
+												Default:     stringdefault.StaticString(defaultVaryBehavior),
 											},
 											"fields": schema.ListAttribute{
 												ElementType: types.StringType,
 												Optional:    true,
+												Computed:    true,
+												Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 											},
 											"sort_enabled": schema.BoolAttribute{
 												Optional: true,
+												Computed: true,
+												Default:  booldefault.StaticBool(defaultQuerystringSort),
 											},
 										},
 									},
 									"cache_vary_by_cookies": schema.SingleNestedAttribute{
 										Optional: true,
+										Computed: true,
+										Default:  objectdefault.StaticValue(varyByCookiesDefault),
 										Attributes: map[string]schema.Attribute{
 											"behavior": schema.StringAttribute{
 												Description: "Cookies behavior: ignore, all, allowlist, denylist.",
 												Optional:    true,
+												Computed:    true,
+												Default:     stringdefault.StaticString(defaultVaryBehavior),
 											},
 											"cookie_names": schema.ListAttribute{
 												ElementType: types.StringType,
 												Optional:    true,
+												Computed:    true,
+												Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 											},
 										},
 									},
 									"cache_vary_by_devices": schema.SingleNestedAttribute{
 										Optional: true,
+										Computed: true,
+										Default:  objectdefault.StaticValue(varyByDevicesDefault),
 										Attributes: map[string]schema.Attribute{
 											"behavior": schema.StringAttribute{
 												Description: "Devices behavior: ignore, allowlist.",
 												Optional:    true,
+												Computed:    true,
+												Default:     stringdefault.StaticString(defaultVaryBehavior),
 											},
 											"device_group": schema.ListAttribute{
 												ElementType: types.Int64Type,
 												Optional:    true,
+												Computed:    true,
+												Default:     listdefault.StaticValue(types.ListValueMust(types.Int64Type, []attr.Value{})),
 											},
 										},
 									},
@@ -289,26 +568,9 @@ func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resou
 		return
 	}
 
-	// Build the V4 API request
-	cacheSettingRequest := azionapi.NewCacheSettingRequest(plan.CacheSetting.Name.ValueString())
-
-	// Browser Cache
-	if plan.CacheSetting.BrowserCache != nil {
-		browserCache := azionapi.NewBrowserCacheModuleRequest()
-		if !plan.CacheSetting.BrowserCache.Behavior.IsNull() {
-			browserCache.SetBehavior(plan.CacheSetting.BrowserCache.Behavior.ValueString())
-		}
-		if !plan.CacheSetting.BrowserCache.MaxAge.IsNull() {
-			browserCache.SetMaxAge(plan.CacheSetting.BrowserCache.MaxAge.ValueInt64())
-		}
-		cacheSettingRequest.SetBrowserCache(*browserCache)
-	}
-
-	// Modules
-	if plan.CacheSetting.Modules != nil {
-		modulesRequest := buildModulesRequest(plan.CacheSetting.Modules)
-		cacheSettingRequest.SetModules(*modulesRequest)
-	}
+	// Build the V4 API request from the plan, which carries the schema defaults
+	// for every field the configuration left out.
+	cacheSettingRequest := buildCacheSettingRequest(plan.CacheSetting)
 
 	// Call V4 API
 	createdCacheSetting, response, err := r.client.api.ApplicationsCacheSettingsAPI.
@@ -347,168 +609,17 @@ func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resou
 		defer response.Body.Close()
 	}
 
-	// Build result starting with plan values (prevents inconsistency errors when nested objects were null)
-	cacheSettingResult := &CacheSettingResourceModel{
-		ID:           types.Int64Value(createdCacheSetting.Data.GetId()),
-		Name:         types.StringValue(createdCacheSetting.Data.GetName()),
-		BrowserCache: plan.CacheSetting.BrowserCache,
-		Modules:      plan.CacheSetting.Modules,
+	// State mirrors exactly what the API returned. Every attribute is Computed,
+	// so all of them must resolve to a known value here.
+	cacheSettingData, ok := createdCacheSetting.GetDataOk()
+	if !ok || cacheSettingData == nil {
+		resp.Diagnostics.AddError("Empty response", "cacheSettingResponse has no data after successful API call")
+		return
 	}
 
-	// Only update browser_cache from API response if the plan had it specified
-	// Start with plan values to preserve fields not set in the plan
-	if plan.CacheSetting.BrowserCache != nil && createdCacheSetting.Data.HasBrowserCache() {
-		bc := createdCacheSetting.Data.GetBrowserCache()
-		cacheSettingResult.BrowserCache = &BrowserCacheResourceModel{
-			Behavior: plan.CacheSetting.BrowserCache.Behavior,
-			MaxAge:   plan.CacheSetting.BrowserCache.MaxAge,
-		}
-		// Only update behavior from API if it was set in the plan
-		if !plan.CacheSetting.BrowserCache.Behavior.IsNull() && bc.HasBehavior() {
-			cacheSettingResult.BrowserCache.Behavior = types.StringValue(bc.GetBehavior())
-		}
-		// Only update max_age from API if it was set in the plan
-		if !plan.CacheSetting.BrowserCache.MaxAge.IsNull() && bc.HasMaxAge() {
-			cacheSettingResult.BrowserCache.MaxAge = types.Int64Value(bc.GetMaxAge())
-		}
-	}
-
-	// Only update modules from API response if the plan had modules specified
-	if plan.CacheSetting.Modules != nil && createdCacheSetting.Data.HasModules() {
-		modulesResp := createdCacheSetting.Data.GetModules()
-		modulesResult := &CacheSettingsModulesResourceModel{}
-
-		// Cache module - only populate if specified in plan
-		if plan.CacheSetting.Modules.Cache != nil && modulesResp.HasCache() {
-			cacheResp := modulesResp.GetCache()
-			cacheResult := &CacheSettingsCacheResourceModel{}
-
-			// Only populate behavior if it was set in the plan
-			if !plan.CacheSetting.Modules.Cache.Behavior.IsNull() && cacheResp.HasBehavior() {
-				cacheResult.Behavior = types.StringValue(cacheResp.GetBehavior())
-			}
-			// Only populate max_age if it was set in the plan
-			if !plan.CacheSetting.Modules.Cache.MaxAge.IsNull() && cacheResp.HasMaxAge() {
-				cacheResult.MaxAge = types.Int64Value(cacheResp.GetMaxAge())
-			}
-
-			// StaleCache - only if in plan
-			if plan.CacheSetting.Modules.Cache.StaleCache != nil && cacheResp.HasStaleCache() {
-				sc := cacheResp.GetStaleCache()
-				cacheResult.StaleCache = &StateCacheResourceModel{}
-				// Only populate enabled if it was set in the plan
-				if !plan.CacheSetting.Modules.Cache.StaleCache.Enabled.IsNull() && sc.HasEnabled() {
-					cacheResult.StaleCache.Enabled = types.BoolValue(sc.GetEnabled())
-				}
-			}
-
-			// LargeFileCache - only if in plan
-			if plan.CacheSetting.Modules.Cache.LargeFileCache != nil && cacheResp.HasLargeFileCache() {
-				lfc := cacheResp.GetLargeFileCache()
-				cacheResult.LargeFileCache = &LargeFileCacheResourceModel{}
-				// Only populate enabled if it was set in the plan
-				if !plan.CacheSetting.Modules.Cache.LargeFileCache.Enabled.IsNull() && lfc.HasEnabled() {
-					cacheResult.LargeFileCache.Enabled = types.BoolValue(lfc.GetEnabled())
-				}
-				// Only populate offset if it was set in the plan
-				if !plan.CacheSetting.Modules.Cache.LargeFileCache.Offset.IsNull() && lfc.HasOffset() {
-					cacheResult.LargeFileCache.Offset = types.Int64Value(lfc.GetOffset())
-				}
-			}
-
-			// TieredCache - only if in plan
-			if plan.CacheSetting.Modules.Cache.TieredCache != nil && cacheResp.HasTieredCache() {
-				tc := cacheResp.GetTieredCache()
-				cacheResult.TieredCache = &CacheSettingsTieredCacheResourceModel{}
-				// Only populate topology if it was set in the plan
-				if !plan.CacheSetting.Modules.Cache.TieredCache.Topology.IsNull() && tc.HasTopology() {
-					cacheResult.TieredCache.Topology = types.StringValue(tc.GetTopology())
-				}
-				// Only populate enabled if it was set in the plan
-				if !plan.CacheSetting.Modules.Cache.TieredCache.Enabled.IsNull() && tc.HasEnabled() {
-					cacheResult.TieredCache.Enabled = types.BoolValue(tc.GetEnabled())
-				}
-			}
-
-			modulesResult.Cache = cacheResult
-		}
-
-		// ApplicationAccelerator - only if in plan
-		if plan.CacheSetting.Modules.ApplicationAccelerator != nil && modulesResp.HasApplicationAccelerator() {
-			aaResp := modulesResp.GetApplicationAccelerator()
-			aaResult := &CacheSettingsAppAcceleratorResourceModel{}
-
-			// CacheVaryByQuerystring - only if in plan
-			if plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByQuerystring != nil && aaResp.HasCacheVaryByQuerystring() {
-				qsResp := aaResp.GetCacheVaryByQuerystring()
-				qsResult := &CacheVaryByQuerystringResourceModel{}
-				// Only populate behavior if it was set in the plan
-				if !plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Behavior.IsNull() && qsResp.HasBehavior() {
-					qsResult.Behavior = types.StringValue(qsResp.GetBehavior())
-				}
-				// Only populate fields if they were set in the plan
-				if len(plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Fields) > 0 && qsResp.HasFields() {
-					for _, f := range qsResp.GetFields() {
-						qsResult.Fields = append(qsResult.Fields, types.StringValue(f))
-					}
-				}
-				// Only populate sort_enabled if it was set in the plan
-				if !plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByQuerystring.SortEnabled.IsNull() && qsResp.HasSortEnabled() {
-					qsResult.SortEnabled = types.BoolValue(qsResp.GetSortEnabled())
-				}
-				aaResult.CacheVaryByQuerystring = qsResult
-			}
-
-			// CacheVaryByCookies - only if in plan
-			if plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByCookies != nil && aaResp.HasCacheVaryByCookies() {
-				cookiesResp := aaResp.GetCacheVaryByCookies()
-				cookiesResult := &CacheVaryByCookiesResourceModel{}
-				// Only populate behavior if it was set in the plan
-				if !plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByCookies.Behavior.IsNull() && cookiesResp.HasBehavior() {
-					cookiesResult.Behavior = types.StringValue(cookiesResp.GetBehavior())
-				}
-				// Only populate cookie_names if they were set in the plan
-				if len(plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByCookies.CookieNames) > 0 && cookiesResp.HasCookieNames() {
-					for _, cn := range cookiesResp.GetCookieNames() {
-						cookiesResult.CookieNames = append(cookiesResult.CookieNames, types.StringValue(cn))
-					}
-				}
-				aaResult.CacheVaryByCookies = cookiesResult
-			}
-
-			// CacheVaryByDevices - only if in plan
-			if plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByDevices != nil && aaResp.HasCacheVaryByDevices() {
-				devicesResp := aaResp.GetCacheVaryByDevices()
-				devicesResult := &CacheVaryByDevicesResourceModel{}
-				// Only populate behavior if it was set in the plan
-				if !plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByDevices.Behavior.IsNull() && devicesResp.HasBehavior() {
-					devicesResult.Behavior = types.StringValue(devicesResp.GetBehavior())
-				}
-				// Only populate device_group if they were set in the plan
-				if len(plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByDevices.DeviceGroup) > 0 && devicesResp.HasDeviceGroup() {
-					for _, dg := range devicesResp.GetDeviceGroup() {
-						devicesResult.DeviceGroup = append(devicesResult.DeviceGroup, types.Int64Value(dg))
-					}
-				}
-				aaResult.CacheVaryByDevices = devicesResult
-			}
-
-			// CacheVaryByMethod - only if in plan
-			if len(plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByMethod) > 0 && aaResp.HasCacheVaryByMethod() {
-				for _, m := range aaResp.GetCacheVaryByMethod() {
-					aaResult.CacheVaryByMethod = append(aaResult.CacheVaryByMethod, types.StringValue(m))
-				}
-			}
-
-			modulesResult.ApplicationAccelerator = aaResult
-		}
-
-		cacheSettingResult.Modules = modulesResult
-	}
-
-	plan.CacheSetting = cacheSettingResult
+	plan.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSettingData)
 	plan.ApplicationID = applicationID
-	plan.ID = types.Int64Value(createdCacheSetting.Data.GetId())
+	plan.ID = types.Int64Value(cacheSettingData.GetId())
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, &plan)
@@ -579,10 +690,12 @@ func (r *applicationCacheSettingsResource) Read(ctx context.Context, req resourc
 		resp.Diagnostics.AddError("Empty response", "cacheSettingResponse has no data after successful API call")
 		return
 	}
-	// Gate nested-field population on the prior state's shape so unconfigured
-	// fields aren't introduced from the API echo, which would cause perpetual
-	// drift on subsequent plans.
-	state.CacheSetting = buildCacheSettingResultFromResponse(state.CacheSetting, cacheSettingData)
+	// Refresh state from the API without filtering: state has to mirror the
+	// remote resource for Terraform to plan a revert when it was changed
+	// out-of-band. Fields the configuration omits do not drift perpetually
+	// because they are Computed with a schema default, so the plan resolves them
+	// to that default rather than to null.
+	state.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSettingData)
 	// Preserve top-level ID from state if not already set (it should come from req.State.Get())
 	// Only set it from CacheSetting.ID if state.ID is null/unknown
 	if state.ID.IsNull() || state.ID.IsUnknown() {
@@ -624,42 +737,22 @@ func (r *applicationCacheSettingsResource) Update(ctx context.Context, req resou
 		cacheID = plan.CacheSetting.ID
 	}
 
-	// Build patched request
-	patchedRequest := azionapi.NewPatchedCacheSettingRequest()
+	// Full replacement, not a partial update: the configuration is the desired
+	// state, so every field is asserted on every apply. A PATCH would leave a
+	// console change to an undeclared field in place forever.
+	cacheSettingRequest := buildCacheSettingRequest(plan.CacheSetting)
 
-	if !plan.CacheSetting.Name.IsNull() {
-		patchedRequest.SetName(plan.CacheSetting.Name.ValueString())
-	}
-
-	// Browser Cache
-	if plan.CacheSetting.BrowserCache != nil {
-		browserCache := azionapi.NewBrowserCacheModuleRequest()
-		if !plan.CacheSetting.BrowserCache.Behavior.IsNull() {
-			browserCache.SetBehavior(plan.CacheSetting.BrowserCache.Behavior.ValueString())
-		}
-		if !plan.CacheSetting.BrowserCache.MaxAge.IsNull() {
-			browserCache.SetMaxAge(plan.CacheSetting.BrowserCache.MaxAge.ValueInt64())
-		}
-		patchedRequest.SetBrowserCache(*browserCache)
-	}
-
-	// Modules
-	if plan.CacheSetting.Modules != nil {
-		modulesRequest := buildModulesRequest(plan.CacheSetting.Modules)
-		patchedRequest.SetModules(*modulesRequest)
-	}
-
-	// Call V4 API PATCH
+	// Call V4 API PUT
 	updatedCacheSetting, response, err := r.client.api.ApplicationsCacheSettingsAPI.
-		PartialUpdateCacheSetting(ctx, applicationID.ValueInt64(), cacheID.ValueInt64()).
-		PatchedCacheSettingRequest(*patchedRequest).
+		UpdateCacheSetting(ctx, applicationID.ValueInt64(), cacheID.ValueInt64()).
+		CacheSettingRequest(*cacheSettingRequest).
 		Execute()
 	if err != nil {
 		if response.StatusCode == 429 {
 			updatedCacheSetting, response, err = utils.RetryOn429(func() (*azionapi.CacheSettingResponse, *http.Response, error) {
 				return r.client.api.ApplicationsCacheSettingsAPI.
-					PartialUpdateCacheSetting(ctx, applicationID.ValueInt64(), cacheID.ValueInt64()).
-					PatchedCacheSettingRequest(*patchedRequest).
+					UpdateCacheSetting(ctx, applicationID.ValueInt64(), cacheID.ValueInt64()).
+					CacheSettingRequest(*cacheSettingRequest).
 					Execute()
 			}, 5)
 
@@ -686,168 +779,16 @@ func (r *applicationCacheSettingsResource) Update(ctx context.Context, req resou
 		defer response.Body.Close()
 	}
 
-	// Build result starting with plan values (prevents inconsistency errors when nested objects were null)
-	cacheSettingResult := &CacheSettingResourceModel{
-		ID:           types.Int64Value(updatedCacheSetting.Data.GetId()),
-		Name:         types.StringValue(updatedCacheSetting.Data.GetName()),
-		BrowserCache: plan.CacheSetting.BrowserCache,
-		Modules:      plan.CacheSetting.Modules,
+	// State mirrors exactly what the API returned.
+	cacheSettingData, ok := updatedCacheSetting.GetDataOk()
+	if !ok || cacheSettingData == nil {
+		resp.Diagnostics.AddError("Empty response", "cacheSettingResponse has no data after successful API call")
+		return
 	}
 
-	// Only update browser_cache from API response if the plan had it specified
-	// Start with plan values to preserve fields not set in the plan
-	if plan.CacheSetting.BrowserCache != nil && updatedCacheSetting.Data.HasBrowserCache() {
-		bc := updatedCacheSetting.Data.GetBrowserCache()
-		cacheSettingResult.BrowserCache = &BrowserCacheResourceModel{
-			Behavior: plan.CacheSetting.BrowserCache.Behavior,
-			MaxAge:   plan.CacheSetting.BrowserCache.MaxAge,
-		}
-		// Only populate behavior if it was set in the plan
-		if !plan.CacheSetting.BrowserCache.Behavior.IsNull() && bc.HasBehavior() {
-			cacheSettingResult.BrowserCache.Behavior = types.StringValue(bc.GetBehavior())
-		}
-		// Only populate max_age if it was set in the plan
-		if !plan.CacheSetting.BrowserCache.MaxAge.IsNull() && bc.HasMaxAge() {
-			cacheSettingResult.BrowserCache.MaxAge = types.Int64Value(bc.GetMaxAge())
-		}
-	}
-
-	// Only update modules from API response if the plan had modules specified
-	if plan.CacheSetting.Modules != nil && updatedCacheSetting.Data.HasModules() {
-		modulesResp := updatedCacheSetting.Data.GetModules()
-		modulesResult := &CacheSettingsModulesResourceModel{}
-
-		// Cache module - only populate if specified in plan
-		if plan.CacheSetting.Modules.Cache != nil && modulesResp.HasCache() {
-			cacheResp := modulesResp.GetCache()
-			cacheResult := &CacheSettingsCacheResourceModel{}
-
-			// Only populate behavior if it was set in the plan
-			if !plan.CacheSetting.Modules.Cache.Behavior.IsNull() && cacheResp.HasBehavior() {
-				cacheResult.Behavior = types.StringValue(cacheResp.GetBehavior())
-			}
-			// Only populate max_age if it was set in the plan
-			if !plan.CacheSetting.Modules.Cache.MaxAge.IsNull() && cacheResp.HasMaxAge() {
-				cacheResult.MaxAge = types.Int64Value(cacheResp.GetMaxAge())
-			}
-
-			// StaleCache - only if in plan
-			if plan.CacheSetting.Modules.Cache.StaleCache != nil && cacheResp.HasStaleCache() {
-				sc := cacheResp.GetStaleCache()
-				cacheResult.StaleCache = &StateCacheResourceModel{}
-				// Only populate enabled if it was set in the plan
-				if !plan.CacheSetting.Modules.Cache.StaleCache.Enabled.IsNull() && sc.HasEnabled() {
-					cacheResult.StaleCache.Enabled = types.BoolValue(sc.GetEnabled())
-				}
-			}
-
-			// LargeFileCache - only if in plan
-			if plan.CacheSetting.Modules.Cache.LargeFileCache != nil && cacheResp.HasLargeFileCache() {
-				lfc := cacheResp.GetLargeFileCache()
-				cacheResult.LargeFileCache = &LargeFileCacheResourceModel{}
-				// Only populate enabled if it was set in the plan
-				if !plan.CacheSetting.Modules.Cache.LargeFileCache.Enabled.IsNull() && lfc.HasEnabled() {
-					cacheResult.LargeFileCache.Enabled = types.BoolValue(lfc.GetEnabled())
-				}
-				// Only populate offset if it was set in the plan
-				if !plan.CacheSetting.Modules.Cache.LargeFileCache.Offset.IsNull() && lfc.HasOffset() {
-					cacheResult.LargeFileCache.Offset = types.Int64Value(lfc.GetOffset())
-				}
-			}
-
-			// TieredCache - only if in plan
-			if plan.CacheSetting.Modules.Cache.TieredCache != nil && cacheResp.HasTieredCache() {
-				tc := cacheResp.GetTieredCache()
-				cacheResult.TieredCache = &CacheSettingsTieredCacheResourceModel{}
-				// Only populate topology if it was set in the plan
-				if !plan.CacheSetting.Modules.Cache.TieredCache.Topology.IsNull() && tc.HasTopology() {
-					cacheResult.TieredCache.Topology = types.StringValue(tc.GetTopology())
-				}
-				// Only populate enabled if it was set in the plan
-				if !plan.CacheSetting.Modules.Cache.TieredCache.Enabled.IsNull() && tc.HasEnabled() {
-					cacheResult.TieredCache.Enabled = types.BoolValue(tc.GetEnabled())
-				}
-			}
-
-			modulesResult.Cache = cacheResult
-		}
-
-		// ApplicationAccelerator - only if in plan
-		if plan.CacheSetting.Modules.ApplicationAccelerator != nil && modulesResp.HasApplicationAccelerator() {
-			aaResp := modulesResp.GetApplicationAccelerator()
-			aaResult := &CacheSettingsAppAcceleratorResourceModel{}
-
-			// CacheVaryByQuerystring - only if in plan
-			if plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByQuerystring != nil && aaResp.HasCacheVaryByQuerystring() {
-				qsResp := aaResp.GetCacheVaryByQuerystring()
-				qsResult := &CacheVaryByQuerystringResourceModel{}
-				// Only populate behavior if it was set in the plan
-				if !plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Behavior.IsNull() && qsResp.HasBehavior() {
-					qsResult.Behavior = types.StringValue(qsResp.GetBehavior())
-				}
-				// Only populate fields if they were set in the plan
-				if len(plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Fields) > 0 && qsResp.HasFields() {
-					for _, f := range qsResp.GetFields() {
-						qsResult.Fields = append(qsResult.Fields, types.StringValue(f))
-					}
-				}
-				// Only populate sort_enabled if it was set in the plan
-				if !plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByQuerystring.SortEnabled.IsNull() && qsResp.HasSortEnabled() {
-					qsResult.SortEnabled = types.BoolValue(qsResp.GetSortEnabled())
-				}
-				aaResult.CacheVaryByQuerystring = qsResult
-			}
-
-			// CacheVaryByCookies - only if in plan
-			if plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByCookies != nil && aaResp.HasCacheVaryByCookies() {
-				cookiesResp := aaResp.GetCacheVaryByCookies()
-				cookiesResult := &CacheVaryByCookiesResourceModel{}
-				// Only populate behavior if it was set in the plan
-				if !plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByCookies.Behavior.IsNull() && cookiesResp.HasBehavior() {
-					cookiesResult.Behavior = types.StringValue(cookiesResp.GetBehavior())
-				}
-				// Only populate cookie_names if they were set in the plan
-				if len(plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByCookies.CookieNames) > 0 && cookiesResp.HasCookieNames() {
-					for _, cn := range cookiesResp.GetCookieNames() {
-						cookiesResult.CookieNames = append(cookiesResult.CookieNames, types.StringValue(cn))
-					}
-				}
-				aaResult.CacheVaryByCookies = cookiesResult
-			}
-
-			// CacheVaryByDevices - only if in plan
-			if plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByDevices != nil && aaResp.HasCacheVaryByDevices() {
-				devicesResp := aaResp.GetCacheVaryByDevices()
-				devicesResult := &CacheVaryByDevicesResourceModel{}
-				// Only populate behavior if it was set in the plan
-				if !plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByDevices.Behavior.IsNull() && devicesResp.HasBehavior() {
-					devicesResult.Behavior = types.StringValue(devicesResp.GetBehavior())
-				}
-				// Only populate device_group if they were set in the plan
-				if len(plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByDevices.DeviceGroup) > 0 && devicesResp.HasDeviceGroup() {
-					for _, dg := range devicesResp.GetDeviceGroup() {
-						devicesResult.DeviceGroup = append(devicesResult.DeviceGroup, types.Int64Value(dg))
-					}
-				}
-				aaResult.CacheVaryByDevices = devicesResult
-			}
-
-			// CacheVaryByMethod - only if in plan
-			if len(plan.CacheSetting.Modules.ApplicationAccelerator.CacheVaryByMethod) > 0 && aaResp.HasCacheVaryByMethod() {
-				for _, m := range aaResp.GetCacheVaryByMethod() {
-					aaResult.CacheVaryByMethod = append(aaResult.CacheVaryByMethod, types.StringValue(m))
-				}
-			}
-
-			modulesResult.ApplicationAccelerator = aaResult
-		}
-
-		cacheSettingResult.Modules = modulesResult
-	}
-
-	plan.CacheSetting = cacheSettingResult
+	plan.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSettingData)
 	plan.ApplicationID = applicationID
-	plan.ID = types.Int64Value(updatedCacheSetting.Data.GetId())
+	plan.ID = types.Int64Value(cacheSettingData.GetId())
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, &plan)
@@ -978,22 +919,54 @@ func (r *applicationCacheSettingsResource) ImportState(ctx context.Context, req 
 }
 
 // Helper: Build Modules Request.
+// buildCacheSettingRequest builds the full API payload from a plan. Shared by
+// Create (POST) and Update (PUT): both send the complete desired state, so a
+// field the practitioner omitted carries its schema default rather than being
+// left to whatever the remote currently holds.
+func buildCacheSettingRequest(cs *CacheSettingResourceModel) *azionapi.CacheSettingRequest {
+	request := azionapi.NewCacheSettingRequest(cs.Name.ValueString())
+
+	if cs.BrowserCache != nil {
+		browserCache := azionapi.NewBrowserCacheModuleRequest()
+		if isSet(cs.BrowserCache.Behavior) {
+			browserCache.SetBehavior(cs.BrowserCache.Behavior.ValueString())
+		}
+		if isSet(cs.BrowserCache.MaxAge) {
+			browserCache.SetMaxAge(cs.BrowserCache.MaxAge.ValueInt64())
+		}
+		request.SetBrowserCache(*browserCache)
+	}
+
+	if cs.Modules != nil {
+		request.SetModules(*buildModulesRequest(cs.Modules))
+	}
+
+	return request
+}
+
+// isSet reports whether a value carries something to send to the API. Unknown is
+// excluded as well as null, so a value Terraform has not resolved yet is omitted
+// instead of being sent as a zero value.
+func isSet(value attr.Value) bool {
+	return !value.IsNull() && !value.IsUnknown()
+}
+
 func buildModulesRequest(modules *CacheSettingsModulesResourceModel) *azionapi.CacheSettingsModulesRequest {
 	modulesRequest := azionapi.NewCacheSettingsModulesRequest()
 
 	if modules.Cache != nil {
 		cacheRequest := azionapi.NewCacheSettingsCacheModuleRequest()
 
-		if !modules.Cache.Behavior.IsNull() {
+		if isSet(modules.Cache.Behavior) {
 			cacheRequest.SetBehavior(modules.Cache.Behavior.ValueString())
 		}
-		if !modules.Cache.MaxAge.IsNull() {
+		if isSet(modules.Cache.MaxAge) {
 			cacheRequest.SetMaxAge(modules.Cache.MaxAge.ValueInt64())
 		}
 
 		if modules.Cache.StaleCache != nil {
 			staleCache := azionapi.NewStateCacheModuleRequest()
-			if !modules.Cache.StaleCache.Enabled.IsNull() {
+			if isSet(modules.Cache.StaleCache.Enabled) {
 				staleCache.SetEnabled(modules.Cache.StaleCache.Enabled.ValueBool())
 			}
 			cacheRequest.SetStaleCache(*staleCache)
@@ -1001,10 +974,10 @@ func buildModulesRequest(modules *CacheSettingsModulesResourceModel) *azionapi.C
 
 		if modules.Cache.TieredCache != nil {
 			tieredCache := azionapi.NewCacheSettingsTieredCacheModuleRequest()
-			if !modules.Cache.TieredCache.Topology.IsNull() {
+			if isSet(modules.Cache.TieredCache.Topology) {
 				tieredCache.SetTopology(modules.Cache.TieredCache.Topology.ValueString())
 			}
-			if !modules.Cache.TieredCache.Enabled.IsNull() {
+			if isSet(modules.Cache.TieredCache.Enabled) {
 				tieredCache.SetEnabled(modules.Cache.TieredCache.Enabled.ValueBool())
 			}
 			cacheRequest.SetTieredCache(*tieredCache)
@@ -1012,10 +985,10 @@ func buildModulesRequest(modules *CacheSettingsModulesResourceModel) *azionapi.C
 
 		if modules.Cache.LargeFileCache != nil {
 			largeFileCache := azionapi.NewLargeFileCacheModuleRequest()
-			if !modules.Cache.LargeFileCache.Enabled.IsNull() {
+			if isSet(modules.Cache.LargeFileCache.Enabled) {
 				largeFileCache.SetEnabled(modules.Cache.LargeFileCache.Enabled.ValueBool())
 			}
-			if !modules.Cache.LargeFileCache.Offset.IsNull() {
+			if isSet(modules.Cache.LargeFileCache.Offset) {
 				largeFileCache.SetOffset(modules.Cache.LargeFileCache.Offset.ValueInt64())
 			}
 			cacheRequest.SetLargeFileCache(*largeFileCache)
@@ -1028,7 +1001,7 @@ func buildModulesRequest(modules *CacheSettingsModulesResourceModel) *azionapi.C
 		aa := modules.ApplicationAccelerator
 		aaRequest := azionapi.NewCacheSettingsApplicationAcceleratorModuleRequest()
 
-		if len(aa.CacheVaryByMethod) > 0 {
+		if aa.CacheVaryByMethod != nil {
 			var methods []string
 			for _, m := range aa.CacheVaryByMethod {
 				methods = append(methods, m.ValueString())
@@ -1060,17 +1033,17 @@ func buildModulesRequest(modules *CacheSettingsModulesResourceModel) *azionapi.C
 func buildQuerystringRequest(qs *CacheVaryByQuerystringResourceModel) *azionapi.CacheVaryByQuerystringModuleRequest {
 	request := azionapi.NewCacheVaryByQuerystringModuleRequest()
 
-	if !qs.Behavior.IsNull() {
+	if isSet(qs.Behavior) {
 		request.SetBehavior(qs.Behavior.ValueString())
 	}
-	if len(qs.Fields) > 0 {
+	if qs.Fields != nil {
 		var fields []string
 		for _, f := range qs.Fields {
 			fields = append(fields, f.ValueString())
 		}
 		request.SetFields(fields)
 	}
-	if !qs.SortEnabled.IsNull() {
+	if isSet(qs.SortEnabled) {
 		request.SetSortEnabled(qs.SortEnabled.ValueBool())
 	}
 
@@ -1080,10 +1053,10 @@ func buildQuerystringRequest(qs *CacheVaryByQuerystringResourceModel) *azionapi.
 func buildCookiesRequest(cookies *CacheVaryByCookiesResourceModel) *azionapi.CacheVaryByCookiesModuleRequest {
 	request := azionapi.NewCacheVaryByCookiesModuleRequest()
 
-	if !cookies.Behavior.IsNull() {
+	if isSet(cookies.Behavior) {
 		request.SetBehavior(cookies.Behavior.ValueString())
 	}
-	if len(cookies.CookieNames) > 0 {
+	if cookies.CookieNames != nil {
 		var names []string
 		for _, n := range cookies.CookieNames {
 			names = append(names, n.ValueString())
@@ -1097,10 +1070,10 @@ func buildCookiesRequest(cookies *CacheVaryByCookiesResourceModel) *azionapi.Cac
 func buildDevicesRequest(devices *CacheVaryByDevicesResourceModel) *azionapi.CacheVaryByDevicesModuleRequest {
 	request := azionapi.NewCacheVaryByDevicesModuleRequest()
 
-	if !devices.Behavior.IsNull() {
+	if isSet(devices.Behavior) {
 		request.SetBehavior(devices.Behavior.ValueString())
 	}
-	if len(devices.DeviceGroup) > 0 {
+	if devices.DeviceGroup != nil {
 		var groups []int64
 		for _, g := range devices.DeviceGroup {
 			groups = append(groups, g.ValueInt64())
@@ -1197,7 +1170,9 @@ func transformCacheSettingResponseToResourceModel(cs *azionapi.CacheSetting) *Ca
 
 			// Cache Vary By Method
 			if aa.HasCacheVaryByMethod() {
-				for _, method := range aa.GetCacheVaryByMethod() {
+				methods := aa.GetCacheVaryByMethod()
+				model.Modules.ApplicationAccelerator.CacheVaryByMethod = make([]types.String, 0, len(methods))
+				for _, method := range methods {
 					model.Modules.ApplicationAccelerator.CacheVaryByMethod = append(
 						model.Modules.ApplicationAccelerator.CacheVaryByMethod,
 						types.StringValue(method),
@@ -1214,7 +1189,9 @@ func transformCacheSettingResponseToResourceModel(cs *azionapi.CacheSetting) *Ca
 					model.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Behavior = types.StringValue(qs.GetBehavior())
 				}
 				if qs.HasFields() {
-					for _, f := range qs.GetFields() {
+					fields := qs.GetFields()
+					model.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Fields = make([]types.String, 0, len(fields))
+					for _, f := range fields {
 						model.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Fields = append(
 							model.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Fields,
 							types.StringValue(f),
@@ -1235,7 +1212,9 @@ func transformCacheSettingResponseToResourceModel(cs *azionapi.CacheSetting) *Ca
 					model.Modules.ApplicationAccelerator.CacheVaryByCookies.Behavior = types.StringValue(cookies.GetBehavior())
 				}
 				if cookies.HasCookieNames() {
-					for _, cn := range cookies.GetCookieNames() {
+					names := cookies.GetCookieNames()
+					model.Modules.ApplicationAccelerator.CacheVaryByCookies.CookieNames = make([]types.String, 0, len(names))
+					for _, cn := range names {
 						model.Modules.ApplicationAccelerator.CacheVaryByCookies.CookieNames = append(
 							model.Modules.ApplicationAccelerator.CacheVaryByCookies.CookieNames,
 							types.StringValue(cn),
@@ -1253,7 +1232,9 @@ func transformCacheSettingResponseToResourceModel(cs *azionapi.CacheSetting) *Ca
 					model.Modules.ApplicationAccelerator.CacheVaryByDevices.Behavior = types.StringValue(devices.GetBehavior())
 				}
 				if devices.HasDeviceGroup() {
-					for _, dg := range devices.GetDeviceGroup() {
+					groups := devices.GetDeviceGroup()
+					model.Modules.ApplicationAccelerator.CacheVaryByDevices.DeviceGroup = make([]types.Int64, 0, len(groups))
+					for _, dg := range groups {
 						model.Modules.ApplicationAccelerator.CacheVaryByDevices.DeviceGroup = append(
 							model.Modules.ApplicationAccelerator.CacheVaryByDevices.DeviceGroup,
 							types.Int64Value(dg),
@@ -1265,181 +1246,4 @@ func transformCacheSettingResponseToResourceModel(cs *azionapi.CacheSetting) *Ca
 	}
 
 	return model
-}
-
-// buildCacheSettingResultFromResponse builds a CacheSettingResourceModel from an API
-// response, using prior to gate population of optional nested fields and leaf values.
-// Used by Read to prevent perpetual drift: if the user never configured a field but
-// the API echoes back a default value, this leaves the field null in state.
-//
-// Import callers pass nil for prior and should use transformCacheSettingResponseToResourceModel
-// instead, since import wants to capture everything the API returns.
-func buildCacheSettingResultFromResponse(prior *CacheSettingResourceModel, data *azionapi.CacheSetting) *CacheSettingResourceModel {
-	if data == nil {
-		return nil
-	}
-
-	result := &CacheSettingResourceModel{
-		ID:   types.Int64Value(data.GetId()),
-		Name: types.StringValue(data.GetName()),
-	}
-
-	if data.CreatedAt.IsSet() && data.CreatedAt.Get() != nil {
-		result.CreatedAt = types.StringValue(data.GetCreatedAt().Format(time.RFC3339))
-	}
-
-	if prior == nil {
-		return result
-	}
-
-	if prior.BrowserCache != nil && data.HasBrowserCache() {
-		bc := data.GetBrowserCache()
-		result.BrowserCache = &BrowserCacheResourceModel{
-			Behavior: prior.BrowserCache.Behavior,
-			MaxAge:   prior.BrowserCache.MaxAge,
-		}
-		if !prior.BrowserCache.Behavior.IsNull() && bc.HasBehavior() {
-			result.BrowserCache.Behavior = types.StringValue(bc.GetBehavior())
-		}
-		if !prior.BrowserCache.MaxAge.IsNull() && bc.HasMaxAge() {
-			result.BrowserCache.MaxAge = types.Int64Value(bc.GetMaxAge())
-		}
-	}
-
-	if prior.Modules != nil && data.HasModules() {
-		modulesResp := data.GetModules()
-		modulesResult := &CacheSettingsModulesResourceModel{}
-
-		if prior.Modules.Cache != nil && modulesResp.HasCache() {
-			cacheResp := modulesResp.GetCache()
-			cacheResult := &CacheSettingsCacheResourceModel{
-				Behavior: prior.Modules.Cache.Behavior,
-				MaxAge:   prior.Modules.Cache.MaxAge,
-			}
-			if !prior.Modules.Cache.Behavior.IsNull() && cacheResp.HasBehavior() {
-				cacheResult.Behavior = types.StringValue(cacheResp.GetBehavior())
-			}
-			if !prior.Modules.Cache.MaxAge.IsNull() && cacheResp.HasMaxAge() {
-				cacheResult.MaxAge = types.Int64Value(cacheResp.GetMaxAge())
-			}
-
-			if prior.Modules.Cache.StaleCache != nil && cacheResp.HasStaleCache() {
-				sc := cacheResp.GetStaleCache()
-				cacheResult.StaleCache = &StateCacheResourceModel{
-					Enabled: prior.Modules.Cache.StaleCache.Enabled,
-				}
-				if !prior.Modules.Cache.StaleCache.Enabled.IsNull() && sc.HasEnabled() {
-					cacheResult.StaleCache.Enabled = types.BoolValue(sc.GetEnabled())
-				}
-			}
-
-			if prior.Modules.Cache.LargeFileCache != nil && cacheResp.HasLargeFileCache() {
-				lfc := cacheResp.GetLargeFileCache()
-				cacheResult.LargeFileCache = &LargeFileCacheResourceModel{
-					Enabled: prior.Modules.Cache.LargeFileCache.Enabled,
-					Offset:  prior.Modules.Cache.LargeFileCache.Offset,
-				}
-				if !prior.Modules.Cache.LargeFileCache.Enabled.IsNull() && lfc.HasEnabled() {
-					cacheResult.LargeFileCache.Enabled = types.BoolValue(lfc.GetEnabled())
-				}
-				if !prior.Modules.Cache.LargeFileCache.Offset.IsNull() && lfc.HasOffset() {
-					cacheResult.LargeFileCache.Offset = types.Int64Value(lfc.GetOffset())
-				}
-			}
-
-			if prior.Modules.Cache.TieredCache != nil && cacheResp.HasTieredCache() {
-				tc := cacheResp.GetTieredCache()
-				cacheResult.TieredCache = &CacheSettingsTieredCacheResourceModel{
-					Topology: prior.Modules.Cache.TieredCache.Topology,
-					Enabled:  prior.Modules.Cache.TieredCache.Enabled,
-				}
-				if !prior.Modules.Cache.TieredCache.Topology.IsNull() && tc.HasTopology() {
-					cacheResult.TieredCache.Topology = types.StringValue(tc.GetTopology())
-				}
-				if !prior.Modules.Cache.TieredCache.Enabled.IsNull() && tc.HasEnabled() {
-					cacheResult.TieredCache.Enabled = types.BoolValue(tc.GetEnabled())
-				}
-			}
-
-			modulesResult.Cache = cacheResult
-		}
-
-		if prior.Modules.ApplicationAccelerator != nil && modulesResp.HasApplicationAccelerator() {
-			aaResp := modulesResp.GetApplicationAccelerator()
-			aaResult := &CacheSettingsAppAcceleratorResourceModel{}
-
-			if prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring != nil && aaResp.HasCacheVaryByQuerystring() {
-				qsResp := aaResp.GetCacheVaryByQuerystring()
-				qsResult := &CacheVaryByQuerystringResourceModel{
-					Behavior:    prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Behavior,
-					Fields:      prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Fields,
-					SortEnabled: prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.SortEnabled,
-				}
-				if !prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Behavior.IsNull() && qsResp.HasBehavior() {
-					qsResult.Behavior = types.StringValue(qsResp.GetBehavior())
-				}
-				if len(prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.Fields) > 0 && qsResp.HasFields() {
-					qsResult.Fields = nil
-					for _, f := range qsResp.GetFields() {
-						qsResult.Fields = append(qsResult.Fields, types.StringValue(f))
-					}
-				}
-				if !prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring.SortEnabled.IsNull() && qsResp.HasSortEnabled() {
-					qsResult.SortEnabled = types.BoolValue(qsResp.GetSortEnabled())
-				}
-				aaResult.CacheVaryByQuerystring = qsResult
-			}
-
-			if prior.Modules.ApplicationAccelerator.CacheVaryByCookies != nil && aaResp.HasCacheVaryByCookies() {
-				cookiesResp := aaResp.GetCacheVaryByCookies()
-				cookiesResult := &CacheVaryByCookiesResourceModel{
-					Behavior:    prior.Modules.ApplicationAccelerator.CacheVaryByCookies.Behavior,
-					CookieNames: prior.Modules.ApplicationAccelerator.CacheVaryByCookies.CookieNames,
-				}
-				if !prior.Modules.ApplicationAccelerator.CacheVaryByCookies.Behavior.IsNull() && cookiesResp.HasBehavior() {
-					cookiesResult.Behavior = types.StringValue(cookiesResp.GetBehavior())
-				}
-				if len(prior.Modules.ApplicationAccelerator.CacheVaryByCookies.CookieNames) > 0 && cookiesResp.HasCookieNames() {
-					cookiesResult.CookieNames = nil
-					for _, cn := range cookiesResp.GetCookieNames() {
-						cookiesResult.CookieNames = append(cookiesResult.CookieNames, types.StringValue(cn))
-					}
-				}
-				aaResult.CacheVaryByCookies = cookiesResult
-			}
-
-			if prior.Modules.ApplicationAccelerator.CacheVaryByDevices != nil && aaResp.HasCacheVaryByDevices() {
-				devicesResp := aaResp.GetCacheVaryByDevices()
-				devicesResult := &CacheVaryByDevicesResourceModel{
-					Behavior:    prior.Modules.ApplicationAccelerator.CacheVaryByDevices.Behavior,
-					DeviceGroup: prior.Modules.ApplicationAccelerator.CacheVaryByDevices.DeviceGroup,
-				}
-				if !prior.Modules.ApplicationAccelerator.CacheVaryByDevices.Behavior.IsNull() && devicesResp.HasBehavior() {
-					devicesResult.Behavior = types.StringValue(devicesResp.GetBehavior())
-				}
-				if len(prior.Modules.ApplicationAccelerator.CacheVaryByDevices.DeviceGroup) > 0 && devicesResp.HasDeviceGroup() {
-					devicesResult.DeviceGroup = nil
-					for _, dg := range devicesResp.GetDeviceGroup() {
-						devicesResult.DeviceGroup = append(devicesResult.DeviceGroup, types.Int64Value(dg))
-					}
-				}
-				aaResult.CacheVaryByDevices = devicesResult
-			}
-
-			if len(prior.Modules.ApplicationAccelerator.CacheVaryByMethod) > 0 && aaResp.HasCacheVaryByMethod() {
-				aaResult.CacheVaryByMethod = nil
-				for _, m := range aaResp.GetCacheVaryByMethod() {
-					aaResult.CacheVaryByMethod = append(aaResult.CacheVaryByMethod, types.StringValue(m))
-				}
-			} else {
-				aaResult.CacheVaryByMethod = prior.Modules.ApplicationAccelerator.CacheVaryByMethod
-			}
-
-			modulesResult.ApplicationAccelerator = aaResult
-		}
-
-		result.Modules = modulesResult
-	}
-
-	return result
 }

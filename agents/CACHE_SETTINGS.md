@@ -16,7 +16,7 @@ This document provides specific guidance for implementing Cache Settings data so
    - [Resource Schema Definition](#resource-schema-definition)
    - [Create Method](#create-method)
    - [Read Method](#read-method)
-   - [Update Method (PATCH)](#update-method-patch)
+   - [Update Method (PUT)](#update-method-put)
    - [Delete Method](#delete-method)
    - [ImportState Method](#importstate-method)
 5. [Transform Functions](#transform-functions)
@@ -51,7 +51,7 @@ The full URL is: `https://api.azion.com/v4/edge_applications/{application_id}/ca
 r.client.api.ApplicationsCacheSettingsAPI.RetrieveCacheSetting(ctx, applicationId, cacheSettingId).Execute()
 r.client.api.ApplicationsCacheSettingsAPI.ListCacheSettings(ctx, applicationId).Page(page).PageSize(pageSize).Execute()
 r.client.api.ApplicationsCacheSettingsAPI.CreateCacheSetting(ctx, applicationId).CacheSettingRequest(request).Execute()
-r.client.api.ApplicationsCacheSettingsAPI.PartialUpdateCacheSetting(ctx, applicationId, cacheSettingId).PatchedCacheSettingRequest(request).Execute()
+r.client.api.ApplicationsCacheSettingsAPI.UpdateCacheSetting(ctx, applicationId, cacheSettingId).CacheSettingRequest(request).Execute()
 r.client.api.ApplicationsCacheSettingsAPI.DeleteCacheSetting(ctx, applicationId, cacheSettingId).Execute()
 ```
 
@@ -1163,11 +1163,15 @@ func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resou
 
 **IMPORTANT:** The Read method must use a raw HTTP request function to work around the SDK validation issue.
 
-**CRITICAL:** Do NOT call `transformCacheSettingResponseToResourceModel(data)` in Read. That helper unconditionally populates every nested field the API returns, including defaults the user never configured (e.g. `large_file_cache.offset = 1024`, `application_accelerator = {...}`). Once those defaults land in state, Terraform sees them as drift on every subsequent plan and tries to null them out — perpetual drift.
+**CRITICAL:** Read MUST call `transformCacheSettingResponseToResourceModel(data)` and populate state from the API response unconditionally. State has to mirror the remote resource, otherwise Terraform cannot plan a revert for a field somebody changed in the console and the change is silently kept — a compliance failure, since the configuration is the desired state.
 
-Use `buildCacheSettingResultFromResponse(prior, data)` instead, passing the prior `state.CacheSetting`. The helper gates every pointer field on `prior.X != nil`, every leaf on `!prior.X.IsNull()`, and every list on `len(prior.X) > 0`, so unconfigured fields stay null in state.
+Do NOT reintroduce prior-state gating (the removed `buildCacheSettingResultFromResponse`, which skipped any field that was null in state). It made Read a state-preserving merge, so the API response could never introduce a value, and out-of-band changes to undeclared fields were invisible on every plan.
 
-`transformCacheSettingResponseToResourceModel` is still correct for **Import**, where there is no prior state and you do want to capture everything the API has.
+Unconfigured fields do not drift perpetually, because the mechanism that used to be gating is now in the schema: every optional attribute is `Optional + Computed` with a `Default`. When the configuration omits a field, the plan resolves it to that default rather than to null, so state and plan agree and the diff is empty. See the defaults block at the top of `internal/resource_application_cache_setting.go`.
+
+**Every** optional attribute needs a default, nested blocks included. This is not only about enforcement: a `Computed` attribute with no default is *unknown* in the plan whenever the configuration omits it, and `req.Plan.Get(ctx, &plan)` reads nested objects into `*Struct` fields, which cannot hold unknown values. The framework fails with "Received unknown value, however the target type cannot handle unknown values", so a missing default breaks Create rather than just weakening enforcement. Use `objectdefault.StaticValue` with a complete subtree — the object default is also required because defaults cannot be applied to children of a block that is null in the plan.
+
+Keep in mind that `modules.cache.tiered_cache` and `modules.application_accelerator` depend on modules being enabled on the parent application. They are enforced like everything else, which means their values are present in every PUT body. If the API rejects them for applications lacking those modules, that surfaces as a 400 on apply.
 
 ```go
 func (r *applicationCacheSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -1219,9 +1223,18 @@ The `if prior == nil { return result }` early exit means callers can safely pass
 
 ---
 
-## Update Method (PATCH)
+## Update Method (PUT)
 
-The Cache Settings resource uses PATCH for partial updates:
+The Cache Settings resource uses PUT (`UpdateCacheSetting` with `CacheSettingRequest`), not PATCH.
+
+**Do not switch this back to `PartialUpdateCacheSetting`.** The configuration is the desired state, so every apply asserts the complete object. A PATCH only sends the fields present in the body, which leaves a console change to an undeclared field in place forever — the resource would never converge on the configuration.
+
+The request body is built from the **plan**, not the configuration, because the plan is where the schema defaults have been resolved. That is what turns "absent from the configuration" into "reset to the Azion default".
+
+Two consequences to keep in mind:
+
+- Any API field the provider schema does not model is reset by the full-body PUT. Adding a field to the API means adding it to the schema, or it silently reverts to its default.
+- Fields that are only valid in combination with others (module-gated blocks) must not be given a schema default, or the PUT body is rejected for applications that lack the module.
 
 ```go
 func (r *applicationCacheSettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -1236,43 +1249,22 @@ func (r *applicationCacheSettingsResource) Update(ctx context.Context, req resou
     applicationId := plan.ApplicationID.ValueInt64()
     cacheSettingId := plan.CacheSetting.ID.ValueInt64()
 
-    // Build patched request (only include fields that changed)
-    patchedRequest := azionapi.NewPatchedCacheSettingRequest()
+    // Build the complete desired state from the plan, which carries the schema
+    // defaults for every field the configuration left out.
+    cacheSettingRequest := buildCacheSettingRequest(plan.CacheSetting)
 
-    if !plan.CacheSetting.Name.IsNull() {
-        patchedRequest.SetName(plan.CacheSetting.Name.ValueString())
-    }
-
-    // Browser Cache
-    if plan.CacheSetting.BrowserCache != nil {
-        browserCache := azionapi.NewBrowserCacheModuleRequest()
-        if !plan.CacheSetting.BrowserCache.Behavior.IsNull() {
-            browserCache.SetBehavior(plan.CacheSetting.BrowserCache.Behavior.ValueString())
-        }
-        if !plan.CacheSetting.BrowserCache.MaxAge.IsNull() {
-            browserCache.SetMaxAge(plan.CacheSetting.BrowserCache.MaxAge.ValueInt64())
-        }
-        patchedRequest.SetBrowserCache(*browserCache)
-    }
-
-    // Modules
-    if plan.CacheSetting.Modules != nil {
-        modulesRequest := buildModulesRequest(plan.CacheSetting.Modules)
-        patchedRequest.SetModules(*modulesRequest)
-    }
-
-    // Call V4 API PATCH
+    // Call V4 API PUT
     updatedCacheSetting, response, err := r.client.api.ApplicationsCacheSettingsAPI.
-        PartialUpdateCacheSetting(ctx, applicationId, cacheSettingId).
-        PatchedCacheSettingRequest(*patchedRequest).
+        UpdateCacheSetting(ctx, applicationId, cacheSettingId).
+        CacheSettingRequest(*cacheSettingRequest).
         Execute()
 
     if err != nil {
         if response.StatusCode == 429 {
             updatedCacheSetting, response, err = utils.RetryOn429(func() (*azionapi.CacheSettingResponse, *http.Response, error) {
                 return r.client.api.ApplicationsCacheSettingsAPI.
-                    PartialUpdateCacheSetting(ctx, applicationId, cacheSettingId).
-                    PatchedCacheSettingRequest(*patchedRequest).
+                    UpdateCacheSetting(ctx, applicationId, cacheSettingId).
+                    CacheSettingRequest(*cacheSettingRequest).
                     Execute()
             }, 5)
 
@@ -1803,11 +1795,12 @@ When implementing or updating Cache Settings resources and data sources:
 
 1. **Use the correct SDK**: V4 (`azion-api` package)
 2. **Use raw HTTP for Read**: Work around SDK validation issue with `retrieveCacheSettingRawDS`
-3. **Use PATCH for updates**: `PartialUpdateCacheSetting` with `PatchedCacheSettingRequest`
+3. **Use PUT for updates**: `UpdateCacheSetting` with `CacheSettingRequest`, body built from the plan (full replacement, never PATCH)
 4. **ID type is `int64`**: Not `string`
 5. **Import format**: `{application_id}/{cache_setting_id}`
 6. **Handle 429 errors**: Use `utils.RetryOn429`
 7. **Handle nullable fields**: Check `IsNull()` and `IsUnknown()` before accessing values
+8. **Keep optional attributes `Optional + Computed` with a `Default`**: this is what prevents perpetual drift now that Read is unfiltered. An optional attribute without a default is not enforced — remote changes to it are kept rather than reverted
 8. **Transform nested objects**: Use helper functions for complex module structures
 9. **Register in provider.go**: Add to both DataSources() and Resources()
 10. **Run linters**: `golangci-lint run --config .golintci.yml ./internal/...`
