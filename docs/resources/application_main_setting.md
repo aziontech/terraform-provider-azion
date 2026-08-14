@@ -8,6 +8,36 @@ description: |-
 
 # azion_application_main_setting (Resource)
 
+## Configuration is the desired state
+
+This resource asserts the **complete** application on every apply, using a full
+replacement (`PUT`) rather than a partial update. Two things follow, both
+intentional:
+
+- A change made outside Terraform — in Azion Console, for example — is
+  **reverted** on the next `terraform apply`, and shows up in `terraform plan` as
+  a diff. This holds for fields you declare and for fields you leave out.
+- Leaving a field out is not "don't care". It means "use the default below", and
+  the field is reset to it. To keep a non-default value, declare it explicitly.
+
+| Field | Enforced default |
+|---|---|
+| `active` | `true` |
+| `debug` | `false` |
+| `modules.cache.enabled` | `true` |
+| `modules.functions.enabled` | `true` |
+| `modules.application_accelerator.enabled` | `false` |
+| `modules.image_processor.enabled` | `false` |
+
+Note that drift is only reverted when an apply runs, and only when state is
+refreshed — `terraform plan -refresh=false` will not detect it. Terraform also
+cannot remove applications created outside Terraform, since those are not in
+state.
+
+Disabling a module that child resources depend on will make those resources fail.
+`modules.cache.enabled` is required by `azion_application_cache_setting`, and
+`modules.functions.enabled` by `azion_application_function_instance`.
+
 
 
 ## Example Usage
@@ -19,7 +49,7 @@ resource "azion_application_main_setting" "example" {
     active = true
     debug  = false
     modules = {
-      edge_cache = {
+      cache = {
         enabled = true
       }
       application_accelerator = {
@@ -116,7 +146,7 @@ Read-Only:
 Optional:
 
 - `application_accelerator` (Attributes) (see [below for nested schema](#nestedatt--application--modules--application_accelerator))
-- `edge_cache` (Attributes) (see [below for nested schema](#nestedatt--application--modules--edge_cache))
+- `cache` (Attributes) (see [below for nested schema](#nestedatt--application--modules--cache))
 - `functions` (Attributes) (see [below for nested schema](#nestedatt--application--modules--functions))
 - `image_processor` (Attributes) (see [below for nested schema](#nestedatt--application--modules--image_processor))
 
@@ -128,8 +158,8 @@ Optional:
 - `enabled` (Boolean)
 
 
-<a id="nestedatt--application--modules--edge_cache"></a>
-### Nested Schema for `application.modules.edge_cache`
+<a id="nestedatt--application--modules--cache"></a>
+### Nested Schema for `application.modules.cache`
 
 Optional:
 

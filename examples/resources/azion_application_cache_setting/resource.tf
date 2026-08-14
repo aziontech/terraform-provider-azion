@@ -5,7 +5,7 @@ resource "azion_application_main_setting" "example" {
     name   = "My Application"
     active = true
     modules = {
-      edge_cache = {
+      cache = {
         enabled = true
       }
     }

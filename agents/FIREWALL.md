@@ -40,7 +40,7 @@ Firewall uses the **V4 SDK (`azion-api`)** for Main Settings:
 | ID Type | `int64` for most operations |
 | Create Method | `.CreateFirewall(ctx).FirewallRequest(req).Execute()` |
 | Retrieve Method | `.RetrieveFirewall(ctx, id).Execute()` |
-| Update Method | `.PartialUpdateFirewall(ctx, id).PatchedFirewallRequest(req).Execute()` |
+| Update Method | `.UpdateFirewall(ctx, id).FirewallRequest(req).Execute()` (PUT, full replacement — never PATCH) |
 | Delete Method | `.DeleteFirewall(ctx, id).Execute()` |
 | Response Type | `Response.Data.GetId()` |
 | List Method | `.ListFirewalls(ctx).Page(page).PageSize(pageSize).Execute()` |
@@ -149,8 +149,8 @@ r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(firewall).Execute(
 // Resource - Read
 r.client.api.FirewallsAPI.RetrieveFirewall(ctx, idInt64).Execute()
 
-// Resource - Update (PATCH)
-r.client.api.FirewallsAPI.PartialUpdateFirewall(ctx, idInt64).PatchedFirewallRequest(firewall).Execute()
+// Resource - Update (PUT, full replacement)
+r.client.api.FirewallsAPI.UpdateFirewall(ctx, idInt64).FirewallRequest(firewall).Execute()
 
 // Resource - Delete
 r.client.api.FirewallsAPI.DeleteFirewall(ctx, idInt64).Execute()
@@ -646,7 +646,7 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 ### Update Method
 
-Uses PATCH for partial updates:
+Uses PUT (`UpdateFirewall` with `FirewallRequest`) to send the complete object. The configuration is the desired state, so every apply asserts every field; a PATCH would leave a console change to an undeclared module in place forever.
 
 ```go
 func (r *firewallResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -933,14 +933,30 @@ Use `time.RFC3339` for the `last_modified` field:
 LastModified: types.StringValue(results.GetLastModified().Format(time.RFC3339)),
 ```
 
-### 7. Resource Update Uses PATCH
+### 7. Resource Update Uses PUT
 
-Use `PartialUpdateFirewall` with `PatchedFirewallRequest` for updates (PATCH, not PUT):
+Use `UpdateFirewall` with `FirewallRequest` — a full replacement, not a PATCH:
 
 ```go
-// CORRECT - Uses PATCH for partial updates
-r.client.api.FirewallsAPI.PartialUpdateFirewall(ctx, firewallID).PatchedFirewallRequest(firewallRequest).Execute()
+// CORRECT - full replacement, so an undeclared module is reset rather than kept
+r.client.api.FirewallsAPI.UpdateFirewall(ctx, firewallID).FirewallRequest(firewallRequest).Execute()
 ```
+
+### 8. Drift and enforcement
+
+Read mirrors the API response through `transformFirewallResponseToModel` without filtering, so a module toggled in Azion Console is reverted on the next apply instead of being silently kept. **Do not reintroduce the prior-state gating** (`priorModules.X != nil`) that Read used to perform: it made Read a state-preserving merge, so the API response could never introduce a value and out-of-band changes were invisible on every plan.
+
+Perpetual drift is prevented in the schema instead — `modules`, each module block and each `enabled` flag are `Optional + Computed` with a `Default`. A field the configuration omits resolves to that default rather than to null.
+
+Every optional nested block needs a default, not just the leaves. A `Computed` block without one is *unknown* in the plan whenever the configuration omits it, and `req.Plan.Get(ctx, &plan)` reads nested blocks into `*Struct` fields, which cannot hold unknown values — the framework fails with "Received unknown value, however the target type cannot handle unknown values". That breaks Create, not just enforcement.
+
+### 9. `ddos_protection` is always `true` but must stay Optional
+
+DDoS protection is always enabled and cannot be edited. `FirewallModulesRequest` has only `functions`, `network_protection` and `waf` — there is no `ddos_protection` field — so `buildFirewallModulesRequest` deliberately omits it and the API accepts no value for it.
+
+**Do not mark it read-only.** Dropping `Optional` makes Terraform reject any configuration that declares the block with "Invalid Configuration for Read-Only Attribute", including on `terraform destroy`, which still evaluates the configuration. That breaks existing configurations for a field whose declared value was always inert.
+
+Keep it `Optional + Computed` with a `Default` of `true`: existing configurations keep working, and an omitted block resolves to the value the API always reports rather than drifting.
 
 ---
 

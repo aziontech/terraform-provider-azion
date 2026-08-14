@@ -8,6 +8,39 @@ description: |-
 
 # azion_workload
 
+## Configuration is the desired state
+
+This resource asserts every field it manages on each apply. Two things follow,
+both intentional:
+
+- A change made outside Terraform — in Azion Console, for example — is **reverted**
+  on the next `terraform apply`, and appears in `terraform plan` as a diff.
+- Leaving an enforced field out is not "don't care". It means "use the default
+  below", and the field is reset to it. To keep a non-default value, declare it.
+
+| Field | Enforced default |
+|---|---|
+| `infrastructure` | `1` (Production, All Locations) |
+| `workload_domain_allow_access` | `true` |
+| `tls.minimum_version` | `tls_1_3` |
+| `protocols.http.http_ports` | `[80]` |
+| `protocols.http.https_ports` | `[443]` |
+| `mtls.enabled` | `false` |
+
+Everything else is **not enforced**. `active`, `domains`, `tls.certificate`,
+`tls.ciphers`, `protocols.http.versions`, `protocols.http.quic_ports` and the
+`mtls.config` fields are sent only when you declare them; otherwise the value the
+API reports is kept rather than being reset. `mtls.config` stays null while MTLS
+is disabled — declare it when you enable MTLS.
+
+Note that drift is only reverted when an apply runs, and only when state is
+refreshed — `terraform plan -refresh=false` will not detect it. Terraform also
+cannot remove workloads created outside Terraform, since those are not in state.
+
+Bindings to an application, firewall or custom page are **not** part of this
+resource — see `azion_workload_deployment`. This resource updates with a partial
+request precisely so that it never touches those bindings.
+
 Creates and manages an Azion Workload resource.
 
 ## Example Usage

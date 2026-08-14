@@ -1002,7 +1002,10 @@ func buildModulesRequest(modules *CacheSettingsModulesResourceModel) *azionapi.C
 		aaRequest := azionapi.NewCacheSettingsApplicationAcceleratorModuleRequest()
 
 		if aa.CacheVaryByMethod != nil {
-			var methods []string
+			// Allocated rather than declared: the SDK omits a nil slice from the
+			// body, so an empty list would leave the remote value untouched
+			// instead of clearing it.
+			methods := make([]string, 0, len(aa.CacheVaryByMethod))
 			for _, m := range aa.CacheVaryByMethod {
 				methods = append(methods, m.ValueString())
 			}
@@ -1037,7 +1040,7 @@ func buildQuerystringRequest(qs *CacheVaryByQuerystringResourceModel) *azionapi.
 		request.SetBehavior(qs.Behavior.ValueString())
 	}
 	if qs.Fields != nil {
-		var fields []string
+		fields := make([]string, 0, len(qs.Fields))
 		for _, f := range qs.Fields {
 			fields = append(fields, f.ValueString())
 		}
@@ -1057,7 +1060,7 @@ func buildCookiesRequest(cookies *CacheVaryByCookiesResourceModel) *azionapi.Cac
 		request.SetBehavior(cookies.Behavior.ValueString())
 	}
 	if cookies.CookieNames != nil {
-		var names []string
+		names := make([]string, 0, len(cookies.CookieNames))
 		for _, n := range cookies.CookieNames {
 			names = append(names, n.ValueString())
 		}
@@ -1074,7 +1077,7 @@ func buildDevicesRequest(devices *CacheVaryByDevicesResourceModel) *azionapi.Cac
 		request.SetBehavior(devices.Behavior.ValueString())
 	}
 	if devices.DeviceGroup != nil {
-		var groups []int64
+		groups := make([]int64, 0, len(devices.DeviceGroup))
 		for _, g := range devices.DeviceGroup {
 			groups = append(groups, g.ValueInt64())
 		}

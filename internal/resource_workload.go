@@ -9,10 +9,16 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -83,6 +89,106 @@ type MTLSConfigResourceModel struct {
 	Verification types.String `tfsdk:"verification"`
 }
 
+// Azion API defaults for workload fields.
+//
+// The configuration is the desired state: a field listed here is reset to its
+// default on every apply, so a change made in Azion Console is undone rather than
+// silently adopted.
+//
+// Fields NOT listed are deliberately left without a default. They stay
+// Optional + Computed, so an omitted one resolves to whatever the API reports
+// instead of being forced to a value — sent and tracked only when declared.
+//
+// Every optional nested block still needs a default even when its contents are
+// not enforced. A Computed block without one is unknown in the plan whenever the
+// configuration omits it, and the nested objects here are read into pointer
+// fields that cannot hold unknown values, so a missing default breaks Create.
+// Inside such a default, a null leaf means "let the API decide": the leaf is
+// Computed, so the framework turns that null into an unknown and the response
+// fills it.
+const (
+	// 1 is Production (All Locations); 2 is Staging.
+	defaultWorkloadInfrastructure = int64(1)
+
+	defaultWorkloadDomainAllowAccess = true
+	defaultWorkloadTLSMinimumVersion = "tls_1_3"
+	defaultWorkloadMTLSEnabled       = false
+)
+
+var (
+	defaultWorkloadHTTPPorts  = []int64{80}
+	defaultWorkloadHTTPSPorts = []int64{443}
+)
+
+// Attribute types for the nested objects, needed to build object defaults whose
+// types must match the schema exactly.
+var (
+	workloadTLSAttrTypes = map[string]attr.Type{
+		"certificate":     types.Int64Type,
+		"ciphers":         types.Int64Type,
+		"minimum_version": types.StringType,
+	}
+
+	workloadHTTPAttrTypes = map[string]attr.Type{
+		"versions":    types.ListType{ElemType: types.StringType},
+		"http_ports":  types.ListType{ElemType: types.Int64Type},
+		"https_ports": types.ListType{ElemType: types.Int64Type},
+		"quic_ports":  types.ListType{ElemType: types.Int64Type},
+	}
+
+	workloadProtocolsAttrTypes = map[string]attr.Type{
+		"http": types.ObjectType{AttrTypes: workloadHTTPAttrTypes},
+	}
+
+	workloadMTLSConfigAttrTypes = map[string]attr.Type{
+		"certificate":  types.Int64Type,
+		"crl":          types.ListType{ElemType: types.Int64Type},
+		"verification": types.StringType,
+	}
+
+	workloadMTLSAttrTypes = map[string]attr.Type{
+		"enabled": types.BoolType,
+		"config":  types.ObjectType{AttrTypes: workloadMTLSConfigAttrTypes},
+	}
+)
+
+var (
+	// certificate and ciphers stay null: they are not enforced, so the API
+	// supplies them.
+	workloadTLSDefault = types.ObjectValueMust(workloadTLSAttrTypes, map[string]attr.Value{
+		"certificate":     types.Int64Null(),
+		"ciphers":         types.Int64Null(),
+		"minimum_version": types.StringValue(defaultWorkloadTLSMinimumVersion),
+	})
+
+	// versions and quic_ports stay null: the API decides them, and quic_ports is
+	// only meaningful when http3 is among the versions.
+	workloadHTTPDefault = types.ObjectValueMust(workloadHTTPAttrTypes, map[string]attr.Value{
+		"versions":    types.ListNull(types.StringType),
+		"http_ports":  int64ListValue(defaultWorkloadHTTPPorts),
+		"https_ports": int64ListValue(defaultWorkloadHTTPSPorts),
+		"quic_ports":  types.ListNull(types.Int64Type),
+	})
+
+	workloadProtocolsDefault = types.ObjectValueMust(workloadProtocolsAttrTypes, map[string]attr.Value{
+		"http": workloadHTTPDefault,
+	})
+
+	workloadMTLSDefault = types.ObjectValueMust(workloadMTLSAttrTypes, map[string]attr.Value{
+		"enabled": types.BoolValue(defaultWorkloadMTLSEnabled),
+		"config":  types.ObjectNull(workloadMTLSConfigAttrTypes),
+	})
+)
+
+func int64ListValue(values []int64) types.List {
+	elements := make([]attr.Value, 0, len(values))
+	for _, value := range values {
+		elements = append(elements, types.Int64Value(value))
+	}
+
+	return types.ListValueMust(types.Int64Type, elements)
+}
+
 func (r *workloadResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_workload"
 }
@@ -133,47 +239,63 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: "Infrastructure type: 1 for Production (All Locations), 2 for Staging.",
 						Optional:    true,
 						Computed:    true,
+						Default:     int64default.StaticInt64(defaultWorkloadInfrastructure),
 					},
 					"tls": schema.SingleNestedAttribute{
 						Description: "TLS configuration for the workload.",
 						Optional:    true,
+						Computed:    true,
+						Default:     objectdefault.StaticValue(workloadTLSDefault),
 						Attributes: map[string]schema.Attribute{
 							"certificate": schema.Int64Attribute{
-								Description: "Certificate ID for TLS.",
+								Description: "Certificate ID for TLS. Supplied by the API when not declared.",
 								Optional:    true,
+								Computed:    true,
 							},
 							"ciphers": schema.Int64Attribute{
-								Description: "Cipher suite configuration.",
+								Description: "Cipher suite configuration. Supplied by the API when not declared.",
 								Optional:    true,
+								Computed:    true,
 							},
 							"minimum_version": schema.StringAttribute{
-								Description: "Minimum TLS version.",
+								Description: "Minimum TLS version: tls_1_0, tls_1_1, tls_1_2 or tls_1_3.",
 								Optional:    true,
+								Computed:    true,
+								Default:     stringdefault.StaticString(defaultWorkloadTLSMinimumVersion),
 							},
 						},
 					},
 					"protocols": schema.SingleNestedAttribute{
 						Description: "Protocol configurations for the workload.",
 						Optional:    true,
+						Computed:    true,
+						Default:     objectdefault.StaticValue(workloadProtocolsDefault),
 						Attributes: map[string]schema.Attribute{
 							"http": schema.SingleNestedAttribute{
 								Description: "HTTP protocol configuration.",
 								Optional:    true,
+								Computed:    true,
+								Default:     objectdefault.StaticValue(workloadHTTPDefault),
 								Attributes: map[string]schema.Attribute{
 									"versions": schema.ListAttribute{
 										ElementType: types.StringType,
-										Description: "HTTP versions supported.",
+										Description: "HTTP versions supported. Supplied by the API when not declared.",
 										Optional:    true,
+										Computed:    true,
 									},
 									"http_ports": schema.ListAttribute{
 										ElementType: types.Int64Type,
 										Description: "HTTP ports.",
 										Optional:    true,
+										Computed:    true,
+										Default:     listdefault.StaticValue(int64ListValue(defaultWorkloadHTTPPorts)),
 									},
 									"https_ports": schema.ListAttribute{
 										ElementType: types.Int64Type,
 										Description: "HTTPS ports.",
 										Optional:    true,
+										Computed:    true,
+										Default:     listdefault.StaticValue(int64ListValue(defaultWorkloadHTTPSPorts)),
 									},
 									"quic_ports": schema.ListAttribute{
 										ElementType: types.Int64Type,
@@ -188,27 +310,36 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"mtls": schema.SingleNestedAttribute{
 						Description: "Mutual TLS configuration for the workload.",
 						Optional:    true,
+						Computed:    true,
+						Default:     objectdefault.StaticValue(workloadMTLSDefault),
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: "Whether MTLS is enabled.",
 								Optional:    true,
+								Computed:    true,
+								Default:     booldefault.StaticBool(defaultWorkloadMTLSEnabled),
 							},
 							"config": schema.SingleNestedAttribute{
-								Description: "MTLS configuration.",
+								Description: "MTLS configuration. Declare it when enabling MTLS; it stays null while MTLS is disabled.",
 								Optional:    true,
+								Computed:    true,
+								Default:     objectdefault.StaticValue(types.ObjectNull(workloadMTLSConfigAttrTypes)),
 								Attributes: map[string]schema.Attribute{
 									"certificate": schema.Int64Attribute{
 										Description: "MTLS certificate ID.",
 										Optional:    true,
+										Computed:    true,
 									},
 									"crl": schema.ListAttribute{
 										ElementType: types.Int64Type,
 										Description: "Certificate Revocation List.",
 										Optional:    true,
+										Computed:    true,
 									},
 									"verification": schema.StringAttribute{
 										Description: "MTLS verification type: enforce or permissive.",
 										Optional:    true,
+										Computed:    true,
 									},
 								},
 							},
@@ -224,6 +355,7 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: "Whether domain access is allowed.",
 						Optional:    true,
 						Computed:    true,
+						Default:     booldefault.StaticBool(defaultWorkloadDomainAllowAccess),
 					},
 					"workload_domain": schema.StringAttribute{
 						Description: "The workload domain.",
@@ -412,7 +544,7 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Populate the state from the response, preserving plan values for optional nested fields.
-	plan.Workload = populateWorkloadResults(ctx, createWorkload, plan.Workload)
+	plan.Workload = populateWorkloadResults(ctx, createWorkload)
 	plan.ID = types.StringValue(strconv.FormatInt(createWorkload.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -488,7 +620,7 @@ func (r *workloadResource) Read(ctx context.Context, req resource.ReadRequest, r
 		defer response.Body.Close()
 	}
 
-	state.Workload = populateWorkloadResults(ctx, getWorkload, state.Workload)
+	state.Workload = populateWorkloadResults(ctx, getWorkload)
 	state.ID = types.StringValue(strconv.FormatInt(getWorkload.Data.GetId(), 10))
 
 	diags = resp.State.Set(ctx, &state)
@@ -514,6 +646,15 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	workloadId := state.Workload.ID.ValueInt64()
+
+	// PATCH, deliberately, unlike the other main-settings resources in this
+	// provider. A full WorkloadRequest carries `bindings`, which this resource
+	// does not model — those belong to azion_workload_deployment. A PUT would
+	// send none and wipe the workload's binding to its deployment.
+	//
+	// Enforcement is unaffected: every field this resource models carries a
+	// schema default, so the plan holds a concrete value and the request below
+	// always sends it. PATCH only spares what the provider does not model.
 	updateWorkloadRequest := azionapi.NewPatchedWorkloadRequest()
 
 	// Set optional fields
@@ -675,7 +816,7 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 		defer response.Body.Close()
 	}
 
-	plan.Workload = populateWorkloadResults(ctx, updateWorkload, plan.Workload)
+	plan.Workload = populateWorkloadResults(ctx, updateWorkload)
 	plan.ID = types.StringValue(strconv.FormatInt(updateWorkload.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -731,142 +872,106 @@ func (r *workloadResource) ImportState(ctx context.Context, req resource.ImportS
 // it stays null in the result to avoid "Provider produced inconsistent result after apply" errors.
 // When plan is nil (the post-import Read, where the prior state holds only the ID), every nested
 // block the API returned is populated so the imported state mirrors the remote resource.
-func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadResponse, plan *workloadResourceResults) *workloadResourceResults {
-	if plan == nil {
-		plan = &workloadResourceResults{
-			Tls:       &TLSWorkloadResourceModel{},
-			Protocols: &ProtocolsResourceModel{Http: &HttpProtocolResourceModel{}},
-			Mtls:      &MTLSResourceModel{Config: &MTLSConfigResourceModel{}},
-		}
-	}
-
+// populateWorkloadResults mirrors the API response into the resource model
+// without filtering. State has to match the remote workload for Terraform to
+// plan a revert when something was changed out-of-band; unconfigured fields do
+// not drift perpetually because every optional attribute is Computed, either
+// with a schema default or resolved from this response.
+func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadResponse) *workloadResourceResults {
 	result := &workloadResourceResults{
 		ID:             types.Int64Value(response.Data.GetId()),
 		Name:           types.StringValue(response.Data.Name),
+		Active:         types.BoolPointerValue(response.Data.Active),
 		LastEditor:     types.StringValue(response.Data.GetLastEditor()),
 		LastModified:   types.StringValue(response.Data.GetLastModified().Format(time.RFC850)),
 		CreatedAt:      types.StringValue(response.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(response.Data.GetProductVersion()),
 		WorkloadDomain: types.StringValue(response.Data.GetWorkloadDomain()),
+
+		Infrastructure:            types.Int64PointerValue(response.Data.Infrastructure),
+		WorkloadDomainAllowAccess: types.BoolPointerValue(response.Data.WorkloadDomainAllowAccess),
 	}
 
-	if response.Data.Active != nil {
-		result.Active = types.BoolValue(*response.Data.Active)
+	if response.Data.Tls != nil {
+		result.Tls = &TLSWorkloadResourceModel{
+			Certificate:    types.Int64PointerValue(response.Data.Tls.Certificate.Get()),
+			Ciphers:        types.Int64PointerValue(response.Data.Tls.Ciphers),
+			MinimumVersion: types.StringPointerValue(response.Data.Tls.MinimumVersion.Get()),
+		}
 	}
 
-	if response.Data.Infrastructure != nil {
-		result.Infrastructure = types.Int64Value(*response.Data.Infrastructure)
-	}
-
-	if response.Data.WorkloadDomainAllowAccess != nil {
-		result.WorkloadDomainAllowAccess = types.BoolValue(*response.Data.WorkloadDomainAllowAccess)
-	}
-
-	// Handle TLS - only populate from API if it was specified in the plan
-	if plan.Tls != nil && response.Data.Tls != nil {
-		tlsModel := &TLSWorkloadResourceModel{}
-		if response.Data.Tls.Certificate.IsSet() {
-			cert := response.Data.Tls.Certificate.Get()
-			if cert != nil {
-				tlsModel.Certificate = types.Int64Value(*cert)
+	if response.Data.Protocols != nil {
+		result.Protocols = &ProtocolsResourceModel{}
+		if response.Data.Protocols.Http != nil {
+			http := response.Data.Protocols.Http
+			result.Protocols.Http = &HttpProtocolResourceModel{
+				Versions:   stringListOrNull(ctx, http.Versions),
+				HttpPorts:  int64ListOrNull(ctx, http.HttpPorts),
+				HttpsPorts: int64ListOrNull(ctx, http.HttpsPorts),
+				QuicPorts:  int64ListOrNull(ctx, http.QuicPorts),
 			}
 		}
-		if response.Data.Tls.Ciphers != nil {
-			tlsModel.Ciphers = types.Int64Value(*response.Data.Tls.Ciphers)
-		}
-		if response.Data.Tls.MinimumVersion.IsSet() {
-			minVer := response.Data.Tls.MinimumVersion.Get()
-			if minVer != nil {
-				tlsModel.MinimumVersion = types.StringValue(*minVer)
-			}
-		}
-		result.Tls = tlsModel
 	}
 
-	// Handle Protocols - only populate from API if it was specified in the plan
-	if plan.Protocols != nil && response.Data.Protocols != nil {
-		protocolsModel := &ProtocolsResourceModel{}
-		// Only populate Http if it was specified in the plan to avoid
-		// "Provider produced inconsistent result after apply" when the API
-		// echoes back an http object the user didn't configure.
-		if plan.Protocols.Http != nil && response.Data.Protocols.Http != nil {
-			httpModel := &HttpProtocolResourceModel{}
-			if response.Data.Protocols.Http.Versions != nil {
-				versionsList, _ := types.ListValueFrom(ctx, types.StringType, response.Data.Protocols.Http.Versions)
-				httpModel.Versions = versionsList
-			} else {
-				httpModel.Versions = types.ListNull(types.StringType)
-			}
-			if response.Data.Protocols.Http.HttpPorts != nil {
-				httpPortsList, _ := types.ListValueFrom(ctx, types.Int64Type, response.Data.Protocols.Http.HttpPorts)
-				httpModel.HttpPorts = httpPortsList
-			} else {
-				httpModel.HttpPorts = types.ListNull(types.Int64Type)
-			}
-			if response.Data.Protocols.Http.HttpsPorts != nil {
-				httpsPortsList, _ := types.ListValueFrom(ctx, types.Int64Type, response.Data.Protocols.Http.HttpsPorts)
-				httpModel.HttpsPorts = httpsPortsList
-			} else {
-				httpModel.HttpsPorts = types.ListNull(types.Int64Type)
-			}
-			if response.Data.Protocols.Http.QuicPorts != nil {
-				quicPortsList, _ := types.ListValueFrom(ctx, types.Int64Type, response.Data.Protocols.Http.QuicPorts)
-				httpModel.QuicPorts = quicPortsList
-			} else {
-				httpModel.QuicPorts = types.ListNull(types.Int64Type)
-			}
-			protocolsModel.Http = httpModel
+	if response.Data.Mtls != nil {
+		result.Mtls = &MTLSResourceModel{
+			Enabled: types.BoolPointerValue(response.Data.Mtls.Enabled.Get()),
 		}
-		result.Protocols = protocolsModel
+
+		if config := response.Data.Mtls.Config.Get(); config != nil {
+			configModel := &MTLSConfigResourceModel{
+				Certificate:  types.Int64PointerValue(config.Certificate.Get()),
+				Crl:          int64ListOrNull(ctx, config.Crl),
+				Verification: types.StringPointerValue(config.Verification.Get()),
+			}
+
+			// The API echoes an all-null config for a workload that has no mTLS
+			// configured. That object carries nothing, so treat it as absent:
+			// writing it to state would contradict the null the plan holds while
+			// mtls is disabled, failing the apply with "Provider produced
+			// inconsistent result after apply".
+			if !configModel.isEmpty() {
+				result.Mtls.Config = configModel
+			}
+		}
 	}
 
-	// Handle MTLS - only populate from API if it was specified in the plan
-	if plan.Mtls != nil && response.Data.Mtls != nil {
-		mtlsModel := &MTLSResourceModel{}
-		if response.Data.Mtls.Enabled.IsSet() {
-			enabled := response.Data.Mtls.Enabled.Get()
-			if enabled != nil {
-				mtlsModel.Enabled = types.BoolValue(*enabled)
-			}
-		}
-		// Only populate Config if it was specified in the plan to avoid
-		// "Provider produced inconsistent result after apply" when the API
-		// echoes back a config object with all-null inner fields.
-		if plan.Mtls.Config != nil && response.Data.Mtls.Config.IsSet() {
-			config := response.Data.Mtls.Config.Get()
-			if config != nil {
-				configModel := &MTLSConfigResourceModel{}
-				if config.Certificate.IsSet() {
-					cert := config.Certificate.Get()
-					if cert != nil {
-						configModel.Certificate = types.Int64Value(*cert)
-					}
-				}
-				if config.Crl != nil {
-					crlList, _ := types.ListValueFrom(ctx, types.Int64Type, config.Crl)
-					configModel.Crl = crlList
-				} else {
-					configModel.Crl = types.ListNull(types.Int64Type)
-				}
-				if config.Verification.IsSet() {
-					verif := config.Verification.Get()
-					if verif != nil {
-						configModel.Verification = types.StringValue(*verif)
-					}
-				}
-				mtlsModel.Config = configModel
-			}
-		}
-		result.Mtls = mtlsModel
-	}
-
-	// Handle Domains.
 	if response.Data.Domains != nil {
-		domainsSet, _ := types.SetValueFrom(ctx, types.StringType, response.Data.Domains)
-		result.Domains = domainsSet
+		domains, _ := types.SetValueFrom(ctx, types.StringType, response.Data.Domains)
+		result.Domains = domains
 	} else {
 		result.Domains = types.SetNull(types.StringType)
 	}
 
 	return result
+}
+
+// isEmpty reports whether the config carries no values at all, which is how the
+// API represents "no mTLS configuration" rather than omitting the object.
+func (m *MTLSConfigResourceModel) isEmpty() bool {
+	if !m.Certificate.IsNull() || !m.Verification.IsNull() {
+		return false
+	}
+
+	return m.Crl.IsNull() || len(m.Crl.Elements()) == 0
+}
+
+func stringListOrNull(ctx context.Context, values []string) types.List {
+	if values == nil {
+		return types.ListNull(types.StringType)
+	}
+
+	list, _ := types.ListValueFrom(ctx, types.StringType, values)
+
+	return list
+}
+
+func int64ListOrNull(ctx context.Context, values []int64) types.List {
+	if values == nil {
+		return types.ListNull(types.Int64Type)
+	}
+
+	list, _ := types.ListValueFrom(ctx, types.Int64Type, values)
+
+	return list
 }
