@@ -1,13 +1,15 @@
 # Terraform Provider release workflow.
 name: Release
 
-# This GitHub action creates a release when a tag that matches the pattern
-# "v*" (e.g. v0.1.0) is created.
+# Releases are started manually. The run creates the version tag itself (see the
+# bump step below) and goreleaser then publishes that tag.
+#
+# Deliberately no `push: tags` trigger. With one, a hand-pushed tag would start a
+# run that bumps and pushes a *second* tag onto the same commit, and goreleaser
+# would be free to publish the wrong one. Manual dispatch keeps exactly one tag
+# per release.
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
 # Minimal default token permissions; the release job elevates to contents: write
 # because GitHub considers creating releases and uploading assets as writing contents.
