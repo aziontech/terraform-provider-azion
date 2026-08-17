@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -399,10 +398,7 @@ func transformFirewallRuleToListResult(rule azionapi.FirewallRule) FirewallRules
 	for _, criterionGroup := range rule.Criteria {
 		var entries []FirewallCriterionWrapperDataModel
 		for _, c := range criterionGroup {
-			arg := ""
-			if c.Argument.Get() != nil {
-				arg = fmt.Sprintf("%v", c.Argument.Get())
-			}
+			arg := getFirewallCriterionArgumentValue(c.Argument)
 			entries = append(entries, FirewallCriterionWrapperDataModel{
 				Criterion: &FirewallCriteriaEntryDataModel{
 					Conditional: types.StringValue(c.GetConditional()),
