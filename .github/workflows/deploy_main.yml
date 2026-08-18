@@ -13,11 +13,11 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    container:
-      image: golang:1.19
-    env:
-      CGO_ENABLED: 0 # Statically linked
 
+    # No toolchain is set up here on purpose. The only real step is a Docker
+    # action that pings goreportcard.com to refresh the badge; it runs in its own
+    # container and compiles nothing, so a Go image (or actions/setup-go) would
+    # just be an unused dependency.
     steps:
       - name: Checkout code
         uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0

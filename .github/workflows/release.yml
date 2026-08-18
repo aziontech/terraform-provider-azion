@@ -18,6 +18,11 @@ permissions:
 
 jobs:
   goreleaser:
+    # Gates the release behind the `release` environment: the job parks in
+    # Waiting until an approver signs off, and GitHub refuses it outright if the
+    # dispatched ref is not allowed by the environment's deployment branch rule.
+    # No runner is started, and no secret is provisioned, before that.
+    environment: release
     permissions:
       contents: write
     runs-on: ubuntu-latest
