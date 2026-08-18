@@ -15,3 +15,6 @@ terraform-provider-azion
 /terraformScripts/dummy_script.txt
 func-tests/terraform.log
 /terraformScripts/openapitools.json
+
+# Compiled test binaries (go test -c)
+*.test
