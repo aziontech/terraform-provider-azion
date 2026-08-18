@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -72,6 +73,25 @@ type customPageResourcePageAttributesResults struct {
 	CustomStatusCode types.Int64  `tfsdk:"custom_status_code"`
 }
 
+// Azion API defaults for custom page fields.
+//
+// Only `active` is enforced, following the convention used by the other
+// main-settings resources in this provider. A page disabled outside Terraform is
+// re-enabled on the next apply.
+//
+// The per-page attributes are deliberately NOT defaulted:
+//
+//   - `ttl` has no default documented in the OpenAPI specification.
+//   - `uri` and `custom_status_code` are nullable in the API, so null is a real
+//     value meaning "no override" rather than an absent one. Defaulting either
+//     would assert an override the practitioner never asked for.
+//
+// They are already Optional + Computed, so omitting one is quiet: the value the
+// API reports lands in state and the plan follows it. A change to one that IS
+// declared still shows up as a diff, because Read mirrors the API response
+// without filtering.
+const defaultCustomPageActive = true
+
 func (r *customPageResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_custom_page"
 }
@@ -117,6 +137,7 @@ func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Description: "Status of the custom page.",
 						Optional:    true,
 						Computed:    true,
+						Default:     booldefault.StaticBool(defaultCustomPageActive),
 					},
 					"product_version": schema.StringAttribute{
 						Description: "Product version of the custom page.",
