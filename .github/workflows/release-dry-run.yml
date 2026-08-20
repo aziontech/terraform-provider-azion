@@ -1,0 +1,49 @@
+name: Release Dry-Run
+
+# Exercises the real release path - same config, same GoReleaser major, same Go
+# toolchain - and stops before anything leaves the runner. Use it to validate a
+# .goreleaser.yml or toolchain change before cutting a real release.
+#
+# Intentionally unprivileged, and that is what makes it safe to dispatch from
+# any branch: it never imports the GPG key, never creates a tag, and needs no
+# contents: write and no environment approval. Keep it that way. The moment this
+# workflow gains the signing key it becomes an ungated path to it, which is
+# exactly the hole `environment: release` closes in release.yml.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: GoReleaser dry-run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # goreleaser derives the version and changelog from tag history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
+        with:
+          version: '~> v2'
+          # Install the binary only; the run: step below drives it.
+          install-only: true
+
+      - name: Run GoReleaser Dry-Run
+        # skip=validate  - the checked-out commit need not be tagged, and a
+        #                  dirty tree should not fail a dry-run.
+        #     ,publish   - nothing is uploaded and no release is created.
+        #     ,sign      - the sign pipe would otherwise run and demand
+        #                  GPG_PRIVATE_KEY. Skipping it is what keeps this
+        #                  workflow free of the signing key. Do not remove.
+        run: goreleaser release --clean --skip=validate,publish,sign -f .goreleaser.yml

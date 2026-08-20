@@ -80,8 +80,6 @@ jobs:
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
-      - name: Setting GIT
-        run: git config --global url."https://${{ secrets.GLOBAL_TOKEN }}:x-oauth-basic@github.com/aziontech".insteadOf "https://github.com/aziontech"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0

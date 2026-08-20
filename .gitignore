@@ -18,3 +18,6 @@ func-tests/terraform.log
 
 # Compiled test binaries (go test -c)
 *.test
+
+# goreleaser build output (local runs / dry-run)
+dist/

@@ -27,11 +27,19 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Allow goreleaser to access older tag information.
           fetch-depth: 0
-      - uses: actions/setup-go@be3c94b385c4f180051c996d336f57a34c397495 # v3.6.1
+          # Nothing in this job pushes over git, so there is no reason to leave a
+          # contents: write token in .git/config where the third-party actions
+          # below could read it. Verified before removing it: github-tag-action
+          # creates the tag by POSTing to the refs API with GITHUB_TOKEN from its
+          # env (it runs `git tag` locally but never `git push`), `git fetch
+          # --tags` below reads a public repo, and goreleaser uploads over the
+          # API. Do not re-enable this thinking the tag push needs it.
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -54,8 +62,12 @@ jobs:
         run: git fetch --tags
         
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@b508e2e3ef3b19d4e4146d4f8fb3ba9db644a757 # v3.2.0
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
         with:
+          # Pin the tool's major. The old v3 action defaulted to `latest`, which
+          # meant GoReleaser itself was the one unpinned dependency in the
+          # signing path - the next major would have landed here unannounced.
+          version: '~> v2'
           args: release --clean
         env:
           # GitHub sets the GITHUB_TOKEN secret automatically.

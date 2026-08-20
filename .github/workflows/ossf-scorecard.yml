@@ -15,6 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # read-only scopes Scorecard needs to evaluate individual checks;
+      # without them the checks below silently score 0 / inconclusive
+      actions: read # Dangerous-Workflow, Token-Permissions
+      checks: read # CI-Tests
+      issues: read # Maintained
+      pull-requests: read # Code-Review, Maintained
     env:
       THRESHOLD: '8'
       MODE: 'enforce'
@@ -26,6 +32,7 @@ jobs:
       - name: Run Scorecard
         uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
         with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           results_file: results.json
           results_format: json
           publish_results: false
@@ -45,4 +52,3 @@ jobs:
               echo "::warning::OSSF ${SCORE} < ${THRESHOLD} — warn mode, not blocking"
             fi
           fi
-

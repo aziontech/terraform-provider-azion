@@ -1,5 +1,10 @@
 # Visit https://goreleaser.com for documentation on how to customize this
 # behavior.
+
+# Required by GoReleaser v2. The release workflow pins the tool to `~> v2`, so
+# this stays 2 until that constraint is deliberately moved.
+version: 2
+
 before:
   hooks:
     - go mod tidy
@@ -29,7 +34,7 @@ builds:
         goarch: "386"
     binary: "{{ .ProjectName }}_v{{ .Version }}"
 archives:
-  - format: zip
+  - formats: [zip]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 checksum:
   extra_files:
@@ -38,7 +43,7 @@ checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
 snapshot:
-  name_template: "{{ incpatch .Version }}"
+  version_template: "{{ incpatch .Version }}"
 signs:
   - artifacts: checksum
     args:
