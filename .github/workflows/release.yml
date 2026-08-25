@@ -43,6 +43,39 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+      # Release gate: fails the run on any High or Critical vulnerability in the
+      # dependency tree. The provider is distributed to customers, so a known-
+      # high release is not shippable.
+      #
+      # Deliberately placed *before* the tag bump, not between `Refresh git` and
+      # `Run GoReleaser`. The bump step creates the tag over the refs API
+      # immediately, so a scan sitting after it turns every vulnerability finding
+      # into a published tag with no release behind it - an orphan that the next
+      # dispatch then has to reason about. Nothing here depends on the tag: the
+      # scan reads the checked-out source, so it is free to run first. Keep it
+      # ahead of the bump, and ahead of the GPG import, so a red scan costs
+      # neither a tag nor a signing key on the runner.
+      #
+      # Scanning the source tree rather than the built archive is the stricter
+      # choice: go.mod carries indirect modules that never get linked into the
+      # binary, so the source scan is a superset of an artifact scan.
+      - name: Scan for vulnerabilities
+        uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6.5.1
+        with:
+          path: '.'
+          fail-build: true
+          severity-cutoff: high
+          # Readable in the job log; the gate is the exit code, not a SARIF upload.
+          output-format: table
+
+      # GoReleaser's sbom pipe shells out to `syft` and hard-fails the release if
+      # it is not on PATH. Pinned rather than floating so the SBOM for a given
+      # commit stays reproducible.
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          syft-version: v1.51.0
+
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@d6f3f49f3345e29369fe57596a3ca8f94c4d2ca7 # v5.4.0
         id: import_gpg

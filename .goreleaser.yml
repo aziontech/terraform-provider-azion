@@ -36,6 +36,21 @@ builds:
 archives:
   - formats: [zip]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+# Ships an SPDX bill of materials (syft's default output) for each release
+# archive, so the artifact a customer downloads carries its own dependency
+# inventory. Emitted as <archive>.sbom.json alongside each zip.
+#
+# Requires `syft` on PATH - GoReleaser shells out to it and hard-fails the
+# release if it is missing. Both release.yml and release-dry-run.yml install it
+# via anchore/sbom-action/download-syft; do not add an sboms entry to this file
+# without confirming every workflow that runs GoReleaser installs syft too.
+#
+# The sbom pipe runs *before* checksums, so each .sbom.json lands in the
+# SHA256SUMS file and is therefore covered by the existing detached GPG
+# signature - the SBOM is signed transitively, with no second signing step.
+sboms:
+  - artifacts: archive
+
 checksum:
   extra_files:
     - glob: "terraform-registry-manifest.json"

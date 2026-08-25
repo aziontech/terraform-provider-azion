@@ -105,6 +105,7 @@ jobs:
     name: Terraform Functional Tests
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
     timeout-minutes: 60
+    environment: Tests
     env:
       AZION_API_TOKEN: ${{ secrets.E2E_TERRAFORM_PROD_TOKEN }}
       AZION_API_ENTRYPOINT: "https://api.azionapi.net"
