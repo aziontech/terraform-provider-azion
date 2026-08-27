@@ -26,6 +26,9 @@ For detailed documentation on specific packages, see the `agents/` folder:
 ### Functions
 - **[agents/FUNCTIONS.md](agents/FUNCTIONS.md)** - Functions
 
+### Data Stream
+- **[agents/DATA_STREAM.md](agents/DATA_STREAM.md)** - Data Stream Streams
+
 ### Intelligent DNS
 - **[agents/ZONES.md](agents/ZONES.md)** - DNS Zones
 - **[agents/RECORDS.md](agents/RECORDS.md)** - DNS Records
