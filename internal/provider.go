@@ -123,6 +123,8 @@ func (p *azionProvider) DataSources(_ context.Context) []func() datasource.DataS
 		dataSourceAzionBuckets,
 		dataSourceAzionDataStream,
 		dataSourceAzionDataStreams,
+		dataSourceAzionDataStreamTemplate,
+		dataSourceAzionDataStreamTemplates,
 	}
 }
 
@@ -155,6 +157,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewCrlResource,
 		NewBucketResource,
 		NewDataStreamResource,
+		NewDataStreamTemplateResource,
 	}
 }
 

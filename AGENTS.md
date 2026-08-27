@@ -28,6 +28,7 @@ For detailed documentation on specific packages, see the `agents/` folder:
 
 ### Data Stream
 - **[agents/DATA_STREAM.md](agents/DATA_STREAM.md)** - Data Stream Streams
+- **[agents/DATA_STREAM_TEMPLATES.md](agents/DATA_STREAM_TEMPLATES.md)** - Data Stream Templates
 
 ### Intelligent DNS
 - **[agents/ZONES.md](agents/ZONES.md)** - DNS Zones

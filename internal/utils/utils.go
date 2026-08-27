@@ -232,6 +232,9 @@ var stillInUseMsgs = []string{
 	"you must first remove its usage",
 	"workloads_using_firewall",
 	"in use",
+	// Data Stream templates: "Cannot delete a template with associated data
+	// streams." (code 32005) matches none of the phrases above.
+	"associated data stream",
 }
 
 func RetryOn429Delete[T any](apiCall func() (T, *http.Response, error), maxRetries int) (T, *http.Response, error) {

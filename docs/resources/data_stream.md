@@ -158,14 +158,14 @@ terraform import azion_data_stream.example 1234
     * `type` - (Required) Type of the input. Supported value: `raw_logs`.
     * `attributes` - (Required) Attributes of the input.
       * `data_source` - (Required) Source of the logs. One of `http`, `waf`, `workloads`, `functions_console`, `cells_console`, `activity_history`, `rtm_activity`.
-  * `transform` - (Optional) Ordered list of transforms applied to the records. Each entry requires the `*_attributes` block matching its `type`.
+  * `transform` - (Optional) Ordered list of transforms applied to the records. Each entry requires the `*_attributes` block matching its `type`. If the list is present, it must contain either a `sampling` entry or a `filter_workloads` entry — see the notes below.
     * `type` - (Required) One of `sampling`, `filter_workloads`, `render_template`.
     * `sampling_attributes` - (Optional) Required when `type` is `sampling`.
       * `rate` - (Required) Percentage of records to keep.
     * `filter_workloads_attributes` - (Optional) Required when `type` is `filter_workloads`.
       * `workloads` - (Required) List of workload identifiers whose logs are kept.
     * `render_template_attributes` - (Optional) Required when `type` is `render_template`.
-      * `template` - (Required) Identifier of the Data Stream template used to render the payload.
+      * `template` - (Required) Identifier of the Data Stream template used to render the payload. Create one with [`azion_data_stream_template`](data_stream_template.md) and reference `azion_data_stream_template.example.template.id`, or look up a built-in template's ID with the [`azion_data_stream_templates`](../data-sources/data_stream_templates.md) data source.
   * `outputs` - (Required) List of endpoints the records are delivered to. Each entry requires the `*_attributes` block matching its `type`.
     * `type` - (Required) One of `standard`, `kafka`, `s3`, `big_query`, `elasticsearch`, `splunk`, `aws_kinesis_firehose`, `datadog`, `qradar`, `azure_monitor`, `azure_blob_storage`.
     * `standard_attributes` - (Optional) Required when `type` is `standard`.
@@ -230,6 +230,15 @@ terraform import azion_data_stream.example 1234
   * `product_version` - Product version of the data stream.
 
 ## Notes
+
+* **A non-empty `transform` list must include either `sampling` or `filter_workloads`.** The API rejects a `transform` list holding only `render_template` with:
+
+  ```
+  400 - code 32002 "Workloads Must Be Provided"
+  "If sampling is disabled, workloads must be provided."
+  ```
+
+  Omitting `transform` entirely is fine — the constraint only applies once the list is present. To render a template without actually sampling or filtering, pair it with a no-op `sampling` entry at `rate = 100`.
 
 * Updates use `PUT`, not `PATCH`: the partial-update payload cannot carry `outputs`, so a `PATCH` could never change the endpoints. Every apply therefore sends the full stream body.
 * Credentials (`access_key`, `secret_key`, `api_key`, `shared_key`, `blob_sas_token`, `service_account_key`, `headers`) are returned masked by the API. The provider keeps the configured value in state so masked echoes don't show up as perpetual drift. On `terraform import` the masked value from the API is stored instead, so re-adding the real credential to the configuration will produce one diff.

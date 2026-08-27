@@ -55,9 +55,12 @@ import azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 
 This is the opposite of the choice made for Connectors and most other V4 resources, which use `PartialUpdate*`. Do not "fix" it to PATCH.
 
-### Sibling APIs (not implemented)
+### Sibling APIs
 
-The SDK also exposes `DataStreamTemplatesAPI` (full CRUD over payload templates) and `DataStreamDataSourcesAPI` (read-only list of available log sources). Neither is wired into the provider. The `render_template` transform references a template by numeric ID, so users must obtain that ID out of band until `azion_data_stream_template` exists.
+The SDK also exposes `DataStreamTemplatesAPI` and `DataStreamDataSourcesAPI`.
+
+* **Templates** are implemented — see **[agents/DATA_STREAM_TEMPLATES.md](DATA_STREAM_TEMPLATES.md)** for `azion_data_stream_template` and `azion_data_stream_templates`. Note their update method differs from this one: Templates use PATCH, Streams must use PUT.
+* **Data Sources** (read-only list of available log sources) is **not** wired into the provider. The valid `inputs[].attributes.data_source` slugs are hardcoded in this document instead.
 
 ---
 
@@ -72,7 +75,7 @@ inputs  ──▶  transform (ordered, optional)  ──▶  outputs
 | Field | Cardinality | Polymorphic? | Notes |
 |-------|-------------|--------------|-------|
 | `inputs` | 1..n, required | No | Only `type = "raw_logs"` exists; `attributes.data_source` selects the log source |
-| `transform` | 0..n, optional | **Yes** (`oneOf`) | Order matters — the API applies them in sequence |
+| `transform` | 0..n, optional | **Yes** (`oneOf`) | Order matters — the API applies them in sequence. If present, must contain `sampling` or `filter_workloads` (see below) |
 | `outputs` | 1..n, required | **Yes** (`oneOf`) | One entry per destination endpoint |
 
 ### SDK type map
@@ -315,9 +318,30 @@ if shouldPopulate(priorAttrs, func(p *DataStreamStandardOutputModel) bool { retu
 
 Both are `ListNestedAttribute`, so order is significant, and for `transform` it genuinely is (the API applies steps in sequence). Do not switch either to a `SetNestedAttribute`: it would break the positional prior-state matching that keeps secrets stable.
 
-### `render_template` needs a template ID the provider can't produce
+### A non-empty `transform` list must include `sampling` or `filter_workloads`
 
-Templates are a separate API that isn't wired up. Users must supply a numeric `template` obtained elsewhere.
+Observed from the live API: a `transform` list holding only `render_template` is rejected with
+
+```
+400 - code 32002 "Workloads Must Be Provided"
+"If sampling is disabled, workloads must be provided."   source.pointer: /data/transform
+```
+
+Omitting `transform` entirely is accepted, so the constraint applies only once the list is present. The API appears to treat the three transform types as slots with a cross-field rule rather than a free-form list, even though the schema models them as an ordered array.
+
+This is **not** validated in the provider schema — it is a cross-entry rule that Terraform's schema validation cannot express, and it is inferred from one API error message rather than documented in the OpenAPI spec. Do not add a client-side check that guesses at the full rule; let the API be the authority and surface its error. Workaround for a template-only pipeline: pair `render_template` with a no-op `sampling` entry at `rate = 100`.
+
+### `render_template` template IDs
+
+The `render_template` transform takes a numeric template ID. Custom templates can be created with `azion_data_stream_template` and referenced directly:
+
+```hcl
+render_template_attributes = {
+  template = azion_data_stream_template.example.template.id
+}
+```
+
+Azion's built-in templates have no resource — they are discovered through the `azion_data_stream_templates` data source, filtering on `custom == false`. Deleting a template a live stream still references may be rejected by the API; repoint or remove the transform first.
 
 ---
 
