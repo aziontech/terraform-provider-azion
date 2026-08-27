@@ -3,12 +3,6 @@ name: Release Dry-Run
 # Exercises the real release path - same config, same GoReleaser major, same Go
 # toolchain - and stops before anything leaves the runner. Use it to validate a
 # .goreleaser.yml or toolchain change before cutting a real release.
-#
-# Intentionally unprivileged, and that is what makes it safe to dispatch from
-# any branch: it never imports the GPG key, never creates a tag, and needs no
-# contents: write and no environment approval. Keep it that way. The moment this
-# workflow gains the signing key it becomes an ungated path to it, which is
-# exactly the hole `environment: release` closes in release.yml.
 on:
   workflow_dispatch:
 
