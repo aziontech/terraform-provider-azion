@@ -356,6 +356,29 @@ resp.Schema = schema.Schema{
 
 ---
 
+## Drift and enforcement (resource)
+
+The configuration is the desired state, so an out-of-band change should be reverted rather than silently adopted. For `azion_waf` that is split, because of a hard constraint in the model:
+
+**Enforced** — `active`, `engine_settings.engine_version` and `engine_settings.type` are `Optional + Computed` with a `Default`. The last two each have exactly one accepted value in the OpenAPI spec (`2021-Q3`, `score`), so resetting an omitted one is safe. `sensitivity` is `Optional + Computed` with **no** default: it is refreshed from the API (so a change to a declared threshold diffs) but not reset, because the spec documents five levels and no default.
+
+**Not enforced** — `engine_settings`, `engine_settings.attributes`, `attributes.rulesets` and `attributes.thresholds` stay unmanaged unless declared, via `alignWAFEngineSettings`.
+
+**Do not "fix" that by making those four Computed.** They are held in the model as Go pointers and slices (`*WafEngineSettingsResourceModel`, `[]types.Int64`, `[]WafThresholdWrapperResourceModel`). A `Computed` attribute with no default is *unknown* in the plan whenever the configuration omits it, and the framework cannot read an unknown into those types:
+
+```
+Received unknown value, however the target type cannot handle unknown values.
+Path: result.engine_settings
+Target Type: *provider.WafEngineSettingsResourceModel
+Suggested Type: basetypes.ObjectValue
+```
+
+Giving them a default instead is not an option either: ruleset IDs are account-specific, so any default would wipe a practitioner's tuning or diff forever.
+
+If full enforcement of those four is ever needed, the fix is to migrate the model fields to framework types — `types.Object` for the two blocks, `types.List`/`types.Set` for the collections — which *can* hold unknown. That removes the need for `alignWAFEngineSettings` entirely. It is a contained refactor of the transforms and request builders, not a schema change.
+
+`TestWAFCollectionsAreNotComputed` and `TestAlignWAFEngineSettingsGatesOnlyCollections` pin both halves of this.
+
 ## Transform Functions
 
 ### Transform WAF to Result Model

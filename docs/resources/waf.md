@@ -8,6 +8,39 @@ description: |-
 
 # azion_waf
 
+## Drift and enforcement
+
+Fields this resource enforces are reset to their default on every apply, so a
+change made outside Terraform — in Azion Console, for example — is reverted and
+shows up in `terraform plan` as a diff.
+
+| Field | Enforced default |
+|---|---|
+| `active` | `true` |
+| `engine_settings.engine_version` | `2021-Q3` (the only value the API accepts) |
+| `engine_settings.type` | `score` (the only value the API accepts) |
+
+`engine_settings.thresholds[].threshold.sensitivity` is refreshed from the API but
+**not** defaulted: the API documents five levels (`highest`, `high`, `medium`,
+`low`, `lowest`) with no stated default. A change to a declared threshold's
+sensitivity still produces a diff, because state reflects what the API reports.
+
+Four fields stay **unmanaged unless you declare them** — `engine_settings`,
+`engine_settings.attributes`, `attributes.rulesets` and `attributes.thresholds`:
+
+- Ruleset IDs are account-specific and there is no default that could be applied
+  without wiping a practitioner's tuning.
+- If you omit one of these, whatever the API holds is left alone rather than being
+  reset, and it is kept out of state so the resource does not diff on every plan.
+
+To bring them under Terraform's control, declare them. Once declared, they are
+refreshed from the API on every read, so an out-of-band change to a declared
+ruleset list or threshold set does appear as a diff.
+
+Note that drift is only reverted when an apply runs, and only when state is
+refreshed — `terraform plan -refresh=false` will not detect it. Terraform also
+cannot remove WAFs created outside Terraform, since those are not in state.
+
 Creates a WAF (Web Application Firewall) resource. This resource represents the main WAF configuration that can have associated WAF Rule Sets (Exceptions).
 
 ## Example Usage

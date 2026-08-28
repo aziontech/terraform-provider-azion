@@ -2,6 +2,17 @@
 
 This document provides specific guidance for implementing Custom Pages resources and data sources in the Terraform provider.
 
+## Drift and enforcement (resource)
+
+This resource was already in good shape and needed almost nothing:
+
+- `Read` mirrors the API response without filtering — no prior-state gating to remove.
+- Every optional attribute was already `Optional + Computed`, so none of them produced the perpetual diff that `Optional`-only attributes cause elsewhere in this provider.
+
+The only change was a `Default` of `true` on `active`, matching the convention in the other main-settings resources.
+
+**Do not add defaults to the per-page attributes.** `uri` and `custom_status_code` are nullable in the API (`NullableString`, `NullableInt64`), so null is a real value meaning "no override" — a default would assert an override the practitioner never requested. `ttl` has no documented default. `TestCustomPagePageAttributesHaveNoDefaults` pins this.
+
 ## Table of Contents
 
 1. [SDK Selection](#sdk-selection)
