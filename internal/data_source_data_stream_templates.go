@@ -72,7 +72,7 @@ func (d *DataStreamTemplatesDataSource) Read(ctx context.Context, _ datasource.R
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
-				defer response.Body.Close()
+				defer func(r *http.Response) { _ = r.Body.Close() }(response)
 			}
 
 			if err != nil {
@@ -90,7 +90,7 @@ func (d *DataStreamTemplatesDataSource) Read(ctx context.Context, _ datasource.R
 	}
 
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 
 	templatesState := DataStreamTemplatesDataSourceModel{}

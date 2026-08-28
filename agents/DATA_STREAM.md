@@ -275,6 +275,20 @@ Delete uses `utils.RetryOn429Delete`. Read treats 404 as "resource gone"; Delete
 
 ---
 
+### Closing response bodies
+
+Every API call in these files uses:
+
+```go
+if response != nil {
+    defer func(r *http.Response) { _ = r.Body.Close() }(response)
+}
+```
+
+not the bare `defer response.Body.Close()` seen in older resources. `errcheck` rejects the bare form on new lines (CI gates with `--new-from-patch`), and the response must be passed as an argument rather than captured, so that retry sites which reassign `response` close each body exactly once. See [AGENTS.md](../AGENTS.md#response-body-closure-pattern).
+
+---
+
 ## Type Conversions
 
 | API field | Go type | Terraform |

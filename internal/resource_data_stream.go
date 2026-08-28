@@ -551,7 +551,7 @@ func (r *dataStreamResource) Create(ctx context.Context, req resource.CreateRequ
 
 	createDataStream, response, err := r.client.api.DataStreamStreamsAPI.CreateDataStream(ctx).DataStreamRequest(dataStreamReq).Execute() //nolint
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
@@ -559,7 +559,7 @@ func (r *dataStreamResource) Create(ctx context.Context, req resource.CreateRequ
 				return r.client.api.DataStreamStreamsAPI.CreateDataStream(ctx).DataStreamRequest(dataStreamReq).Execute()
 			}, 5)
 			if response != nil {
-				defer response.Body.Close()
+				defer func(r *http.Response) { _ = r.Body.Close() }(response)
 			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
@@ -605,7 +605,7 @@ func (r *dataStreamResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	getDataStream, response, err := r.client.api.DataStreamStreamsAPI.RetrieveDataStream(ctx, streamID).Execute() //nolint
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusNotFound {
@@ -617,7 +617,7 @@ func (r *dataStreamResource) Read(ctx context.Context, req resource.ReadRequest,
 				return r.client.api.DataStreamStreamsAPI.RetrieveDataStream(ctx, streamID).Execute()
 			}, 5)
 			if response != nil {
-				defer response.Body.Close()
+				defer func(r *http.Response) { _ = r.Body.Close() }(response)
 			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
@@ -664,7 +664,7 @@ func (r *dataStreamResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	updateDataStream, response, err := r.client.api.DataStreamStreamsAPI.UpdateDataStream(ctx, streamID).DataStreamRequest(dataStreamReq).Execute() //nolint
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
@@ -672,7 +672,7 @@ func (r *dataStreamResource) Update(ctx context.Context, req resource.UpdateRequ
 				return r.client.api.DataStreamStreamsAPI.UpdateDataStream(ctx, streamID).DataStreamRequest(dataStreamReq).Execute()
 			}, 5)
 			if response != nil {
-				defer response.Body.Close()
+				defer func(r *http.Response) { _ = r.Body.Close() }(response)
 			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
@@ -707,7 +707,7 @@ func (r *dataStreamResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return r.client.api.DataStreamStreamsAPI.DeleteDataStream(ctx, streamID).Execute()
 	}, 5)
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusNotFound {
@@ -730,7 +730,7 @@ func (r *dataStreamResource) ImportState(ctx context.Context, req resource.Impor
 
 	getDataStream, response, err := r.client.api.DataStreamStreamsAPI.RetrieveDataStream(ctx, streamID).Execute() //nolint
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
@@ -738,7 +738,7 @@ func (r *dataStreamResource) ImportState(ctx context.Context, req resource.Impor
 				return r.client.api.DataStreamStreamsAPI.RetrieveDataStream(ctx, streamID).Execute()
 			}, 5)
 			if response != nil {
-				defer response.Body.Close()
+				defer func(r *http.Response) { _ = r.Body.Close() }(response)
 			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")

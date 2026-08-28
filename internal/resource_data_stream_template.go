@@ -147,7 +147,7 @@ func (r *dataStreamTemplateResource) Create(ctx context.Context, req resource.Cr
 
 	createTemplate, response, err := r.client.api.DataStreamTemplatesAPI.CreateTemplate(ctx).TemplateRequest(*templateReq).Execute() //nolint
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
@@ -155,7 +155,7 @@ func (r *dataStreamTemplateResource) Create(ctx context.Context, req resource.Cr
 				return r.client.api.DataStreamTemplatesAPI.CreateTemplate(ctx).TemplateRequest(*templateReq).Execute()
 			}, 5)
 			if response != nil {
-				defer response.Body.Close()
+				defer func(r *http.Response) { _ = r.Body.Close() }(response)
 			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
@@ -201,7 +201,7 @@ func (r *dataStreamTemplateResource) Read(ctx context.Context, req resource.Read
 
 	getTemplate, response, err := r.client.api.DataStreamTemplatesAPI.RetrieveTemplate(ctx, templateID).Execute() //nolint
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusNotFound {
@@ -213,7 +213,7 @@ func (r *dataStreamTemplateResource) Read(ctx context.Context, req resource.Read
 				return r.client.api.DataStreamTemplatesAPI.RetrieveTemplate(ctx, templateID).Execute()
 			}, 5)
 			if response != nil {
-				defer response.Body.Close()
+				defer func(r *http.Response) { _ = r.Body.Close() }(response)
 			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
@@ -259,7 +259,7 @@ func (r *dataStreamTemplateResource) Update(ctx context.Context, req resource.Up
 
 	updateTemplate, response, err := r.client.api.DataStreamTemplatesAPI.PartialUpdateTemplate(ctx, templateID).PatchedTemplateRequest(*templateReq).Execute() //nolint
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
@@ -267,7 +267,7 @@ func (r *dataStreamTemplateResource) Update(ctx context.Context, req resource.Up
 				return r.client.api.DataStreamTemplatesAPI.PartialUpdateTemplate(ctx, templateID).PatchedTemplateRequest(*templateReq).Execute()
 			}, 5)
 			if response != nil {
-				defer response.Body.Close()
+				defer func(r *http.Response) { _ = r.Body.Close() }(response)
 			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
@@ -302,7 +302,7 @@ func (r *dataStreamTemplateResource) Delete(ctx context.Context, req resource.De
 		return r.client.api.DataStreamTemplatesAPI.DeleteTemplate(ctx, templateID).Execute()
 	}, 5)
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusNotFound {
@@ -325,7 +325,7 @@ func (r *dataStreamTemplateResource) ImportState(ctx context.Context, req resour
 
 	getTemplate, response, err := r.client.api.DataStreamTemplatesAPI.RetrieveTemplate(ctx, templateID).Execute() //nolint
 	if response != nil {
-		defer response.Body.Close()
+		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
@@ -333,7 +333,7 @@ func (r *dataStreamTemplateResource) ImportState(ctx context.Context, req resour
 				return r.client.api.DataStreamTemplatesAPI.RetrieveTemplate(ctx, templateID).Execute()
 			}, 5)
 			if response != nil {
-				defer response.Body.Close()
+				defer func(r *http.Response) { _ = r.Body.Close() }(response)
 			}
 			if err != nil {
 				resp.Diagnostics.AddError(err.Error(), "API request failed after too many retries")
