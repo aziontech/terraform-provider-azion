@@ -437,6 +437,23 @@ Optional:
 | `exists` | Header/argument exists |
 | `does_not_exist` | Header/argument does not exist |
 
+### Network list operators
+
+For `is_in_list` and `is_not_in_list`, the `argument` is the **ID of the network list** to check
+against, not a value to compare. Write it as a string containing only digits — the provider converts
+it to the numeric ID the API expects:
+
+```terraform
+criterion = {
+  variable    = "${network}"
+  operator    = "is_in_list"
+  conditional = "if"
+  argument    = azion_network_list.example.id
+}
+```
+
+A non-numeric argument on these operators fails at apply time with a message naming the operator.
+
 ## Import
 
 Import is supported using the following syntax:
