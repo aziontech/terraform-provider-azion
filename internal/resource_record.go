@@ -11,7 +11,6 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -421,7 +420,30 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 func (r *recordResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("zone_id"), req, resp)
+	parts := strings.Split(req.ID, "/")
+	if len(parts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid import format",
+			"Expected format: zoneID/recordID",
+		)
+		return
+	}
+
+	recordID, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid record ID format", err.Error())
+		return
+	}
+
+	state := recordResourceModel{
+		ZoneId: types.StringValue(parts[0]),
+		Record: &recordModel{
+			Id: types.Int64Value(recordID),
+		},
+	}
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }
 
 // buildRdataList converts a slice of types.String to a slice of string.

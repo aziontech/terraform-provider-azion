@@ -2,14 +2,12 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -213,7 +211,7 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 	// Create the WAF.
 	wafResponse, response, err := r.client.api.WAFsAPI.CreateWaf(ctx).WAFRequest(*wafRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFResponse, *http.Response, error) {
 				return r.client.api.WAFsAPI.CreateWaf(ctx).WAFRequest(*wafRequest).Execute()
 			}, 5)
@@ -230,14 +228,7 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -278,11 +269,21 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	// Save the state's engine_settings to preserve it if it was null.
-	stateEngineSettings := state.Result.EngineSettings
+	var stateEngineSettings *WafEngineSettingsResourceModel
+	if state.Result != nil {
+		stateEngineSettings = state.Result.EngineSettings
+	}
 
 	var wafID int64
 	var err error
 	if state.ID.IsNull() {
+		if state.Result == nil || state.Result.ID.IsNull() {
+			resp.Diagnostics.AddError(
+				"WAF ID error",
+				"WAF ID cannot be empty",
+			)
+			return
+		}
 		wafID = state.Result.ID.ValueInt64()
 	} else {
 		wafID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -297,11 +298,11 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	wafResponse, response, err := r.client.api.WAFsAPI.RetrieveWaf(ctx, wafID).Execute()
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFResponse, *http.Response, error) {
 				return r.client.api.WAFsAPI.RetrieveWaf(ctx, wafID).Execute()
 			}, 5)
@@ -318,14 +319,7 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -373,6 +367,13 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	var wafID int64
 	var err error
 	if state.ID.IsNull() {
+		if state.Result == nil || state.Result.ID.IsNull() {
+			resp.Diagnostics.AddError(
+				"WAF ID error",
+				"WAF ID cannot be empty",
+			)
+			return
+		}
 		wafID = state.Result.ID.ValueInt64()
 	} else {
 		wafID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -405,7 +406,7 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	// Update the WAF.
 	wafResponse, response, err := r.client.api.WAFsAPI.UpdateWaf(ctx, wafID).WAFRequest(*wafRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFResponse, *http.Response, error) {
 				return r.client.api.WAFsAPI.UpdateWaf(ctx, wafID).WAFRequest(*wafRequest).Execute()
 			}, 5)
@@ -422,14 +423,7 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -472,6 +466,13 @@ func (r *wafResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	var wafID int64
 	var err error
 	if state.ID.IsNull() {
+		if state.Result == nil || state.Result.ID.IsNull() {
+			resp.Diagnostics.AddError(
+				"WAF ID error",
+				"WAF ID cannot be empty",
+			)
+			return
+		}
 		wafID = state.Result.ID.ValueInt64()
 	} else {
 		wafID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -495,14 +496,7 @@ func (r *wafResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
+		bodyString := readAPIErrorBody(response)
 		resp.Diagnostics.AddError(
 			err.Error(),
 			bodyString,
@@ -512,7 +506,21 @@ func (r *wafResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 }
 
 func (r *wafResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	wafID, err := strconv.ParseInt(req.ID, 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid WAF ID format", err.Error())
+		return
+	}
+
+	state := WafResourceModel{
+		ID: types.StringValue(req.ID),
+		Result: &WafResourceResults{
+			ID: types.Int64Value(wafID),
+		},
+	}
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }
 
 // buildWAFEngineSettingsRequest builds a WAFEngineSettingsFieldRequest from the Terraform model.

@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"sync"
@@ -11,7 +10,6 @@ import (
 
 	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -194,14 +192,7 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -296,14 +287,7 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -410,14 +394,7 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -466,14 +443,7 @@ func (r *applicationResource) Delete(ctx context.Context, req resource.DeleteReq
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
+		bodyString := readAPIErrorBody(response)
 		resp.Diagnostics.AddError(
 			err.Error(),
 			bodyString,
@@ -483,7 +453,21 @@ func (r *applicationResource) Delete(ctx context.Context, req resource.DeleteReq
 }
 
 func (r *applicationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	applicationID, err := strconv.ParseInt(req.ID, 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid application ID format", err.Error())
+		return
+	}
+
+	state := ApplicationResourceModel{
+		ID: types.StringValue(req.ID),
+		Application: &ApplicationResults{
+			ApplicationID: types.Int64Value(applicationID),
+		},
+	}
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }
 
 func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationModulesRequest {

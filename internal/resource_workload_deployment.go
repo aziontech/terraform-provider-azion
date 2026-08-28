@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -201,7 +200,7 @@ func (r *workloadDeploymentResource) Create(ctx context.Context, req resource.Cr
 		CreateWorkloadDeployment(ctx, plan.WorkloadID.ValueInt64()).
 		WorkloadDeploymentRequest(*deploymentRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			createDeployment, response, err = utils.RetryOn429(func() (*azionapi.WorkloadDeploymentResponse, *http.Response, error) {
 				return r.client.api.WorkloadDeploymentsAPI.
 					CreateWorkloadDeployment(ctx, plan.WorkloadID.ValueInt64()).
@@ -216,14 +215,7 @@ func (r *workloadDeploymentResource) Create(ctx context.Context, req resource.Cr
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -292,11 +284,11 @@ func (r *workloadDeploymentResource) Read(ctx context.Context, req resource.Read
 	deploymentResponse, response, err := r.client.api.WorkloadDeploymentsAPI.
 		RetrieveWorkloadDeployment(ctx, deploymentID, workloadID).Execute()
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			deploymentResponse, response, err = utils.RetryOn429(func() (*azionapi.WorkloadDeploymentResponse, *http.Response, error) {
 				return r.client.api.WorkloadDeploymentsAPI.
 					RetrieveWorkloadDeployment(ctx, deploymentID, workloadID).Execute()
@@ -310,14 +302,7 @@ func (r *workloadDeploymentResource) Read(ctx context.Context, req resource.Read
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -409,7 +394,7 @@ func (r *workloadDeploymentResource) Update(ctx context.Context, req resource.Up
 		PartialUpdateWorkloadDeployment(ctx, deploymentID, plan.WorkloadID.ValueInt64()).
 		PatchedWorkloadDeploymentRequest(*patchedRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			updateResponse, response, err = utils.RetryOn429(func() (*azionapi.WorkloadDeploymentResponse, *http.Response, error) {
 				return r.client.api.WorkloadDeploymentsAPI.
 					PartialUpdateWorkloadDeployment(ctx, deploymentID, plan.WorkloadID.ValueInt64()).
@@ -424,14 +409,7 @@ func (r *workloadDeploymentResource) Update(ctx context.Context, req resource.Up
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -490,14 +468,7 @@ func (r *workloadDeploymentResource) Delete(ctx context.Context, req resource.De
 			// Resource already deleted, consider this a success
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
+		bodyString := readAPIErrorBody(response)
 		resp.Diagnostics.AddError(
 			err.Error(),
 			bodyString,
@@ -535,47 +506,12 @@ func (r *workloadDeploymentResource) ImportState(ctx context.Context, req resour
 		return
 	}
 
-	// Read the deployment to populate state
-	deploymentResponse, response, err := r.client.api.WorkloadDeploymentsAPI.
-		RetrieveWorkloadDeployment(ctx, deploymentID, workloadID).Execute()
-	if err != nil {
-		if response.StatusCode == 429 {
-			deploymentResponse, response, err = utils.RetryOn429(func() (*azionapi.WorkloadDeploymentResponse, *http.Response, error) {
-				return r.client.api.WorkloadDeploymentsAPI.
-					RetrieveWorkloadDeployment(ctx, deploymentID, workloadID).Execute()
-			}, 5)
-
-			if err != nil {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed after too many retries",
-				)
-				return
-			}
-		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
-			return
-		}
-	}
-	if response != nil {
-		defer response.Body.Close()
-	}
-
 	state := WorkloadDeploymentResourceModel{
 		WorkloadID: types.Int64Value(workloadID),
-		ID:         types.StringValue(req.ID),
-		Deployment: populateDeploymentResults(deploymentResponse),
+		ID:         types.StringValue(fmt.Sprintf("%d/%d", workloadID, deploymentID)),
+		Deployment: &WorkloadDeploymentResourceResults{
+			ID: types.Int64Value(deploymentID),
+		},
 	}
 
 	diags := resp.State.Set(ctx, &state)

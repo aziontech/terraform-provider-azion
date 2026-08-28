@@ -2,14 +2,14 @@ package provider
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -185,7 +185,7 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 	// Create the WAF exception.
 	exceptionResponse, response, err := r.client.api.WAFsExceptionsAPI.CreateWafException(ctx, plan.WafID.ValueInt64()).WAFRuleRequest(*wafRuleRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			exceptionResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFRuleResponse, *http.Response, error) {
 				return r.client.api.WAFsExceptionsAPI.CreateWafException(ctx, plan.WafID.ValueInt64()).WAFRuleRequest(*wafRuleRequest).Execute()
 			}, 5)
@@ -202,14 +202,7 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -244,9 +237,21 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	var exceptionID int64
+	wafID := state.WafID.ValueInt64()
 	var err error
 	if state.ID.IsNull() {
 		exceptionID = state.Result.ID.ValueInt64()
+	} else if parts := strings.Split(state.ID.ValueString(), "/"); len(parts) == 2 {
+		wafID, err = strconv.ParseInt(parts[0], 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError("Value Conversion error ", "Could not convert WAF ID")
+			return
+		}
+		exceptionID, err = strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			resp.Diagnostics.AddError("Value Conversion error ", "Could not convert WAF Rule Set ID")
+			return
+		}
 	} else {
 		exceptionID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)
 		if err != nil {
@@ -258,15 +263,15 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 		}
 	}
 
-	exceptionResponse, response, err := r.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID, state.WafID.ValueInt64()).Execute()
+	exceptionResponse, response, err := r.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID, wafID).Execute()
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			exceptionResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFRuleResponse, *http.Response, error) {
-				return r.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID, state.WafID.ValueInt64()).Execute()
+				return r.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID, wafID).Execute()
 			}, 5)
 
 			if response != nil {
@@ -281,14 +286,7 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -303,7 +301,8 @@ func (r *wafRuleSetResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	data := exceptionResponse.GetData()
 	state.Result = transformWAFRuleToResourceModel(data)
-	state.ID = types.StringValue(strconv.FormatInt(exceptionID, 10))
+	state.WafID = types.Int64Value(wafID)
+	state.ID = types.StringValue(fmt.Sprintf("%d/%d", wafID, data.GetId()))
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -368,7 +367,7 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 	// Update the WAF exception.
 	exceptionResponse, response, err := r.client.api.WAFsExceptionsAPI.UpdateWafException(ctx, exceptionID, plan.WafID.ValueInt64()).WAFRuleRequest(*wafRuleRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			exceptionResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFRuleResponse, *http.Response, error) {
 				return r.client.api.WAFsExceptionsAPI.UpdateWafException(ctx, exceptionID, plan.WafID.ValueInt64()).WAFRuleRequest(*wafRuleRequest).Execute()
 			}, 5)
@@ -385,14 +384,7 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -452,14 +444,7 @@ func (r *wafRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
+		bodyString := readAPIErrorBody(response)
 		resp.Diagnostics.AddError(
 			err.Error(),
 			bodyString,
@@ -469,7 +454,37 @@ func (r *wafRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequ
 }
 
 func (r *wafRuleSetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	parts := strings.Split(req.ID, "/")
+	if len(parts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid import format",
+			"Expected format: wafID/exceptionID",
+		)
+		return
+	}
+
+	wafID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid WAF ID format", err.Error())
+		return
+	}
+
+	exceptionID, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid WAF exception ID format", err.Error())
+		return
+	}
+
+	state := WafRuleSetResourceModel{
+		WafID: types.Int64Value(wafID),
+		ID:    types.StringValue(fmt.Sprintf("%d/%d", wafID, exceptionID)),
+		Result: &WafRuleSetResourceResults{
+			ID: types.Int64Value(exceptionID),
+		},
+	}
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }
 
 // transformWAFRuleToResourceModel transforms an SDK WAFRule to a Terraform resource model.

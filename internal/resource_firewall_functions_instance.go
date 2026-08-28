@@ -2,7 +2,7 @@ package provider
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,11 +36,11 @@ type FirewallFunctionsInstanceResource struct {
 }
 
 type FirewallFunctionInstanceResourceModel struct {
-	State       types.String                         `tfsdk:"state"`
-	Data        FirewallFunctionInstanceResourceData `tfsdk:"data"`
-	ID          types.String                         `tfsdk:"id"`
-	FirewallID  types.Int64                          `tfsdk:"firewall_id"`
-	LastUpdated types.String                         `tfsdk:"last_updated"`
+	State       types.String                          `tfsdk:"state"`
+	Data        *FirewallFunctionInstanceResourceData `tfsdk:"data"`
+	ID          types.String                          `tfsdk:"id"`
+	FirewallID  types.Int64                           `tfsdk:"firewall_id"`
+	LastUpdated types.String                          `tfsdk:"last_updated"`
 }
 
 type FirewallFunctionInstanceResourceData struct {
@@ -181,7 +181,7 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 		FirewallFunctionInstanceRequest(functionInstanceRequest).
 		Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			functionInstanceResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallFunctionInstanceResponse, *http.Response, error) {
 				return r.client.api.FirewallsFunctionAPI.
 					CreateFirewallFunction(ctx, firewallID.ValueInt64()).
@@ -201,14 +201,7 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -228,7 +221,7 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	plan.Data = FirewallFunctionInstanceResourceData{
+	plan.Data = &FirewallFunctionInstanceResourceData{
 		Name:         types.StringValue(functionInstanceResponse.Data.GetName()),
 		Args:         types.StringValue(jsonArgsStr),
 		Function:     types.Int64Value(functionInstanceResponse.Data.GetFunction()),
@@ -266,7 +259,9 @@ func (r *FirewallFunctionsInstanceResource) Read(ctx context.Context, req resour
 		functionInstanceID, _ = strconv.ParseInt(valueFromCmd[1], 10, 64)
 	} else {
 		firewallID = state.FirewallID.ValueInt64()
-		functionInstanceID = state.Data.ID.ValueInt64()
+		if state.Data != nil {
+			functionInstanceID = state.Data.ID.ValueInt64()
+		}
 	}
 
 	if functionInstanceID == 0 {
@@ -281,11 +276,11 @@ func (r *FirewallFunctionsInstanceResource) Read(ctx context.Context, req resour
 		api.FirewallsFunctionAPI.
 		RetrieveFirewallFunction(ctx, firewallID, functionInstanceID).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			functionInstanceResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallFunctionInstanceResponse, *http.Response, error) {
 				return r.client.
 					api.FirewallsFunctionAPI.
@@ -304,14 +299,7 @@ func (r *FirewallFunctionsInstanceResource) Read(ctx context.Context, req resour
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -333,8 +321,8 @@ func (r *FirewallFunctionsInstanceResource) Read(ctx context.Context, req resour
 	readState := FirewallFunctionInstanceResourceModel{
 		FirewallID: types.Int64Value(firewallID),
 		State:      types.StringValue(stateValue),
-		ID:         types.StringValue(strconv.FormatInt(functionInstanceResponse.Data.GetId(), 10)),
-		Data: FirewallFunctionInstanceResourceData{
+		ID:         types.StringValue(fmt.Sprintf("%d/%d", firewallID, functionInstanceResponse.Data.GetId())),
+		Data: &FirewallFunctionInstanceResourceData{
 			ID:           types.Int64Value(functionInstanceResponse.Data.GetId()),
 			LastEditor:   types.StringValue(functionInstanceResponse.Data.GetLastEditor()),
 			LastModified: types.StringValue(functionInstanceResponse.Data.GetLastModified().Format(time.RFC850)),
@@ -411,7 +399,7 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 		PatchedFirewallFunctionInstanceRequest(patchRequest).
 		Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			updateResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallFunctionInstanceResponse, *http.Response, error) {
 				return r.client.api.FirewallsFunctionAPI.
 					PartialUpdateFirewallFunction(ctx, firewallID.ValueInt64(), functionInstanceID.ValueInt64()).
@@ -431,14 +419,7 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
+			bodyString := readAPIErrorBody(response)
 			resp.Diagnostics.AddError(
 				err.Error(),
 				bodyString,
@@ -458,7 +439,7 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	plan.Data = FirewallFunctionInstanceResourceData{
+	plan.Data = &FirewallFunctionInstanceResourceData{
 		Function:     types.Int64Value(updateResponse.Data.GetFunction()),
 		Name:         types.StringValue(updateResponse.Data.GetName()),
 		LastEditor:   types.StringValue(updateResponse.Data.GetLastEditor()),
@@ -517,14 +498,7 @@ func (r *FirewallFunctionsInstanceResource) Delete(ctx context.Context, req reso
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
+		bodyString := readAPIErrorBody(response)
 		resp.Diagnostics.AddError(
 			err.Error(),
 			bodyString,
@@ -534,5 +508,35 @@ func (r *FirewallFunctionsInstanceResource) Delete(ctx context.Context, req reso
 }
 
 func (r *FirewallFunctionsInstanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	parts := strings.Split(req.ID, "/")
+	if len(parts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid import format",
+			"Expected format: firewallID/functionInstanceID",
+		)
+		return
+	}
+
+	firewallID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid firewall ID format", err.Error())
+		return
+	}
+
+	functionInstanceID, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid function instance ID format", err.Error())
+		return
+	}
+
+	state := FirewallFunctionInstanceResourceModel{
+		FirewallID: types.Int64Value(firewallID),
+		ID:         types.StringValue(fmt.Sprintf("%d/%d", firewallID, functionInstanceID)),
+		Data: &FirewallFunctionInstanceResourceData{
+			ID: types.Int64Value(functionInstanceID),
+		},
+	}
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }

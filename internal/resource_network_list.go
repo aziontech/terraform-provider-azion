@@ -2,14 +2,12 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -164,25 +162,8 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 				return
 			}
 		} else {
-			if response != nil && response.Body != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"error reading response from API",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
-			} else {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed",
-				)
-			}
+			bodyString := readAPIErrorBody(response)
+			resp.Diagnostics.AddError(err.Error(), bodyString)
 			return
 		}
 	}
@@ -227,6 +208,10 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 
 	var networkListId int64
 	if state.ID.IsNull() {
+		if state.NetworkList == nil || state.NetworkList.ID.IsNull() {
+			resp.Diagnostics.AddError("Invalid ID format", "Network list ID cannot be empty")
+			return
+		}
 		networkListId = state.NetworkList.ID.ValueInt64()
 	} else {
 		id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -263,25 +248,8 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 				return
 			}
 		} else {
-			if response != nil && response.Body != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"error reading response from API",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
-			} else {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed",
-				)
-			}
+			bodyString := readAPIErrorBody(response)
+			resp.Diagnostics.AddError(err.Error(), bodyString)
 			return
 		}
 	}
@@ -332,6 +300,10 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 
 	var networkListId int64
 	if state.ID.IsNull() {
+		if state.NetworkList == nil || state.NetworkList.ID.IsNull() {
+			resp.Diagnostics.AddError("Invalid ID format", "Network list ID cannot be empty")
+			return
+		}
 		networkListId = state.NetworkList.ID.ValueInt64()
 	} else {
 		id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -377,25 +349,8 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 				return
 			}
 		} else {
-			if response != nil && response.Body != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"error reading response from API",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
-			} else {
-				resp.Diagnostics.AddError(
-					err.Error(),
-					"API request failed",
-				)
-			}
+			bodyString := readAPIErrorBody(response)
+			resp.Diagnostics.AddError(err.Error(), bodyString)
 			return
 		}
 	}
@@ -440,6 +395,10 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	var networkListId int64
 	if state.ID.IsNull() {
+		if state.NetworkList == nil || state.NetworkList.ID.IsNull() {
+			resp.Diagnostics.AddError("Invalid ID format", "Network list ID cannot be empty")
+			return
+		}
 		networkListId = state.NetworkList.ID.ValueInt64()
 	} else {
 		id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -463,29 +422,27 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		if response != nil && response.Body != nil {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"error reading response from API",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
-		} else {
-			resp.Diagnostics.AddError(
-				err.Error(),
-				"API request failed",
-			)
-		}
+		bodyString := readAPIErrorBody(response)
+		resp.Diagnostics.AddError(err.Error(), bodyString)
 		return
 	}
 }
 
 func (r *networkListResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	networkListID, err := strconv.ParseInt(req.ID, 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid network list ID format", err.Error())
+		return
+	}
+
+	state := NetworkListResourceModel{
+		ID: types.StringValue(req.ID),
+		NetworkList: &NetworkListResourceResults{
+			ID:    types.Int64Value(networkListID),
+			Items: types.SetNull(types.StringType),
+		},
+	}
+
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
 }

@@ -21,7 +21,7 @@ import (
 
 func SliceStringTypeToList(slice []types.String) types.List {
 	if len(slice) == 0 {
-		return types.ListValueMust(types.StringType, nil)
+		return types.ListNull(types.StringType)
 	}
 	strs := []attr.Value{}
 	for _, value := range slice {
@@ -54,7 +54,7 @@ func SliceStringTypeToSet(slice []types.String) types.Set {
 
 func SliceStringTypeToSetOrNull(slice []types.String) types.Set {
 	if len(slice) == 0 {
-		return types.SetValueMust(types.StringType, nil)
+		return types.SetNull(types.StringType)
 	}
 	strings := []attr.Value{}
 	for _, value := range slice {
