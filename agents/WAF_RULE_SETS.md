@@ -2,6 +2,20 @@
 
 This document provides comprehensive guidance for AI agents generating Terraform provider code for WAF Rule Sets (called "WAF Exceptions" in the V4 SDK) from the Azion API.
 
+## Drift and enforcement (resource)
+
+Every optional field in this resource is `Optional + Computed`. That is not only about enforcement — it is a correctness requirement. `transformWAFRuleToResourceModel` populates `rule_id`, `path`, `operator` and `active` from the API unconditionally, so an `Optional`-only attribute leaves state holding a value the plan wants to null. The result is a diff that reappears on every plan and never converges.
+
+Only `active` carries a `Default` (`true`). Do not add defaults to the others:
+
+- `rule_id` selects which WAF rule the exception targets — a default would silently retarget it.
+- `operator` accepts `regex` or `contains`, with no documented default.
+- `path`, and the per-condition `name` and `value`, are free-form.
+
+All six gaps here are scalars, so no gating helper is needed. Contrast `azion_waf`, where `engine_settings` and its collections are held as Go pointers and slices that cannot hold an unknown value, and therefore need `alignWAFEngineSettings`.
+
+`TestWAFRuleSetOptionalFieldsAreComputed` and `TestWAFRuleSetEnforcesOnlyActive` pin both halves.
+
 ## Overview
 
 In the Azion API V4 SDK, WAF Rule Sets are referred to as **WAF Exceptions**. These are rules that define exceptions to the WAF's normal behavior, allowing specific traffic patterns to bypass certain WAF rules.

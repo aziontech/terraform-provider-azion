@@ -237,7 +237,7 @@ func (r *workloadDeploymentResource) Create(ctx context.Context, req resource.Cr
 
 	// Populate the state from the response
 	plan.Deployment = populateDeploymentResults(createDeployment)
-	plan.ID = types.StringValue(fmt.Sprintf("%d/%d", plan.WorkloadID.ValueInt64(), createDeployment.Data.Id))
+	plan.ID = types.StringValue(fmt.Sprintf("%d/%d", plan.WorkloadID.ValueInt64(), createDeployment.Data.GetId()))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
@@ -331,7 +331,7 @@ func (r *workloadDeploymentResource) Read(ctx context.Context, req resource.Read
 
 	state.Deployment = populateDeploymentResults(deploymentResponse)
 	state.WorkloadID = types.Int64Value(workloadID)
-	state.ID = types.StringValue(fmt.Sprintf("%d/%d", workloadID, deploymentResponse.Data.Id))
+	state.ID = types.StringValue(fmt.Sprintf("%d/%d", workloadID, deploymentResponse.Data.GetId()))
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -444,7 +444,7 @@ func (r *workloadDeploymentResource) Update(ctx context.Context, req resource.Up
 	}
 
 	plan.Deployment = populateDeploymentResults(updateResponse)
-	plan.ID = types.StringValue(fmt.Sprintf("%d/%d", plan.WorkloadID.ValueInt64(), updateResponse.Data.Id))
+	plan.ID = types.StringValue(fmt.Sprintf("%d/%d", plan.WorkloadID.ValueInt64(), updateResponse.Data.GetId()))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)

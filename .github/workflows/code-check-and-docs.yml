@@ -10,14 +10,13 @@ jobs:
   # Ensure the project can build first
   build:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -31,14 +30,13 @@ jobs:
           make install
   fmt:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     name: go fmt
     needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -50,28 +48,26 @@ jobs:
 
   gosec:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     name: Run Gosec 
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
       - run: |
           echo "Checking Security"
           make sec
 
   vet:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     name: go vet
     needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -79,17 +75,14 @@ jobs:
 
   lint:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     name: golangcli-lint
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
-      - name: Setting GIT
-        run: git config --global url."https://${{ secrets.GLOBAL_TOKEN }}:x-oauth-basic@github.com/aziontech".insteadOf "https://github.com/aziontech"
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
-      - uses: golangci/golangci-lint-action@v9
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         env:
           ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
         with:
@@ -102,12 +95,12 @@ jobs:
   #   needs: [build]
   #   runs-on: ubuntu-latest
   #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-go@v4
+  #     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+  #     - uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
   #       with:
   #         go-version-file: 'go.mod'
   #         cache: true
-  #     - uses: hashicorp/setup-terraform@v2
+  #     - uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
   #       with:
   #         terraform_version: 1.9.4
   #     - run: |

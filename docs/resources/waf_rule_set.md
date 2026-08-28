@@ -8,6 +8,26 @@ description: |-
 
 # azion_waf_rule_set (Resource)
 
+## Drift and enforcement
+
+`active` is enforced: it defaults to `true`, so an exception disabled outside
+Terraform — in Azion Console, for example — is re-enabled on the next apply and
+shows up in `terraform plan` as a diff.
+
+The other optional fields — `rule_id`, `path`, `operator`, and the per-condition
+`name` and `value` — are refreshed from the API but **not** defaulted. A change to
+one you have declared still produces a diff, because state reflects what the API
+reports. Omitting one leaves whatever the API holds in place rather than resetting
+it, because no safe default exists:
+
+- `rule_id` selects which WAF rule the exception applies to, so a default would
+  silently retarget it.
+- `operator` accepts `regex` or `contains`, with no documented default.
+- `path`, `name` and `value` are free-form.
+
+Note that drift is only reverted when an apply runs, and only when state is
+refreshed — `terraform plan -refresh=false` will not detect it.
+
 Creates a WAF exception (rule set) resource. WAF exceptions allow you to bypass certain WAF rules for specific conditions.
 
 ## Example Usage
