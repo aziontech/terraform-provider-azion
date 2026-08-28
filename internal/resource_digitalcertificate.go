@@ -220,6 +220,13 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 	// Call the V4 API.
 	certificateResponse, response, err := r.client.api.DigitalCertificatesCertificatesAPI.CreateCertificate(ctx).Certificate(certificateRequest).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			certificateResponse, response, err = utils.RetryOn429(func() (*azionapi.CertificateResponse, *http.Response, error) {
 				return r.client.api.DigitalCertificatesCertificatesAPI.CreateCertificate(ctx).Certificate(certificateRequest).Execute()
@@ -292,6 +299,13 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 	// Call the V4 API.
 	certificateResponse, response, err := r.client.api.DigitalCertificatesCertificatesAPI.RetrieveCertificate(ctx, certificateID).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
@@ -384,6 +398,13 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 	// Call the V4 API (using PUT for full update).
 	certificateResponse, response, err := r.client.api.DigitalCertificatesCertificatesAPI.UpdateCertificate(ctx, certificateID).Certificate(certificateRequest).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			certificateResponse, response, err = utils.RetryOn429(func() (*azionapi.CertificateResponse, *http.Response, error) {
 				return r.client.api.DigitalCertificatesCertificatesAPI.UpdateCertificate(ctx, certificateID).Certificate(certificateRequest).Execute()

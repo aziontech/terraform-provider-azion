@@ -198,6 +198,13 @@ func (r *functionResource) Create(ctx context.Context, req resource.CreateReques
 
 	createFunction, response, err := r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			createFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
 				return r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
@@ -298,6 +305,13 @@ func (r *functionResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	getFunction, response, err := r.client.api.FunctionsAPI.RetrieveFunction(ctx, functionId).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
@@ -442,6 +456,13 @@ func (r *functionResource) Update(ctx context.Context, req resource.UpdateReques
 
 	updateFunction, response, err := r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, functionId).PatchedFunctionsRequest(updateFunctionRequest).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			updateFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
 				return r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, functionId).PatchedFunctionsRequest(updateFunctionRequest).Execute() //nolint

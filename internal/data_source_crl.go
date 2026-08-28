@@ -137,6 +137,13 @@ func (c *CrlDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	crlResponse, response, err := c.client.api.DigitalCertificatesCertificateRevocationListsAPI.RetrieveCertificateRevocationList(ctx, getCrlID.ValueInt64()).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			crlResponse, response, err = utils.RetryOn429(func() (*azionapi.CertificateRevocationListResponse, *http.Response, error) {
 				return c.client.api.DigitalCertificatesCertificateRevocationListsAPI.RetrieveCertificateRevocationList(ctx, getCrlID.ValueInt64()).Execute()

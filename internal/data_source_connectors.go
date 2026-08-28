@@ -127,6 +127,13 @@ func (d *ConnectorsDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 func (d *ConnectorsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	connectorsResponse, response, err := d.client.api.ConnectorsAPI.ListConnectors(ctx).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			connectorsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedConnectorList, *http.Response, error) {
 				return d.client.api.ConnectorsAPI.ListConnectors(ctx).Execute() //nolint

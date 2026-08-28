@@ -111,6 +111,13 @@ func (d *ApplicationFunctionInstanceDataSource) Read(ctx context.Context, req da
 
 	functionInstanceResponse, response, err := d.client.api.ApplicationsFunctionAPI.RetrieveApplicationFunctionInstance(ctx, applicationID.ValueInt64(), functionInstanceID.ValueInt64()).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			functionInstanceResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionInstanceResponse, *http.Response, error) {
 				return d.client.api.ApplicationsFunctionAPI.RetrieveApplicationFunctionInstance(ctx, applicationID.ValueInt64(), functionInstanceID.ValueInt64()).Execute() //nolint

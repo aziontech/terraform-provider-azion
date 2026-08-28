@@ -199,6 +199,13 @@ func (d *DigitalCertificatesDataSource) Schema(_ context.Context, _ datasource.S
 func (d *DigitalCertificatesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	certificatesResponse, response, err := d.client.api.DigitalCertificatesCertificatesAPI.ListCertificates(ctx).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			certificatesResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedCertificateList, *http.Response, error) {
 				return d.client.api.DigitalCertificatesCertificatesAPI.ListCertificates(ctx).Execute()

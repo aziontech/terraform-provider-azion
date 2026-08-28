@@ -177,6 +177,13 @@ func (o *WafRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	exceptionResponse, response, err := o.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID.ValueInt64(), wafID.ValueInt64()).Execute()
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			exceptionResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFRuleResponse, *http.Response, error) {
 				return o.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID.ValueInt64(), wafID.ValueInt64()).Execute()

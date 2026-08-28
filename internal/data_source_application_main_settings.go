@@ -194,6 +194,13 @@ func (e *ApplicationDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	applicationsResponse, response, err := e.client.api.ApplicationsAPI.RetrieveApplication(ctx, applicationId).Execute() //nolint
 	if err != nil {
+		if response == nil {
+			resp.Diagnostics.AddError(
+				"Unexpected nil response",
+				"API call returned a nil HTTP response with an error",
+			)
+			return
+		}
 		if response.StatusCode == 429 {
 			applicationsResponse, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
 				return e.client.api.ApplicationsAPI.RetrieveApplication(ctx, applicationId).Execute() //nolint

@@ -1,7 +1,9 @@
 package provider
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -162,6 +164,27 @@ type AWS4HMACAttributesModel struct {
 	Service   types.String `tfsdk:"service"`
 	AccessKey types.String `tfsdk:"access_key"`
 	SecretKey types.String `tfsdk:"secret_key"`
+}
+
+type sdkConnectorResponseAlias = azionapi.ConnectorResponse
+
+type connectorAPIResponse struct {
+	State *string         `json:"state"`
+	Data  json.RawMessage `json:"data"`
+}
+
+type connectorCommonAPIResponse struct {
+	ID             *int64          `json:"id"`
+	Name           string          `json:"name"`
+	LastEditor     *string         `json:"last_editor"`
+	LastModified   *time.Time      `json:"last_modified"`
+	CreatedAt      *time.Time      `json:"created_at"`
+	Active         *bool           `json:"active"`
+	ProductVersion *string         `json:"product_version"`
+	Type           string          `json:"type"`
+	State          *string         `json:"state"`
+	VersionID      *string         `json:"version_id"`
+	Attributes     json.RawMessage `json:"attributes"`
 }
 
 func (r *connectorResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -547,14 +570,14 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Read the connector back to ensure we have the complete state with all API defaults.
-	getConnector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute() //nolint
+	getConnector, response, err := r.retrieveConnector(ctx, connectorId)
 	if response != nil {
 		defer response.Body.Close()
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
 			getConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
-				return r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+				return r.retrieveConnector(ctx, connectorId)
 			}, 5)
 			if response != nil {
 				defer response.Body.Close()
@@ -569,7 +592,7 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 		}
 	}
 
-	r.populateConnectorFromResponse(ctx, plan.Connector, getConnector.GetData())
+	r.populateConnectorFromResponse(plan.Connector, getConnector.GetData())
 	plan.ID = types.StringValue(strconv.FormatInt(plan.Connector.ID.ValueInt64(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.SchemaVersion = types.Int64Value(0)
@@ -621,7 +644,7 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 	}
 
-	getConnector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute() //nolint
+	getConnector, response, err := r.retrieveConnector(ctx, connectorId)
 	if response != nil {
 		defer response.Body.Close()
 	}
@@ -632,7 +655,7 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
 			getConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
-				return r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+				return r.retrieveConnector(ctx, connectorId)
 			}, 5)
 			if response != nil {
 				defer response.Body.Close()
@@ -647,7 +670,7 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 	}
 
-	r.populateConnectorFromResponse(ctx, state.Connector, getConnector.GetData())
+	r.populateConnectorFromResponse(state.Connector, getConnector.GetData())
 	state.ID = types.StringValue(strconv.FormatInt(state.Connector.ID.ValueInt64(), 10))
 	state.SchemaVersion = types.Int64Value(0)
 
@@ -687,14 +710,14 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 			)
 			return
 		}
-		updateConnector, response, err := r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute() //nolint
+		updateConnector, response, err := r.partialUpdateConnector(ctx, connectorId, connectorReq)
 		if response != nil {
 			defer response.Body.Close()
 		}
 		if err != nil {
 			if response != nil && response.StatusCode == http.StatusTooManyRequests {
 				updateConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
-					return r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute()
+					return r.partialUpdateConnector(ctx, connectorId, connectorReq)
 				}, 5)
 				if response != nil {
 					defer response.Body.Close()
@@ -708,7 +731,7 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 				return
 			}
 		}
-		r.populateConnectorFromResponse(ctx, plan.Connector, updateConnector.GetData())
+		r.populateConnectorFromResponse(plan.Connector, updateConnector.GetData())
 
 	case "http":
 		connectorReq, err := r.buildHTTPPatchedConnectorRequest(ctx, plan.Connector)
@@ -719,14 +742,14 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 			)
 			return
 		}
-		updateConnector, response, err := r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute() //nolint
+		updateConnector, response, err := r.partialUpdateConnector(ctx, connectorId, connectorReq)
 		if response != nil {
 			defer response.Body.Close()
 		}
 		if err != nil {
 			if response != nil && response.StatusCode == http.StatusTooManyRequests {
 				updateConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
-					return r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute()
+					return r.partialUpdateConnector(ctx, connectorId, connectorReq)
 				}, 5)
 				if response != nil {
 					defer response.Body.Close()
@@ -740,7 +763,7 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 				return
 			}
 		}
-		r.populateConnectorFromResponse(ctx, plan.Connector, updateConnector.GetData())
+		r.populateConnectorFromResponse(plan.Connector, updateConnector.GetData())
 
 	default:
 		resp.Diagnostics.AddError(
@@ -797,14 +820,14 @@ func (r *connectorResource) ImportState(ctx context.Context, req resource.Import
 	}
 
 	// First, get the connector from API to determine its type
-	getConnector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+	getConnector, response, err := r.retrieveConnector(ctx, connectorId)
 	if response != nil {
 		defer response.Body.Close()
 	}
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusTooManyRequests {
 			getConnector, response, err = utils.RetryOn429(func() (*azionapi.ConnectorResponse, *http.Response, error) {
-				return r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+				return r.retrieveConnector(ctx, connectorId)
 			}, 5)
 			if response != nil {
 				defer response.Body.Close()
@@ -823,12 +846,148 @@ func (r *connectorResource) ImportState(ctx context.Context, req resource.Import
 	state := &connectorResourceModel{
 		Connector: &connectorResourceResults{},
 	}
-	r.populateConnectorFromResponse(ctx, state.Connector, getConnector.GetData())
+	r.populateConnectorFromResponse(state.Connector, getConnector.GetData())
 	state.ID = types.StringValue(strconv.FormatInt(connectorId, 10))
 	state.SchemaVersion = types.Int64Value(0)
 
 	diags := resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
+}
+
+func (r *connectorResource) retrieveConnector(ctx context.Context, connectorId int64) (*azionapi.ConnectorResponse, *http.Response, error) {
+	connector, response, err := r.client.api.ConnectorsAPI.RetrieveConnector(ctx, connectorId).Execute()
+	if err == nil || response == nil || response.Body == nil {
+		return connector, response, err
+	}
+
+	bodyBytes, readErr := io.ReadAll(response.Body)
+	response.Body.Close()
+	response.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	if readErr != nil || len(bodyBytes) == 0 {
+		return connector, response, err
+	}
+
+	decoded, decodeErr := decodeConnectorResponse(bodyBytes)
+	if decodeErr != nil {
+		return connector, response, err
+	}
+
+	return decoded, response, nil
+}
+
+func (r *connectorResource) partialUpdateConnector(ctx context.Context, connectorId int64, connectorReq azionapi.PatchedConnectorRequest) (*azionapi.ConnectorResponse, *http.Response, error) {
+	connector, response, err := r.client.api.ConnectorsAPI.PartialUpdateConnector(ctx, connectorId).PatchedConnectorRequest(connectorReq).Execute() //nolint
+	if err == nil || response == nil || response.Body == nil {
+		return connector, response, err
+	}
+
+	bodyBytes, readErr := io.ReadAll(response.Body)
+	response.Body.Close()
+	response.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	if readErr != nil || len(bodyBytes) == 0 {
+		return connector, response, err
+	}
+
+	decoded, decodeErr := decodeConnectorResponse(bodyBytes)
+	if decodeErr != nil {
+		return connector, response, err
+	}
+
+	return decoded, response, nil
+}
+
+func decodeConnectorResponse(body []byte) (*azionapi.ConnectorResponse, error) {
+	var raw connectorAPIResponse
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, err
+	}
+
+	var common connectorCommonAPIResponse
+	if err := json.Unmarshal(raw.Data, &common); err != nil {
+		return nil, err
+	}
+
+	connector := azionapi.ConnectorResponse{
+		State: raw.State,
+	}
+
+	switch common.Type {
+	case "http":
+		var attrs azionapi.ConnectorHTTPAttributes
+		if err := json.Unmarshal(common.Attributes, &attrs); err != nil {
+			return nil, err
+		}
+		httpConnector := azionapi.ConnectorHTTP{Attributes: attrs}
+		applyConnectorHTTPCommon(&httpConnector, common)
+		connector.Data = azionapi.ConnectorHTTPAsConnector(&httpConnector)
+	case "storage":
+		var attrs azionapi.ConnectorStorageAttributes
+		if err := json.Unmarshal(common.Attributes, &attrs); err != nil {
+			return nil, err
+		}
+		storageConnector := azionapi.ConnectorStorage{Attributes: attrs}
+		applyConnectorStorageCommon(&storageConnector, common)
+		connector.Data = azionapi.ConnectorStorageAsConnector(&storageConnector)
+	case "live_ingest":
+		var attrs azionapi.ConnectorLiveIngestAttributes
+		if err := json.Unmarshal(common.Attributes, &attrs); err != nil {
+			return nil, err
+		}
+		liveIngestConnector := azionapi.ConnectorLiveIngest{Attributes: attrs}
+		applyConnectorLiveIngestCommon(&liveIngestConnector, common)
+		connector.Data = azionapi.ConnectorLiveIngestAsConnector(&liveIngestConnector)
+	default:
+		return nil, fmt.Errorf("unsupported connector type %q", common.Type)
+	}
+
+	return &connector, nil
+}
+
+func applyConnectorHTTPCommon(connector *azionapi.ConnectorHTTP, common connectorCommonAPIResponse) {
+	connector.Id = common.ID
+	connector.Name = common.Name
+	connector.LastEditor = common.LastEditor
+	connector.LastModified = common.LastModified
+	connector.CreatedAt = common.CreatedAt
+	connector.Active = common.Active
+	connector.ProductVersion = common.ProductVersion
+	connector.Type = common.Type
+	setNullableString(&connector.State, common.State)
+	setNullableString(&connector.VersionId, common.VersionID)
+}
+
+func applyConnectorStorageCommon(connector *azionapi.ConnectorStorage, common connectorCommonAPIResponse) {
+	connector.Id = common.ID
+	connector.Name = common.Name
+	connector.LastEditor = common.LastEditor
+	connector.LastModified = common.LastModified
+	connector.CreatedAt = common.CreatedAt
+	connector.Active = common.Active
+	connector.ProductVersion = common.ProductVersion
+	connector.Type = common.Type
+	setNullableString(&connector.State, common.State)
+	setNullableString(&connector.VersionId, common.VersionID)
+}
+
+func applyConnectorLiveIngestCommon(connector *azionapi.ConnectorLiveIngest, common connectorCommonAPIResponse) {
+	connector.Id = common.ID
+	connector.Name = common.Name
+	connector.LastEditor = common.LastEditor
+	connector.LastModified = common.LastModified
+	connector.CreatedAt = common.CreatedAt
+	connector.Active = common.Active
+	connector.ProductVersion = common.ProductVersion
+	connector.Type = common.Type
+	setNullableString(&connector.State, common.State)
+	setNullableString(&connector.VersionId, common.VersionID)
+}
+
+func setNullableString(target *azionapi.NullableString, value *string) {
+	if value != nil {
+		target.Set(value)
+		return
+	}
+	target.Unset()
 }
 
 // Helper functions for building requests.
@@ -1082,7 +1241,7 @@ func (r *connectorResource) buildHTTPPatchedConnectorRequest(_ context.Context, 
 	return azionapi.PatchedConnectorHTTPRequestAsPatchedConnectorRequest(req), nil
 }
 
-func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, model *connectorResourceResults, connector azionapi.Connector) {
+func (r *connectorResource) populateConnectorFromResponse(model *connectorResourceResults, connector azionapi.Connector) {
 	actualConnector := connector.GetActualInstance()
 	if actualConnector == nil {
 		return
