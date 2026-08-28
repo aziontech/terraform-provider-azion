@@ -1,36 +1,78 @@
 # Terraform Provider release workflow.
 name: Release
 
-# This GitHub action creates a release when a tag that matches the pattern
-# "v*" (e.g. v0.1.0) is created.
+# Releases are started manually. The run creates the version tag itself (see the
+# bump step below) and goreleaser then publishes that tag.
+#
+# Deliberately no `push: tags` trigger. With one, a hand-pushed tag would start a
+# run that bumps and pushes a *second* tag onto the same commit, and goreleaser
+# would be free to publish the wrong one. Manual dispatch keeps exactly one tag
+# per release.
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
-# Releases need permissions to read and write the repository contents.
-# GitHub considers creating releases and uploading assets as writing contents.
+# Minimal default token permissions; the release job elevates to contents: write
+# because GitHub considers creating releases and uploading assets as writing contents.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   goreleaser:
     permissions:
       contents: write
-      pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Allow goreleaser to access older tag information.
           fetch-depth: 0
-      - uses: actions/setup-go@v3
+          # Nothing in this job pushes over git, so there is no reason to leave a
+          # contents: write token in .git/config where the third-party actions
+          # below could read it. Verified before removing it: github-tag-action
+          # creates the tag by POSTing to the refs API with GITHUB_TOKEN from its
+          # env (it runs `git tag` locally but never `git push`), `git fetch
+          # --tags` below reads a public repo, and goreleaser uploads over the
+          # API. Do not re-enable this thinking the tag push needs it.
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: 'go.mod'
           cache: true
+      # Release gate: fails the run on any High or Critical vulnerability in the
+      # dependency tree. The provider is distributed to customers, so a known-
+      # high release is not shippable.
+      #
+      # Deliberately placed *before* the tag bump, not between `Refresh git` and
+      # `Run GoReleaser`. The bump step creates the tag over the refs API
+      # immediately, so a scan sitting after it turns every vulnerability finding
+      # into a published tag with no release behind it - an orphan that the next
+      # dispatch then has to reason about. Nothing here depends on the tag: the
+      # scan reads the checked-out source, so it is free to run first. Keep it
+      # ahead of the bump, and ahead of the GPG import, so a red scan costs
+      # neither a tag nor a signing key on the runner.
+      #
+      # Scanning the source tree rather than the built archive is the stricter
+      # choice: go.mod carries indirect modules that never get linked into the
+      # binary, so the source scan is a superset of an artifact scan.
+      - name: Scan for vulnerabilities
+        uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6.5.1
+        with:
+          path: '.'
+          fail-build: true
+          severity-cutoff: high
+          # Readable in the job log; the gate is the exit code, not a SARIF upload.
+          output-format: table
+
+      # GoReleaser's sbom pipe shells out to `syft` and hard-fails the release if
+      # it is not on PATH. Pinned rather than floating so the SBOM for a given
+      # commit stays reproducible.
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          syft-version: v1.51.0
+
       - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v5
+        uses: crazy-max/ghaction-import-gpg@d6f3f49f3345e29369fe57596a3ca8f94c4d2ca7 # v5.4.0
         id: import_gpg
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -38,7 +80,7 @@ jobs:
 
       - name: Bump version and push tag
         id: tag_ver
-        uses: anothrNick/github-tag-action@1.37.0
+        uses: anothrNick/github-tag-action@3272e7a58f6c71ee9ede35f53b114e1bb9a91347 # 1.37.0
         env:
           RELEASE_BRANCHES: master,main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,8 +90,12 @@ jobs:
         run: git fetch --tags
         
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v3
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
         with:
+          # Pin the tool's major. The old v3 action defaulted to `latest`, which
+          # meant GoReleaser itself was the one unpinned dependency in the
+          # signing path - the next major would have landed here unannounced.
+          version: '~> v2'
           args: release --clean
         env:
           # GitHub sets the GITHUB_TOKEN secret automatically.
