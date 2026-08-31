@@ -4,7 +4,7 @@ resource "azion_application_main_setting" "example" {
     active = true
     debug  = false
     modules = {
-      edge_cache = {
+      cache = {
         enabled = true
       }
       functions = {

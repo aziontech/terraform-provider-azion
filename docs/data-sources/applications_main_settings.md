@@ -55,7 +55,7 @@ Read-Only:
 Read-Only:
 
 - `application_accelerator` (Attributes) (see [below for nested schema](#nestedatt--results--modules--application_accelerator))
-- `edge_cache` (Attributes) (see [below for nested schema](#nestedatt--results--modules--edge_cache))
+- `cache` (Attributes) (see [below for nested schema](#nestedatt--results--modules--cache))
 - `functions` (Attributes) (see [below for nested schema](#nestedatt--results--modules--functions))
 - `image_processor` (Attributes) (see [below for nested schema](#nestedatt--results--modules--image_processor))
 
@@ -67,8 +67,8 @@ Read-Only:
 - `enabled` (Boolean)
 
 
-<a id="nestedatt--results--modules--edge_cache"></a>
-### Nested Schema for `results.modules.edge_cache`
+<a id="nestedatt--results--modules--cache"></a>
+### Nested Schema for `results.modules.cache`
 
 Read-Only:
 

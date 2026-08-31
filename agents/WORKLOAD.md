@@ -996,9 +996,34 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 }
 ```
 
+### Drift and enforcement
+
+Read mirrors the API response through `populateWorkloadResults` without filtering, so a change made in Azion Console is reverted on the next apply instead of being silently kept. **Do not reintroduce the `plan` parameter** that the function used to take to gate population: it made Read a state-preserving merge, so the API response could never introduce a value and out-of-band changes were invisible on every plan.
+
+Perpetual drift is prevented in the schema instead — optional attributes are `Optional + Computed`, either with a `Default` (enforced) or without one (the API supplies the value).
+
+Every optional nested block needs a default even when its contents are not enforced. A `Computed` block without one is *unknown* in the plan whenever the configuration omits it, and `workloadResourceResults` reads nested blocks into `*Struct` fields, which cannot hold unknown values — the framework fails with "Received unknown value, however the target type cannot handle unknown values". Inside such a default, a **null leaf means "let the API decide"**: the leaf is Computed, so the framework turns that null into an unknown and the response fills it. That is how `tls.certificate`, `protocols.http.versions` and the `mtls.config` fields stay unenforced without drifting.
+
+### The API echoes an empty `mtls.config`
+
+For a workload with no mTLS configured, the API returns `mtls.config` as an object whose every field is null, rather than omitting it. `populateWorkloadResults` treats that as **absent** via `MTLSConfigResourceModel.isEmpty()`.
+
+Do not remove that check. `mtls.config` defaults to a null object in the schema, so writing the echoed object into state contradicts the plan and fails the apply with:
+
+```
+Provider produced inconsistent result after apply
+.workload.mtls.config: was null, but now cty.ObjectVal(map[string]cty.Value{"certificate":cty.NullVal(cty.Number), ...})
+```
+
+The same rule applies to any block defaulting to a null object: an all-null echo carries no configuration, so treat it as absent. `TestPopulateWorkloadResultsIgnoresEmptyMTLSConfig` pins this, with a companion test asserting a config with real values still reaches state.
+
 ### Update Operation Pattern (PATCH)
 
-Workload uses **partial update (PATCH)** via `PartialUpdateWorkload`:
+Workload uses **partial update (PATCH)** via `PartialUpdateWorkload` — unlike the other main-settings resources in this provider, which use PUT.
+
+**Do not "upgrade" this to `UpdateWorkload` (PUT).** A full `WorkloadRequest` carries a `bindings` field that this resource does not model; bindings belong to `azion_workload_deployment`. A PUT sends none of them and wipes the workload's binding to its deployment.
+
+Enforcement does not depend on the verb here. Every field this resource models carries a schema default, so the plan holds a concrete value and the request always sends it — a console change to any modeled field is still reverted. PATCH only spares the fields the provider does not model, which is exactly what is wanted.
 
 ```go
 func (r *workloadResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

@@ -12,7 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -70,6 +72,60 @@ type WafThresholdConfigResourceModel struct {
 	Sensitivity types.String `tfsdk:"sensitivity"`
 }
 
+// Azion API defaults for WAF fields.
+//
+// Only values the API documents as having a single possible setting are enforced
+// here. `engine_version` and `type` each have exactly one accepted value in the
+// OpenAPI specification, so a configuration that omits them can safely be reset
+// to it. `active` follows the convention used by the other main-settings
+// resources in this provider.
+//
+// Deliberately NOT defaulted: `rulesets`, `thresholds` and `sensitivity`. Ruleset
+// IDs are account-specific and the API documents five sensitivity levels with no
+// stated default, so any value chosen here would be a guess that either wipes a
+// practitioner's tuning or produces a permanent diff.
+const (
+	defaultWAFActive        = true
+	defaultWAFEngineVersion = "2021-Q3"
+	defaultWAFEngineType    = "score"
+)
+
+// alignWAFEngineSettings reconciles an API response with what the configuration
+// actually declared, for the parts of the model that cannot hold an unknown
+// value.
+//
+// engine_settings, attributes, rulesets and thresholds are held in the model as
+// Go pointers and slices, which the framework cannot populate from an unknown:
+// reading one yields "Received unknown value, however the target type cannot
+// handle unknown values". They therefore cannot be Computed with no default, and
+// no honest default exists for them (see the const block above). Left ungated,
+// the API's own values would land in state while the plan holds null, and the
+// resource would diff on every plan forever.
+//
+// So these four stay unmanaged unless declared. Scalars inside a declared block
+// are NOT gated: they are Computed, so an out-of-band change to engine_version,
+// type or sensitivity lands in state and is reverted on the next apply.
+func alignWAFEngineSettings(declared, fromAPI *WafEngineSettingsResourceModel) *WafEngineSettingsResourceModel {
+	if declared == nil || fromAPI == nil {
+		return nil
+	}
+
+	if declared.Attributes == nil || fromAPI.Attributes == nil {
+		fromAPI.Attributes = nil
+		return fromAPI
+	}
+
+	if declared.Attributes.Rulesets == nil {
+		fromAPI.Attributes.Rulesets = nil
+	}
+
+	if declared.Attributes.Thresholds == nil {
+		fromAPI.Attributes.Thresholds = nil
+	}
+
+	return fromAPI
+}
+
 func (r *wafResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_waf"
 }
@@ -104,6 +160,8 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 					"active": schema.BoolAttribute{
 						Description: "Whether the WAF is active.",
 						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(defaultWAFActive),
 					},
 					"last_editor": schema.StringAttribute{
 						Description: "Last editor of the WAF.",
@@ -130,12 +188,16 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"engine_version": schema.StringAttribute{
-								Description: "Engine version for the WAF.",
+								Description: "Engine version for the WAF. Only `2021-Q3` is accepted.",
 								Optional:    true,
+								Computed:    true,
+								Default:     stringdefault.StaticString(defaultWAFEngineVersion),
 							},
 							"type": schema.StringAttribute{
-								Description: "Type of the WAF engine.",
+								Description: "Type of the WAF engine. Only `score` is accepted.",
 								Optional:    true,
+								Computed:    true,
+								Default:     stringdefault.StaticString(defaultWAFEngineType),
 							},
 							"attributes": schema.SingleNestedAttribute{
 								Description: "Attributes for the WAF engine settings.",
@@ -160,8 +222,9 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 															Required:    true,
 														},
 														"sensitivity": schema.StringAttribute{
-															Description: "The sensitivity level for the threshold.",
+															Description: "The sensitivity level for the threshold: highest, high, medium, low or lowest. Supplied by the API when not declared.",
 															Optional:    true,
+															Computed:    true,
 														},
 													},
 												},
@@ -256,11 +319,7 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 	plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	// Only update engine_settings from API response if the plan had it specified.
-	// This prevents Terraform from seeing an inconsistency when engine_settings was null in plan.
-	if planEngineSettings == nil {
-		plan.Result.EngineSettings = nil
-	}
+	plan.Result.EngineSettings = alignWAFEngineSettings(planEngineSettings, plan.Result.EngineSettings)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -342,11 +401,7 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Result = transformWAFToResourceModel(data)
 	state.ID = types.StringValue(strconv.FormatInt(wafID, 10))
 
-	// Only update engine_settings from API response if the state had it specified.
-	// This prevents Terraform from seeing an inconsistency when engine_settings was null in state.
-	if stateEngineSettings == nil {
-		state.Result.EngineSettings = nil
-	}
+	state.Result.EngineSettings = alignWAFEngineSettings(stateEngineSettings, state.Result.EngineSettings)
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -448,11 +503,7 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	plan.ID = types.StringValue(strconv.FormatInt(wafID, 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	// Only update engine_settings from API response if the plan had it specified.
-	// This prevents Terraform from seeing an inconsistency when engine_settings was null in plan.
-	if planEngineSettings == nil {
-		plan.Result.EngineSettings = nil
-	}
+	plan.Result.EngineSettings = alignWAFEngineSettings(planEngineSettings, plan.Result.EngineSettings)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

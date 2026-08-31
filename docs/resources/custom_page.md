@@ -8,6 +8,26 @@ description: |-
 
 # azion_custom_page (Resource)
 
+## Drift and enforcement
+
+`active` is enforced: it defaults to `true`, so a custom page disabled outside
+Terraform — in Azion Console, for example — is re-enabled on the next apply and
+shows up in `terraform plan` as a diff.
+
+State always mirrors what the API reports, so a change to any field you have
+declared produces a diff, including the per-page attributes.
+
+The per-page attributes `ttl`, `uri` and `custom_status_code` are **not**
+defaulted. Omitting one leaves whatever the API holds in place rather than
+resetting it:
+
+- `uri` and `custom_status_code` are nullable in the API, where null means "no
+  override" — defaulting either would assert an override you never asked for.
+- `ttl` has no default documented in the API specification.
+
+Note that drift is only reverted when an apply runs, and only when state is
+refreshed — `terraform plan -refresh=false` will not detect it.
+
 Creates a Custom Page resource. Custom Pages allow you to define custom error pages for specific HTTP status codes.
 
 ## Example Usage
