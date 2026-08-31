@@ -104,7 +104,7 @@ func (d *BucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		RetrieveBucket(ctx, bucketName.ValueString()).
 		Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			bucketResponse, response, err = utils.RetryOn429(func() (*azionapi.BucketCreateResponse, *http.Response, error) {
 				return d.client.api.StorageBucketsAPI.RetrieveBucket(ctx, bucketName.ValueString()).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -121,7 +121,7 @@ func (d *BucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintBucket(response.StatusCode, err)
+			usrMsg, errMsg := errPrintBucket(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}

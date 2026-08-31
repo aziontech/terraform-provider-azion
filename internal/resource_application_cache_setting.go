@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -578,7 +577,7 @@ func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resou
 		CacheSettingRequest(*cacheSettingRequest).
 		Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			createdCacheSetting, response, err = utils.RetryOn429(func() (*azionapi.CacheSettingResponse, *http.Response, error) {
 				return r.client.api.ApplicationsCacheSettingsAPI.
 					CreateCacheSetting(ctx, applicationID.ValueInt64()).
@@ -595,13 +594,7 @@ func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resou
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(errReadAll.Error(), "err")
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(err.Error(), bodyString)
-			response.Body.Close()
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -635,7 +628,12 @@ func (r *applicationCacheSettingsResource) Read(ctx context.Context, req resourc
 	}
 
 	applicationId := state.ApplicationID.ValueInt64()
-	cacheSettingId := state.CacheSetting.ID.ValueInt64()
+	var cacheSettingId int64
+	if state.CacheSetting != nil {
+		cacheSettingId = state.CacheSetting.ID.ValueInt64()
+	} else {
+		cacheSettingId = state.ID.ValueInt64()
+	}
 
 	// Call V4 API to retrieve cache setting
 	cacheSettingResponse, response, err := r.client.api.ApplicationsCacheSettingsAPI.
@@ -663,13 +661,7 @@ func (r *applicationCacheSettingsResource) Read(ctx context.Context, req resourc
 			}
 		} else {
 			if response != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(errReadAll.Error(), "err")
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(err.Error(), bodyString)
-				response.Body.Close()
+				resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			}
 			return
 		}
@@ -748,7 +740,7 @@ func (r *applicationCacheSettingsResource) Update(ctx context.Context, req resou
 		CacheSettingRequest(*cacheSettingRequest).
 		Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			updatedCacheSetting, response, err = utils.RetryOn429(func() (*azionapi.CacheSettingResponse, *http.Response, error) {
 				return r.client.api.ApplicationsCacheSettingsAPI.
 					UpdateCacheSetting(ctx, applicationID.ValueInt64(), cacheID.ValueInt64()).
@@ -765,13 +757,7 @@ func (r *applicationCacheSettingsResource) Update(ctx context.Context, req resou
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(errReadAll.Error(), "err")
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(err.Error(), bodyString)
-			response.Body.Close()
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -804,7 +790,12 @@ func (r *applicationCacheSettingsResource) Delete(ctx context.Context, req resou
 	}
 
 	applicationId := state.ApplicationID.ValueInt64()
-	cacheSettingId := state.CacheSetting.ID.ValueInt64()
+	var cacheSettingId int64
+	if state.CacheSetting != nil {
+		cacheSettingId = state.CacheSetting.ID.ValueInt64()
+	} else {
+		cacheSettingId = state.ID.ValueInt64()
+	}
 
 	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
 		return r.client.api.ApplicationsCacheSettingsAPI.
@@ -818,12 +809,7 @@ func (r *applicationCacheSettingsResource) Delete(ctx context.Context, req resou
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(errReadAll.Error(), "err")
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(err.Error(), bodyString)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }
@@ -880,13 +866,7 @@ func (r *applicationCacheSettingsResource) ImportState(ctx context.Context, req 
 			}
 		} else {
 			if response != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(errReadAll.Error(), "err")
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(err.Error(), bodyString)
-				response.Body.Close()
+				resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			}
 			return
 		}

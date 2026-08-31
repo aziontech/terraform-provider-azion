@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -198,7 +197,7 @@ func (r *functionResource) Create(ctx context.Context, req resource.CreateReques
 
 	createFunction, response, err := r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			createFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
 				return r.client.api.FunctionsAPI.CreateFunction(ctx).FunctionsRequest(edgeFunction).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -215,18 +214,7 @@ func (r *functionResource) Create(ctx context.Context, req resource.CreateReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -255,7 +243,7 @@ func (r *functionResource) Create(ctx context.Context, req resource.CreateReques
 		Version:              types.StringValue(createFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(createFunction.Data.GetVendor()),
 		ReferenceCount:       types.Int64Value(createFunction.Data.GetReferenceCount()),
-		State:                types.StringPointerValue(createFunction.Data.State.Get()),
+		State:                types.StringPointerValue(createFunction.Data.VersionState.Get()),
 		VersionID:            types.StringPointerValue(createFunction.Data.VersionId.Get()),
 	}
 
@@ -298,11 +286,11 @@ func (r *functionResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	getFunction, response, err := r.client.api.FunctionsAPI.RetrieveFunction(ctx, functionId).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			getFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
 				return r.client.api.FunctionsAPI.RetrieveFunction(ctx, functionId).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -319,18 +307,7 @@ func (r *functionResource) Read(ctx context.Context, req resource.ReadRequest, r
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -359,7 +336,7 @@ func (r *functionResource) Read(ctx context.Context, req resource.ReadRequest, r
 		Version:              types.StringValue(getFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(getFunction.Data.GetVendor()),
 		ReferenceCount:       types.Int64Value(getFunction.Data.GetReferenceCount()),
-		State:                types.StringPointerValue(getFunction.Data.State.Get()),
+		State:                types.StringPointerValue(getFunction.Data.VersionState.Get()),
 		VersionID:            types.StringPointerValue(getFunction.Data.VersionId.Get()),
 	}
 
@@ -442,7 +419,7 @@ func (r *functionResource) Update(ctx context.Context, req resource.UpdateReques
 
 	updateFunction, response, err := r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, functionId).PatchedFunctionsRequest(updateFunctionRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			updateFunction, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
 				return r.client.api.FunctionsAPI.PartialUpdateFunction(ctx, functionId).PatchedFunctionsRequest(updateFunctionRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -459,18 +436,7 @@ func (r *functionResource) Update(ctx context.Context, req resource.UpdateReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -499,7 +465,7 @@ func (r *functionResource) Update(ctx context.Context, req resource.UpdateReques
 		Version:              types.StringValue(updateFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(updateFunction.Data.GetVendor()),
 		ReferenceCount:       types.Int64Value(updateFunction.Data.GetReferenceCount()),
-		State:                types.StringPointerValue(updateFunction.Data.State.Get()),
+		State:                types.StringPointerValue(updateFunction.Data.VersionState.Get()),
 		VersionID:            types.StringPointerValue(updateFunction.Data.VersionId.Get()),
 	}
 
@@ -550,18 +516,7 @@ func (r *functionResource) Delete(ctx context.Context, req resource.DeleteReques
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }

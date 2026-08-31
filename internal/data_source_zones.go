@@ -160,7 +160,7 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		PageSize(PageSize.ValueInt64()).
 		Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedZoneList, *http.Response, error) {
 				return d.client.api.DNSZonesAPI.ListDnsZones(ctx).
 					Page(Page.ValueInt64()).
@@ -180,7 +180,7 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintZones(response.StatusCode, err)
+			usrMsg, errMsg := errPrintZones(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}

@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -153,7 +152,7 @@ func transformFirewallResponseToModel(data *sdk.Firewall) *FirewallResourceResul
 		LastModified:   types.StringValue(data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(data.GetProductVersion()),
-		State:          types.StringPointerValue(data.State.Get()),
+		State:          types.StringPointerValue(data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(data.VersionId.Get()),
 	}
 
@@ -164,9 +163,9 @@ func transformFirewallResponseToModel(data *sdk.Firewall) *FirewallResourceResul
 	modules := data.GetModules()
 	results.Modules = &FirewallResourceModules{}
 
-	if modules.DdosProtection != nil {
-		results.Modules.DdosProtection = &DdosProtectionModule{Enabled: types.BoolValue(modules.DdosProtection.GetEnabled())}
-	}
+	// ddos_protection is always present in the response, so it is not a pointer.
+	ddosProtection := modules.GetDdosProtection()
+	results.Modules.DdosProtection = &DdosProtectionModule{Enabled: types.BoolValue(ddosProtection.GetEnabled())}
 	if modules.Functions != nil {
 		results.Modules.Functions = &FunctionsModule{Enabled: types.BoolValue(modules.Functions.GetEnabled())}
 	}
@@ -332,7 +331,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 
 	firewallResponse, response, err := r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(firewallRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(firewallRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -349,18 +348,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -386,6 +374,13 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 	var firewallID int64
 	if state.ID.IsNull() {
+		if state.Firewall == nil {
+			resp.Diagnostics.AddError(
+				"Firewall id error ",
+				"should not be null or empty",
+			)
+			return
+		}
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
 		var err error
@@ -399,11 +394,11 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 	firewallResponse, response, err := r.client.api.FirewallsAPI.
 		RetrieveFirewall(ctx, firewallID).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.RetrieveFirewall(ctx, firewallID).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -420,18 +415,7 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -463,6 +447,13 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 
 	var firewallID int64
 	if state.ID.IsNull() {
+		if state.Firewall == nil {
+			resp.Diagnostics.AddError(
+				"Firewall id error ",
+				"should not be null or empty",
+			)
+			return
+		}
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
 		var err error
@@ -487,7 +478,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 
 	firewallResponse, response, err := r.client.api.FirewallsAPI.UpdateFirewall(ctx, firewallID).FirewallRequest(firewallRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.UpdateFirewall(ctx, firewallID).FirewallRequest(firewallRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -504,18 +495,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -542,6 +522,13 @@ func (r *firewallResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	var firewallID int64
 	if state.ID.IsNull() {
+		if state.Firewall == nil {
+			resp.Diagnostics.AddError(
+				"Firewall id error ",
+				"should not be null or empty",
+			)
+			return
+		}
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
 		var err error
@@ -562,18 +549,7 @@ func (r *firewallResource) Delete(ctx context.Context, req resource.DeleteReques
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }

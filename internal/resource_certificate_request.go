@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -250,7 +249,7 @@ func (r *certificateRequestResource) Create(ctx context.Context, req resource.Cr
 	// Call the V4 API - Request Certificate endpoint (Let's Encrypt).
 	certificateResponse, response, err := r.client.api.DigitalCertificatesRequestACertificateAPI.RequestCertificate(ctx).CertificateRequest(*certificateRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			certificateResponse, response, err = utils.RetryOn429(func() (*azionapi.CertificateResponse, *http.Response, error) {
 				return r.client.api.DigitalCertificatesRequestACertificateAPI.RequestCertificate(ctx).CertificateRequest(*certificateRequest).Execute()
 			}, 5) // Maximum 5 retries
@@ -267,18 +266,7 @@ func (r *certificateRequestResource) Create(ctx context.Context, req resource.Cr
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	} else {
@@ -310,7 +298,7 @@ func (r *certificateRequestResource) Read(ctx context.Context, req resource.Read
 	}
 
 	// Get the certificate ID from state.
-	certificateID, err := parseCertificateRequestID(state.ID, state.Results.ID)
+	certificateID, err := parseCertificateRequestID(state.ID, state.Results)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error",
@@ -322,11 +310,11 @@ func (r *certificateRequestResource) Read(ctx context.Context, req resource.Read
 	// Call the V4 API - Use the regular certificates endpoint to read.
 	certificateResponse, response, err := r.client.api.DigitalCertificatesCertificatesAPI.RetrieveCertificate(ctx, certificateID).Execute()
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			certificateResponse, response, err = utils.RetryOn429(func() (*azionapi.CertificateResponse, *http.Response, error) {
 				return r.client.api.DigitalCertificatesCertificatesAPI.RetrieveCertificate(ctx, certificateID).Execute()
 			}, 5) // Maximum 5 retries
@@ -343,18 +331,7 @@ func (r *certificateRequestResource) Read(ctx context.Context, req resource.Read
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	} else {
@@ -393,7 +370,7 @@ func (r *certificateRequestResource) Delete(ctx context.Context, req resource.De
 	}
 
 	// Get the certificate ID from state.
-	certificateID, err := parseCertificateRequestID(state.ID, state.Results.ID)
+	certificateID, err := parseCertificateRequestID(state.ID, state.Results)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Value Conversion error",
@@ -413,18 +390,7 @@ func (r *certificateRequestResource) Delete(ctx context.Context, req resource.De
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }
@@ -434,7 +400,7 @@ func (r *certificateRequestResource) ImportState(ctx context.Context, req resour
 }
 
 // parseCertificateRequestID extracts the certificate ID from either the string ID or the int64 ID.
-func parseCertificateRequestID(stringID types.String, int64ID types.Int64) (int64, error) {
+func parseCertificateRequestID(stringID types.String, results *certificateRequestResultsModel) (int64, error) {
 	if !stringID.IsNull() && !stringID.IsUnknown() {
 		var id int64
 		_, err := fmt.Sscanf(stringID.ValueString(), "%d", &id)
@@ -443,8 +409,8 @@ func parseCertificateRequestID(stringID types.String, int64ID types.Int64) (int6
 		}
 		return id, nil
 	}
-	if !int64ID.IsNull() && !int64ID.IsUnknown() {
-		return int64ID.ValueInt64(), nil
+	if results != nil && !results.ID.IsNull() && !results.ID.IsUnknown() {
+		return results.ID.ValueInt64(), nil
 	}
 	return 0, fmt.Errorf("no valid certificate ID found in state")
 }

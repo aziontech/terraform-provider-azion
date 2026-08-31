@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -121,7 +120,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 		BucketCreateRequest(*bucket).
 		Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			createBucket, response, err = utils.RetryOn429(func() (*azionapi.BucketCreateResponse, *http.Response, error) {
 				return r.client.api.StorageBucketsAPI.
 					CreateBucket(ctx).
@@ -141,18 +140,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -190,11 +178,11 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 		RetrieveBucket(ctx, bucketName).
 		Execute() //nolint
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			getBucket, response, err = utils.RetryOn429(func() (*azionapi.BucketCreateResponse, *http.Response, error) {
 				return r.client.api.StorageBucketsAPI.
 					RetrieveBucket(ctx, bucketName).
@@ -213,18 +201,7 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -269,7 +246,7 @@ func (r *bucketResource) Update(ctx context.Context, req resource.UpdateRequest,
 		PatchedBucketRequest(*updateBucketRequest).
 		Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			updateBucket, response, err = utils.RetryOn429(func() (*azionapi.BucketCreateResponse, *http.Response, error) {
 				return r.client.api.StorageBucketsAPI.
 					UpdateBucket(ctx, bucketName).
@@ -289,18 +266,7 @@ func (r *bucketResource) Update(ctx context.Context, req resource.UpdateRequest,
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -341,18 +307,7 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }

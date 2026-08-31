@@ -183,7 +183,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	// Execute the request.
 	recordsResponse, httpResp, err := listRequest.Execute() //nolint
 	if err != nil {
-		if httpResp.StatusCode == 429 {
+		if httpResp != nil && httpResp.StatusCode == 429 {
 			recordsResponse, httpResp, err = utils.RetryOn429(func() (*azionapi.PaginatedRecordList, *http.Response, error) {
 				return d.client.api.DNSRecordsAPI.ListDnsRecords(ctx, zoneId.ValueInt64()).
 					Page(page.ValueInt64()).
@@ -203,7 +203,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintRecords(httpResp.StatusCode, err)
+			usrMsg, errMsg := errPrintRecords(utils.StatusCodeOf(httpResp), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}

@@ -189,6 +189,9 @@ func ExceedsValidRange(resp any, vl any) {
 }
 
 func SleepAfter429(response *http.Response) error {
+	if response == nil {
+		return errors.New("no response to inspect for the retry-after header")
+	}
 	timeToSleep := response.Header.Get("retry-after")
 	num, err := strconv.Atoi(timeToSleep)
 	if err != nil {
@@ -207,6 +210,11 @@ func RetryOn429[T any](apiCall func() (T, *http.Response, error), maxRetries int
 	for i := 0; i < maxRetries; i++ {
 		// Call the API function
 		result, response, err = apiCall()
+
+		// No response to inspect, return immediately.
+		if response == nil {
+			return result, response, err
+		}
 
 		// If no error and not a 429, return successfully
 		if err == nil && response.StatusCode != http.StatusTooManyRequests {
@@ -294,4 +302,34 @@ func containsStillInUseMsg(s string) bool {
 		}
 	}
 	return false
+}
+
+// ReadAPIErrorBody safely extracts the body of a failed API response so it can
+// be surfaced as a Terraform diagnostic detail. It never panics: the response
+// (or its body) is nil whenever the request fails before the server answers,
+// e.g. on DNS, TLS or connection errors.
+func ReadAPIErrorBody(response *http.Response) string {
+	if response == nil || response.Body == nil {
+		return "API request failed"
+	}
+	defer func() { _ = response.Body.Close() }()
+
+	bodyBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return fmt.Sprintf("API request failed with status %d - could not read the response body: %s", response.StatusCode, err.Error())
+	}
+	if len(bodyBytes) == 0 {
+		return fmt.Sprintf("API request failed with status %d", response.StatusCode)
+	}
+	return string(bodyBytes)
+}
+
+// StatusCodeOf returns the status code of a response, or 0 when there is no
+// response to inspect. It lets callers compare status codes without risking a
+// nil pointer dereference.
+func StatusCodeOf(response *http.Response) int {
+	if response == nil {
+		return 0
+	}
+	return response.StatusCode
 }

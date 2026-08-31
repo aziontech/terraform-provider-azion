@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -133,7 +132,7 @@ func (r *applicationDeviceGroupResource) Create(ctx context.Context, req resourc
 		DeviceGroupRequest(deviceGroupRequest).
 		Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			deviceGroupResponse, response, err = utils.RetryOn429(func() (*azionapi.DeviceGroupResponse, *http.Response, error) {
 				return r.client.api.ApplicationsDeviceGroupsAPI.
 					CreateDeviceGroup(ctx, plan.ApplicationID.ValueInt64()).
@@ -150,12 +149,7 @@ func (r *applicationDeviceGroupResource) Create(ctx context.Context, req resourc
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(errReadAll.Error(), "err")
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(err.Error(), bodyString)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -206,12 +200,12 @@ func (r *applicationDeviceGroupResource) Read(ctx context.Context, req resource.
 		RetrieveDeviceGroup(ctx, applicationID, deviceGroupID).
 		Execute() //nolint
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
 
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			deviceGroupResponse, response, err = utils.RetryOn429(func() (*azionapi.DeviceGroupResponse, *http.Response, error) {
 				return r.client.api.ApplicationsDeviceGroupsAPI.RetrieveDeviceGroup(ctx, applicationID, deviceGroupID).Execute() //nolint
 			}, 5)
@@ -225,12 +219,7 @@ func (r *applicationDeviceGroupResource) Read(ctx context.Context, req resource.
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(errReadAll.Error(), "err")
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(err.Error(), bodyString)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -290,7 +279,7 @@ func (r *applicationDeviceGroupResource) Update(ctx context.Context, req resourc
 		DeviceGroupRequest(deviceGroupRequest).
 		Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			deviceGroupResponse, response, err = utils.RetryOn429(func() (*azionapi.DeviceGroupResponse, *http.Response, error) {
 				return r.client.api.ApplicationsDeviceGroupsAPI.
 					UpdateDeviceGroup(ctx, applicationID, deviceGroupID).
@@ -307,12 +296,7 @@ func (r *applicationDeviceGroupResource) Update(ctx context.Context, req resourc
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(errReadAll.Error(), "err")
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(err.Error(), bodyString)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -367,12 +351,7 @@ func (r *applicationDeviceGroupResource) Delete(ctx context.Context, req resourc
 			// Resource already deleted.
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(errReadAll.Error(), "err")
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(err.Error(), bodyString)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }

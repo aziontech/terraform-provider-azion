@@ -327,15 +327,15 @@ func retrieveCacheSettingRawDS(ctx context.Context, client *apiClient, applicati
 	}
 
 	// Check for error status codes
-	if httpResp.StatusCode == http.StatusNotFound {
+	if httpResp != nil && httpResp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("404")
 	}
-	if httpResp.StatusCode >= 400 {
+	if httpResp != nil && httpResp.StatusCode >= 400 {
 		return nil, fmt.Errorf("API error: %s - %s", httpResp.Status, string(bodyBytes))
 	}
 
 	// Handle rate limiting
-	if httpResp.StatusCode == 429 {
+	if httpResp != nil && httpResp.StatusCode == 429 {
 		return nil, fmt.Errorf("rate limited")
 	}
 

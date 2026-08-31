@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -121,7 +120,7 @@ func (f *FirewallFunctionInstanceDataSource) Read(ctx context.Context, req datas
 	firewallFunctionInstanceResponse, response, err := f.client.api.FirewallsFunctionAPI.
 		RetrieveFirewallFunction(ctx, firewallID.ValueInt64(), functionInstanceID.ValueInt64()).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallFunctionInstanceResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallFunctionInstanceResponse, *http.Response, error) {
 				return f.client.api.FirewallsFunctionAPI.
 					RetrieveFirewallFunction(ctx, firewallID.ValueInt64(), functionInstanceID.ValueInt64()).Execute() //nolint
@@ -139,18 +138,7 @@ func (f *FirewallFunctionInstanceDataSource) Read(ctx context.Context, req datas
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}

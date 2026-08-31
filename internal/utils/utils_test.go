@@ -62,3 +62,75 @@ func TestIsReferencedByAnotherResource(t *testing.T) {
 		})
 	}
 }
+
+func TestReadAPIErrorBody(t *testing.T) {
+	tests := []struct {
+		name     string
+		response *http.Response
+		want     string
+	}{
+		{
+			name:     "nil response",
+			response: nil,
+			want:     "API request failed",
+		},
+		{
+			name:     "nil body",
+			response: &http.Response{StatusCode: 500},
+			want:     "API request failed",
+		},
+		{
+			name: "empty body",
+			response: &http.Response{
+				StatusCode: 502,
+				Body:       io.NopCloser(bytes.NewReader(nil)),
+			},
+			want: "API request failed with status 502",
+		},
+		{
+			name: "body is returned verbatim",
+			response: &http.Response{
+				StatusCode: 400,
+				Body:       io.NopCloser(bytes.NewReader([]byte(`{"detail":"invalid"}`))),
+			},
+			want: `{"detail":"invalid"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ReadAPIErrorBody(tt.response); got != tt.want {
+				t.Errorf("ReadAPIErrorBody() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStatusCodeOf(t *testing.T) {
+	if got := StatusCodeOf(nil); got != 0 {
+		t.Errorf("StatusCodeOf(nil) = %d, want 0", got)
+	}
+	if got := StatusCodeOf(&http.Response{StatusCode: 404}); got != 404 {
+		t.Errorf("StatusCodeOf(404) = %d, want 404", got)
+	}
+}
+
+func TestRetryOn429WithoutResponse(t *testing.T) {
+	// A transport error yields a nil response; the retry helper must return it
+	// instead of dereferencing it.
+	calls := 0
+	_, response, err := RetryOn429(func() (*string, *http.Response, error) { //nolint:bodyclose // the call always returns a nil response
+		calls++
+		return nil, nil, errors.New("connection refused")
+	}, 5)
+
+	if calls != 1 {
+		t.Errorf("apiCall was invoked %d times, want 1", calls)
+	}
+	if response != nil {
+		t.Errorf("response = %v, want nil", response)
+	}
+	if err == nil || err.Error() != "connection refused" {
+		t.Errorf("err = %v, want \"connection refused\"", err)
+	}
+}
