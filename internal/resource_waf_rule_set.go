@@ -11,6 +11,7 @@ import (
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -50,6 +51,23 @@ type WafRuleSetResourceResults struct {
 	LastModified types.String                        `tfsdk:"last_modified"`
 }
 
+// Azion API defaults for WAF exception fields.
+//
+// Only `active` is enforced. The rest of the optional fields are Computed without
+// a default, which makes state reflect what the API reports without asserting a
+// value the API never documented:
+//
+//   - `rule_id` selects which WAF rule the exception applies to, so defaulting it
+//     would silently retarget an exception.
+//   - `operator` accepts `regex` or `contains` with no stated default.
+//   - `path`, and the per-condition `name` and `value`, are free-form.
+//
+// Adding Computed is a fix in its own right, independent of enforcement: the
+// transform populates these from the API unconditionally, so while they were
+// Optional-only, omitting one left state holding a value the plan wanted to null
+// — a diff that reappeared on every plan and never converged.
+const defaultWAFRuleActive = true
+
 func (r *wafRuleSetResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_waf_rule_set"
 }
@@ -80,16 +98,18 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Computed:    true,
 					},
 					"rule_id": schema.Int64Attribute{
-						Description: "The rule ID that this exception applies to. 0 means all rules.",
+						Description: "The rule ID that this exception applies to. 0 means all rules. Supplied by the API when not declared.",
 						Optional:    true,
+						Computed:    true,
 					},
 					"name": schema.StringAttribute{
 						Description: "Name of the WAF exception.",
 						Required:    true,
 					},
 					"path": schema.StringAttribute{
-						Description: "Path pattern for the exception.",
+						Description: "Path pattern for the exception. Supplied by the API when not declared.",
 						Optional:    true,
+						Computed:    true,
 					},
 					"conditions": schema.ListNestedAttribute{
 						Description: "Conditions for the WAF exception.",
@@ -105,12 +125,14 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 											Required:    true,
 										},
 										"name": schema.StringAttribute{
-											Description: "The name for specific condition on name.",
+											Description: "The name for specific condition on name. Supplied by the API when not declared.",
 											Optional:    true,
+											Computed:    true,
 										},
 										"value": schema.StringAttribute{
-											Description: "The value for specific condition on value.",
+											Description: "The value for specific condition on value. Supplied by the API when not declared.",
 											Optional:    true,
+											Computed:    true,
 										},
 										"condition_type": schema.StringAttribute{
 											Description: "Type of condition: generic, specific_on_name, or specific_on_value.",
@@ -122,12 +144,15 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						},
 					},
 					"operator": schema.StringAttribute{
-						Description: "The operator for the exception (regex or contains).",
+						Description: "The operator for the exception: regex or contains. Supplied by the API when not declared.",
 						Optional:    true,
+						Computed:    true,
 					},
 					"active": schema.BoolAttribute{
 						Description: "Whether the exception is active.",
 						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(defaultWAFRuleActive),
 					},
 					"last_editor": schema.StringAttribute{
 						Description: "Last editor of the exception.",

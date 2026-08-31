@@ -8,6 +8,38 @@ description: |-
 
 # azion_firewall_main_setting (Resource)
 
+## Configuration is the desired state
+
+This resource asserts the **complete** firewall on every apply, using a full
+replacement (`PUT`) rather than a partial update. Two things follow, both
+intentional:
+
+- A change made outside Terraform — in Azion Console, for example — is **reverted**
+  on the next `terraform apply`, and appears in `terraform plan` as a diff. This
+  holds for fields you declare and for fields you leave out.
+- Leaving a field out is not "don't care". It means "use the default below", and
+  the field is reset to it. To keep a non-default value, declare it explicitly.
+
+| Field | Enforced default |
+|---|---|
+| `active` | `true` |
+| `debug` | `false` |
+| `modules.functions.enabled` | `true` |
+| `modules.network_protection.enabled` | `true` |
+| `modules.waf.enabled` | `false` |
+
+`modules.ddos_protection` is always `true`. DDoS protection cannot be disabled and
+the Azion API accepts no value for it, so declaring it has no effect — it is kept
+declarable only so existing configurations continue to work.
+
+Note that drift is only reverted when an apply runs, and only when state is
+refreshed — `terraform plan -refresh=false` will not detect it. Terraform also
+cannot remove firewalls created outside Terraform, since those are not in state.
+
+Disabling a module that child resources depend on will make those resources fail:
+`modules.functions.enabled` is required by `azion_firewall_functions_instance`, and
+`modules.waf.enabled` by WAF rule sets attached through the rules engine.
+
 
 
 ## Example Usage
@@ -76,17 +108,20 @@ Read-Only:
 
 Optional:
 
-- `ddos_protection` (Attributes) DDoS protection module configuration. (see [below for nested schema](#nestedatt--data--modules--ddos_protection))
 - `functions` (Attributes) Functions module configuration. (see [below for nested schema](#nestedatt--data--modules--functions))
 - `network_protection` (Attributes) Network protection module configuration. (see [below for nested schema](#nestedatt--data--modules--network_protection))
+- `ddos_protection` (Attributes) DDoS protection module configuration. Always enabled. (see [below for nested schema](#nestedatt--data--modules--ddos_protection))
 - `waf` (Attributes) WAF module configuration. (see [below for nested schema](#nestedatt--data--modules--waf))
 
 <a id="nestedatt--data--modules--ddos_protection"></a>
 ### Nested Schema for `data.modules.ddos_protection`
 
+DDoS protection is always enabled and cannot be edited. Declaring this block has
+no effect on the API; it remains settable only for backwards compatibility.
+
 Optional:
 
-- `enabled` (Boolean) Whether DDoS protection is enabled.
+- `enabled` (Boolean) Always `true`. Setting it to `false` has no effect.
 
 
 <a id="nestedatt--data--modules--functions"></a>

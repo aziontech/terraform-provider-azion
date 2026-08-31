@@ -1103,51 +1103,12 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
         }
     }
 
-    // Preserve the prior state's Modules shape so unconfigured submodules
-    // aren't introduced into state by the API response, which would cause
-    // perpetual drift on subsequent plans.
-    previousModules := state.Application.Modules
-
-    // Update state from response
-    state.Application = &ApplicationResults{
-        ApplicationID:  types.Int64Value(stateApplication.Data.GetId()),
-        Name:           types.StringValue(stateApplication.Data.GetName()),
-        Active:         types.BoolValue(stateApplication.Data.GetActive()),
-        Debug:          types.BoolValue(stateApplication.Data.GetDebug()),
-        ProductVersion: types.StringValue(stateApplication.Data.GetProductVersion()),
-        State:          types.StringPointerValue(stateApplication.Data.State.Get()),
-        VersionID:      types.StringPointerValue(stateApplication.Data.VersionId.Get()),
-    }
+    // Mirror the API response without filtering. State must match the remote
+    // application so Terraform can plan a revert when a module was toggled
+    // outside Terraform. Unconfigured fields do not drift perpetually because
+    // every optional attribute is Computed with a schema default.
+    state.Application = transformApplicationResponseToModel(&stateApplication.Data)
     state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
-
-    // Handle modules from response - gate each submodule on the prior state having it.
-    // If the user never configured a submodule, do not introduce it into state from the
-    // API echo; otherwise Terraform will plan to set it to null on every subsequent run.
-    if previousModules != nil && stateApplication.Data.Modules != nil {
-        modelState := stateApplication.Data.GetModules()
-        modelPlan := ApplicationModules{}
-        if previousModules.Cache != nil && modelState.Cache != nil {
-            modelPlan.Cache = &CacheModule{
-                Enabled: types.BoolValue(modelState.Cache.GetEnabled()),
-            }
-        }
-        if previousModules.Functions != nil && modelState.Functions != nil {
-            modelPlan.Functions = &FunctionModule{
-                Enabled: types.BoolValue(modelState.Functions.GetEnabled()),
-            }
-        }
-        if previousModules.ApplicationAccelerator != nil && modelState.ApplicationAccelerator != nil {
-            modelPlan.ApplicationAccelerator = &ApplicationAcceleratorModule{
-                Enabled: types.BoolValue(modelState.ApplicationAccelerator.GetEnabled()),
-            }
-        }
-        if previousModules.ImageProcessor != nil && modelState.ImageProcessor != nil {
-            modelPlan.ImageProcessor = &ImageProcessorModule{
-                Enabled: types.BoolValue(modelState.ImageProcessor.GetEnabled()),
-            }
-        }
-        state.Application.Modules = &modelPlan
-    }
 
     diags = resp.State.Set(ctx, &state)
     resp.Diagnostics.Append(diags...)
@@ -1413,9 +1374,13 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 
 **Root cause:** Read unconditionally populated `state.Application.Modules` from the API response (which always echoes back submodule defaults). After refresh, state had submodules the user never configured; HCL had none → Terraform planned to null them. Update then preserved those nulls in state, but the next refresh re-populated from API → loop.
 
-**Fix:** In Read, snapshot the prior `state.Application.Modules` *before* rebuilding `state.Application`, then gate each submodule on `previousModules.X != nil` (see the Read Method section above). If the prior state had no modules block, none gets re-introduced.
+**Superseded fix — do NOT reintroduce prior-state gating.** Gating Read on `previousModules.X != nil` did stop the perpetual drift, but it also made Read a state-preserving merge: the API response could never *introduce* a value, so a module toggled in Azion Console was invisible on every plan. The configuration is the desired state, so that silence is a compliance failure.
 
-**Self-heal for already-polluted state:** Run `terraform apply` once after the fix is deployed. Update writes the user's plan (modules=nil) into state, clearing the API-default leftovers. Subsequent plans show no drift.
+**Current fix:** Read mirrors the API response unconditionally via `transformApplicationResponseToModel`, and the perpetual drift is prevented in the *schema* instead — `modules`, each module block and each `enabled` flag are `Optional + Computed` with a `Default`. When the configuration omits a field, the plan resolves it to that default rather than to null, so plan and state agree and the diff is empty. A module toggled out-of-band now differs from the default and is reverted on the next apply.
+
+Note that every optional attribute needs a default, nested blocks included. A `Computed` attribute without one is *unknown* in the plan whenever the configuration omits it, and `req.Plan.Get(ctx, &plan)` reads nested objects into `*Struct` fields, which cannot hold unknown values — the framework fails with "Received unknown value, however the target type cannot handle unknown values". A missing default therefore breaks Create, not just enforcement. Use `objectdefault.StaticValue` with a complete subtree; the object default is also required because defaults cannot be applied to children of a block that is null in the plan.
+
+Update must send the full object (`UpdateApplication`, a PUT) and write the API response into state — never the plan's modules — or a console change to an undeclared module survives the apply.
 
 ### Application Schema Fields
 

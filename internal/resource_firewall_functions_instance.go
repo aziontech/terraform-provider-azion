@@ -287,6 +287,14 @@ func (r *FirewallFunctionsInstanceResource) Read(ctx context.Context, req resour
 		return
 	}
 
+	if firewallID == 0 {
+		resp.Diagnostics.AddError(
+			"Firewall ID error ",
+			"should not be null or empty",
+		)
+		return
+	}
+
 	functionInstanceResponse, response, err := r.client.
 		api.FirewallsFunctionAPI.
 		RetrieveFirewallFunction(ctx, firewallID, functionInstanceID).Execute() //nolint

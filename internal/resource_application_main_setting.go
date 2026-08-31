@@ -10,10 +10,12 @@ import (
 
 	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -51,6 +53,73 @@ type ApplicationResults struct {
 	VersionID      types.String        `tfsdk:"version_id"`
 }
 
+// Azion API defaults for application fields.
+//
+// The configuration is the desired state: a field left out of the configuration
+// is reset to the value below on every apply, so a module toggled in Azion
+// Console is undone rather than silently adopted.
+//
+// Every optional attribute needs a default. A Computed attribute without one is
+// unknown in the plan whenever the configuration omits it, and the nested
+// objects here are read into pointer fields that cannot hold unknown values, so
+// a missing default breaks Create instead of merely weakening enforcement.
+const (
+	defaultApplicationActive           = true
+	defaultApplicationDebug            = false
+	defaultModuleCacheEnabled          = true
+	defaultModuleFunctionsEnabled      = true
+	defaultModuleAcceleratorEnabled    = false
+	defaultModuleImageProcessorEnabled = false
+)
+
+// Attribute types for the nested objects, needed to build object defaults whose
+// types must match the schema exactly.
+var (
+	moduleToggleAttrTypes = map[string]attr.Type{
+		"enabled": types.BoolType,
+	}
+
+	applicationModulesAttrTypes = map[string]attr.Type{
+		"cache":                   types.ObjectType{AttrTypes: moduleToggleAttrTypes},
+		"functions":               types.ObjectType{AttrTypes: moduleToggleAttrTypes},
+		"application_accelerator": types.ObjectType{AttrTypes: moduleToggleAttrTypes},
+		"image_processor":         types.ObjectType{AttrTypes: moduleToggleAttrTypes},
+	}
+)
+
+var (
+	applicationModulesDefault = types.ObjectValueMust(applicationModulesAttrTypes, map[string]attr.Value{
+		"cache":                   moduleToggleDefault(defaultModuleCacheEnabled),
+		"functions":               moduleToggleDefault(defaultModuleFunctionsEnabled),
+		"application_accelerator": moduleToggleDefault(defaultModuleAcceleratorEnabled),
+		"image_processor":         moduleToggleDefault(defaultModuleImageProcessorEnabled),
+	})
+)
+
+func moduleToggleDefault(enabled bool) types.Object {
+	return types.ObjectValueMust(moduleToggleAttrTypes, map[string]attr.Value{
+		"enabled": types.BoolValue(enabled),
+	})
+}
+
+// moduleToggleAttribute builds the schema for one module, all of which are a
+// single `enabled` flag.
+func moduleToggleAttribute(description string, enabled bool) schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Description: description,
+		Optional:    true,
+		Computed:    true,
+		Default:     objectdefault.StaticValue(moduleToggleDefault(enabled)),
+		Attributes: map[string]schema.Attribute{
+			"enabled": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(enabled),
+			},
+		},
+	}
+}
+
 func (r *applicationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_application_main_setting"
 }
@@ -82,13 +151,13 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 					"active": schema.BoolAttribute{
 						Optional:    true,
 						Computed:    true,
-						Default:     booldefault.StaticBool(true),
+						Default:     booldefault.StaticBool(defaultApplicationActive),
 						Description: "Indicates whether the Application is active.",
 					},
 					"debug": schema.BoolAttribute{
 						Optional:    true,
 						Computed:    true,
-						Default:     booldefault.StaticBool(false),
+						Default:     booldefault.StaticBool(defaultApplicationDebug),
 						Description: "Indicates whether debug rules are enabled for the Application.",
 					},
 					"product_version": schema.StringAttribute{
@@ -104,32 +173,15 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Description: "The identifier of the current application version.",
 					},
 					"modules": schema.SingleNestedAttribute{
-						Optional: true,
+						Description: "Modules enabled for the Application. Omitting a module resets it to its default on every apply.",
+						Optional:    true,
+						Computed:    true,
+						Default:     objectdefault.StaticValue(applicationModulesDefault),
 						Attributes: map[string]schema.Attribute{
-							"cache": schema.SingleNestedAttribute{
-								Optional: true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{Optional: true},
-								},
-							},
-							"functions": schema.SingleNestedAttribute{
-								Optional: true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{Optional: true},
-								},
-							},
-							"application_accelerator": schema.SingleNestedAttribute{
-								Optional: true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{Optional: true},
-								},
-							},
-							"image_processor": schema.SingleNestedAttribute{
-								Optional: true,
-								Attributes: map[string]schema.Attribute{
-									"enabled": schema.BoolAttribute{Optional: true},
-								},
-							},
+							"cache":                   moduleToggleAttribute("Cache module.", defaultModuleCacheEnabled),
+							"functions":               moduleToggleAttribute("Functions module.", defaultModuleFunctionsEnabled),
+							"application_accelerator": moduleToggleAttribute("Application Accelerator module.", defaultModuleAcceleratorEnabled),
+							"image_processor":         moduleToggleAttribute("Image Processor module.", defaultModuleImageProcessorEnabled),
 						},
 					},
 				},
@@ -310,32 +362,6 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 	state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
 
-	if stateApplication.Data.Modules != nil {
-		modelState := stateApplication.Data.GetModules()
-		modelPlan := ApplicationModules{}
-		if modelState.Cache != nil && (previousModules == nil || previousModules.Cache != nil) {
-			modelPlan.Cache = &CacheModule{
-				Enabled: types.BoolValue(modelState.Cache.GetEnabled()),
-			}
-		}
-		if modelState.Functions != nil && (previousModules == nil || previousModules.Functions != nil) {
-			modelPlan.Functions = &FunctionModule{
-				Enabled: types.BoolValue(modelState.Functions.GetEnabled()),
-			}
-		}
-		if modelState.ApplicationAccelerator != nil && (previousModules == nil || previousModules.ApplicationAccelerator != nil) {
-			modelPlan.ApplicationAccelerator = &ApplicationAcceleratorModule{
-				Enabled: types.BoolValue(modelState.ApplicationAccelerator.GetEnabled()),
-			}
-		}
-		if modelState.ImageProcessor != nil && (previousModules == nil || previousModules.ImageProcessor != nil) {
-			modelPlan.ImageProcessor = &ImageProcessorModule{
-				Enabled: types.BoolValue(modelState.ImageProcessor.GetEnabled()),
-			}
-		}
-		state.Application.Modules = &modelPlan
-	}
-
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -445,7 +471,7 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 	modsRequest := sdk.ApplicationModulesRequest{}
 	if modsPlan != nil {
 		cachePlan := modsPlan.Cache
-		if cachePlan != nil && !cachePlan.Enabled.IsNull() {
+		if cachePlan != nil && isSet(cachePlan.Enabled) {
 			enabled := cachePlan.Enabled
 			cacheReq := sdk.CacheModuleRequest{
 				Enabled: enabled.ValueBoolPointer(),
@@ -454,7 +480,7 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 		}
 
 		functionsPlan := modsPlan.Functions
-		if functionsPlan != nil && !functionsPlan.Enabled.IsNull() {
+		if functionsPlan != nil && isSet(functionsPlan.Enabled) {
 			enabled := functionsPlan.Enabled
 			functionsReq := sdk.FunctionModuleRequest{
 				Enabled: enabled.ValueBoolPointer(),
@@ -463,7 +489,7 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 		}
 
 		applicationAcceleratorPlan := modsPlan.ApplicationAccelerator
-		if applicationAcceleratorPlan != nil && !applicationAcceleratorPlan.Enabled.IsNull() {
+		if applicationAcceleratorPlan != nil && isSet(applicationAcceleratorPlan.Enabled) {
 			enabled := applicationAcceleratorPlan.Enabled
 			appAccReq := sdk.ApplicationAcceleratorModuleRequest{
 				Enabled: enabled.ValueBoolPointer(),
@@ -472,7 +498,7 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 		}
 
 		imageProcessorPlan := modsPlan.ImageProcessor
-		if imageProcessorPlan != nil && !imageProcessorPlan.Enabled.IsNull() {
+		if imageProcessorPlan != nil && isSet(imageProcessorPlan.Enabled) {
 			enabled := imageProcessorPlan.Enabled
 			imgProcReq := sdk.ImageProcessorModuleRequest{
 				Enabled: enabled.ValueBoolPointer(),
@@ -482,4 +508,47 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 	}
 
 	return modsRequest
+}
+
+// transformApplicationResponseToModel mirrors the API response into the resource
+// model without filtering. State has to match the remote application for
+// Terraform to plan a revert when a module was toggled outside Terraform;
+// unconfigured fields do not drift perpetually because every optional attribute
+// is Computed with a schema default.
+func transformApplicationResponseToModel(data *sdk.Application) *ApplicationResults {
+	if data == nil {
+		return nil
+	}
+
+	results := &ApplicationResults{
+		ApplicationID:  types.Int64Value(data.GetId()),
+		Name:           types.StringValue(data.GetName()),
+		Active:         types.BoolValue(data.GetActive()),
+		Debug:          types.BoolValue(data.GetDebug()),
+		ProductVersion: types.StringValue(data.GetProductVersion()),
+		State:          types.StringPointerValue(data.State.Get()),
+		VersionID:      types.StringPointerValue(data.VersionId.Get()),
+	}
+
+	if data.Modules == nil {
+		return results
+	}
+
+	modules := data.GetModules()
+	results.Modules = &ApplicationModules{}
+
+	if modules.Cache != nil {
+		results.Modules.Cache = &CacheModule{Enabled: types.BoolValue(modules.Cache.GetEnabled())}
+	}
+	if modules.Functions != nil {
+		results.Modules.Functions = &FunctionModule{Enabled: types.BoolValue(modules.Functions.GetEnabled())}
+	}
+	if modules.ApplicationAccelerator != nil {
+		results.Modules.ApplicationAccelerator = &ApplicationAcceleratorModule{Enabled: types.BoolValue(modules.ApplicationAccelerator.GetEnabled())}
+	}
+	if modules.ImageProcessor != nil {
+		results.Modules.ImageProcessor = &ImageProcessorModule{Enabled: types.BoolValue(modules.ImageProcessor.GetEnabled())}
+	}
+
+	return results
 }
