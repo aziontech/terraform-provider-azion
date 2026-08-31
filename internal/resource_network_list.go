@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -165,18 +164,7 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 			}
 		} else {
 			if response != nil && response.Body != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"error reading response from API",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
+				resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			} else {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -203,7 +191,7 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 		Type:         types.StringValue(data.GetType()),
 		Name:         types.StringValue(data.GetName()),
 		Items:        utils.SliceStringTypeToSet(sliceString),
-		State:        types.StringPointerValue(data.State.Get()),
+		State:        types.StringPointerValue(data.VersionState.Get()),
 		VersionID:    types.StringPointerValue(data.VersionId.Get()),
 	}
 
@@ -227,6 +215,13 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 
 	var networkListId int64
 	if state.ID.IsNull() {
+		if state.NetworkList == nil {
+			resp.Diagnostics.AddError(
+				"Network list id error ",
+				"should not be null or empty",
+			)
+			return
+		}
 		networkListId = state.NetworkList.ID.ValueInt64()
 	} else {
 		id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -264,18 +259,7 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 			}
 		} else {
 			if response != nil && response.Body != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"error reading response from API",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
+				resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			} else {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -302,7 +286,7 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 			Type:         types.StringValue(data.GetType()),
 			Name:         types.StringValue(data.GetName()),
 			Items:        utils.SliceStringTypeToSet(sliceString),
-			State:        types.StringPointerValue(data.State.Get()),
+			State:        types.StringPointerValue(data.VersionState.Get()),
 			VersionID:    types.StringPointerValue(data.VersionId.Get()),
 		},
 		ID: types.StringValue(strconv.FormatInt(data.GetId(), 10)),
@@ -332,6 +316,13 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 
 	var networkListId int64
 	if state.ID.IsNull() {
+		if state.NetworkList == nil {
+			resp.Diagnostics.AddError(
+				"Network list id error ",
+				"should not be null or empty",
+			)
+			return
+		}
 		networkListId = state.NetworkList.ID.ValueInt64()
 	} else {
 		id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -378,18 +369,7 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 			}
 		} else {
 			if response != nil && response.Body != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"error reading response from API",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
+				resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			} else {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -416,7 +396,7 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 		Type:         types.StringValue(data.GetType()),
 		Name:         types.StringValue(data.GetName()),
 		Items:        utils.SliceStringTypeToSet(sliceString),
-		State:        types.StringPointerValue(data.State.Get()),
+		State:        types.StringPointerValue(data.VersionState.Get()),
 		VersionID:    types.StringPointerValue(data.VersionId.Get()),
 	}
 
@@ -440,6 +420,13 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	var networkListId int64
 	if state.ID.IsNull() {
+		if state.NetworkList == nil {
+			resp.Diagnostics.AddError(
+				"Network list id error ",
+				"should not be null or empty",
+			)
+			return
+		}
 		networkListId = state.NetworkList.ID.ValueInt64()
 	} else {
 		id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -464,18 +451,7 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 			return
 		}
 		if response != nil && response.Body != nil {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"error reading response from API",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		} else {
 			resp.Diagnostics.AddError(
 				err.Error(),

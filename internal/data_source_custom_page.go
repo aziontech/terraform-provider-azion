@@ -200,7 +200,7 @@ func (d *CustomPageDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	customPageResponse, response, err := d.client.api.CustomPagesAPI.
 		RetrieveCustomPage(ctx, customPageID).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			customPageResponse, response, err = utils.RetryOn429(func() (*azionapi.CustomPageResponse, *http.Response, error) {
 				return d.client.api.CustomPagesAPI.RetrieveCustomPage(ctx, customPageID).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -217,7 +217,7 @@ func (d *CustomPageDataSource) Read(ctx context.Context, req datasource.ReadRequ
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintCustomPage(response.StatusCode, err)
+			usrMsg, errMsg := errPrintCustomPage(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
@@ -231,7 +231,7 @@ func (d *CustomPageDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			LastModified:   types.StringValue(customPageResponse.Data.GetLastModified().Format(time.RFC3339)),
 			CreatedAt:      types.StringValue(customPageResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(customPageResponse.Data.GetProductVersion()),
-			State:          types.StringPointerValue(customPageResponse.Data.State.Get()),
+			State:          types.StringPointerValue(customPageResponse.Data.VersionState.Get()),
 			VersionID:      types.StringPointerValue(customPageResponse.Data.VersionId.Get()),
 		},
 	}

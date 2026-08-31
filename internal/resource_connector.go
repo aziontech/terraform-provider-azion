@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -647,6 +646,9 @@ func (r *connectorResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 	}
 
+	if state.Connector == nil {
+		state.Connector = &connectorResourceResults{}
+	}
 	r.populateConnectorFromResponse(ctx, state.Connector, getConnector.GetData())
 	state.ID = types.StringValue(strconv.FormatInt(state.Connector.ID.ValueInt64(), 10))
 	state.SchemaVersion = types.Int64Value(0)
@@ -1099,7 +1101,7 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 		model.ProductVersion = types.StringValue(c.GetProductVersion())
 		model.Type = types.StringValue(c.Type)
 		model.Active = types.BoolPointerValue(c.Active)
-		model.State = types.StringPointerValue(c.State.Get())
+		model.State = types.StringPointerValue(c.VersionState.Get())
 		model.VersionID = types.StringPointerValue(c.VersionId.Get())
 
 		// Populate storage attributes
@@ -1127,7 +1129,7 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 		model.ProductVersion = types.StringValue(c.GetProductVersion())
 		model.Type = types.StringValue(c.Type)
 		model.Active = types.BoolPointerValue(c.Active)
-		model.State = types.StringPointerValue(c.State.Get())
+		model.State = types.StringPointerValue(c.VersionState.Get())
 		model.VersionID = types.StringPointerValue(c.VersionId.Get())
 
 		httpAttrs := &HTTPAttributesModel{
@@ -1390,11 +1392,5 @@ func addConnectorAPIError(diagnostics *diag.Diagnostics, err error, response *ht
 		return
 	}
 
-	bodyBytes, errReadAll := io.ReadAll(response.Body)
-	if errReadAll != nil {
-		diagnostics.AddError(errReadAll.Error(), "err")
-		return
-	}
-	bodyString := string(bodyBytes)
-	diagnostics.AddError(err.Error(), bodyString)
+	diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 }

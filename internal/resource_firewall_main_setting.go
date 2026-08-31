@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -216,7 +215,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 
 	firewallResponse, response, err := r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(firewallRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.CreateFirewall(ctx).FirewallRequest(firewallRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -233,18 +232,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -293,7 +281,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
-		State:          types.StringPointerValue(firewallResponse.Data.State.Get()),
+		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
 	}
 
@@ -316,6 +304,13 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 	var firewallID int64
 	if state.ID.IsNull() {
+		if state.Firewall == nil {
+			resp.Diagnostics.AddError(
+				"Firewall id error ",
+				"should not be null or empty",
+			)
+			return
+		}
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
 		var err error
@@ -329,11 +324,11 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 	firewallResponse, response, err := r.client.api.FirewallsAPI.
 		RetrieveFirewall(ctx, firewallID).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.RetrieveFirewall(ctx, firewallID).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -350,18 +345,7 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -416,7 +400,7 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 		Debug:          types.BoolValue(firewallResponse.Data.GetDebug()),
 		Modules:        modulesResponsePtr,
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
-		State:          types.StringPointerValue(firewallResponse.Data.State.Get()),
+		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
 	}
 	state.ID = types.StringValue(strconv.FormatInt(firewallID, 10))
@@ -445,6 +429,13 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 
 	var firewallID int64
 	if state.ID.IsNull() {
+		if state.Firewall == nil {
+			resp.Diagnostics.AddError(
+				"Firewall id error ",
+				"should not be null or empty",
+			)
+			return
+		}
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
 		var err error
@@ -483,7 +474,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 
 	firewallResponse, response, err := r.client.api.FirewallsAPI.PartialUpdateFirewall(ctx, firewallID).PatchedFirewallRequest(firewallRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return r.client.api.FirewallsAPI.PartialUpdateFirewall(ctx, firewallID).PatchedFirewallRequest(firewallRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -500,18 +491,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -561,7 +541,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 		Debug:          types.BoolValue(firewallResponse.Data.GetDebug()),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
 		Modules:        responseModulesPtr,
-		State:          types.StringPointerValue(firewallResponse.Data.State.Get()),
+		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
 	}
 
@@ -585,6 +565,13 @@ func (r *firewallResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	var firewallID int64
 	if state.ID.IsNull() {
+		if state.Firewall == nil {
+			resp.Diagnostics.AddError(
+				"Firewall id error ",
+				"should not be null or empty",
+			)
+			return
+		}
 		firewallID = state.Firewall.ID.ValueInt64()
 	} else {
 		var err error
@@ -605,18 +592,7 @@ func (r *firewallResource) Delete(ctx context.Context, req resource.DeleteReques
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }

@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -289,12 +288,7 @@ func (r *RuleEngineDataSource) Read(ctx context.Context, req datasource.ReadRequ
 				return
 			}
 		} else if response != nil {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(errReadAll.Error(), "err")
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(err.Error(), bodyString)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			response.Body.Close()
 			return
 		} else {

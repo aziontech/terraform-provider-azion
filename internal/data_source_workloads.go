@@ -215,7 +215,7 @@ func (d *WorkloadsDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 func (d *WorkloadsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	workloadsResponse, response, err := d.client.api.WorkloadsAPI.ListWorkloads(ctx).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			workloadsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedWorkloadList, *http.Response, error) {
 				return d.client.api.WorkloadsAPI.ListWorkloads(ctx).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -232,7 +232,7 @@ func (d *WorkloadsDataSource) Read(ctx context.Context, req datasource.ReadReque
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintWorkloads(response.StatusCode, err)
+			usrMsg, errMsg := errPrintWorkloads(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}

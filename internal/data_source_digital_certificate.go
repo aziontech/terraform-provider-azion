@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -188,7 +187,7 @@ func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	certificateResponse, response, err := c.client.api.DigitalCertificatesCertificatesAPI.RetrieveCertificate(ctx, getCertificateID.ValueInt64()).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			certificateResponse, response, err = utils.RetryOn429(func() (*azionapi.CertificateResponse, *http.Response, error) {
 				return c.client.api.DigitalCertificatesCertificatesAPI.RetrieveCertificate(ctx, getCertificateID.ValueInt64()).Execute()
 			}, 5)
@@ -205,18 +204,7 @@ func (c *CertificateDataSource) Read(ctx context.Context, req datasource.ReadReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	} else {

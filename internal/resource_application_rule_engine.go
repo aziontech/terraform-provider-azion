@@ -292,7 +292,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 			ListApplicationRequestRules(ctx, applicationID.ValueInt64()).
 			Page(1).PageSize(2).Execute()
 		if err != nil {
-			if response.StatusCode == 429 {
+			if response != nil && response.StatusCode == 429 {
 				rulesResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedRequestPhaseRuleList, *http.Response, error) {
 					return r.client.api.ApplicationsRequestRulesAPI.
 						ListApplicationRequestRules(ctx, applicationID.ValueInt64()).
@@ -311,18 +311,7 @@ func (r *rulesEngineResource) Create(ctx context.Context, req resource.CreateReq
 					return
 				}
 			} else {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"err",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
+				resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 				response.Body.Close()
 				return
 			}
@@ -472,6 +461,13 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 		phase = valueFromCmd[1]
 		ruleID = int64(utils.AtoiNoError(valueFromCmd[2], resp))
 	} else if len(valueFromCmd) == 1 {
+		if state.RulesEngine == nil {
+			resp.Diagnostics.AddError(
+				"Parameters error",
+				"you need to pass <applicationID>/<phase>/<ruleEngineID>",
+			)
+			return
+		}
 		applicationID = state.ApplicationID.ValueInt64()
 		ruleID = state.RulesEngine.ID.ValueInt64()
 		phase = state.RulesEngine.Phase.ValueString()
@@ -507,7 +503,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 			defer response.Body.Close()
 		}
 		if err != nil {
-			if response.StatusCode == http.StatusNotFound {
+			if response != nil && response.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
 				return
 			}
@@ -523,7 +519,7 @@ func (r *rulesEngineResource) Read(ctx context.Context, req resource.ReadRequest
 			defer response.Body.Close()
 		}
 		if err != nil {
-			if response.StatusCode == http.StatusNotFound {
+			if response != nil && response.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
 				return
 			}

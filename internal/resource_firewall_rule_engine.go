@@ -283,7 +283,11 @@ func (r *firewallRuleEngineResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	// Build criteria
-	criteria := buildFirewallCriteriaRequest(plan.Results.Criteria)
+	criteria, errCriteria := buildFirewallCriteriaRequest(plan.Results.Criteria)
+	if errCriteria != nil {
+		resp.Diagnostics.AddError("Invalid criterion argument", errCriteria.Error())
+		return
+	}
 
 	// Build behaviors
 	behaviors := buildFirewallBehaviorsRequest(plan.Results.Behaviors)
@@ -357,6 +361,13 @@ func (r *firewallRuleEngineResource) Read(ctx context.Context, req resource.Read
 		firewallID = int64(utils.AtoiNoError(valueFromCmd[0], resp))
 		ruleID = int64(utils.AtoiNoError(valueFromCmd[1], resp))
 	} else if len(valueFromCmd) == 1 {
+		if state.Results == nil {
+			resp.Diagnostics.AddError(
+				"Parameters error",
+				"you need to pass <firewallID>/<ruleID>",
+			)
+			return
+		}
 		firewallID = state.FirewallID.ValueInt64()
 		ruleID = state.Results.ID.ValueInt64()
 	} else {
@@ -382,11 +393,11 @@ func (r *firewallRuleEngineResource) Read(ctx context.Context, req resource.Read
 		defer response.Body.Close()
 	}
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			ruleResponse, response, err = utils.RetryOn429(func() (*azionapi.FirewallRuleResponse, *http.Response, error) {
 				return r.client.api.FirewallsRulesEngineAPI.
 					RetrieveFirewallRule(ctx, firewallID, ruleID).
@@ -446,7 +457,11 @@ func (r *firewallRuleEngineResource) Update(ctx context.Context, req resource.Up
 	}
 
 	// Build criteria
-	criteria := buildFirewallCriteriaRequest(plan.Results.Criteria)
+	criteria, errCriteria := buildFirewallCriteriaRequest(plan.Results.Criteria)
+	if errCriteria != nil {
+		resp.Diagnostics.AddError("Invalid criterion argument", errCriteria.Error())
+		return
+	}
 
 	// Build behaviors
 	behaviors := buildFirewallBehaviorsRequest(plan.Results.Behaviors)
@@ -587,7 +602,7 @@ func (r *firewallRuleEngineResource) ImportState(ctx context.Context, req resour
 
 // Helper functions for Firewall Rules Engine
 
-func buildFirewallCriteriaRequest(criteria []FirewallCriteriaResourceModel) [][]azionapi.FirewallCriterionFieldRequest {
+func buildFirewallCriteriaRequest(criteria []FirewallCriteriaResourceModel) ([][]azionapi.FirewallCriterionFieldRequest, error) {
 	var result [][]azionapi.FirewallCriterionFieldRequest
 	for _, criterion := range criteria {
 		var criterionGroup []azionapi.FirewallCriterionFieldRequest
@@ -596,14 +611,16 @@ func buildFirewallCriteriaRequest(criteria []FirewallCriteriaResourceModel) [][]
 				continue
 			}
 			c := entry.Criterion
+			operator := c.Operator.ValueString()
 			criterionField := azionapi.NewFirewallCriterionFieldRequest(
 				c.Conditional.ValueString(),
 				c.Variable.ValueString(),
-				c.Operator.ValueString(),
+				operator,
 			)
 			if !c.Argument.IsNull() && !c.Argument.IsUnknown() {
-				arg := azionapi.FirewallCriterionArgumentRequest{
-					String: c.Argument.ValueStringPointer(),
+				arg, err := buildFirewallCriterionArgument(operator, c.Argument)
+				if err != nil {
+					return nil, err
 				}
 				criterionField.SetArgument(arg)
 			}
@@ -611,7 +628,30 @@ func buildFirewallCriteriaRequest(criteria []FirewallCriteriaResourceModel) [][]
 		}
 		result = append(result, criterionGroup)
 	}
-	return result
+	return result, nil
+}
+
+// listArgumentOperators are the operators whose argument is a network list ID. The API validates
+// the argument of these operators as an integer, so it must be sent as a JSON number.
+var listArgumentOperators = map[string]struct{}{
+	"is_in_list":     {},
+	"is_not_in_list": {},
+}
+
+// buildFirewallCriterionArgument serializes the criterion argument with the type the API expects.
+// Most operators take a string, but the network list operators take the list ID as an integer,
+// so the argument must be sent as a JSON number instead of a quoted string.
+func buildFirewallCriterionArgument(operator string, argument types.String) (azionapi.FirewallCriterionArgumentRequest, error) {
+	if _, isList := listArgumentOperators[operator]; isList {
+		raw := strings.TrimSpace(argument.ValueString())
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			return azionapi.FirewallCriterionArgumentRequest{}, fmt.Errorf(
+				"operator %q requires a numeric network list ID as argument, got %q", operator, raw)
+		}
+		return azionapi.FirewallCriterionArgumentRequest{Int64: &id}, nil
+	}
+	return azionapi.FirewallCriterionArgumentRequest{String: argument.ValueStringPointer()}, nil
 }
 
 func buildFirewallBehaviorsRequest(behaviors []FirewallBehaviorWrapperResourceModel) []azionapi.FirewallBehaviorRequest {

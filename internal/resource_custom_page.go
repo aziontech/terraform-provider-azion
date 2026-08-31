@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -252,7 +251,7 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 
 	createCustomPage, response, err := r.client.api.CustomPagesAPI.CreateCustomPage(ctx).CustomPageRequest(customPageRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			createCustomPage, response, err = utils.RetryOn429(func() (*azionapi.CustomPageResponse, *http.Response, error) {
 				return r.client.api.CustomPagesAPI.CreateCustomPage(ctx).CustomPageRequest(customPageRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -269,18 +268,7 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -293,7 +281,7 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
 		LastModified:   types.StringValue(createCustomPage.Data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(createCustomPage.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(createCustomPage.Data.GetProductVersion()),
-		State:          types.StringPointerValue(createCustomPage.Data.State.Get()),
+		State:          types.StringPointerValue(createCustomPage.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(createCustomPage.Data.VersionId.Get()),
 	}
 
@@ -363,11 +351,11 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	getCustomPage, response, err := r.client.api.CustomPagesAPI.RetrieveCustomPage(ctx, customPageId).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			getCustomPage, response, err = utils.RetryOn429(func() (*azionapi.CustomPageResponse, *http.Response, error) {
 				return r.client.api.CustomPagesAPI.RetrieveCustomPage(ctx, customPageId).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -384,18 +372,7 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -407,7 +384,7 @@ func (r *customPageResource) Read(ctx context.Context, req resource.ReadRequest,
 		LastModified:   types.StringValue(getCustomPage.Data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(getCustomPage.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(getCustomPage.Data.GetProductVersion()),
-		State:          types.StringPointerValue(getCustomPage.Data.State.Get()),
+		State:          types.StringPointerValue(getCustomPage.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(getCustomPage.Data.VersionId.Get()),
 	}
 
@@ -530,7 +507,7 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 	// Custom Pages API uses PUT for full update.
 	updateCustomPage, response, err := r.client.api.CustomPagesAPI.UpdateCustomPage(ctx, customPageId).CustomPageRequest(customPageRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			updateCustomPage, response, err = utils.RetryOn429(func() (*azionapi.CustomPageResponse, *http.Response, error) {
 				return r.client.api.CustomPagesAPI.UpdateCustomPage(ctx, customPageId).CustomPageRequest(customPageRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -547,18 +524,7 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -571,7 +537,7 @@ func (r *customPageResource) Update(ctx context.Context, req resource.UpdateRequ
 		LastModified:   types.StringValue(updateCustomPage.Data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(updateCustomPage.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(updateCustomPage.Data.GetProductVersion()),
-		State:          types.StringPointerValue(updateCustomPage.Data.State.Get()),
+		State:          types.StringPointerValue(updateCustomPage.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(updateCustomPage.Data.VersionId.Get()),
 	}
 
@@ -649,18 +615,7 @@ func (r *customPageResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }

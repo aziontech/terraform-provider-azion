@@ -163,7 +163,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	createRecord, httpResponse, err := r.client.api.DNSRecordsAPI.CreateDnsRecord(ctx, zoneId).
 		RecordRequest(*recordReq).Execute() //nolint
 	if err != nil {
-		if httpResponse.StatusCode == 429 {
+		if httpResponse != nil && httpResponse.StatusCode == 429 {
 			createRecord, httpResponse, err = utils.RetryOn429(func() (*azionapi.RecordResponse, *http.Response, error) {
 				return r.client.api.DNSRecordsAPI.CreateDnsRecord(ctx, zoneId).
 					RecordRequest(*recordReq).Execute()
@@ -181,7 +181,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 				return
 			}
 		} else {
-			usrMsg, errMsg := errorPrintRecord(httpResponse.StatusCode, err)
+			usrMsg, errMsg := errorPrintRecord(utils.StatusCodeOf(httpResponse), err)
 			// Read response body for more error details
 			if httpResponse != nil && httpResponse.Body != nil {
 				bodyBytes, readErr := io.ReadAll(httpResponse.Body)
@@ -249,11 +249,11 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 	// Retrieve the record.
 	recordResponse, httpResponse, err := r.client.api.DNSRecordsAPI.RetrieveDnsRecord(ctx, recordId, zoneId).Execute() //nolint
 	if err != nil {
-		if httpResponse.StatusCode == http.StatusNotFound {
+		if httpResponse != nil && httpResponse.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if httpResponse.StatusCode == 429 {
+		if httpResponse != nil && httpResponse.StatusCode == 429 {
 			recordResponse, httpResponse, err = utils.RetryOn429(func() (*azionapi.RecordResponse, *http.Response, error) {
 				return r.client.api.DNSRecordsAPI.RetrieveDnsRecord(ctx, recordId, zoneId).Execute()
 			}, 5) // Maximum 5 retries
@@ -270,7 +270,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 				return
 			}
 		} else {
-			usrMsg, errMsg := errorPrintRecord(httpResponse.StatusCode, err)
+			usrMsg, errMsg := errorPrintRecord(utils.StatusCodeOf(httpResponse), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
@@ -344,7 +344,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 	updateRecord, httpResponse, err := r.client.api.DNSRecordsAPI.UpdateDnsRecord(ctx, recordId, zoneId).
 		RecordRequest(*recordReq).Execute() //nolint
 	if err != nil {
-		if httpResponse.StatusCode == 429 {
+		if httpResponse != nil && httpResponse.StatusCode == 429 {
 			updateRecord, httpResponse, err = utils.RetryOn429(func() (*azionapi.RecordResponse, *http.Response, error) {
 				return r.client.api.DNSRecordsAPI.UpdateDnsRecord(ctx, recordId, zoneId).
 					RecordRequest(*recordReq).Execute()
@@ -362,7 +362,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 				return
 			}
 		} else {
-			usrMsg, errMsg := errorPrintRecord(httpResponse.StatusCode, err)
+			usrMsg, errMsg := errorPrintRecord(utils.StatusCodeOf(httpResponse), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
@@ -414,7 +414,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if httpResponse != nil && httpResponse.StatusCode == http.StatusNotFound {
 			return
 		}
-		usrMsg, errMsg := errorPrintRecord(httpResponse.StatusCode, err)
+		usrMsg, errMsg := errorPrintRecord(utils.StatusCodeOf(httpResponse), err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return
 	}

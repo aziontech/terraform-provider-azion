@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"sync"
@@ -194,18 +193,7 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -216,7 +204,7 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
 		Active:         types.BoolValue(createApplication.Data.GetActive()),
 		Debug:          types.BoolValue(createApplication.Data.GetDebug()),
 		ProductVersion: types.StringValue(createApplication.Data.GetProductVersion()),
-		State:          types.StringPointerValue(createApplication.Data.State.Get()),
+		State:          types.StringPointerValue(createApplication.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(createApplication.Data.VersionId.Get()),
 		Modules:        plan.Application.Modules,
 	}
@@ -296,18 +284,7 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -328,7 +305,7 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 		Active:         types.BoolValue(stateApplication.Data.GetActive()),
 		Debug:          types.BoolValue(stateApplication.Data.GetDebug()),
 		ProductVersion: types.StringValue(stateApplication.Data.GetProductVersion()),
-		State:          types.StringPointerValue(stateApplication.Data.State.Get()),
+		State:          types.StringPointerValue(stateApplication.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(stateApplication.Data.VersionId.Get()),
 	}
 	state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
@@ -410,18 +387,7 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -432,7 +398,7 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
 		Active:         types.BoolValue(updateApplication.Data.GetActive()),
 		Debug:          types.BoolValue(updateApplication.Data.GetDebug()),
 		ProductVersion: types.StringValue(updateApplication.Data.GetProductVersion()),
-		State:          types.StringPointerValue(updateApplication.Data.State.Get()),
+		State:          types.StringPointerValue(updateApplication.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(updateApplication.Data.VersionId.Get()),
 		Modules:        modsPlan,
 	}
@@ -466,18 +432,7 @@ func (r *applicationResource) Delete(ctx context.Context, req resource.DeleteReq
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }

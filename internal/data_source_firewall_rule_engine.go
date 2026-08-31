@@ -2,8 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -283,12 +281,7 @@ func (r *FirewallRuleEngineDataSource) Read(ctx context.Context, req datasource.
 				return
 			}
 		} else if response != nil {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(errReadAll.Error(), "err")
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(err.Error(), bodyString)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			response.Body.Close()
 			return
 		} else {
@@ -353,10 +346,7 @@ func transformFirewallRuleResponseToDataModel(rule azionapi.FirewallRule) *Firew
 	for _, criterionGroup := range rule.Criteria {
 		var entries []FirewallCriterionWrapperDataModel
 		for _, c := range criterionGroup {
-			arg := ""
-			if c.Argument.Get() != nil {
-				arg = fmt.Sprintf("%v", c.Argument.Get())
-			}
+			arg := getFirewallCriterionArgumentValue(c.Argument)
 			entries = append(entries, FirewallCriterionWrapperDataModel{
 				Criterion: &FirewallCriteriaEntryDataModel{
 					Conditional: types.StringValue(c.GetConditional()),

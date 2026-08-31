@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -194,7 +193,7 @@ func (e *ApplicationDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	applicationsResponse, response, err := e.client.api.ApplicationsAPI.RetrieveApplication(ctx, applicationId).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			applicationsResponse, response, err = utils.RetryOn429(func() (*sdk.ApplicationResponse, *http.Response, error) {
 				return e.client.api.ApplicationsAPI.RetrieveApplication(ctx, applicationId).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -211,18 +210,7 @@ func (e *ApplicationDataSource) Read(ctx context.Context, req datasource.ReadReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -260,7 +248,7 @@ func (e *ApplicationDataSource) Read(ctx context.Context, req datasource.ReadReq
 			LastEditor:     types.StringValue(applicationsResponse.Data.GetLastEditor()),
 			LastModified:   types.StringValue(applicationsResponse.Data.GetLastModified().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(applicationsResponse.Data.GetProductVersion()),
-			State:          types.StringPointerValue(applicationsResponse.Data.State.Get()),
+			State:          types.StringPointerValue(applicationsResponse.Data.VersionState.Get()),
 			VersionID:      types.StringPointerValue(applicationsResponse.Data.VersionId.Get()),
 		},
 	}

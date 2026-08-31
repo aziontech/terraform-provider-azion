@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -191,7 +190,7 @@ func (f *FirewallsDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	firewallsResponse, response, err := f.client.api.FirewallsAPI.ListFirewalls(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallsResponse, response, err = utils.RetryOn429(func() (*sdk.PaginatedFirewallList, *http.Response, error) {
 				return f.client.api.FirewallsAPI.ListFirewalls(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -208,18 +207,7 @@ func (f *FirewallsDataSource) Read(ctx context.Context, req datasource.ReadReque
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -257,7 +245,7 @@ func (f *FirewallsDataSource) Read(ctx context.Context, req datasource.ReadReque
 			LastModified:   types.StringValue(results.GetLastModified().Format(time.RFC3339)),
 			ProductVersion: types.StringValue(results.GetProductVersion()),
 			CreatedAt:      types.StringValue(results.GetCreatedAt().Format(time.RFC3339)),
-			State:          types.StringPointerValue(results.State.Get()),
+			State:          types.StringPointerValue(results.VersionState.Get()),
 			VersionID:      types.StringPointerValue(results.VersionId.Get()),
 		}
 		firewallsResults = append(firewallsResults, firewallResult)

@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -136,18 +135,7 @@ func (n *NetworkListDataSource) Read(ctx context.Context, req datasource.ReadReq
 			}
 		} else {
 			if response != nil && response.Body != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"error reading response from API",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
+				resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			} else {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -182,7 +170,7 @@ func populateNetworkListResult(data azionapi.NetworkList) NetworkListDataSourceM
 			Type:         types.StringValue(data.GetType()),
 			Name:         types.StringValue(data.GetName()),
 			Items:        utils.SliceStringTypeToList(itemsSlice),
-			State:        types.StringPointerValue(data.State.Get()),
+			State:        types.StringPointerValue(data.VersionState.Get()),
 			VersionID:    types.StringPointerValue(data.VersionId.Get()),
 		},
 	}

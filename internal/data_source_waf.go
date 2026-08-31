@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -186,7 +185,7 @@ func (o *WafDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	wafResponse, response, err := o.client.api.WAFsAPI.RetrieveWaf(ctx, wafID.ValueInt64()).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFResponse, *http.Response, error) {
 				return o.client.api.WAFsAPI.RetrieveWaf(ctx, wafID.ValueInt64()).Execute()
 			}, 5)
@@ -203,18 +202,7 @@ func (o *WafDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -246,7 +234,7 @@ func transformWAFToResultModel(waf azionapi.WAF) *WafResultDataModel {
 		Name:         types.StringValue(waf.GetName()),
 		LastEditor:   types.StringValue(waf.GetLastEditor()),
 		LastModified: types.StringValue(waf.GetLastModified().Format(time.RFC3339)),
-		State:        types.StringPointerValue(waf.State.Get()),
+		State:        types.StringPointerValue(waf.VersionState.Get()),
 		VersionID:    types.StringPointerValue(waf.VersionId.Get()),
 	}
 

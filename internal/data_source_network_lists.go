@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -174,18 +173,7 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 			}
 		} else {
 			if response != nil && response.Body != nil {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"error reading response from API",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
+				resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			} else {
 				resp.Diagnostics.AddError(
 					err.Error(),
@@ -205,7 +193,7 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 			CreatedAt:    types.StringValue(nl.GetCreatedAt().Format(time.RFC3339)),
 			Type:         types.StringValue(nl.GetType()),
 			Name:         types.StringValue(nl.GetName()),
-			State:        types.StringPointerValue(nl.State.Get()),
+			State:        types.StringPointerValue(nl.VersionState.Get()),
 			VersionID:    types.StringPointerValue(nl.VersionId.Get()),
 		}
 		networkLists = append(networkLists, networkList)

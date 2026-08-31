@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -160,7 +159,7 @@ func (f *FirewallFunctionsInstanceDataSource) Read(ctx context.Context, req data
 		PageSize(pageSize.ValueInt64()).
 		Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallFunctionInstancesResponse, response, err = utils.RetryOn429(func() (*sdk.PaginatedFirewallFunctionInstanceList, *http.Response, error) {
 				return f.client.api.FirewallsFunctionAPI.
 					ListFirewallFunction(ctx, firewallID.ValueInt64()).Page(page.ValueInt64()).
@@ -179,18 +178,7 @@ func (f *FirewallFunctionsInstanceDataSource) Read(ctx context.Context, req data
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}

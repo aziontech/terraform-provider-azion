@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -141,7 +140,7 @@ func (r *functionInstanceResource) Create(ctx context.Context, req resource.Crea
 
 	functionInstanceResponse, response, err := r.client.api.ApplicationsFunctionAPI.CreateApplicationFunctionInstance(ctx, plan.ApplicationID.ValueInt64()).FunctionInstanceRequest(functionInstanceRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			functionInstanceResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionInstanceResponse, *http.Response, error) {
 				return r.client.api.ApplicationsFunctionAPI.CreateApplicationFunctionInstance(ctx, plan.ApplicationID.ValueInt64()).FunctionInstanceRequest(functionInstanceRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -158,18 +157,7 @@ func (r *functionInstanceResource) Create(ctx context.Context, req resource.Crea
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -246,11 +234,11 @@ func (r *functionInstanceResource) Read(ctx context.Context, req resource.ReadRe
 	functionInstanceResponse, response, err := r.client.api.ApplicationsFunctionAPI.
 		RetrieveApplicationFunctionInstance(ctx, applicationID, functionInstanceID).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			functionInstanceResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionInstanceResponse, *http.Response, error) {
 				return r.client.api.ApplicationsFunctionAPI.
 					RetrieveApplicationFunctionInstance(ctx, applicationID, functionInstanceID).Execute() //nolint
@@ -268,18 +256,7 @@ func (r *functionInstanceResource) Read(ctx context.Context, req resource.ReadRe
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -362,7 +339,7 @@ func (r *functionInstanceResource) Update(ctx context.Context, req resource.Upda
 
 	functionInstanceUpdateResponse, response, err := r.client.api.ApplicationsFunctionAPI.PartialUpdateApplicationFunctionInstance(ctx, plan.ApplicationID.ValueInt64(), functionInstanceID.ValueInt64()).PatchedFunctionInstanceRequest(patchRequest).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			functionInstanceUpdateResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionInstanceResponse, *http.Response, error) {
 				return r.client.api.ApplicationsFunctionAPI.PartialUpdateApplicationFunctionInstance(ctx, plan.ApplicationID.ValueInt64(), functionInstanceID.ValueInt64()).PatchedFunctionInstanceRequest(patchRequest).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -379,18 +356,7 @@ func (r *functionInstanceResource) Update(ctx context.Context, req resource.Upda
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"error while reading response body",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -459,18 +425,7 @@ func (r *functionInstanceResource) Delete(ctx context.Context, req resource.Dele
 			// Resource already deleted, consider this a success
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }

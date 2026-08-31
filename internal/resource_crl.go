@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -187,7 +186,7 @@ func (r *crlResource) Create(ctx context.Context, req resource.CreateRequest, re
 		CertificateRevocationList(*crlRequest).
 		Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			createCrl, response, err = utils.RetryOn429(func() (*azionapi.CertificateRevocationListResponse, *http.Response, error) {
 				return r.client.api.DigitalCertificatesCertificateRevocationListsAPI.
 					CreateCertificateRevocationList(ctx).
@@ -207,18 +206,7 @@ func (r *crlResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	} else {
@@ -267,11 +255,11 @@ func (r *crlResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		RetrieveCertificateRevocationList(ctx, crlID).
 		Execute()
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			getCrl, response, err = utils.RetryOn429(func() (*azionapi.CertificateRevocationListResponse, *http.Response, error) {
 				return r.client.api.DigitalCertificatesCertificateRevocationListsAPI.
 					RetrieveCertificateRevocationList(ctx, crlID).
@@ -290,18 +278,7 @@ func (r *crlResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	} else {
@@ -368,7 +345,7 @@ func (r *crlResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		PatchedCertificateRevocationList(*patchedCrl).
 		Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			updateCrl, response, err = utils.RetryOn429(func() (*azionapi.CertificateRevocationListResponse, *http.Response, error) {
 				return r.client.api.DigitalCertificatesCertificateRevocationListsAPI.
 					PartialUpdateCertificateRevocationList(ctx, crlID).
@@ -388,18 +365,7 @@ func (r *crlResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	} else {
@@ -455,18 +421,7 @@ func (r *crlResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }
@@ -487,7 +442,7 @@ func (r *crlResource) ImportState(ctx context.Context, req resource.ImportStateR
 		Execute()
 	if err != nil {
 		if response != nil {
-			if response.StatusCode == 429 {
+			if response != nil && response.StatusCode == 429 {
 				getCrl, response, err = utils.RetryOn429(func() (*azionapi.CertificateRevocationListResponse, *http.Response, error) {
 					return r.client.api.DigitalCertificatesCertificateRevocationListsAPI.
 						RetrieveCertificateRevocationList(ctx, crlID).
@@ -506,18 +461,7 @@ func (r *crlResource) ImportState(ctx context.Context, req resource.ImportStateR
 					return
 				}
 			} else {
-				bodyBytes, errReadAll := io.ReadAll(response.Body)
-				if errReadAll != nil {
-					resp.Diagnostics.AddError(
-						errReadAll.Error(),
-						"err",
-					)
-				}
-				bodyString := string(bodyBytes)
-				resp.Diagnostics.AddError(
-					err.Error(),
-					bodyString,
-				)
+				resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 				return
 			}
 		}
