@@ -264,10 +264,11 @@ func (r *FirewallFunctionsInstanceResource) Read(ctx context.Context, req resour
 		functionInstanceID, _ = strconv.ParseInt(valueFromCmd[1], 10, 64)
 	} else {
 		firewallID = state.FirewallID.ValueInt64()
+		// On import the data block is still null, so fall back to the top-level id.
 		if state.Data != nil && !state.Data.ID.IsNull() {
 			functionInstanceID = state.Data.ID.ValueInt64()
 		} else {
-			functionInstanceID, _ = strconv.ParseInt(valueFromCmd[0], 10, 64)
+			functionInstanceID, _ = strconv.ParseInt(state.ID.ValueString(), 10, 64)
 		}
 	}
 
@@ -377,10 +378,18 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	if plan.Data == nil || state.Data == nil {
+	if plan.Data == nil {
 		resp.Diagnostics.AddError(
 			"Missing function instance data",
 			"The \"data\" block is required to update a firewall function instance.",
+		)
+		return
+	}
+
+	if state.Data == nil || state.Data.ID.IsNull() {
+		resp.Diagnostics.AddError(
+			"Function Instance id error ",
+			"could not determine the function instance id from state",
 		)
 		return
 	}
@@ -552,9 +561,6 @@ func (r *FirewallFunctionsInstanceResource) ImportState(ctx context.Context, req
 	state := FirewallFunctionInstanceResourceModel{
 		FirewallID: types.Int64Value(firewallID),
 		ID:         types.StringValue(strconv.FormatInt(functionInstanceID, 10)),
-		Data: &FirewallFunctionInstanceResourceData{
-			ID: types.Int64Value(functionInstanceID),
-		},
 	}
 
 	diags := resp.State.Set(ctx, &state)

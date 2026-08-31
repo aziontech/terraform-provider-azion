@@ -250,48 +250,7 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
 		}
 	}
 
-	appResults := &ApplicationResults{
-		ApplicationID:  types.Int64Value(createApplication.Data.GetId()),
-		Name:           types.StringValue(createApplication.Data.GetName()),
-		Active:         types.BoolValue(createApplication.Data.GetActive()),
-		Debug:          types.BoolValue(createApplication.Data.GetDebug()),
-		ProductVersion: types.StringValue(createApplication.Data.GetProductVersion()),
-		State:          types.StringPointerValue(createApplication.Data.VersionState.Get()),
-		VersionID:      types.StringPointerValue(createApplication.Data.VersionId.Get()),
-		Modules:        plan.Application.Modules,
-	}
-
-	// Only update modules from API response if the plan had modules specified
-	// This prevents Terraform from seeing an inconsistency when modules was null in plan
-	if plan.Application.Modules != nil && createApplication.Data.Modules != nil {
-		modulesResp := createApplication.Data.GetModules()
-		modules := ApplicationModules{}
-
-		// Only populate modules that were specified in the plan
-		if plan.Application.Modules.Cache != nil && modulesResp.Cache != nil {
-			modules.Cache = &CacheModule{
-				Enabled: types.BoolValue(modulesResp.Cache.GetEnabled()),
-			}
-		}
-		if plan.Application.Modules.Functions != nil && modulesResp.Functions != nil {
-			modules.Functions = &FunctionModule{
-				Enabled: types.BoolValue(modulesResp.Functions.GetEnabled()),
-			}
-		}
-		if plan.Application.Modules.ApplicationAccelerator != nil && modulesResp.ApplicationAccelerator != nil {
-			modules.ApplicationAccelerator = &ApplicationAcceleratorModule{
-				Enabled: types.BoolValue(modulesResp.ApplicationAccelerator.GetEnabled()),
-			}
-		}
-		if plan.Application.Modules.ImageProcessor != nil && modulesResp.ImageProcessor != nil {
-			modules.ImageProcessor = &ImageProcessorModule{
-				Enabled: types.BoolValue(modulesResp.ImageProcessor.GetEnabled()),
-			}
-		}
-		appResults.Modules = &modules
-	}
-
-	plan.Application = appResults
+	plan.Application = transformApplicationResponseToModel(&createApplication.Data)
 	plan.ID = types.StringValue(fmt.Sprintf("%d", createApplication.Data.GetId()))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -341,25 +300,7 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 		}
 	}
 
-	// Preserve the prior state's Modules shape so unconfigured submodules
-	// aren't introduced into state by the API response, which would cause
-	// perpetual drift on subsequent plans. When prior state is nil (import),
-	// populate every submodule the API returned so the imported state mirrors
-	// reality.
-	var previousModules *ApplicationModules
-	if state.Application != nil {
-		previousModules = state.Application.Modules
-	}
-
-	state.Application = &ApplicationResults{
-		ApplicationID:  types.Int64Value(stateApplication.Data.GetId()),
-		Name:           types.StringValue(stateApplication.Data.GetName()),
-		Active:         types.BoolValue(stateApplication.Data.GetActive()),
-		Debug:          types.BoolValue(stateApplication.Data.GetDebug()),
-		ProductVersion: types.StringValue(stateApplication.Data.GetProductVersion()),
-		State:          types.StringPointerValue(stateApplication.Data.VersionState.Get()),
-		VersionID:      types.StringPointerValue(stateApplication.Data.VersionId.Get()),
-	}
+	state.Application = transformApplicationResponseToModel(&stateApplication.Data)
 	state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
 
 	diags = resp.State.Set(ctx, &state)
@@ -418,16 +359,7 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 	}
 
-	plan.Application = &ApplicationResults{
-		ApplicationID:  types.Int64Value(updateApplication.Data.GetId()),
-		Name:           types.StringValue(updateApplication.Data.GetName()),
-		Active:         types.BoolValue(updateApplication.Data.GetActive()),
-		Debug:          types.BoolValue(updateApplication.Data.GetDebug()),
-		ProductVersion: types.StringValue(updateApplication.Data.GetProductVersion()),
-		State:          types.StringPointerValue(updateApplication.Data.VersionState.Get()),
-		VersionID:      types.StringPointerValue(updateApplication.Data.VersionId.Get()),
-		Modules:        modsPlan,
-	}
+	plan.Application = transformApplicationResponseToModel(&updateApplication.Data)
 
 	plan.ID = types.StringValue(fmt.Sprintf("%d", updateApplication.Data.GetId()))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -526,7 +458,7 @@ func transformApplicationResponseToModel(data *sdk.Application) *ApplicationResu
 		Active:         types.BoolValue(data.GetActive()),
 		Debug:          types.BoolValue(data.GetDebug()),
 		ProductVersion: types.StringValue(data.GetProductVersion()),
-		State:          types.StringPointerValue(data.State.Get()),
+		State:          types.StringPointerValue(data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(data.VersionId.Get()),
 	}
 

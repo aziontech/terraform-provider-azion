@@ -152,7 +152,7 @@ func transformFirewallResponseToModel(data *sdk.Firewall) *FirewallResourceResul
 		LastModified:   types.StringValue(data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(data.GetProductVersion()),
-		State:          types.StringPointerValue(data.State.Get()),
+		State:          types.StringPointerValue(data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(data.VersionId.Get()),
 	}
 
@@ -163,9 +163,9 @@ func transformFirewallResponseToModel(data *sdk.Firewall) *FirewallResourceResul
 	modules := data.GetModules()
 	results.Modules = &FirewallResourceModules{}
 
-	if modules.DdosProtection != nil {
-		results.Modules.DdosProtection = &DdosProtectionModule{Enabled: types.BoolValue(modules.DdosProtection.GetEnabled())}
-	}
+	// ddos_protection is always present in the response, so it is not a pointer.
+	ddosProtection := modules.GetDdosProtection()
+	results.Modules.DdosProtection = &DdosProtectionModule{Enabled: types.BoolValue(ddosProtection.GetEnabled())}
 	if modules.Functions != nil {
 		results.Modules.Functions = &FunctionsModule{Enabled: types.BoolValue(modules.Functions.GetEnabled())}
 	}
@@ -353,53 +353,7 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	mods := firewallResponse.Data.GetModules()
-	ddosProtection := mods.GetDdosProtection()
-	functions := mods.GetFunctions()
-	networkProtection := mods.GetNetworkProtection()
-	waf := mods.GetWaf()
-
-	var responseModulesPtr *FirewallResourceModules
-	if plan.Firewall.Modules != nil {
-		responseModules := FirewallResourceModules{}
-
-		if plan.Firewall.Modules.DdosProtection != nil {
-			responseModules.DdosProtection = &DdosProtectionModule{
-				Enabled: types.BoolValue(ddosProtection.GetEnabled()),
-			}
-		}
-		if plan.Firewall.Modules.Functions != nil {
-			responseModules.Functions = &FunctionsModule{
-				Enabled: types.BoolValue(functions.GetEnabled()),
-			}
-		}
-		if plan.Firewall.Modules.NetworkProtection != nil {
-			responseModules.NetworkProtection = &NetworkProtectionModule{
-				Enabled: types.BoolValue(networkProtection.GetEnabled()),
-			}
-		}
-		if plan.Firewall.Modules.WAF != nil {
-			responseModules.WAF = &WAFModule{
-				Enabled: types.BoolValue(waf.GetEnabled()),
-			}
-		}
-
-		responseModulesPtr = &responseModules
-	}
-
-	plan.Firewall = &FirewallResourceResults{
-		ID:             types.Int64Value(firewallResponse.Data.GetId()),
-		Name:           types.StringValue(firewallResponse.Data.GetName()),
-		Modules:        responseModulesPtr,
-		Debug:          types.BoolValue(firewallResponse.Data.GetDebug()),
-		Active:         types.BoolValue(firewallResponse.Data.GetActive()),
-		LastEditor:     types.StringValue(firewallResponse.Data.GetLastEditor()),
-		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
-		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
-		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
-		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
-		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
-	}
+	plan.Firewall = transformFirewallResponseToModel(&firewallResponse.Data)
 
 	plan.ID = types.StringValue(strconv.FormatInt(firewallResponse.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -466,59 +420,7 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
-	// Preserve the prior state's Modules shape so unconfigured submodules
-	// aren't introduced into state by the API response, which would cause
-	// perpetual drift on subsequent plans (state {} vs plan null). When prior
-	// state is nil (import), populate every submodule the API returned so the
-	// imported state mirrors reality.
-	var priorModules *FirewallResourceModules
-	if state.Firewall != nil {
-		priorModules = state.Firewall.Modules
-	}
-	var modulesResponsePtr *FirewallResourceModules
-	if firewallResponse.Data.Modules != nil {
-		modules := firewallResponse.Data.GetModules()
-		modulesResponse := FirewallResourceModules{}
-		if priorModules == nil || priorModules.DdosProtection != nil {
-			ddosProtection := modules.GetDdosProtection()
-			modulesResponse.DdosProtection = &DdosProtectionModule{
-				Enabled: types.BoolValue(ddosProtection.GetEnabled()),
-			}
-		}
-		if priorModules == nil || priorModules.Functions != nil {
-			functions := modules.GetFunctions()
-			modulesResponse.Functions = &FunctionsModule{
-				Enabled: types.BoolValue(functions.GetEnabled()),
-			}
-		}
-		if priorModules == nil || priorModules.NetworkProtection != nil {
-			networkProtection := modules.GetNetworkProtection()
-			modulesResponse.NetworkProtection = &NetworkProtectionModule{
-				Enabled: types.BoolValue(networkProtection.GetEnabled()),
-			}
-		}
-		if priorModules == nil || priorModules.WAF != nil {
-			waf := modules.GetWaf()
-			modulesResponse.WAF = &WAFModule{
-				Enabled: types.BoolValue(waf.GetEnabled()),
-			}
-		}
-		modulesResponsePtr = &modulesResponse
-	}
-
-	state.Firewall = &FirewallResourceResults{
-		ID:             types.Int64Value(firewallResponse.Data.GetId()),
-		LastEditor:     types.StringValue(firewallResponse.Data.GetLastEditor()),
-		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
-		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
-		Name:           types.StringValue(firewallResponse.Data.GetName()),
-		Active:         types.BoolValue(firewallResponse.Data.GetActive()),
-		Debug:          types.BoolValue(firewallResponse.Data.GetDebug()),
-		Modules:        modulesResponsePtr,
-		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
-		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
-		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
-	}
+	state.Firewall = transformFirewallResponseToModel(&firewallResponse.Data)
 	state.ID = types.StringValue(strconv.FormatInt(firewallID, 10))
 
 	diags = resp.State.Set(ctx, &state)
@@ -598,54 +500,7 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	mods := firewallResponse.Data.GetModules()
-	ddosProtection := mods.GetDdosProtection()
-	functions := mods.GetFunctions()
-	networkProtection := mods.GetNetworkProtection()
-	waf := mods.GetWaf()
-
-	var responseModulesPtr *FirewallResourceModules
-
-	if plan.Firewall.Modules != nil {
-		responseModules := FirewallResourceModules{}
-
-		if plan.Firewall.Modules.DdosProtection != nil {
-			responseModules.DdosProtection = &DdosProtectionModule{
-				Enabled: types.BoolValue(ddosProtection.GetEnabled()),
-			}
-		}
-		if plan.Firewall.Modules.Functions != nil {
-			responseModules.Functions = &FunctionsModule{
-				Enabled: types.BoolValue(functions.GetEnabled()),
-			}
-		}
-		if plan.Firewall.Modules.NetworkProtection != nil {
-			responseModules.NetworkProtection = &NetworkProtectionModule{
-				Enabled: types.BoolValue(networkProtection.GetEnabled()),
-			}
-		}
-		if plan.Firewall.Modules.WAF != nil {
-			responseModules.WAF = &WAFModule{
-				Enabled: types.BoolValue(waf.GetEnabled()),
-			}
-		}
-
-		responseModulesPtr = &responseModules
-	}
-
-	plan.Firewall = &FirewallResourceResults{
-		ID:             types.Int64Value(firewallResponse.Data.GetId()),
-		LastEditor:     types.StringValue(firewallResponse.Data.GetLastEditor()),
-		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
-		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
-		Name:           types.StringValue(firewallResponse.Data.GetName()),
-		Active:         types.BoolValue(firewallResponse.Data.GetActive()),
-		Debug:          types.BoolValue(firewallResponse.Data.GetDebug()),
-		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
-		Modules:        responseModulesPtr,
-		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
-		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
-	}
+	plan.Firewall = transformFirewallResponseToModel(&firewallResponse.Data)
 
 	plan.ID = types.StringValue(strconv.FormatInt(firewallResponse.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
