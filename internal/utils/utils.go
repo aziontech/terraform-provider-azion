@@ -309,7 +309,7 @@ func ReadAPIErrorBody(response *http.Response) string {
 	if response == nil || response.Body == nil {
 		return "API request failed"
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
