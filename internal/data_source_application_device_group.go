@@ -116,7 +116,7 @@ func (d *ApplicationDeviceGroupDataSource) Read(ctx context.Context, req datasou
 	deviceGroupResponse, response, err := d.client.api.ApplicationsDeviceGroupsAPI.
 		RetrieveDeviceGroup(ctx, applicationID.ValueInt64(), deviceGroupIDInt).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			deviceGroupResponse, response, err = utils.RetryOn429(func() (*azionapi.DeviceGroupResponse, *http.Response, error) {
 				return d.client.api.ApplicationsDeviceGroupsAPI.RetrieveDeviceGroup(ctx, applicationID.ValueInt64(), deviceGroupIDInt).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -133,7 +133,7 @@ func (d *ApplicationDeviceGroupDataSource) Read(ctx context.Context, req datasou
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintApplicationDeviceGroup(response.StatusCode, err)
+			usrMsg, errMsg := errPrintApplicationDeviceGroup(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}

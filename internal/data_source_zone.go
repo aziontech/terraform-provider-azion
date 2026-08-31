@@ -112,7 +112,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	zoneResponse, response, err := d.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
 				return d.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 			}, 5)
@@ -129,7 +129,7 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintZone(response.StatusCode, err)
+			usrMsg, errMsg := errPrintZone(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}

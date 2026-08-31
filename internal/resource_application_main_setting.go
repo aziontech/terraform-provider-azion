@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"sync"
@@ -246,18 +245,7 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -307,18 +295,7 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -377,18 +354,7 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -424,18 +390,7 @@ func (r *applicationResource) Delete(ctx context.Context, req resource.DeleteReq
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }
@@ -503,7 +458,7 @@ func transformApplicationResponseToModel(data *sdk.Application) *ApplicationResu
 		Active:         types.BoolValue(data.GetActive()),
 		Debug:          types.BoolValue(data.GetDebug()),
 		ProductVersion: types.StringValue(data.GetProductVersion()),
-		State:          types.StringPointerValue(data.State.Get()),
+		State:          types.StringPointerValue(data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(data.VersionId.Get()),
 	}
 

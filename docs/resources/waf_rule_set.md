@@ -222,7 +222,7 @@ When `condition_type = "specific_on_value"`, the `value` field is required and t
 Import is supported using the following syntax:
 
 ```shell
-terraform import azion_waf_rule_set.example <exception_id>
+terraform import azion_waf_rule_set.example <waf_id>/<exception_id>
 ```
 
-**Note**: The `waf_id` must be provided in the Terraform configuration for the imported resource to be properly managed.
+**Note**: The `waf_id` is part of the import ID because the API requires it to retrieve the exception. It is written to state by the import, so it does not have to be known beforehand.

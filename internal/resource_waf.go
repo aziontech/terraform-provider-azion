@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -276,7 +275,7 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 	// Create the WAF.
 	wafResponse, response, err := r.client.api.WAFsAPI.CreateWaf(ctx).WAFRequest(*wafRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFResponse, *http.Response, error) {
 				return r.client.api.WAFsAPI.CreateWaf(ctx).WAFRequest(*wafRequest).Execute()
 			}, 5)
@@ -293,18 +292,7 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -336,12 +324,25 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	// Save the state's engine_settings to preserve it if it was null.
-	stateEngineSettings := state.Result.EngineSettings
+	// Save the state's engine_settings to preserve it if it was null. The
+	// result block is absent right after an import, before the first read;
+	// in that case everything the API returns is written to state.
+	hasPriorResult := state.Result != nil
+	var stateEngineSettings *WafEngineSettingsResourceModel
+	if hasPriorResult {
+		stateEngineSettings = state.Result.EngineSettings
+	}
 
 	var wafID int64
 	var err error
 	if state.ID.IsNull() {
+		if state.Result == nil {
+			resp.Diagnostics.AddError(
+				"WAF id error ",
+				"should not be null or empty",
+			)
+			return
+		}
 		wafID = state.Result.ID.ValueInt64()
 	} else {
 		wafID, err = strconv.ParseInt(state.ID.ValueString(), 10, 64)
@@ -356,11 +357,11 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	wafResponse, response, err := r.client.api.WAFsAPI.RetrieveWaf(ctx, wafID).Execute()
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFResponse, *http.Response, error) {
 				return r.client.api.WAFsAPI.RetrieveWaf(ctx, wafID).Execute()
 			}, 5)
@@ -377,18 +378,7 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -401,7 +391,11 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Result = transformWAFToResourceModel(data)
 	state.ID = types.StringValue(strconv.FormatInt(wafID, 10))
 
-	state.Result.EngineSettings = alignWAFEngineSettings(stateEngineSettings, state.Result.EngineSettings)
+	// Only update engine_settings from API response if the state had it specified.
+	// This prevents Terraform from seeing an inconsistency when engine_settings was null in state.
+	if hasPriorResult && stateEngineSettings == nil && state.Result != nil {
+		state.Result.EngineSettings = nil
+	}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -460,7 +454,7 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	// Update the WAF.
 	wafResponse, response, err := r.client.api.WAFsAPI.UpdateWaf(ctx, wafID).WAFRequest(*wafRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			wafResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFResponse, *http.Response, error) {
 				return r.client.api.WAFsAPI.UpdateWaf(ctx, wafID).WAFRequest(*wafRequest).Execute()
 			}, 5)
@@ -477,18 +471,7 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -546,18 +529,7 @@ func (r *wafResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }
@@ -624,7 +596,7 @@ func transformWAFToResourceModel(waf azionapi.WAF) *WafResourceResults {
 		Name:         types.StringValue(waf.GetName()),
 		LastEditor:   types.StringValue(waf.GetLastEditor()),
 		LastModified: types.StringValue(waf.GetLastModified().Format(time.RFC3339)),
-		State:        types.StringPointerValue(waf.State.Get()),
+		State:        types.StringPointerValue(waf.VersionState.Get()),
 		VersionID:    types.StringPointerValue(waf.VersionId.Get()),
 	}
 

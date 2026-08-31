@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -190,7 +189,7 @@ func (e *ApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	appResponse, response, err := e.client.api.ApplicationsAPI.ListApplications(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			appResponse, response, err = utils.RetryOn429(func() (*sdk.PaginatedApplicationList, *http.Response, error) {
 				return e.client.api.ApplicationsAPI.ListApplications(ctx).Page(Page.ValueInt64()).PageSize(PageSize.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -207,18 +206,7 @@ func (e *ApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -257,7 +245,7 @@ func (e *ApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 			LastModified:   types.StringValue(resultApplication.GetLastModified().Format(time.RFC3339)),
 			Modules:        modules,
 			ProductVersion: types.StringValue(resultApplication.GetProductVersion()),
-			State:          types.StringPointerValue(resultApplication.State.Get()),
+			State:          types.StringPointerValue(resultApplication.VersionState.Get()),
 			VersionID:      types.StringPointerValue(resultApplication.VersionId.Get()),
 			Active:         types.BoolValue(resultApplication.GetActive()),
 			Debug:          types.BoolValue(resultApplication.GetDebug()),

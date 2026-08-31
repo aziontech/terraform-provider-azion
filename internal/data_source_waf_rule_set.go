@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -177,7 +176,7 @@ func (o *WafRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	exceptionResponse, response, err := o.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID.ValueInt64(), wafID.ValueInt64()).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			exceptionResponse, response, err = utils.RetryOn429(func() (*azionapi.WAFRuleResponse, *http.Response, error) {
 				return o.client.api.WAFsExceptionsAPI.RetrieveWafException(ctx, exceptionID.ValueInt64(), wafID.ValueInt64()).Execute()
 			}, 5)
@@ -194,18 +193,7 @@ func (o *WafRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequ
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}

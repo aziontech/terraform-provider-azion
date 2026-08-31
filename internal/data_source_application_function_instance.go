@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -111,7 +110,7 @@ func (d *ApplicationFunctionInstanceDataSource) Read(ctx context.Context, req da
 
 	functionInstanceResponse, response, err := d.client.api.ApplicationsFunctionAPI.RetrieveApplicationFunctionInstance(ctx, applicationID.ValueInt64(), functionInstanceID.ValueInt64()).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			functionInstanceResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionInstanceResponse, *http.Response, error) {
 				return d.client.api.ApplicationsFunctionAPI.RetrieveApplicationFunctionInstance(ctx, applicationID.ValueInt64(), functionInstanceID.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -128,18 +127,7 @@ func (d *ApplicationFunctionInstanceDataSource) Read(ctx context.Context, req da
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"error reading response from api",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}

@@ -163,7 +163,7 @@ func (d *functionDataSource) Read(ctx context.Context, req datasource.ReadReques
 	functionsResponse, response, err := d.client.api.FunctionsAPI.
 		RetrieveFunction(ctx, functionID).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			functionsResponse, response, err = utils.RetryOn429(func() (*azionapi.FunctionResponse, *http.Response, error) {
 				return d.client.api.FunctionsAPI.RetrieveFunction(ctx, functionID).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -180,7 +180,7 @@ func (d *functionDataSource) Read(ctx context.Context, req datasource.ReadReques
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrint(response.StatusCode, err)
+			usrMsg, errMsg := errPrint(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
@@ -213,7 +213,7 @@ func (d *functionDataSource) Read(ctx context.Context, req datasource.ReadReques
 			Version:              types.StringValue(functionsResponse.Data.GetVersion()),
 			Vendor:               types.StringValue(functionsResponse.Data.GetVendor()),
 			ReferenceCount:       types.Int64Value(functionsResponse.Data.GetReferenceCount()),
-			State:                types.StringPointerValue(functionsResponse.Data.State.Get()),
+			State:                types.StringPointerValue(functionsResponse.Data.VersionState.Get()),
 			VersionID:            types.StringPointerValue(functionsResponse.Data.VersionId.Get()),
 		},
 	}

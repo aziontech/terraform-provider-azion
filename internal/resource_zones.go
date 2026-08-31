@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -125,7 +124,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	zoneResponse, response, err := r.client.api.DNSZonesAPI.CreateDnsZone(ctx).
 		ZoneRequest(*zoneRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
 				return r.client.api.DNSZonesAPI.CreateDnsZone(ctx).
 					ZoneRequest(*zoneRequest).Execute()
@@ -143,13 +142,8 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(errReadAll.Error(), "err")
-				return
-			}
-			bodyString := string(bodyBytes)
-			usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
+			bodyString := utils.ReadAPIErrorBody(response)
+			usrMsg, errMsg := errPrintZoneResource(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, fmt.Sprintf("%s\nDetails: %s", errMsg, bodyString))
 			return
 		}
@@ -215,11 +209,11 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	zoneResponse, response, err := r.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
 				return r.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 			}, 5)
@@ -236,7 +230,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
+			usrMsg, errMsg := errPrintZoneResource(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
@@ -305,7 +299,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	zoneResponse, response, err := r.client.api.DNSZonesAPI.UpdateDnsZone(ctx, zoneId).
 		UpdateZoneRequest(*updateRequest).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
 				return r.client.api.DNSZonesAPI.UpdateDnsZone(ctx, zoneId).
 					UpdateZoneRequest(*updateRequest).Execute()
@@ -323,7 +317,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
+			usrMsg, errMsg := errPrintZoneResource(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
@@ -396,7 +390,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		usrMsg, errMsg := errPrintZoneResource(response.StatusCode, err)
+		usrMsg, errMsg := errPrintZoneResource(utils.StatusCodeOf(response), err)
 		resp.Diagnostics.AddError(usrMsg, errMsg)
 		return
 	}

@@ -131,18 +131,7 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 				}
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -152,6 +141,13 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Parse response manually to handle the "state" field
+	if response == nil || response.Body == nil {
+		resp.Diagnostics.AddError(
+			"Empty response",
+			"The API returned no response body",
+		)
+		return
+	}
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -228,18 +224,7 @@ func (r *dnssecResource) Read(
 				}
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -249,6 +234,13 @@ func (r *dnssecResource) Read(
 	}
 
 	// Parse response manually to handle the "state" field
+	if response == nil || response.Body == nil {
+		resp.Diagnostics.AddError(
+			"Empty response",
+			"The API returned no response body",
+		)
+		return
+	}
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -321,18 +313,7 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 				}
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -342,6 +323,13 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Parse response manually to handle the "state" field
+	if response == nil || response.Body == nil {
+		resp.Diagnostics.AddError(
+			"Empty response",
+			"The API returned no response body",
+		)
+		return
+	}
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -406,18 +394,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			return
 		}
-		bodyBytes, errReadAll := io.ReadAll(response.Body)
-		if errReadAll != nil {
-			resp.Diagnostics.AddError(
-				errReadAll.Error(),
-				"err",
-			)
-		}
-		bodyString := string(bodyBytes)
-		resp.Diagnostics.AddError(
-			err.Error(),
-			bodyString,
-		)
+		resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 		return
 	}
 }

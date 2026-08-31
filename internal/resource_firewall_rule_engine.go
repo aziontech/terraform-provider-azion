@@ -361,6 +361,13 @@ func (r *firewallRuleEngineResource) Read(ctx context.Context, req resource.Read
 		firewallID = int64(utils.AtoiNoError(valueFromCmd[0], resp))
 		ruleID = int64(utils.AtoiNoError(valueFromCmd[1], resp))
 	} else if len(valueFromCmd) == 1 {
+		if state.Results == nil {
+			resp.Diagnostics.AddError(
+				"Parameters error",
+				"you need to pass <firewallID>/<ruleID>",
+			)
+			return
+		}
 		firewallID = state.FirewallID.ValueInt64()
 		ruleID = state.Results.ID.ValueInt64()
 	} else {
@@ -386,11 +393,11 @@ func (r *firewallRuleEngineResource) Read(ctx context.Context, req resource.Read
 		defer response.Body.Close()
 	}
 	if err != nil {
-		if response.StatusCode == http.StatusNotFound {
+		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			ruleResponse, response, err = utils.RetryOn429(func() (*azionapi.FirewallRuleResponse, *http.Response, error) {
 				return r.client.api.FirewallsRulesEngineAPI.
 					RetrieveFirewallRule(ctx, firewallID, ruleID).

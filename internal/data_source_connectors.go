@@ -127,7 +127,7 @@ func (d *ConnectorsDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 func (d *ConnectorsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	connectorsResponse, response, err := d.client.api.ConnectorsAPI.ListConnectors(ctx).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			connectorsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedConnectorList, *http.Response, error) {
 				return d.client.api.ConnectorsAPI.ListConnectors(ctx).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -144,7 +144,7 @@ func (d *ConnectorsDataSource) Read(ctx context.Context, req datasource.ReadRequ
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintConnectors(response.StatusCode, err)
+			usrMsg, errMsg := errPrintConnectors(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}
@@ -202,7 +202,7 @@ func populateConnectorsResults(connector azionapi.Connector) (ConnectorsResults,
 			ProductVersion: types.StringValue(c.GetProductVersion()),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),
-			State:          types.StringPointerValue(c.State.Get()),
+			State:          types.StringPointerValue(c.VersionState.Get()),
 			VersionID:      types.StringPointerValue(c.VersionId.Get()),
 		}
 
@@ -224,7 +224,7 @@ func populateConnectorsResults(connector azionapi.Connector) (ConnectorsResults,
 			ProductVersion: types.StringValue(c.GetProductVersion()),
 			Type:           types.StringValue(c.Type),
 			Active:         types.BoolPointerValue(c.Active),
-			State:          types.StringPointerValue(c.State.Get()),
+			State:          types.StringPointerValue(c.VersionState.Get()),
 			VersionID:      types.StringPointerValue(c.VersionId.Get()),
 		}
 

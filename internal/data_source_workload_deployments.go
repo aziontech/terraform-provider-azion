@@ -170,7 +170,7 @@ func (d *WorkloadDeploymentsDataSource) Read(ctx context.Context, req datasource
 	deploymentsResponse, response, err := d.client.api.WorkloadDeploymentsAPI.
 		ListWorkloadDeployments(ctx, workloadID).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			deploymentsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedWorkloadDeploymentList, *http.Response, error) {
 				return d.client.api.WorkloadDeploymentsAPI.ListWorkloadDeployments(ctx, workloadID).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -187,7 +187,7 @@ func (d *WorkloadDeploymentsDataSource) Read(ctx context.Context, req datasource
 				return
 			}
 		} else {
-			usrMsg, errMsg := errPrintWorkloadDeployments(response.StatusCode, err)
+			usrMsg, errMsg := errPrintWorkloadDeployments(utils.StatusCodeOf(response), err)
 			resp.Diagnostics.AddError(usrMsg, errMsg)
 			return
 		}

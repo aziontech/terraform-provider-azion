@@ -196,18 +196,7 @@ func (d *dnssecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 				}
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -217,6 +206,13 @@ func (d *dnssecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	// Parse response manually to handle the "state" field
+	if response == nil || response.Body == nil {
+		resp.Diagnostics.AddError(
+			"Empty response",
+			"The API returned no response body",
+		)
+		return
+	}
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
 		resp.Diagnostics.AddError(

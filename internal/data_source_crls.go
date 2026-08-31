@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -163,7 +162,7 @@ func (d *CrlsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 func (d *CrlsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	crlsResponse, response, err := d.client.api.DigitalCertificatesCertificateRevocationListsAPI.ListCertificateRevocationLists(ctx).Execute()
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			crlsResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedCertificateRevocationList, *http.Response, error) {
 				return d.client.api.DigitalCertificatesCertificateRevocationListsAPI.ListCertificateRevocationLists(ctx).Execute()
 			}, 5)
@@ -180,18 +179,7 @@ func (d *CrlsDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	} else {

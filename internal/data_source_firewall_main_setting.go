@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"time"
 
@@ -192,7 +191,7 @@ func (f *FirewallDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	firewallResponse, response, err := f.client.api.FirewallsAPI.RetrieveFirewall(ctx, getFirewallID.ValueInt64()).Execute() //nolint
 	if err != nil {
-		if response.StatusCode == 429 {
+		if response != nil && response.StatusCode == 429 {
 			firewallResponse, response, err = utils.RetryOn429(func() (*sdk.FirewallResponse, *http.Response, error) {
 				return f.client.api.FirewallsAPI.RetrieveFirewall(ctx, getFirewallID.ValueInt64()).Execute() //nolint
 			}, 5) // Maximum 5 retries
@@ -209,18 +208,7 @@ func (f *FirewallDataSource) Read(ctx context.Context, req datasource.ReadReques
 				return
 			}
 		} else {
-			bodyBytes, errReadAll := io.ReadAll(response.Body)
-			if errReadAll != nil {
-				resp.Diagnostics.AddError(
-					errReadAll.Error(),
-					"err",
-				)
-			}
-			bodyString := string(bodyBytes)
-			resp.Diagnostics.AddError(
-				err.Error(),
-				bodyString,
-			)
+			resp.Diagnostics.AddError(err.Error(), utils.ReadAPIErrorBody(response))
 			return
 		}
 	}
@@ -256,7 +244,7 @@ func (f *FirewallDataSource) Read(ctx context.Context, req datasource.ReadReques
 		LastModified:   types.StringValue(firewallResponse.Data.GetLastModified().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(firewallResponse.Data.GetProductVersion()),
 		CreatedAt:      types.StringValue(firewallResponse.Data.GetCreatedAt().Format(time.RFC3339)),
-		State:          types.StringPointerValue(firewallResponse.Data.State.Get()),
+		State:          types.StringPointerValue(firewallResponse.Data.VersionState.Get()),
 		VersionID:      types.StringPointerValue(firewallResponse.Data.VersionId.Get()),
 	}
 
