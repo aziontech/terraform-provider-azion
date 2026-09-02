@@ -45,7 +45,21 @@ resource "azion_data_stream" "example" {
       {
         type = "raw_logs"
         attributes = {
-          data_source = "http"
+          data_source = "workloads"
+        }
+      }
+    ]
+    transform = [
+      {
+        type = "sampling"
+        sampling_attributes = {
+          rate = 100
+        }
+      },
+      {
+        type = "render_template"
+        render_template_attributes = {
+          template = 2
         }
       }
     ]

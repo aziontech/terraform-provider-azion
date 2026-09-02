@@ -74,9 +74,9 @@ inputs  ──▶  transform (ordered, optional)  ──▶  outputs
 
 | Field | Cardinality | Polymorphic? | Notes |
 |-------|-------------|--------------|-------|
-| `inputs` | 1..n, required | No | Only `type = "raw_logs"` exists; `attributes.data_source` selects the log source |
-| `transform` | 0..n, optional | **Yes** (`oneOf`) | Order matters — the API applies them in sequence. If present, must contain `sampling` or `filter_workloads` (see below) |
-| `outputs` | 1..n, required | **Yes** (`oneOf`) | One entry per destination endpoint |
+| `inputs` | exactly 1, required | No | Only `type = "raw_logs"` exists; `attributes.data_source` selects the log source. The API keeps only one input out of a longer list, silently — the schema caps it at 1 |
+| `transform` | 1..n, required | **Yes** (`oneOf`) | Must contain a `render_template` entry plus either `sampling` or `filter_workloads` (see below). The API normalizes the order, so the configured order is cosmetic |
+| `outputs` | exactly 1, required | **Yes** (`oneOf`) | The API stores one output per stream — see below. The schema caps it at 1 |
 
 ### SDK type map
 
@@ -86,13 +86,25 @@ inputs  ──▶  transform (ordered, optional)  ──▶  outputs
 | Input entry | `InputInputDataSourceAttributes` | `InputInputDataSourceAttributesRequest` |
 | Input attributes | `InputDataSource` | `InputDataSourceRequest` |
 | Transform entry | `Transform` (oneOf wrapper) | `TransformRequest` (oneOf wrapper) |
-| Output entry | `OutputBase` (`Type` + `Attributes Output`) | `OutputRequestBase` (`Type` + `Attributes OutputRequest`) |
+| Output entry | `Output` (oneOf wrapper) | `OutputRequest` (oneOf wrapper) |
+| Output variant | `<Endpoint>Attributes` (`Type` + `Attributes <Endpoint>`) | `<Endpoint>AttributesRequest` (`Type` + `Attributes <Endpoint>Request`) |
 
-Note the asymmetry: transform entries **are** the `oneOf` value, while output entries are a base struct whose `Attributes` field holds the `oneOf`. Getting this backwards is the easiest mistake to make here.
+Transform and output entries share the same shape: the entry **is** the `oneOf` value, and each
+variant carries its own `type` discriminator alongside the endpoint payload in `Attributes`.
+
+> SDK `v0.266.0` reshaped outputs. Before it, an entry was an `OutputRequestBase`/`OutputBase`
+> wrapper whose `Attributes` field held the `oneOf`, and the endpoint struct itself repeated the
+> `type` field. The wrapper structs still exist in the SDK but are no longer referenced by
+> `DataStreamRequest`/`DataStream` — do not use them.
 
 ### Data sources (`inputs[].attributes.data_source`)
 
-`workloads`, `waf`, `functions_console`, `activity_history`, `http`, `cells_console`, `rtm_activity`.
+`workloads`, `waf`, `functions_console`, `activity_history` — the four slugs served by
+`GET /data_stream/data_sources`. `http`, `cells_console` and `rtm_activity` were accepted by
+earlier API versions and are gone. The API does **not** reject an unrecognized slug; it silently
+stores a different one, which surfaces in Terraform as `Provider produced inconsistent result
+after apply`. That is why the schema validates the value with `stringvalidator.OneOf` instead of
+deferring to the API. Re-check the endpoint before trusting this list.
 
 ### Transform types
 
@@ -215,12 +227,13 @@ item := azionapi.NewTransformTransformSamplingAttributesRequest(transformType, *
 out = append(out, azionapi.TransformTransformSamplingAttributesRequestAsTransformRequest(item))
 ```
 
-Output entries wrap the endpoint inside `OutputRequestBase`, and the endpoint carries its own `type` field too — **set it in both places**:
+Output entries follow the identical pattern — the endpoint struct holds only its own payload,
+and the discriminator goes on the `<Endpoint>AttributesRequest` variant:
 
 ```go
-endpoint := azionapi.NewKafkaEndpointRequest(servers, topic, useTLS, outputType)
-attrs := azionapi.KafkaEndpointRequestAsOutputRequest(endpoint)
-out = append(out, *azionapi.NewOutputRequestBase(outputType, attrs))
+endpoint := azionapi.NewKafkaEndpointRequest(servers, topic, useTLS)
+item := azionapi.NewKafkaEndpointAttributesRequest(outputType, *endpoint)
+out = append(out, azionapi.KafkaEndpointAttributesRequestAsOutputRequest(item))
 ```
 
 ### Reading responses (SDK → Terraform)
@@ -232,12 +245,17 @@ case *azionapi.TransformTransformFilterWorkloadsAttributes:
 case *azionapi.TransformTransformRenderTemplateAttributes:
 }
 
-switch e := outputs[i].Attributes.GetActualInstance().(type) {
-case *azionapi.HttpPostEndpoint:
-case *azionapi.KafkaEndpoint:
+switch e := outputs[i].GetActualInstance().(type) {
+case *azionapi.HttpPostEndpointAttributes:
+case *azionapi.KafkaEndpointAttributes:
 // ...
 }
 ```
+
+Each output variant nests its payload one level down, so the endpoint fields are read from
+`e.Attributes` and the discriminator from `e.GetType()`. `dataStreamOutputEndpoint` in
+`internal/resource_data_stream.go` unwraps both in one place so the rest of the population
+code can switch on the endpoint structs (`*azionapi.HttpPostEndpoint`, ...) directly.
 
 `GetActualInstance()` returns `nil` when the discriminator didn't match any member — always guard for it.
 
@@ -328,22 +346,85 @@ if shouldPopulate(priorAttrs, func(p *DataStreamStandardOutputModel) bool { retu
 
 `shouldPopulate` returns `true` when `prior == nil`, so the `else` branch only runs when `priorAttrs` is non-nil — the dereference is safe.
 
-### Reordering `transform` or `outputs` is a real change
+### The API normalizes `transform` order
 
-Both are `ListNestedAttribute`, so order is significant, and for `transform` it genuinely is (the API applies steps in sequence). Do not switch either to a `SetNestedAttribute`: it would break the positional prior-state matching that keeps secrets stable.
+`outputs` order is preserved by the API, but `transform` is not: the pipeline comes back in the
+API's own canonical order regardless of what was submitted (sending `[render_template, sampling]`
+stores `[sampling, render_template]`). `populateDataStreamTransforms` therefore re-orders the
+response to match the prior list's sequence of types via `orderTransformsLikePrior`, falling back
+to the API's order when the types don't match so genuine drift still shows. Without that,
+any config not already written in the API's order fails with `Provider produced inconsistent
+result after apply`.
 
-### A non-empty `transform` list must include `sampling` or `filter_workloads`
+Both attributes stay `ListNestedAttribute`. Do not switch either to a `SetNestedAttribute`: it
+would break the positional prior-state matching that keeps secrets stable.
 
-Observed from the live API: a `transform` list holding only `render_template` is rejected with
+### `transform` is required and carries cross-entry rules
 
-```
-400 - code 32002 "Workloads Must Be Provided"
-"If sampling is disabled, workloads must be provided."   source.pointer: /data/transform
-```
+Observed from the live API — all four are enforced:
 
-Omitting `transform` entirely is accepted, so the constraint applies only once the list is present. The API appears to treat the three transform types as slots with a cross-field rule rather than a free-form list, even though the schema models them as an ordered array.
+| Constraint | Error |
+|---|---|
+| The `transform` key must be present | `400 - 10059 "Required Field"` |
+| It must hold at least one entry | `400 - 10049 "Min Length List Field"` |
+| It must include a `render_template` entry | `400 - 32008 "Template Must Be Provided"` |
+| It must include a `sampling` or `filter_workloads` entry | `400 - 32002 "Workloads Must Be Provided"` |
 
-This is **not** validated in the provider schema — it is a cross-entry rule that Terraform's schema validation cannot express, and it is inferred from one API error message rather than documented in the OpenAPI spec. Do not add a client-side check that guesses at the full rule; let the API be the authority and surface its error. Workaround for a template-only pipeline: pair `render_template` with a no-op `sampling` entry at `rate = 100`.
+All four point at `/data/transform`. The API treats the three transform types as slots with
+cross-field rules rather than a free-form list, even though the schema models them as an ordered
+array.
+
+The schema enforces the first two (`Required` plus `listvalidator.SizeAtLeast(1)`), which
+Terraform can express. The last two are cross-entry rules that schema validation cannot express
+and that are inferred from error messages rather than documented in the OpenAPI spec — do not add
+a client-side check that guesses at the full rule; let the API be the authority and surface its
+error. Workaround for a template-only pipeline: pair `render_template` with a no-op `sampling`
+entry at `rate = 100`.
+
+### Only one `outputs` entry is stored
+
+Fan-out from a single stream does not work, in two different ways:
+
+- outputs all of the same `type`: the API keeps **only the last entry**, silently
+- outputs of differing types: the API answers `500 - 10067 "Internal Server Error"`
+
+Verified against the live API by posting three `kafka` outputs and reading the stream back — one
+survived, the third. The schema therefore caps `outputs` at one entry
+(`listvalidator.SizeBetween(1, 1)`), the same treatment `inputs` gets, so the loss surfaces as a
+plan-time error instead of `Provider produced inconsistent result after apply`. One stream per
+destination endpoint is the working pattern. Revisit if the API starts honouring longer lists.
+
+### Only one stream per account can be active
+
+Account-wide, not per `data_source`: activating a stream silently deactivates whichever was
+active before. Verified by creating two active streams on different data sources — the older one
+came back `active: false`. The create/update response still echoes `active: true`, so the
+provider writes `true` into state while the API holds `false`, and the next plan shows
+`active = false -> true` indefinitely. Nothing to validate at plan time (it depends on
+account-wide state), so this is documentation-only.
+
+### `elasticsearch`, `splunk` and `datadog` outputs cannot be decoded
+
+All three are `{url, api_key}` and `oneOf(Output)` has no `discriminator`, so the generated
+`UnmarshalJSON` tries every variant and counts matches — three match, and it fails with
+`data matches more than one schema in oneOf(Output)`. 8 of the 11 endpoint types decode fine;
+these three do not, in either the old or the new SDK.
+
+The blast radius includes the plural data source: `azion_data_streams` decodes every stream in
+the account, so one such stream anywhere makes the whole list read fail. There is no provider-side
+workaround — by the time `Execute()` returns the error the response body is consumed, so the raw
+JSON is not available to decode by hand. The fix is `discriminator: {propertyName: type}` on the
+`Output`/`OutputRequest` schemas in the OpenAPI spec, or giving the three schemas distinguishing
+required fields.
+
+### `log_line_separator` is trimmed
+
+The API runs the equivalent of `strings.TrimSpace` on it, so a real newline, tab, CR or run of
+spaces is all stored as `""`. The API's own default is the **two-character** text `\n`
+(backslash, n), which round-trips unchanged — as does any value with no surrounding whitespace.
+The schema validates against leading/trailing whitespace with `stringvalidator.RegexMatches`
+rather than silently normalizing, since normalizing would mean editing the user's configured
+value behind their back.
 
 ### `render_template` template IDs
 

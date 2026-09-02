@@ -12,7 +12,25 @@ resource "azion_data_stream" "http_post" {
       {
         type = "raw_logs"
         attributes = {
-          data_source = "http"
+          data_source = "workloads"
+        }
+      }
+    ]
+
+    # transform is required. rate = 100 keeps every record, so this pipeline only
+    # renders the template.
+    transform = [
+      {
+        type = "sampling"
+        sampling_attributes = {
+          rate = 100
+        }
+      },
+      {
+        type = "render_template"
+        render_template_attributes = {
+          # Replace with the identifier of an existing Data Stream template.
+          template = 2
         }
       }
     ]
@@ -52,6 +70,13 @@ resource "azion_data_stream" "waf_to_s3" {
         sampling_attributes = {
           rate = 50
         }
+      },
+      {
+        type = "render_template"
+        render_template_attributes = {
+          # Replace with the identifier of an existing Data Stream template.
+          template = 4
+        }
       }
     ]
 
@@ -72,18 +97,19 @@ resource "azion_data_stream" "waf_to_s3" {
   }
 }
 
-# Workload-filtered logs rendered through a template and fanned out to Kafka
-# and Datadog. Both transforms and multiple outputs are supported per stream.
+# Workload-filtered logs rendered through a template and delivered to Kafka.
+# A stream carries exactly one endpoint, so fanning the same logs out to a second
+# destination means a second stream with the same inputs and transforms.
 resource "azion_data_stream" "multi_output" {
   data_stream = {
-    name   = "Filtered logs to Kafka and Datadog"
+    name   = "Filtered logs to Kafka"
     active = true
 
     inputs = [
       {
         type = "raw_logs"
         attributes = {
-          data_source = "http"
+          data_source = "workloads"
         }
       }
     ]
@@ -112,13 +138,6 @@ resource "azion_data_stream" "multi_output" {
           bootstrap_servers = "kafka-1.example.com:9092,kafka-2.example.com:9092"
           kafka_topic       = "azion-logs"
           use_tls           = true
-        }
-      },
-      {
-        type = "datadog"
-        datadog_attributes = {
-          url     = "https://http-intake.logs.datadoghq.com/v1/input"
-          api_key = "my-datadog-api-key"
         }
       }
     ]

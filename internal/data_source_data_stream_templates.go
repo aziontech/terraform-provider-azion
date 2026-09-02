@@ -93,7 +93,10 @@ func (d *DataStreamTemplatesDataSource) Read(ctx context.Context, _ datasource.R
 		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 
-	templatesState := DataStreamTemplatesDataSourceModel{}
+	templatesState := DataStreamTemplatesDataSourceModel{
+		Counter: types.Int64Value(0),
+		Results: []DataStreamTemplateResults{},
+	}
 
 	if templatesResponse.Count != nil {
 		templatesState.Counter = types.Int64Value(*templatesResponse.Count)

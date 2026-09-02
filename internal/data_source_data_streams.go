@@ -93,7 +93,10 @@ func (d *DataStreamsDataSource) Read(ctx context.Context, _ datasource.ReadReque
 		defer func(r *http.Response) { _ = r.Body.Close() }(response)
 	}
 
-	dataStreamsState := DataStreamsDataSourceModel{}
+	dataStreamsState := DataStreamsDataSourceModel{
+		Counter: types.Int64Value(0),
+		Results: []DataStreamResults{},
+	}
 
 	if dataStreamsResponse.Count != nil {
 		dataStreamsState.Counter = types.Int64Value(*dataStreamsResponse.Count)

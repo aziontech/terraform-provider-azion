@@ -55,7 +55,7 @@ resource "azion_data_stream" "with_template" {
       {
         type = "raw_logs"
         attributes = {
-          data_source = "http"
+          data_source = "workloads"
         }
       }
     ]

@@ -5,16 +5,20 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -183,7 +187,7 @@ func (r *dataStreamResource) Metadata(_ context.Context, req resource.MetadataRe
 
 func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Creates a Data Stream. A stream pipes logs from one or more inputs through optional transforms into one or more outputs (endpoints).",
+		Description: "Creates a Data Stream. A stream pipes logs from one or more inputs through a transform pipeline into one or more outputs (endpoints).",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
@@ -231,8 +235,12 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Computed:    true,
 					},
 					"inputs": schema.ListNestedAttribute{
-						Description: "Inputs feeding the stream.",
-						Required:    true,
+						Description: "Input feeding the stream. The API stores a single input per stream: it silently keeps only one " +
+							"of a longer list, so more than one entry is rejected here rather than losing them on apply.",
+						Required: true,
+						Validators: []validator.List{
+							listvalidator.SizeBetween(1, 1),
+						},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
@@ -244,8 +252,13 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 									Required:    true,
 									Attributes: map[string]schema.Attribute{
 										"data_source": schema.StringAttribute{
-											Description: "Source of the logs. One of `http`, `waf`, `workloads`, `functions_console`, `cells_console`, `activity_history`, `rtm_activity`.",
-											Required:    true,
+											Description: "Source of the logs. One of `workloads`, `waf`, `functions_console`, `activity_history` — " +
+												"the slugs served by the API's `GET /data_stream/data_sources` endpoint. The API silently " +
+												"rewrites an unrecognized slug instead of rejecting it, so it is validated here.",
+											Required: true,
+											Validators: []validator.String{
+												stringvalidator.OneOf("workloads", "waf", "functions_console", "activity_history"),
+											},
 										},
 									},
 								},
@@ -253,8 +266,14 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						},
 					},
 					"transform": schema.ListNestedAttribute{
-						Description: "Ordered list of transforms applied to the records. Exactly one `*_attributes` block must be set per entry, matching `type`.",
-						Optional:    true,
+						Description: "Transforms applied to the records. Exactly one `*_attributes` block must be set per entry, matching `type`. " +
+							"At least one entry is required: the API rejects an empty list. It also requires a `render_template` entry, " +
+							"plus either a `sampling` or a `filter_workloads` entry. The API normalizes the pipeline order, so the order " +
+							"the entries are listed in here does not change how they are applied.",
+						Required: true,
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
+						},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
@@ -296,8 +315,13 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						},
 					},
 					"outputs": schema.ListNestedAttribute{
-						Description: "Endpoints the records are delivered to. Exactly one `*_attributes` block must be set per entry, matching `type`.",
-						Required:    true,
+						Description: "Endpoint the records are delivered to. Exactly one `*_attributes` block must be set, matching `type`. " +
+							"The API stores a single output per stream: given a longer list it keeps only the last entry (and answers 500 " +
+							"when the entries have differing types), so more than one is rejected here rather than losing them on apply.",
+						Required: true,
+						Validators: []validator.List{
+							listvalidator.SizeBetween(1, 1),
+						},
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
@@ -319,9 +343,18 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 											Sensitive:   true,
 										},
 										"log_line_separator": schema.StringAttribute{
-											Description: "Separator inserted between records in the payload.",
-											Optional:    true,
-											Computed:    true,
+											Description: "Separator inserted between records in the payload. The API trims surrounding " +
+												"whitespace from this value, so a newline separator has to be written as the two-character " +
+												"escape `\\n` rather than a literal newline — an all-whitespace value would be stored as empty.",
+											Optional: true,
+											Computed: true,
+											Validators: []validator.String{
+												stringvalidator.RegexMatches(
+													regexp.MustCompile(`(?s)^(\S(.*\S)?)?$`),
+													"must not start or end with whitespace: the API trims it, so the stored value would "+
+														"differ from the configuration. Write a newline separator as \"\\n\" (backslash n).",
+												),
+											},
 										},
 										"payload_format": schema.StringAttribute{
 											Description: "Format of the payload, for example `$dataset`.",
@@ -843,21 +876,25 @@ func buildDataStreamTransformRequests(transforms []DataStreamTransformModel) ([]
 	return out, nil
 }
 
-func buildDataStreamOutputRequests(outputs []DataStreamOutputModel) ([]azionapi.OutputRequestBase, error) {
-	out := []azionapi.OutputRequestBase{}
+func buildDataStreamOutputRequests(outputs []DataStreamOutputModel) ([]azionapi.OutputRequest, error) {
+	out := []azionapi.OutputRequest{}
 	for i, output := range outputs {
 		outputType := output.Type.ValueString()
-		attrs, err := buildDataStreamOutputAttributes(i, outputType, output)
+		request, err := buildDataStreamOutputRequest(i, outputType, output)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, *azionapi.NewOutputRequestBase(outputType, attrs))
+		out = append(out, request)
 	}
 	return out, nil
 }
 
+// buildDataStreamOutputRequest builds one entry of the outputs list. The SDK models
+// each endpoint as a `{type, attributes}` variant of the OutputRequest `oneOf`, so the
+// discriminator is set on the variant rather than on a shared wrapper.
+//
 //nolint:gocyclo // One branch per endpoint type; splitting it only adds indirection.
-func buildDataStreamOutputAttributes(index int, outputType string, output DataStreamOutputModel) (azionapi.OutputRequest, error) {
+func buildDataStreamOutputRequest(index int, outputType string, output DataStreamOutputModel) (azionapi.OutputRequest, error) {
 	switch outputType {
 	case "standard":
 		if output.StandardAttributes == nil {
@@ -868,7 +905,7 @@ func buildDataStreamOutputAttributes(index int, outputType string, output DataSt
 		for key, value := range attrs.Headers {
 			headers[key] = value.ValueString()
 		}
-		endpoint := azionapi.NewHttpPostEndpointRequest(attrs.URL.ValueString(), headers, outputType)
+		endpoint := azionapi.NewHttpPostEndpointRequest(attrs.URL.ValueString(), headers)
 		if !attrs.LogLineSeparator.IsNull() && !attrs.LogLineSeparator.IsUnknown() {
 			endpoint.SetLogLineSeparator(attrs.LogLineSeparator.ValueString())
 		}
@@ -878,7 +915,8 @@ func buildDataStreamOutputAttributes(index int, outputType string, output DataSt
 		if !attrs.MaxSize.IsNull() && !attrs.MaxSize.IsUnknown() {
 			endpoint.SetMaxSize(attrs.MaxSize.ValueInt64())
 		}
-		return azionapi.HttpPostEndpointRequestAsOutputRequest(endpoint), nil
+		item := azionapi.NewHttpPostEndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.HttpPostEndpointAttributesRequestAsOutputRequest(item), nil
 
 	case "kafka":
 		if output.KafkaAttributes == nil {
@@ -889,9 +927,9 @@ func buildDataStreamOutputAttributes(index int, outputType string, output DataSt
 			attrs.BootstrapServers.ValueString(),
 			attrs.KafkaTopic.ValueString(),
 			attrs.UseTLS.ValueBool(),
-			outputType,
 		)
-		return azionapi.KafkaEndpointRequestAsOutputRequest(endpoint), nil
+		item := azionapi.NewKafkaEndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.KafkaEndpointAttributesRequestAsOutputRequest(item), nil
 
 	case "s3":
 		if output.S3Attributes == nil {
@@ -905,12 +943,12 @@ func buildDataStreamOutputAttributes(index int, outputType string, output DataSt
 			attrs.BucketName.ValueString(),
 			attrs.ContentType.ValueString(),
 			attrs.HostURL.ValueString(),
-			outputType,
 		)
 		if !attrs.ObjectKeyPrefix.IsNull() && !attrs.ObjectKeyPrefix.IsUnknown() {
 			endpoint.SetObjectKeyPrefix(attrs.ObjectKeyPrefix.ValueString())
 		}
-		return azionapi.S3EndpointRequestAsOutputRequest(endpoint), nil
+		item := azionapi.NewS3EndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.S3EndpointAttributesRequestAsOutputRequest(item), nil
 
 	case "big_query":
 		if output.BigQueryAttributes == nil {
@@ -922,25 +960,27 @@ func buildDataStreamOutputAttributes(index int, outputType string, output DataSt
 			attrs.ProjectID.ValueString(),
 			attrs.TableID.ValueString(),
 			attrs.ServiceAccountKey.ValueString(),
-			outputType,
 		)
-		return azionapi.BigQueryEndpointRequestAsOutputRequest(endpoint), nil
+		item := azionapi.NewBigQueryEndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.BigQueryEndpointAttributesRequestAsOutputRequest(item), nil
 
 	case "elasticsearch":
 		if output.ElasticsearchAttributes == nil {
 			return azionapi.OutputRequest{}, missingOutputAttrsErr(index, outputType, "elasticsearch_attributes")
 		}
 		attrs := output.ElasticsearchAttributes
-		endpoint := azionapi.NewElasticsearchEndpointRequest(attrs.URL.ValueString(), attrs.APIKey.ValueString(), outputType)
-		return azionapi.ElasticsearchEndpointRequestAsOutputRequest(endpoint), nil
+		endpoint := azionapi.NewElasticsearchEndpointRequest(attrs.URL.ValueString(), attrs.APIKey.ValueString())
+		item := azionapi.NewElasticsearchEndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.ElasticsearchEndpointAttributesRequestAsOutputRequest(item), nil
 
 	case "splunk":
 		if output.SplunkAttributes == nil {
 			return azionapi.OutputRequest{}, missingOutputAttrsErr(index, outputType, "splunk_attributes")
 		}
 		attrs := output.SplunkAttributes
-		endpoint := azionapi.NewSplunkEndpointRequest(attrs.URL.ValueString(), attrs.APIKey.ValueString(), outputType)
-		return azionapi.SplunkEndpointRequestAsOutputRequest(endpoint), nil
+		endpoint := azionapi.NewSplunkEndpointRequest(attrs.URL.ValueString(), attrs.APIKey.ValueString())
+		item := azionapi.NewSplunkEndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.SplunkEndpointAttributesRequestAsOutputRequest(item), nil
 
 	case "aws_kinesis_firehose":
 		if output.AWSKinesisFirehoseAttrs == nil {
@@ -952,24 +992,26 @@ func buildDataStreamOutputAttributes(index int, outputType string, output DataSt
 			attrs.StreamName.ValueString(),
 			attrs.Region.ValueString(),
 			attrs.SecretKey.ValueString(),
-			outputType,
 		)
-		return azionapi.AWSKinesisFirehoseEndpointRequestAsOutputRequest(endpoint), nil
+		item := azionapi.NewAWSKinesisFirehoseEndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.AWSKinesisFirehoseEndpointAttributesRequestAsOutputRequest(item), nil
 
 	case "datadog":
 		if output.DatadogAttributes == nil {
 			return azionapi.OutputRequest{}, missingOutputAttrsErr(index, outputType, "datadog_attributes")
 		}
 		attrs := output.DatadogAttributes
-		endpoint := azionapi.NewDatadogEndpointRequest(attrs.URL.ValueString(), attrs.APIKey.ValueString(), outputType)
-		return azionapi.DatadogEndpointRequestAsOutputRequest(endpoint), nil
+		endpoint := azionapi.NewDatadogEndpointRequest(attrs.URL.ValueString(), attrs.APIKey.ValueString())
+		item := azionapi.NewDatadogEndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.DatadogEndpointAttributesRequestAsOutputRequest(item), nil
 
 	case "qradar":
 		if output.QRadarAttributes == nil {
 			return azionapi.OutputRequest{}, missingOutputAttrsErr(index, outputType, "qradar_attributes")
 		}
-		endpoint := azionapi.NewQRadarEndpointRequest(output.QRadarAttributes.URL.ValueString(), outputType)
-		return azionapi.QRadarEndpointRequestAsOutputRequest(endpoint), nil
+		endpoint := azionapi.NewQRadarEndpointRequest(output.QRadarAttributes.URL.ValueString())
+		item := azionapi.NewQRadarEndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.QRadarEndpointAttributesRequestAsOutputRequest(item), nil
 
 	case "azure_monitor":
 		if output.AzureMonitorAttributes == nil {
@@ -980,12 +1022,12 @@ func buildDataStreamOutputAttributes(index int, outputType string, output DataSt
 			attrs.LogType.ValueString(),
 			attrs.SharedKey.ValueString(),
 			attrs.WorkspaceID.ValueString(),
-			outputType,
 		)
 		if !attrs.TimeGeneratedField.IsNull() && !attrs.TimeGeneratedField.IsUnknown() {
 			endpoint.SetTimeGeneratedField(attrs.TimeGeneratedField.ValueString())
 		}
-		return azionapi.AzureMonitorEndpointRequestAsOutputRequest(endpoint), nil
+		item := azionapi.NewAzureMonitorEndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.AzureMonitorEndpointAttributesRequestAsOutputRequest(item), nil
 
 	case "azure_blob_storage":
 		if output.AzureBlobStorageAttributes == nil {
@@ -996,9 +1038,9 @@ func buildDataStreamOutputAttributes(index int, outputType string, output DataSt
 			attrs.StorageAccount.ValueString(),
 			attrs.ContainerName.ValueString(),
 			attrs.BlobSasToken.ValueString(),
-			outputType,
 		)
-		return azionapi.AzureBlobStorageEndpointRequestAsOutputRequest(endpoint), nil
+		item := azionapi.NewAzureBlobStorageEndpointAttributesRequest(outputType, *endpoint)
+		return azionapi.AzureBlobStorageEndpointAttributesRequestAsOutputRequest(item), nil
 
 	default:
 		return azionapi.OutputRequest{}, fmt.Errorf(
@@ -1020,6 +1062,7 @@ func populateDataStreamFromResponse(model *dataStreamResourceResults, stream azi
 	}
 
 	priorOutputs := model.Outputs
+	priorTransforms := model.Transform
 
 	model.ID = types.Int64Value(stream.GetId())
 	model.Name = types.StringValue(stream.GetName())
@@ -1029,7 +1072,7 @@ func populateDataStreamFromResponse(model *dataStreamResourceResults, stream azi
 	model.LastModified = types.StringValue(stream.GetLastModified().Format(time.RFC850))
 	model.ProductVersion = types.StringValue(stream.GetProductVersion())
 	model.Inputs = populateDataStreamInputs(stream.GetInputs())
-	model.Transform = populateDataStreamTransforms(stream.GetTransform())
+	model.Transform = populateDataStreamTransforms(priorTransforms, stream.GetTransform())
 	model.Outputs = populateDataStreamOutputs(priorOutputs, stream.GetOutputs())
 }
 
@@ -1046,7 +1089,12 @@ func populateDataStreamInputs(inputs []azionapi.InputInputDataSourceAttributes) 
 	return out
 }
 
-func populateDataStreamTransforms(transforms []azionapi.Transform) []DataStreamTransformModel {
+// populateDataStreamTransforms maps the response transforms back onto the model.
+// The API stores the pipeline in its own canonical order regardless of the order it
+// was submitted in, so entries are re-ordered to follow the configured list whenever
+// both hold the same types. Without that, any config not already written in the
+// API's order would fail with "Provider produced inconsistent result after apply".
+func populateDataStreamTransforms(prior []DataStreamTransformModel, transforms []azionapi.Transform) []DataStreamTransformModel {
 	var out []DataStreamTransformModel
 	for i := range transforms {
 		actual := transforms[i].GetActualInstance()
@@ -1081,23 +1129,84 @@ func populateDataStreamTransforms(transforms []azionapi.Transform) []DataStreamT
 			})
 		}
 	}
-	return out
+	return orderTransformsLikePrior(prior, out)
+}
+
+// orderTransformsLikePrior re-orders actual to match prior's sequence of transform
+// types. It bails out and returns the API's order untouched when the two lists don't
+// hold the same types, so a genuine remote change still shows up as drift.
+func orderTransformsLikePrior(prior, actual []DataStreamTransformModel) []DataStreamTransformModel {
+	if len(prior) == 0 || len(prior) != len(actual) {
+		return actual
+	}
+
+	remaining := make([]DataStreamTransformModel, len(actual))
+	copy(remaining, actual)
+
+	ordered := make([]DataStreamTransformModel, 0, len(actual))
+	for _, want := range prior {
+		match := -1
+		for i := range remaining {
+			if remaining[i].Type.Equal(want.Type) {
+				match = i
+				break
+			}
+		}
+		if match < 0 {
+			return actual
+		}
+		ordered = append(ordered, remaining[match])
+		remaining = append(remaining[:match], remaining[match+1:]...)
+	}
+	return ordered
+}
+
+// dataStreamOutputEndpoint unwraps a response output into its endpoint type and
+// attributes. Each variant of the Output `oneOf` carries its own discriminator, so
+// there is no shared accessor to read them from.
+func dataStreamOutputEndpoint(output azionapi.Output) (string, interface{}) {
+	switch e := output.GetActualInstance().(type) {
+	case *azionapi.HttpPostEndpointAttributes:
+		return e.GetType(), &e.Attributes
+	case *azionapi.KafkaEndpointAttributes:
+		return e.GetType(), &e.Attributes
+	case *azionapi.S3EndpointAttributes:
+		return e.GetType(), &e.Attributes
+	case *azionapi.BigQueryEndpointAttributes:
+		return e.GetType(), &e.Attributes
+	case *azionapi.ElasticsearchEndpointAttributes:
+		return e.GetType(), &e.Attributes
+	case *azionapi.SplunkEndpointAttributes:
+		return e.GetType(), &e.Attributes
+	case *azionapi.AWSKinesisFirehoseEndpointAttributes:
+		return e.GetType(), &e.Attributes
+	case *azionapi.DatadogEndpointAttributes:
+		return e.GetType(), &e.Attributes
+	case *azionapi.QRadarEndpointAttributes:
+		return e.GetType(), &e.Attributes
+	case *azionapi.AzureMonitorEndpointAttributes:
+		return e.GetType(), &e.Attributes
+	case *azionapi.AzureBlobStorageEndpointAttributes:
+		return e.GetType(), &e.Attributes
+	}
+	return "", nil
 }
 
 //nolint:gocyclo // One branch per endpoint type; splitting it only adds indirection.
-func populateDataStreamOutputs(prior []DataStreamOutputModel, outputs []azionapi.OutputBase) []DataStreamOutputModel {
+func populateDataStreamOutputs(prior []DataStreamOutputModel, outputs []azionapi.Output) []DataStreamOutputModel {
 	var out []DataStreamOutputModel
 	for i := range outputs {
+		outputType, actual := dataStreamOutputEndpoint(outputs[i])
+
 		// Prior state is matched positionally; a type change at the same index is
 		// treated as a fresh entry so stale secrets aren't carried over.
 		var priorOutput *DataStreamOutputModel
-		if i < len(prior) && prior[i].Type.ValueString() == outputs[i].GetType() {
+		if i < len(prior) && prior[i].Type.ValueString() == outputType {
 			priorOutput = &prior[i]
 		}
 
-		model := DataStreamOutputModel{Type: types.StringValue(outputs[i].GetType())}
+		model := DataStreamOutputModel{Type: types.StringValue(outputType)}
 
-		actual := outputs[i].Attributes.GetActualInstance()
 		if actual == nil {
 			out = append(out, model)
 			continue
