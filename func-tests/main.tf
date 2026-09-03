@@ -317,6 +317,144 @@ resource "azion_network_list" "exampleTwo" {
   }
 }
 
+# ---------------------- DATA STREAM ----------------------
+# Constraints the API enforces, all of them verified against the live API and
+# all of them able to break an apply if ignored:
+#
+#   - `transform` is required, must hold at least one entry, must include a
+#     `render_template` entry, and must include `sampling` or
+#     `filter_workloads`. A no-op `sampling` at rate = 100 satisfies the last
+#     rule without actually dropping records.
+#   - `inputs` and `outputs` store exactly one entry each. A longer list is
+#     silently truncated to one (and mixed output types answer 500).
+#   - the account holds at most ONE active stream, so this one is
+#     `active = false` to stay out of the way of anything else running here.
+#   - `data_source` accepts only the four slugs served by
+#     GET /data_stream/data_sources.
+#   - `log_line_separator` is trimmed by the API, so a newline separator is the
+#     two-character escape "\\n", not a literal newline.
+#
+# The `elasticsearch`, `splunk` and `datadog` endpoint types are deliberately
+# absent: they all serialize as {url, api_key} and the SDK's oneOf(Output)
+# decoder matches by shape rather than by the `type` discriminator, so reading
+# one back fails with "data matches more than one schema in oneOf(Output)".
+
+resource "azion_data_stream_template" "testfunc" {
+  template = {
+    name   = "Terraform Data Stream Template ${local.name_suffix}"
+    active = true
+    data_set = jsonencode({
+      time        = "$time_iso8601"
+      host        = "$host"
+      remote_addr = "$remote_addr"
+      request_uri = "$request_uri"
+      status      = "$status"
+    })
+  }
+}
+
+resource "azion_data_stream" "testfunc" {
+  data_stream = {
+    name   = "Terraform Data Stream ${local.name_suffix}"
+    active = false
+
+    inputs = [
+      {
+        type = "raw_logs"
+        attributes = {
+          data_source = "workloads"
+        }
+      }
+    ]
+
+    # render_template listed first on purpose: the API stores the pipeline in
+    # its own canonical order, so this also covers the provider mapping the
+    # response back onto the configured order.
+    transform = [
+      {
+        type = "render_template"
+        render_template_attributes = {
+          template = azion_data_stream_template.testfunc.template.id
+        }
+      },
+      {
+        type = "sampling"
+        sampling_attributes = {
+          rate = 100
+        }
+      }
+    ]
+
+    outputs = [
+      {
+        type = "standard"
+        standard_attributes = {
+          url = "https://logs.example.com/ingest"
+          headers = {
+            "Authorization" = "Bearer terraform-func-test"
+          }
+          log_line_separator = "\\n"
+          payload_format     = "$dataset"
+          max_size           = 1000000
+        }
+      }
+    ]
+  }
+
+  depends_on = [azion_data_stream_template.testfunc]
+}
+
+# A second stream on a different endpoint type, to cover an output whose
+# credentials come back masked. One stream per endpoint, since outputs cannot
+# fan out.
+resource "azion_data_stream" "testfunc_s3" {
+  data_stream = {
+    name   = "Terraform Data Stream S3 ${local.name_suffix}"
+    active = false
+
+    inputs = [
+      {
+        type = "raw_logs"
+        attributes = {
+          data_source = "waf"
+        }
+      }
+    ]
+
+    transform = [
+      {
+        type = "sampling"
+        sampling_attributes = {
+          rate = 50
+        }
+      },
+      {
+        type = "render_template"
+        render_template_attributes = {
+          template = azion_data_stream_template.testfunc.template.id
+        }
+      }
+    ]
+
+    outputs = [
+      {
+        type = "s3"
+        s3_attributes = {
+          host_url          = "https://s3.us-east-1.amazonaws.com"
+          bucket_name       = "terraform-func-test-bucket"
+          region            = "us-east-1"
+          object_key_prefix = "azion/waf"
+          content_type      = "application/gzip"
+          access_key        = "AKIAIOSFODNN7EXAMPLE"
+          secret_key        = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+        }
+      }
+    ]
+  }
+
+  depends_on = [azion_data_stream_template.testfunc]
+}
+
 # Removed due to 401 Unauthorized error
 # resource "azion_waf_rule_set" "testfunc" {
 #   result = {
@@ -462,6 +600,28 @@ data "azion_intelligent_dns_records" "examples" {
 
 data "azion_network_lists" "example" {
   page = 1
+}
+
+data "azion_data_stream" "example" {
+  id = azion_data_stream.testfunc.id
+}
+
+# Listing decodes every stream in the account, so this read fails while any
+# elasticsearch/splunk/datadog stream exists here - see the oneOf(Output) note
+# above. Comment it out if the account is expected to hold one.
+data "azion_data_streams" "example" {
+  depends_on = [
+    azion_data_stream.testfunc,
+    azion_data_stream.testfunc_s3,
+  ]
+}
+
+data "azion_data_stream_template" "example" {
+  id = azion_data_stream_template.testfunc.id
+}
+
+data "azion_data_stream_templates" "example" {
+  depends_on = [azion_data_stream_template.testfunc]
 }
 
 data "azion_network_list" "exampleOne" {
