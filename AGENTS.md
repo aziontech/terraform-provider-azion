@@ -26,6 +26,10 @@ For detailed documentation on specific packages, see the `agents/` folder:
 ### Functions
 - **[agents/FUNCTIONS.md](agents/FUNCTIONS.md)** - Functions
 
+### Data Stream
+- **[agents/DATA_STREAM.md](agents/DATA_STREAM.md)** - Data Stream Streams
+- **[agents/DATA_STREAM_TEMPLATES.md](agents/DATA_STREAM_TEMPLATES.md)** - Data Stream Templates
+
 ### Intelligent DNS
 - **[agents/ZONES.md](agents/ZONES.md)** - DNS Zones
 - **[agents/RECORDS.md](agents/RECORDS.md)** - DNS Records
@@ -568,8 +572,20 @@ The project enforces these important linter rules:
 ```go
 // After successful API response
 if response != nil {
-    defer response.Body.Close()
+    defer func(r *http.Response) { _ = r.Body.Close() }(response)
 }
+```
+
+Two things this form gets right, both of which CI enforces on new code only:
+
+1. **`_ =` on the result.** `errcheck` flags a bare `defer response.Body.Close()`. The repo has ~242 pre-existing violations that are grandfathered in, but CI runs `golangci-lint --new-from-patch`, so **any new or modified line using the bare form fails the build**. Do not copy the bare form out of an existing file.
+
+2. **The response passed as an argument.** The argument is evaluated when the `defer` statement runs, which matches the bare form's behavior of evaluating the receiver immediately. A bare closure — `defer func() { _ = response.Body.Close() }()` — captures the *variable* instead, so at every retry site (where `response` is reassigned by `utils.RetryOn429`) both deferred calls would close whichever response was assigned last, closing it twice and leaking the first one.
+
+Verify with the gate CI actually uses, not a plain lint run:
+
+```bash
+golangci-lint run --config .golintci.yml --new-from-rev=$(git merge-base main HEAD) ./internal/...
 ```
 
 ### Context Propagation Pattern
