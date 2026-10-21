@@ -257,14 +257,16 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
     // Set policy.
     recordReq.SetPolicy(plan.Record.Policy.ValueString())
 
-    // Set weight and description for weighted policy.
+    // Set weight for weighted policy.
     if plan.Record.Policy.ValueString() == "weighted" {
         if !plan.Record.Weight.IsNull() && !plan.Record.Weight.IsUnknown() {
             recordReq.SetWeight(plan.Record.Weight.ValueInt64())
         }
-        if !plan.Record.Description.IsNull() && !plan.Record.Description.IsUnknown() {
-            recordReq.SetDescription(plan.Record.Description.ValueString())
-        }
+    }
+
+    // Set description (independent of policy).
+    if !plan.Record.Description.IsNull() && !plan.Record.Description.IsUnknown() {
+        recordReq.SetDescription(plan.Record.Description.ValueString())
     }
 
     // Execute create request.
@@ -426,14 +428,18 @@ func populateRecordModel(record azionapi.Record, policyOverride string) *recordM
         model.Policy = types.StringValue(record.GetPolicy())
     }
 
-    // Set weight and description for weighted policy.
-    if model.Policy.ValueString() == "weighted" {
-        if record.HasWeight() {
-            model.Weight = types.Int64Value(record.GetWeight())
-        }
-        if record.HasDescription() {
-            model.Description = types.StringValue(record.GetDescription())
-        }
+    // Set weight for weighted policy.
+    if model.Policy.ValueString() == "weighted" && record.HasWeight() {
+        model.Weight = types.Int64Value(record.GetWeight())
+    } else {
+        model.Weight = types.Int64Null()
+    }
+
+    // Set description (independent of policy). An empty string is treated as unset.
+    if record.HasDescription() && record.GetDescription() != "" {
+        model.Description = types.StringValue(record.GetDescription())
+    } else {
+        model.Description = types.StringNull()
     }
 
     // Set rdata.
