@@ -8,6 +8,12 @@ description: |-
 
 # azion_waf_rule_set (Resource)
 
+-> This resource manages one exception and ignores the WAF's other exceptions,
+so exceptions created in Azion Console never appear in a plan. To make Terraform
+the only source of truth for a WAF's exceptions, detecting and reverting every
+change made outside Terraform, use
+[`azion_waf_rule_sets`](waf_rule_sets.md) instead. Do not use both on the same WAF.
+
 ## Drift and enforcement
 
 `active` is enforced: it defaults to `true`, so an exception disabled outside

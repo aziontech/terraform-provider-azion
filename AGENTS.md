@@ -38,6 +38,7 @@ For detailed documentation on specific packages, see the `agents/` folder:
 ### WAF
 - **[agents/WAF.md](agents/WAF.md)** - WAF (Main Settings)
 - **[agents/WAF_RULE_SETS.md](agents/WAF_RULE_SETS.md)** - WAF Rule Sets
+- **[agents/WAF_RULE_SETS_AUTHORITATIVE.md](agents/WAF_RULE_SETS_AUTHORITATIVE.md)** - WAF Rule Sets, authoritative (all exceptions of a WAF; detects and reverts drift)
 
 ### Other Resources
 - **[agents/NETWORK_LISTS.md](agents/NETWORK_LISTS.md)** - Network Lists
@@ -457,7 +458,7 @@ terraform import azion_resource.example 12345
 |-----------------|-----------------|
 | `azion_application_main_setting` | `azion_application_rule_engine`, `azion_application_function_instance`, `azion_application_cache_setting`, `azion_application_device_group` |
 | `azion_firewall_main_setting` | `azion_firewall_rule_engine`, `azion_firewall_functions_instance` |
-| `azion_waf` | `azion_waf_rule_set` |
+| `azion_waf` | `azion_waf_rule_set`, `azion_waf_rule_sets` |
 | `azion_intelligent_dns_zone` | `azion_intelligent_dns_record`, `azion_intelligent_dns_dnssec` |
 
 #### Required Documentation Pattern for Child Resources
