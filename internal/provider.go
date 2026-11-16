@@ -146,6 +146,7 @@ func (p *azionProvider) Resources(_ context.Context) []func() resource.Resource 
 		FirewallMainSettingResource,
 		WafResource,
 		WafRuleSetResource,
+		WafRuleSetsResource,
 		NewFirewallFunctionsInstanceResource,
 		NewFirewallRuleEngineResource,
 		NewFirewallRuleEngineOrderResource,
