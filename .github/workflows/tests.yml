@@ -23,8 +23,14 @@ jobs:
 
       - name: install tflint
         uses: terraform-linters/setup-tflint@444635365d380c7363d1eaee4267317c2445717d # v2.0.1
+        with:
+          # Without a token the "latest" version lookup hits the GitHub API
+          # anonymously and fails with "API rate limit exceeded" on shared runners.
+          github_token: ${{ github.token }}
 
       - run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: tflint
         run: |
