@@ -117,12 +117,14 @@ func (r *wafRuleSetsResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						// No UseStateForUnknown here: it only skips resources with no
+						// state at all, so for a key added to an existing resource it
+						// copies that element's null prior value into the plan, and
+						// apply fails with "inconsistent result after apply". ModifyPlan
+						// carries the ID over for keys state already holds.
 						"exception_id": schema.Int64Attribute{
 							Description: "The ID of the WAF exception.",
 							Computed:    true,
-							PlanModifiers: []planmodifier.Int64{
-								int64planmodifier.UseStateForUnknown(),
-							},
 						},
 						"rule_id": schema.Int64Attribute{
 							Description: "The rule ID that this exception applies to. 0 means all rules. Supplied by the API when not declared.",
@@ -248,6 +250,11 @@ func (r *wafRuleSetsResource) ModifyPlan(ctx context.Context, req resource.Modif
 	for key, planned := range plan.RuleSets {
 		current, ok := state.RuleSets[key]
 		if !ok {
+			// Created by apply: the API assigns these.
+			planned.ExceptionID = types.Int64Unknown()
+			planned.LastEditor = types.StringUnknown()
+			planned.LastModified = types.StringUnknown()
+			plan.RuleSets[key] = planned
 			continue
 		}
 		if wafRuleSetsItemNeedsUpdate(planned, current) {

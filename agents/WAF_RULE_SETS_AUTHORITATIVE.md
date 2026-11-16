@@ -35,7 +35,7 @@ id            string  computed (= waf_id), UseStateForUnknown
 waf_id        int64   required, RequiresReplace
 last_updated  string  computed
 rule_sets     map<name, object> required (an empty map deletes all)
-  exception_id  int64  computed, UseStateForUnknown
+  exception_id  int64  computed (NO UseStateForUnknown, see below)
   rule_id / path / operator      Optional+Computed, no default
   active                         Optional+Computed, default true
   conditions[].condition{match, condition_type, name, value}
@@ -43,6 +43,8 @@ rule_sets     map<name, object> required (an empty map deletes all)
 ```
 
 The map key **is** the exception name. There is no separate `name` attribute.
+
+**Never use `UseStateForUnknown` on any attribute inside `rule_sets`.** It only skips when the *whole resource* has no state. For a key added to an existing resource (a new exception, one deleted in Console and being recreated, a rename, a rollback), it copies that element's **null** prior value into the plan, and apply fails with `Provider produced inconsistent result after apply: .rule_sets["..."].exception_id: was null, but now ...`. This shipped once and was caught in manual testing. `ModifyPlan` carries `exception_id` over for keys that state holds, and explicitly marks the computed fields of new keys as unknown.
 
 The Optional+Computed and "only `active` has a default" rules are the same as in `azion_waf_rule_set`, for the same reasons. See WAF_RULE_SETS.md. Do not add `UseStateForUnknown` to `rule_id`, `path`, `operator` or the condition `name`/`value`. When the plan carries a stale value and the API returns something else, apply fails with "Provider produced inconsistent result". `ModifyPlan` (below) already removes the noise for unchanged exceptions.
 
@@ -85,6 +87,7 @@ Delete removes every exception in state, which is every exception of the WAF as 
 
 - Pure functions: `planWafRuleSetsOps`, `wafRuleSetsItemNeedsUpdate`, `buildWafRuleSetsState` (duplicates), `isWafRuleSetsDuplicateKey`, `buildWafRuleSetsRequest`.
 - `ModifyPlan` driven with real `tfsdk.Plan`/`tfsdk.State`.
+- `resource_waf_rule_sets_plan_test.go` runs plans through the framework's real `PlanResourceChange` (`providerserver` + a test provider that serves only this resource), covering defaults, computed-nil marking, attribute plan modifiers, and `ModifyPlan` together. **Any plan-shape change must be tested here.** Calling `ModifyPlan` with a hand-built plan is what let the `UseStateForUnknown` bug through.
 - An `httptest` fake of the exceptions endpoint that serves **one exception per page** to exercise pagination. `TestWAFRuleSetsRollsBackConsoleChanges` reproduces the FR-993 scenario end to end and checks that the second plan is empty.
 
 `terraform-plugin-testing` is not a dependency, and adding it drags in `terraform-plugin-go` bumps (see the lockstep note). The provider's V4 URL is also hard-coded. That is why the tests call the resource methods directly instead of running acceptance tests.
