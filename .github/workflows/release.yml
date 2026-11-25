@@ -84,7 +84,10 @@ jobs:
 
       - name: Bump version and push tag
         id: tag_ver
-        uses: anothrNick/github-tag-action@3272e7a58f6c71ee9ede35f53b114e1bb9a91347 # 1.37.0
+        # >= 1.53 writes outputs to $GITHUB_OUTPUT; 1.37.0 used the deprecated
+        # `::set-output` command. Tagging still goes through the refs API
+        # (GIT_API_TAGGING defaults to true), so persist-credentials: false holds.
+        uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8 # 1.75.0
         env:
           RELEASE_BRANCHES: master,main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
