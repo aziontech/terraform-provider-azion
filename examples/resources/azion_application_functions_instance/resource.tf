@@ -1,11 +1,11 @@
 # Example: Complete setup with parent application
 # First, create the parent application with functions module enabled
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
-    modules = {
-      functions = {
+    modules {
+      functions {
         enabled = true
       }
     }
@@ -15,7 +15,7 @@ resource "azion_application_main_setting" "example" {
 # Then create the function instance for that application
 resource "azion_application_function_instance" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  data = {
+  data {
     name        = "Terraform Example"
     function_id = 12345
     active      = true
@@ -29,7 +29,7 @@ resource "azion_application_function_instance" "example" {
 # Example: Using hardcoded application ID
 resource "azion_application_function_instance" "example_simple" {
   application_id = 1234567890
-  data = {
+  data {
     name        = "Terraform Example"
     function_id = 12345
     active      = true

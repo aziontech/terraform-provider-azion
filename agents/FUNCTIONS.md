@@ -607,6 +607,8 @@ func errPrintFunctions(errCode int, err error) (string, string) {
 
 ## Resource Implementation
 
+**Schema:** `function` is a `SingleNestedBlock` (`function { ... }`, not `function = { ... }`) with `objectvalidator.IsRequired()` and a description starting with `Required.`, so Terraform rejects unknown or misplaced arguments with `Unsupported argument`. State is unchanged (same object shape). See "Nested Objects Must Be Blocks" in `AGENTS.md`.
+
 The resource implementation (`resource_edgeFunction.go`) uses the `azion-api` SDK for all CRUD operations.
 
 ### Resource SDK Methods (V4 SDK)

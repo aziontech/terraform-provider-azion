@@ -12,8 +12,10 @@ import (
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -202,8 +204,13 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
-			"data_stream": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"data_stream": schema.SingleNestedBlock{
+				Description: "Required. The data stream configuration.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The data stream identifier.",
@@ -234,22 +241,28 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Description: "Product version of the data stream.",
 						Computed:    true,
 					},
-					"inputs": schema.ListNestedAttribute{
-						Description: "Input feeding the stream. The API stores a single input per stream: it silently keeps only one " +
-							"of a longer list, so more than one entry is rejected here rather than losing them on apply.",
-						Required: true,
+				},
+				Blocks: map[string]schema.Block{
+					"inputs": schema.ListNestedBlock{
+						Description: "Required. Exactly one block. Input feeding the stream. The API stores a single input per stream: it silently keeps only one " +
+							"of a longer list, so more than one block is rejected here rather than losing them on apply.",
 						Validators: []validator.List{
+							listvalidator.IsRequired(),
 							listvalidator.SizeBetween(1, 1),
 						},
-						NestedObject: schema.NestedAttributeObject{
+						NestedObject: schema.NestedBlockObject{
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
 									Description: "Type of the input. Supported value: `raw_logs`.",
 									Required:    true,
 								},
-								"attributes": schema.SingleNestedAttribute{
-									Description: "Attributes of the input.",
-									Required:    true,
+							},
+							Blocks: map[string]schema.Block{
+								"attributes": schema.SingleNestedBlock{
+									Description: "Required. Attributes of the input.",
+									Validators: []validator.Object{
+										objectvalidator.IsRequired(),
+									},
 									Attributes: map[string]schema.Attribute{
 										"data_source": schema.StringAttribute{
 											Description: "Source of the logs. One of `workloads`, `waf`, `functions_console`, `activity_history` — " +
@@ -265,80 +278,84 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 							},
 						},
 					},
-					"transform": schema.ListNestedAttribute{
-						Description: "Transforms applied to the records. Exactly one `*_attributes` block must be set per entry, matching `type`. " +
+					"transform": schema.ListNestedBlock{
+						Description: "Required. At least one block. Transforms applied to the records. Exactly one `*_attributes` block must be set per entry, matching `type`. " +
 							"At least one entry is required: the API rejects an empty list. It also requires a `render_template` entry, " +
 							"plus either a `sampling` or a `filter_workloads` entry. The API normalizes the pipeline order, so the order " +
 							"the entries are listed in here does not change how they are applied.",
-						Required: true,
 						Validators: []validator.List{
+							listvalidator.IsRequired(),
 							listvalidator.SizeAtLeast(1),
 						},
-						NestedObject: schema.NestedAttributeObject{
+						NestedObject: schema.NestedBlockObject{
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
 									Description: "Type of the transform. One of `sampling`, `filter_workloads`, `render_template`.",
 									Required:    true,
 								},
-								"sampling_attributes": schema.SingleNestedAttribute{
+							},
+							Blocks: map[string]schema.Block{
+								"sampling_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `sampling` transform.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("rate"),
 									Attributes: map[string]schema.Attribute{
 										"rate": schema.Int64Attribute{
-											Description: "Percentage of records to keep.",
-											Required:    true,
+											Description: "Required. Percentage of records to keep.",
+											Optional:    true,
 										},
 									},
 								},
-								"filter_workloads_attributes": schema.SingleNestedAttribute{
+								"filter_workloads_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `filter_workloads` transform.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("workloads"),
 									Attributes: map[string]schema.Attribute{
 										"workloads": schema.ListAttribute{
-											Description: "Identifiers of the workloads whose logs are kept.",
-											Required:    true,
+											Description: "Required. Identifiers of the workloads whose logs are kept.",
+											Optional:    true,
 											ElementType: types.Int64Type,
 										},
 									},
 								},
-								"render_template_attributes": schema.SingleNestedAttribute{
+								"render_template_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `render_template` transform.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("template"),
 									Attributes: map[string]schema.Attribute{
 										"template": schema.Int64Attribute{
-											Description: "Identifier of the data stream template used to render the payload.",
-											Required:    true,
+											Description: "Required. Identifier of the data stream template used to render the payload.",
+											Optional:    true,
 										},
 									},
 								},
 							},
 						},
 					},
-					"outputs": schema.ListNestedAttribute{
-						Description: "Endpoint the records are delivered to. Exactly one `*_attributes` block must be set, matching `type`. " +
+					"outputs": schema.ListNestedBlock{
+						Description: "Required. Exactly one block. Endpoint the records are delivered to. Exactly one `*_attributes` block must be set, matching `type`. " +
 							"The API stores a single output per stream: given a longer list it keeps only the last entry (and answers 500 " +
-							"when the entries have differing types), so more than one is rejected here rather than losing them on apply.",
-						Required: true,
+							"when the entries have differing types), so more than one block is rejected here rather than losing them on apply.",
 						Validators: []validator.List{
+							listvalidator.IsRequired(),
 							listvalidator.SizeBetween(1, 1),
 						},
-						NestedObject: schema.NestedAttributeObject{
+						NestedObject: schema.NestedBlockObject{
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
 									Description: "Type of the endpoint. One of `standard`, `kafka`, `s3`, `big_query`, `elasticsearch`, `splunk`, `aws_kinesis_firehose`, `datadog`, `qradar`, `azure_monitor`, `azure_blob_storage`.",
 									Required:    true,
 								},
-								"standard_attributes": schema.SingleNestedAttribute{
+							},
+							Blocks: map[string]schema.Block{
+								"standard_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `standard` (HTTP/HTTPS POST) endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("url", "headers"),
 									Attributes: map[string]schema.Attribute{
 										"url": schema.StringAttribute{
-											Description: "Destination URL.",
-											Required:    true,
+											Description: "Required. Destination URL.",
+											Optional:    true,
 										},
 										"headers": schema.MapAttribute{
-											Description: "Headers sent with each request.",
-											Required:    true,
+											Description: "Required. Headers sent with each request.",
+											Optional:    true,
 											ElementType: types.StringType,
 											Sensitive:   true,
 										},
@@ -368,143 +385,143 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 										},
 									},
 								},
-								"kafka_attributes": schema.SingleNestedAttribute{
+								"kafka_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `kafka` endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("bootstrap_servers", "kafka_topic", "use_tls"),
 									Attributes: map[string]schema.Attribute{
 										"bootstrap_servers": schema.StringAttribute{
-											Description: "Comma-separated list of Kafka bootstrap servers.",
-											Required:    true,
+											Description: "Required. Comma-separated list of Kafka bootstrap servers.",
+											Optional:    true,
 										},
 										"kafka_topic": schema.StringAttribute{
-											Description: "Kafka topic the records are published to.",
-											Required:    true,
+											Description: "Required. Kafka topic the records are published to.",
+											Optional:    true,
 										},
 										"use_tls": schema.BoolAttribute{
-											Description: "Whether TLS is used to connect to the brokers.",
-											Required:    true,
+											Description: "Required. Whether TLS is used to connect to the brokers.",
+											Optional:    true,
 										},
 									},
 								},
-								"s3_attributes": schema.SingleNestedAttribute{
+								"s3_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `s3` endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("access_key", "secret_key", "region", "bucket_name", "content_type", "host_url"),
 									Attributes: map[string]schema.Attribute{
 										"access_key": schema.StringAttribute{
-											Description: "Access key of the S3-compatible service.",
-											Required:    true,
+											Description: "Required. Access key of the S3-compatible service.",
+											Optional:    true,
 											Sensitive:   true,
 										},
 										"secret_key": schema.StringAttribute{
-											Description: "Secret key of the S3-compatible service.",
-											Required:    true,
+											Description: "Required. Secret key of the S3-compatible service.",
+											Optional:    true,
 											Sensitive:   true,
 										},
 										"region": schema.StringAttribute{
-											Description: "Region of the bucket.",
-											Required:    true,
+											Description: "Required. Region of the bucket.",
+											Optional:    true,
 										},
 										"object_key_prefix": schema.StringAttribute{
 											Description: "Prefix prepended to the object keys.",
 											Optional:    true,
 										},
 										"bucket_name": schema.StringAttribute{
-											Description: "Name of the bucket.",
-											Required:    true,
+											Description: "Required. Name of the bucket.",
+											Optional:    true,
 										},
 										"content_type": schema.StringAttribute{
-											Description: "Content type of the uploaded objects. One of `plain/text`, `application/gzip`.",
-											Required:    true,
+											Description: "Required. Content type of the uploaded objects. One of `plain/text`, `application/gzip`.",
+											Optional:    true,
 										},
 										"host_url": schema.StringAttribute{
-											Description: "Host URL of the S3-compatible service.",
-											Required:    true,
+											Description: "Required. Host URL of the S3-compatible service.",
+											Optional:    true,
 										},
 									},
 								},
-								"big_query_attributes": schema.SingleNestedAttribute{
+								"big_query_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `big_query` endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("dataset_id", "project_id", "table_id", "service_account_key"),
 									Attributes: map[string]schema.Attribute{
 										"dataset_id": schema.StringAttribute{
-											Description: "BigQuery dataset identifier.",
-											Required:    true,
+											Description: "Required. BigQuery dataset identifier.",
+											Optional:    true,
 										},
 										"project_id": schema.StringAttribute{
-											Description: "Google Cloud project identifier.",
-											Required:    true,
+											Description: "Required. Google Cloud project identifier.",
+											Optional:    true,
 										},
 										"table_id": schema.StringAttribute{
-											Description: "BigQuery table identifier.",
-											Required:    true,
+											Description: "Required. BigQuery table identifier.",
+											Optional:    true,
 										},
 										"service_account_key": schema.StringAttribute{
-											Description: "Service account key, as a JSON string.",
-											Required:    true,
+											Description: "Required. Service account key, as a JSON string.",
+											Optional:    true,
 											Sensitive:   true,
 										},
 									},
 								},
-								"elasticsearch_attributes": schema.SingleNestedAttribute{
+								"elasticsearch_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `elasticsearch` endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("url", "api_key"),
 									Attributes:  dataStreamURLAPIKeyAttributes("Elasticsearch"),
 								},
-								"splunk_attributes": schema.SingleNestedAttribute{
+								"splunk_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `splunk` endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("url", "api_key"),
 									Attributes:  dataStreamURLAPIKeyAttributes("Splunk"),
 								},
-								"aws_kinesis_firehose_attributes": schema.SingleNestedAttribute{
+								"aws_kinesis_firehose_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `aws_kinesis_firehose` endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("access_key", "stream_name", "region", "secret_key"),
 									Attributes: map[string]schema.Attribute{
 										"access_key": schema.StringAttribute{
-											Description: "AWS access key.",
-											Required:    true,
+											Description: "Required. AWS access key.",
+											Optional:    true,
 											Sensitive:   true,
 										},
 										"stream_name": schema.StringAttribute{
-											Description: "Name of the Kinesis Data Firehose delivery stream.",
-											Required:    true,
+											Description: "Required. Name of the Kinesis Data Firehose delivery stream.",
+											Optional:    true,
 										},
 										"region": schema.StringAttribute{
-											Description: "AWS region of the delivery stream.",
-											Required:    true,
+											Description: "Required. AWS region of the delivery stream.",
+											Optional:    true,
 										},
 										"secret_key": schema.StringAttribute{
-											Description: "AWS secret key.",
-											Required:    true,
+											Description: "Required. AWS secret key.",
+											Optional:    true,
 											Sensitive:   true,
 										},
 									},
 								},
-								"datadog_attributes": schema.SingleNestedAttribute{
+								"datadog_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `datadog` endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("url", "api_key"),
 									Attributes:  dataStreamURLAPIKeyAttributes("Datadog"),
 								},
-								"qradar_attributes": schema.SingleNestedAttribute{
+								"qradar_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `qradar` endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("url"),
 									Attributes: map[string]schema.Attribute{
 										"url": schema.StringAttribute{
-											Description: "IBM QRadar HTTP receiver URL.",
-											Required:    true,
+											Description: "Required. IBM QRadar HTTP receiver URL.",
+											Optional:    true,
 										},
 									},
 								},
-								"azure_monitor_attributes": schema.SingleNestedAttribute{
+								"azure_monitor_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `azure_monitor` endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("log_type", "shared_key", "workspace_id"),
 									Attributes: map[string]schema.Attribute{
 										"log_type": schema.StringAttribute{
-											Description: "Record type of the data being submitted.",
-											Required:    true,
+											Description: "Required. Record type of the data being submitted.",
+											Optional:    true,
 										},
 										"shared_key": schema.StringAttribute{
-											Description: "Primary or secondary key of the workspace.",
-											Required:    true,
+											Description: "Required. Primary or secondary key of the workspace.",
+											Optional:    true,
 											Sensitive:   true,
 										},
 										"time_generated_field": schema.StringAttribute{
@@ -512,26 +529,26 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 											Optional:    true,
 										},
 										"workspace_id": schema.StringAttribute{
-											Description: "Log Analytics workspace identifier.",
-											Required:    true,
+											Description: "Required. Log Analytics workspace identifier.",
+											Optional:    true,
 										},
 									},
 								},
-								"azure_blob_storage_attributes": schema.SingleNestedAttribute{
+								"azure_blob_storage_attributes": schema.SingleNestedBlock{
 									Description: "Attributes for the `azure_blob_storage` endpoint.",
-									Optional:    true,
+									Validators:  dataStreamRequiredWhenSet("storage_account", "container_name", "blob_sas_token"),
 									Attributes: map[string]schema.Attribute{
 										"storage_account": schema.StringAttribute{
-											Description: "Name of the storage account.",
-											Required:    true,
+											Description: "Required. Name of the storage account.",
+											Optional:    true,
 										},
 										"container_name": schema.StringAttribute{
-											Description: "Name of the blob container.",
-											Required:    true,
+											Description: "Required. Name of the blob container.",
+											Optional:    true,
 										},
 										"blob_sas_token": schema.StringAttribute{
-											Description: "Shared access signature token of the container.",
-											Required:    true,
+											Description: "Required. Shared access signature token of the container.",
+											Optional:    true,
 											Sensitive:   true,
 										},
 									},
@@ -545,17 +562,30 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 	}
 }
 
+// dataStreamRequiredWhenSet makes the named attributes mandatory once the
+// enclosing optional `*_attributes` block is written. The attributes themselves
+// are Optional because the framework also checks Required on the children of an
+// absent single nested block: a Required child would turn every unused
+// `*_attributes` block of a transform or output into a validation error.
+func dataStreamRequiredWhenSet(names ...string) []validator.Object {
+	expressions := make([]path.Expression, 0, len(names))
+	for _, name := range names {
+		expressions = append(expressions, path.MatchRelative().AtName(name))
+	}
+	return []validator.Object{objectvalidator.AlsoRequires(expressions...)}
+}
+
 // dataStreamURLAPIKeyAttributes builds the schema shared by the endpoints that
 // take only a URL and an API key.
 func dataStreamURLAPIKeyAttributes(vendor string) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"url": schema.StringAttribute{
-			Description: fmt.Sprintf("%s endpoint URL.", vendor),
-			Required:    true,
+			Description: fmt.Sprintf("Required. %s endpoint URL.", vendor),
+			Optional:    true,
 		},
 		"api_key": schema.StringAttribute{
-			Description: fmt.Sprintf("%s API key.", vendor),
-			Required:    true,
+			Description: fmt.Sprintf("Required. %s API key.", vendor),
+			Optional:    true,
 			Sensitive:   true,
 		},
 	}

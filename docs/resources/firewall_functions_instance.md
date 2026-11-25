@@ -17,11 +17,11 @@ Provides a resource to manage Function Instances for a Firewall.
 ```terraform
 # First, create the parent firewall with functions module enabled
 resource "azion_firewall_main_setting" "example" {
-  data = {
+  data {
     name   = "My Firewall"
     active = true
-    modules = {
-      functions = {
+    modules {
+      functions {
         enabled = true
       }
     }
@@ -31,7 +31,7 @@ resource "azion_firewall_main_setting" "example" {
 # Then create the function instance for that firewall
 resource "azion_firewall_functions_instance" "example" {
   firewall_id = azion_firewall_main_setting.example.data.id
-  data = {
+  data {
     name     = "Terraform Test"
     function = 9359
     args = jsonencode({
@@ -46,7 +46,7 @@ resource "azion_firewall_functions_instance" "example" {
 ```terraform
 resource "azion_firewall_functions_instance" "example" {
   firewall_id = 12464
-  data = {
+  data {
     name     = "Terraform Test"
     function = 9359
     args = jsonencode({
@@ -61,8 +61,11 @@ resource "azion_firewall_functions_instance" "example" {
 
 ### Required
 
-- `data` (Attributes) (see [below for nested schema](#nestedatt--data))
 - `firewall_id` (Number) The firewall identifier.
+
+### Optional
+
+- `data` (Block, Optional) Required. The Function Instance settings. (see [below for nested schema](#nestedblock--data))
 
 ### Read-Only
 
@@ -70,7 +73,7 @@ resource "azion_firewall_functions_instance" "example" {
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
 - `state` (String) State of the function instance.
 
-<a id="nestedatt--data"></a>
+<a id="nestedblock--data"></a>
 ### Nested Schema for `data`
 
 Required:

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -58,29 +59,48 @@ func TestWAFEnforcedScalarsAreComputed(t *testing.T) {
 	}
 }
 
-// The collections and blocks must NOT be Computed. They are held as Go pointers
-// and slices, which cannot be populated from an unknown value — a Computed
-// attribute with no default is unknown whenever the configuration omits it, and
-// reading that fails Create outright.
+// rulesets must NOT be Computed. It is held as a Go slice, which cannot be
+// populated from an unknown value — a Computed attribute with no default is
+// unknown whenever the configuration omits it, and reading that fails Create
+// outright. engine_settings, attributes and thresholds are blocks, which cannot
+// be Computed at all.
 func TestWAFCollectionsAreNotComputed(t *testing.T) {
 	ctx := context.Background()
 	sr := wafSchema(t)
 
-	for _, name := range []string{
-		"result.engine_settings",
-		"result.engine_settings.attributes",
-		"result.engine_settings.attributes.rulesets",
-		"result.engine_settings.attributes.thresholds",
-	} {
-		attribute, diags := sr.Schema.AttributeAtPath(ctx, tfPath(t, name))
-		if diags.HasError() {
-			t.Errorf("%s: %v", name, diags)
-			continue
-		}
+	attribute, diags := sr.Schema.AttributeAtPath(ctx, tfPath(t, "result.engine_settings.attributes.rulesets"))
+	if diags.HasError() {
+		t.Fatalf("rulesets: %v", diags)
+	}
+	if attribute.IsComputed() {
+		t.Error("rulesets: must not be Computed; the model cannot hold an unknown here")
+	}
+}
 
-		if attribute.IsComputed() {
-			t.Errorf("%s: must not be Computed; the model cannot hold an unknown here", name)
-		}
+// Every writable nested object is a block, so Terraform rejects unknown
+// arguments instead of dropping them; result and threshold stay required.
+func TestWAFNestedObjectsAreBlocks(t *testing.T) {
+	sr := wafSchema(t)
+
+	result, ok := sr.Schema.Blocks["result"].(schema.SingleNestedBlock)
+	if !ok || len(result.Validators) == 0 {
+		t.Fatalf("result must be a required single nested block, got %T", sr.Schema.Blocks["result"])
+	}
+	engine, ok := result.Blocks["engine_settings"].(schema.SingleNestedBlock)
+	if !ok {
+		t.Fatalf("engine_settings must be a single nested block, got %T", result.Blocks["engine_settings"])
+	}
+	attributes, ok := engine.Blocks["attributes"].(schema.SingleNestedBlock)
+	if !ok {
+		t.Fatalf("attributes must be a single nested block, got %T", engine.Blocks["attributes"])
+	}
+	thresholds, ok := attributes.Blocks["thresholds"].(schema.SetNestedBlock)
+	if !ok {
+		t.Fatalf("thresholds must be a set nested block, got %T", attributes.Blocks["thresholds"])
+	}
+	threshold, ok := thresholds.NestedObject.Blocks["threshold"].(schema.SingleNestedBlock)
+	if !ok || len(threshold.Validators) == 0 {
+		t.Fatalf("threshold must be a required single nested block, got %T", thresholds.NestedObject.Blocks["threshold"])
 	}
 }
 

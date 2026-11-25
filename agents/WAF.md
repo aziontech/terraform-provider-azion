@@ -854,109 +854,31 @@ type WafThresholdConfigResourceModel struct {
 
 ### Resource Schema
 
+Writable nested objects are **blocks** (see AGENTS.md, "Nested Objects Must Be Blocks"); the full definition is in `internal/resource_waf.go`. Shape:
+
 ```go
-resp.Schema = schema.Schema{
-    Description: "Creates a WAF (Web Application Firewall) resource.",
-    Attributes: map[string]schema.Attribute{
-        "id": schema.StringAttribute{
-            Description: "Identifier of the resource.",
-            Computed:    true,
-            PlanModifiers: []planmodifier.String{
-                stringplanmodifier.UseStateForUnknown(),
-            },
-        },
-        "last_updated": schema.StringAttribute{
-            Description: "Timestamp of the last Terraform update of the resource.",
-            Computed:    true,
-        },
-        "result": schema.SingleNestedAttribute{
-            Description: "The WAF configuration.",
-            Required:    true,
-            Attributes: map[string]schema.Attribute{
-                "id": schema.Int64Attribute{
-                    Description: "The ID of the WAF.",
-                    Computed:    true,
-                },
-                "name": schema.StringAttribute{
-                    Description: "Name of the WAF.",
-                    Required:    true,
-                },
-                "active": schema.BoolAttribute{
-                    Description: "Whether the WAF is active.",
-                    Optional:    true,
-                },
-                "last_editor": schema.StringAttribute{
-                    Description: "Last editor of the WAF.",
-                    Computed:    true,
-                },
-                "last_modified": schema.StringAttribute{
-                    Description: "Last modified timestamp.",
-                    Computed:    true,
-                },
-                "product_version": schema.StringAttribute{
-                    Description: "Product version of the WAF.",
-                    Computed:    true,
-                },
-                "state": schema.StringAttribute{
-                    Description: "The state of the current WAF version.",
-                    Computed:    true,
-                },
-                "version_id": schema.StringAttribute{
-                    Description: "The identifier of the current WAF version.",
-                    Computed:    true,
-                },
-                "engine_settings": schema.SingleNestedAttribute{
-                    Description: "Engine settings for the WAF.",
-                    Optional:    true,
-                    Attributes: map[string]schema.Attribute{
-                        "engine_version": schema.StringAttribute{
-                            Description: "Engine version for the WAF.",
-                            Optional:    true,
-                        },
-                        "type": schema.StringAttribute{
-                            Description: "Type of the WAF engine.",
-                            Optional:    true,
-                        },
-                        "attributes": schema.SingleNestedAttribute{
-                            Description: "Attributes for the WAF engine settings.",
-                            Optional:    true,
-                            Attributes: map[string]schema.Attribute{
-                                "rulesets": schema.ListAttribute{
-                                    Description: "List of ruleset IDs.",
-                                    Optional:    true,
-                                    ElementType: types.Int64Type,
-                                },
-                                "thresholds": schema.SetNestedAttribute{
-                                    Description: "Threshold configurations for the WAF. Order-insensitive; the API returns thresholds sorted alphabetically by threat.",
-                                    Optional:    true,
-                                    NestedObject: schema.NestedAttributeObject{
-                                        Attributes: map[string]schema.Attribute{
-                                            "threshold": schema.SingleNestedAttribute{
-                                                Description: "A single threshold configuration.",
-                                                Required:    true,
-                                                Attributes: map[string]schema.Attribute{
-                                                    "threat": schema.StringAttribute{
-                                                        Description: "The threat type for the threshold.",
-                                                        Required:    true,
-                                                    },
-                                                    "sensitivity": schema.StringAttribute{
-                                                        Description: "The sensitivity level for the threshold.",
-                                                        Optional:    true,
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
+Attributes: id (computed, UseStateForUnknown), last_updated (computed)
+Blocks: map[string]schema.Block{
+    "result": schema.SingleNestedBlock{                // objectvalidator.IsRequired(); "Required." description
+        Attributes: id, last_editor, last_modified, product_version, state, version_id (computed),
+                    name (required), active (Optional+Computed, default true)
+        Blocks: "engine_settings": schema.SingleNestedBlock{     // optional
+            Attributes: engine_version (default "2021-Q3"), type (default "score")  // Optional+Computed
+            Blocks: "attributes": schema.SingleNestedBlock{      // optional
+                Attributes: rulesets (ListAttribute of Int64, Optional, NOT Computed)
+                Blocks: "thresholds": schema.SetNestedBlock{     // optional, one block per threat
+                    NestedObject.Blocks["threshold"] = SingleNestedBlock + objectvalidator.IsRequired()
+                        threat (required), sensitivity (Optional+Computed, no default)
                 },
             },
         },
     },
 }
 ```
+
+User syntax: `result { engine_settings { attributes { thresholds { threshold { threat = "..." } } } } }`, one `thresholds` block per threat. Names and nesting are 1:1 with the former nested-attribute form, so state written by it is read unchanged (no state upgrader).
+
+Block presence follows the configuration: Create/Update **and Read** pass the API result through `alignWAFEngineSettings` with the prior plan/state, so an undeclared `engine_settings`, `attributes`, `rulesets` or `thresholds` stays null in state (Terraform core rejects a block planned absent that comes back present). After an import there is no prior `result`, so everything is kept and the first plan removes undeclared blocks. Zero `thresholds` blocks reach the provider as null, which `alignWAFEngineSettings` treats as undeclared.
 
 ### Create Method
 
@@ -1268,25 +1190,23 @@ Creates a WAF (Web Application Firewall) resource.
 
 ```hcl
 resource "azion_waf" "example" {
-  result = {
+  result {
     name   = "My WAF"
     active = true
-    
-    engine_settings = {
+
+    engine_settings {
       engine_version = "2021-Q3"
       type           = "score"
-      
-      attributes = {
+
+      attributes {
         rulesets = [1, 2, 3]
-        
-        thresholds = [
-          {
-            threshold = {
-              threat      = "sql_injection"
-              sensitivity = "high"
-            }
+
+        thresholds {
+          threshold {
+            threat      = "sql_injection"
+            sensitivity = "high"
           }
-        ]
+        }
       }
     }
   }

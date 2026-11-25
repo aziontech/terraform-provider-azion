@@ -568,6 +568,8 @@ func errPrintZones(errCode int, err error) (string, string) {
 
 ## Resource Implementation
 
+**Schema:** `zone` is a `SingleNestedBlock` (`zone { ... }`, not `zone = { ... }`) with `objectvalidator.IsRequired()` and a description starting with `Required.`, so Terraform rejects unknown or misplaced arguments with `Unsupported argument`. State is unchanged (same object shape). See "Nested Objects Must Be Blocks" in `AGENTS.md`.
+
 ### Resource Structure
 
 **File:** `internal/resource_zones.go`

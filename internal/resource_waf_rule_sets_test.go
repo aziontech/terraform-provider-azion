@@ -14,8 +14,8 @@ import (
 	"testing"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -34,13 +34,20 @@ func TestWAFRuleSetsSchemaImplementation(t *testing.T) {
 		t.Errorf("invalid schema implementation: %v", diags)
 	}
 
+	if sr.Schema.Version != 1 {
+		t.Errorf("schema version = %d, want 1 (rule_sets map -> rule_set blocks)", sr.Schema.Version)
+	}
+
 	// Same contract as azion_waf_rule_set: optional fields are Computed, or
 	// omitting one diffs forever.
+	block, ok := sr.Schema.Blocks["rule_set"].(schema.SetNestedBlock)
+	if !ok {
+		t.Fatalf("rule_set must be a set nested block, got %T", sr.Schema.Blocks["rule_set"])
+	}
 	for _, name := range []string{"rule_id", "path", "operator", "active"} {
-		p := path.Root("rule_sets").AtMapKey("x").AtName(name)
-		attribute, diags := sr.Schema.AttributeAtPath(ctx, p)
-		if diags.HasError() {
-			t.Errorf("%s: %v", name, diags)
+		attribute, ok := block.NestedObject.Attributes[name]
+		if !ok {
+			t.Errorf("%s: missing", name)
 			continue
 		}
 		if !attribute.IsOptional() || !attribute.IsComputed() {
@@ -466,7 +473,9 @@ func wafRuleSetsPlanAndState(t *testing.T, plan, state WafRuleSetsResourceModel)
 		t.Fatalf("setting state: %v", diags)
 	}
 
-	req := fwresource.ModifyPlanRequest{Plan: tfPlan, State: tfState}
+	// The plan's declared values stand in for the configuration.
+	config := tfsdk.Config{Schema: s, Raw: tfPlan.Raw}
+	req := fwresource.ModifyPlanRequest{Config: config, Plan: tfPlan, State: tfState}
 	return req, &fwresource.ModifyPlanResponse{Plan: tfPlan}
 }
 
@@ -475,7 +484,7 @@ func wafRuleSetsModel(lastUpdated types.String, items map[string]WafRuleSetsItem
 		ID:          types.StringValue("42"),
 		WafID:       types.Int64Value(42),
 		LastUpdated: lastUpdated,
-		RuleSets:    items,
+		RuleSets:    wafRuleSetsList(items),
 	}
 }
 
@@ -507,13 +516,14 @@ func TestWAFRuleSetsModifyPlanOnlyShowsChangedExceptions(t *testing.T) {
 		t.Fatalf("reading plan: %v", diags)
 	}
 
-	if !reflect.DeepEqual(got.RuleSets["untouched"], state.RuleSets["untouched"]) {
-		t.Errorf("untouched exception should plan as its state, got %+v", got.RuleSets["untouched"])
+	gotByName, stateByName := wafRuleSetsByName(got.RuleSets), wafRuleSetsByName(state.RuleSets)
+	if !reflect.DeepEqual(gotByName["untouched"], stateByName["untouched"]) {
+		t.Errorf("untouched exception should plan as its state, got %+v", gotByName["untouched"])
 	}
-	if got.RuleSets["changed"].ExceptionID.ValueInt64() != 1 {
+	if gotByName["changed"].ExceptionID.ValueInt64() != 1 {
 		t.Error("changed exception should keep its exception_id")
 	}
-	if !got.RuleSets["changed"].LastModified.IsUnknown() {
+	if !gotByName["changed"].LastModified.IsUnknown() {
 		t.Error("changed exception's last_modified should be unknown")
 	}
 	if !got.LastUpdated.IsUnknown() {
@@ -540,5 +550,23 @@ func TestWAFRuleSetsModifyPlanEmptyWhenNothingChanges(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, state) {
 		t.Errorf("plan should equal state, got %+v", got)
+	}
+}
+
+// Zero rule_set blocks reach the provider as a null set, which the model reads
+// as a nil slice. That must mean "no exceptions": apply deletes all of them.
+func TestWAFRuleSetsNullRuleSetDeletesEverything(t *testing.T) {
+	ctx := context.Background()
+	fake, r := newFakeWAFAPI(t)
+	a, b := fake.add("a", "/a"), fake.add("b", "/b")
+	current := map[string]WafRuleSetsItemModel{"a": wafItem(a, "/a", true), "b": wafItem(b, "/b", true)}
+
+	var plan WafRuleSetsResourceModel // RuleSets nil, as decoded from a null set
+	result, diags := r.reconcile(ctx, 42, wafRuleSetsByName(plan.RuleSets), current)
+	if diags.HasError() {
+		t.Fatalf("reconcile: %v", diags)
+	}
+	if got := fake.snapshot(); len(got) != 0 || len(result) != 0 {
+		t.Errorf("API holds %v, state %v; want both empty", got, result)
 	}
 }

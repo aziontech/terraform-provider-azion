@@ -15,11 +15,15 @@ replacement (`PUT`) rather than a partial update. Two things follow from that, a
 both are intentional:
 
 - A change made outside Terraform — in Azion Console, for example — is **reverted**
-  on the next `terraform apply`, and appears in `terraform plan` as a diff. This
-  holds for fields you declare and for fields you leave out.
-- Leaving a field out of your configuration is not "don't care". It means "use the
-  Azion default", and the field is reset to that default. To keep a non-default
-  value, declare it explicitly.
+  on the next `terraform apply`. Inside a block you declare, it also appears in
+  `terraform plan` as a diff, including for arguments you leave out of that block.
+  A block you leave out (for example `browser_cache` or `modules { cache { tiered_cache { ... } } }`)
+  is still reset to its defaults on every apply, but a console change to it does
+  not show up in `terraform plan`; declare the block, even empty, to have its drift
+  detected.
+- Leaving a field or block out of your configuration is not "don't care". It means
+  "use the Azion default", and the field is reset to that default. To keep a
+  non-default value, declare it explicitly.
 
 The defaults enforced for omitted fields are:
 
@@ -63,11 +67,11 @@ not model is also reset to its API default.
 ```terraform
 # First, create the parent application with edge cache enabled
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
-    modules = {
-      cache = {
+    modules {
+      cache {
         enabled = true
       }
     }
@@ -77,32 +81,32 @@ resource "azion_application_main_setting" "example" {
 # Then create the cache setting for that application
 resource "azion_application_cache_setting" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  cache_setting = {
+  cache_setting {
     name = "Terraform Cache Setting Example"
-    browser_cache = {
+    browser_cache {
       behavior = "override"
       max_age  = 3600
     }
-    modules = {
-      cache = {
+    modules {
+      cache {
         behavior = "override"
         max_age  = 13660
-        stale_cache = {
+        stale_cache {
           enabled = true
         }
-        tiered_cache = {
+        tiered_cache {
           topology = "nearest-region"
           enabled  = true
         }
       }
-      application_accelerator = {
-        cache_vary_by_querystring = {
+      application_accelerator {
+        cache_vary_by_querystring {
           behavior = "ignore"
         }
-        cache_vary_by_cookies = {
+        cache_vary_by_cookies {
           behavior = "ignore"
         }
-        cache_vary_by_devices = {
+        cache_vary_by_devices {
           behavior = "ignore"
         }
       }
@@ -116,32 +120,32 @@ resource "azion_application_cache_setting" "example" {
 ```terraform
 resource "azion_application_cache_setting" "example" {
   application_id = 1234567890
-  cache_setting = {
+  cache_setting {
     name = "Terraform Cache Setting Example"
-    browser_cache = {
+    browser_cache {
       behavior = "override"
       max_age  = 3600
     }
-    modules = {
-      cache = {
+    modules {
+      cache {
         behavior = "override"
         max_age  = 13660
-        stale_cache = {
+        stale_cache {
           enabled = true
         }
-        tiered_cache = {
+        tiered_cache {
           topology = "nearest-region"
           enabled  = true
         }
       }
-      application_accelerator = {
-        cache_vary_by_querystring = {
+      application_accelerator {
+        cache_vary_by_querystring {
           behavior = "ignore"
         }
-        cache_vary_by_cookies = {
+        cache_vary_by_cookies {
           behavior = "ignore"
         }
-        cache_vary_by_devices = {
+        cache_vary_by_devices {
           behavior = "ignore"
         }
       }
@@ -155,15 +159,18 @@ resource "azion_application_cache_setting" "example" {
 
 ### Required
 
-- `cache_setting` (Attributes) Cache setting configuration. (see [below for nested schema](#nestedatt--cache_setting))
 - `application_id` (Number) Numeric identifier of the Application.
+
+### Optional
+
+- `cache_setting` (Block, Optional) Required. Cache setting configuration. (see [below for nested schema](#nestedblock--cache_setting))
 
 ### Read-Only
 
 - `id` (Number) Resource identifier.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
-<a id="nestedatt--cache_setting"></a>
+<a id="nestedblock--cache_setting"></a>
 ### Nested Schema for `cache_setting`
 
 Required:
@@ -172,76 +179,61 @@ Required:
 
 Optional:
 
-- `browser_cache` (Attributes) Browser cache settings. (see [below for nested schema](#nestedatt--cache_setting--browser_cache))
-- `modules` (Attributes) Cache settings modules. (see [below for nested schema](#nestedatt--cache_setting--modules))
+- `browser_cache` (Block, Optional) Browser cache settings. Omitting this block resets it to the Azion defaults on every apply, but its drift is only detected while the block is declared. (see [below for nested schema](#nestedblock--cache_setting--browser_cache))
+- `modules` (Block, Optional) Cache settings modules. A module left out is reset to the Azion defaults on every apply, but its drift is only detected while its block is declared. (see [below for nested schema](#nestedblock--cache_setting--modules))
 
 Read-Only:
 
-- `id` (Number) Cache setting identifier.
 - `created_at` (String) The creation timestamp.
+- `id` (Number) Cache setting identifier.
 
-<a id="nestedatt--cache_setting--browser_cache"></a>
-### Nested Schema for `browser_cache`
+<a id="nestedblock--cache_setting--browser_cache"></a>
+### Nested Schema for `cache_setting.browser_cache`
 
 Optional:
 
 - `behavior` (String) Browser cache behavior: `override`, `honor`, `no-cache`.
 - `max_age` (Number) Maximum TTL for browser cache in seconds.
 
-<a id="nestedatt--cache_setting--modules"></a>
-### Nested Schema for `modules`
+
+<a id="nestedblock--cache_setting--modules"></a>
+### Nested Schema for `cache_setting.modules`
 
 Optional:
 
-- `cache` (Attributes) Edge cache module settings. (see [below for nested schema](#nestedatt--cache_setting--modules--cache))
-- `application_accelerator` (Attributes) Application accelerator module settings. (see [below for nested schema](#nestedatt--cache_setting--modules--application_accelerator))
+- `application_accelerator` (Block, Optional) Application accelerator module settings. Requires the application accelerator module on the application. (see [below for nested schema](#nestedblock--cache_setting--modules--application_accelerator))
+- `cache` (Block, Optional) Edge cache module settings. (see [below for nested schema](#nestedblock--cache_setting--modules--cache))
 
-<a id="nestedatt--cache_setting--modules--cache"></a>
-### Nested Schema for `cache`
-
-Optional:
-
-- `behavior` (String) Cache behavior: `honor`, `override`.
-- `max_age` (Number) Maximum TTL for edge cache in seconds.
-- `stale_cache` (Attributes) Stale cache settings. (see [below for nested schema](#nestedatt--cache_setting--modules--cache--stale_cache))
-- `large_file_cache` (Attributes) Large file cache settings. (see [below for nested schema](#nestedatt--cache_setting--modules--cache--large_file_cache))
-- `tiered_cache` (Attributes) Tiered cache settings. (see [below for nested schema](#nestedatt--cache_setting--modules--cache--tiered_cache))
-
-<a id="nestedatt--cache_setting--modules--cache--stale_cache"></a>
-### Nested Schema for `stale_cache`
+<a id="nestedblock--cache_setting--modules--application_accelerator"></a>
+### Nested Schema for `cache_setting.modules.application_accelerator`
 
 Optional:
 
-- `enabled` (Boolean) Enable stale cache.
-
-<a id="nestedatt--cache_setting--modules--cache--large_file_cache"></a>
-### Nested Schema for `large_file_cache`
-
-Optional:
-
-- `enabled` (Boolean) Enable large file cache.
-- `offset` (Number) Offset for large file cache slicing.
-
-<a id="nestedatt--cache_setting--modules--cache--tiered_cache"></a>
-### Nested Schema for `tiered_cache`
-
-Optional:
-
-- `topology` (String) Tiered cache topology: `nearest-region`, `br-east-1`, `us-east-1`.
-- `enabled` (Boolean) Enable tiered cache.
-
-<a id="nestedatt--cache_setting--modules--application_accelerator"></a>
-### Nested Schema for `application_accelerator`
-
-Optional:
-
+- `cache_vary_by_cookies` (Block, Optional) Cookies cache variation settings. (see [below for nested schema](#nestedblock--cache_setting--modules--application_accelerator--cache_vary_by_cookies))
+- `cache_vary_by_devices` (Block, Optional) Devices cache variation settings. (see [below for nested schema](#nestedblock--cache_setting--modules--application_accelerator--cache_vary_by_devices))
 - `cache_vary_by_method` (List of String) HTTP methods to vary cache by.
-- `cache_vary_by_querystring` (Attributes) Query string cache variation settings. (see [below for nested schema](#nestedatt--cache_setting--modules--application_accelerator--cache_vary_by_querystring))
-- `cache_vary_by_cookies` (Attributes) Cookies cache variation settings. (see [below for nested schema](#nestedatt--cache_setting--modules--application_accelerator--cache_vary_by_cookies))
-- `cache_vary_by_devices` (Attributes) Devices cache variation settings. (see [below for nested schema](#nestedatt--cache_setting--modules--application_accelerator--cache_vary_by_devices))
+- `cache_vary_by_querystring` (Block, Optional) Query string cache variation settings. (see [below for nested schema](#nestedblock--cache_setting--modules--application_accelerator--cache_vary_by_querystring))
 
-<a id="nestedatt--cache_setting--modules--application_accelerator--cache_vary_by_querystring"></a>
-### Nested Schema for `cache_vary_by_querystring`
+<a id="nestedblock--cache_setting--modules--application_accelerator--cache_vary_by_cookies"></a>
+### Nested Schema for `cache_setting.modules.application_accelerator.cache_vary_by_cookies`
+
+Optional:
+
+- `behavior` (String) Cookies behavior: `ignore`, `all`, `allowlist`, `denylist`.
+- `cookie_names` (List of String) Cookie names for allowlist/denylist.
+
+
+<a id="nestedblock--cache_setting--modules--application_accelerator--cache_vary_by_devices"></a>
+### Nested Schema for `cache_setting.modules.application_accelerator.cache_vary_by_devices`
+
+Optional:
+
+- `behavior` (String) Devices behavior: `ignore`, `allowlist`.
+- `device_group` (List of Number) Device group IDs for allowlist.
+
+
+<a id="nestedblock--cache_setting--modules--application_accelerator--cache_vary_by_querystring"></a>
+### Nested Schema for `cache_setting.modules.application_accelerator.cache_vary_by_querystring`
 
 Optional:
 
@@ -249,21 +241,43 @@ Optional:
 - `fields` (List of String) Query string fields for allowlist/denylist.
 - `sort_enabled` (Boolean) Enable query string sorting.
 
-<a id="nestedatt--cache_setting--modules--application_accelerator--cache_vary_by_cookies"></a>
-### Nested Schema for `cache_vary_by_cookies`
+
+
+<a id="nestedblock--cache_setting--modules--cache"></a>
+### Nested Schema for `cache_setting.modules.cache`
 
 Optional:
 
-- `behavior` (String) Cookies behavior: `ignore`, `all`, `allowlist`, `denylist`.
-- `cookie_names` (List of String) Cookie names for allowlist/denylist.
+- `behavior` (String) Cache behavior: `honor`, `override`.
+- `large_file_cache` (Block, Optional) Large file cache settings. (see [below for nested schema](#nestedblock--cache_setting--modules--cache--large_file_cache))
+- `max_age` (Number) Maximum TTL for edge cache in seconds.
+- `stale_cache` (Block, Optional) Stale cache settings. (see [below for nested schema](#nestedblock--cache_setting--modules--cache--stale_cache))
+- `tiered_cache` (Block, Optional) Tiered cache settings. Requires the tiered cache module on the application. (see [below for nested schema](#nestedblock--cache_setting--modules--cache--tiered_cache))
 
-<a id="nestedatt--cache_setting--modules--application_accelerator--cache_vary_by_devices"></a>
-### Nested Schema for `cache_vary_by_devices`
+<a id="nestedblock--cache_setting--modules--cache--large_file_cache"></a>
+### Nested Schema for `cache_setting.modules.cache.large_file_cache`
 
 Optional:
 
-- `behavior` (String) Devices behavior: `ignore`, `allowlist`.
-- `device_group` (List of Number) Device group IDs for allowlist.
+- `enabled` (Boolean) Enable large file cache.
+- `offset` (Number) Offset for large file cache slicing.
+
+
+<a id="nestedblock--cache_setting--modules--cache--stale_cache"></a>
+### Nested Schema for `cache_setting.modules.cache.stale_cache`
+
+Optional:
+
+- `enabled` (Boolean) Enable stale cache.
+
+
+<a id="nestedblock--cache_setting--modules--cache--tiered_cache"></a>
+### Nested Schema for `cache_setting.modules.cache.tiered_cache`
+
+Optional:
+
+- `enabled` (Boolean) Enable tiered cache.
+- `topology` (String) Tiered cache topology: `nearest-region`, `br-east-1`, `us-east-1`.
 
 ## Import
 

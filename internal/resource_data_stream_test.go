@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -45,27 +47,48 @@ func listOfSize(n int) types.List {
 	return types.ListValueMust(types.StringType, elements)
 }
 
-// validateList runs every list validator attached to an attribute and reports
-// whether the value was rejected.
-func validateList(t *testing.T, dotted string, value types.List) bool {
+// dataStreamListBlock returns one of the list blocks under `data_stream`
+// (`inputs`, `transform`, `outputs`).
+func dataStreamListBlock(t *testing.T, name string) schema.ListNestedBlock {
+	t.Helper()
+
+	stream, ok := dataStreamSchema(t).Schema.Blocks["data_stream"].(schema.SingleNestedBlock)
+	if !ok {
+		t.Fatalf("data_stream: expected a single nested block")
+	}
+	block, ok := stream.Blocks[name].(schema.ListNestedBlock)
+	if !ok {
+		t.Fatalf("data_stream.%s: expected a list nested block", name)
+	}
+	return block
+}
+
+// validateList runs every list validator attached to a list block under
+// `data_stream` and reports whether the value was rejected.
+func validateList(t *testing.T, name string, value types.List) bool {
 	t.Helper()
 	ctx := context.Background()
 
-	attribute, diags := dataStreamSchema(t).Schema.AttributeAtPath(ctx, tfPath(t, dotted))
-	if diags.HasError() {
-		t.Fatalf("%s: %v", dotted, diags)
-	}
-
-	withValidators, ok := attribute.(interface{ ListValidators() []validator.List })
-	if !ok {
-		t.Fatalf("%s: attribute carries no list validators", dotted)
-	}
-
 	resp := &validator.ListResponse{}
-	for _, v := range withValidators.ListValidators() {
+	for _, v := range dataStreamListBlock(t, name).ListValidators() {
 		v.ValidateList(ctx, validator.ListRequest{
-			Path:        tfPath(t, dotted),
+			Path:        path.Root("data_stream").AtName(name),
 			ConfigValue: value,
+		}, resp)
+	}
+	return resp.Diagnostics.HasError()
+}
+
+// rejectsMissingObject runs the object validators of a single nested block
+// against an absent block and reports whether it was rejected.
+func rejectsMissingObject(t *testing.T, block schema.SingleNestedBlock) bool {
+	t.Helper()
+	ctx := context.Background()
+
+	resp := &validator.ObjectResponse{}
+	for _, v := range block.ObjectValidators() {
+		v.ValidateObject(ctx, validator.ObjectRequest{
+			ConfigValue: types.ObjectNull(block.Type().(types.ObjectType).AttrTypes),
 		}, resp)
 	}
 	return resp.Diagnostics.HasError()
@@ -116,27 +139,21 @@ func requireJSONEqual(t *testing.T, got []byte, want string) {
 }
 
 // The API rejects a missing or empty transform list (10059 "Required Field",
-// 10049 "Min Length List Field"), so the attribute has to be Required and
-// carry a minimum-size validator rather than deferring to the API.
+// 10049 "Min Length List Field"). A list block has no Required flag, and zero
+// blocks reach the provider as a null list during validation and as an empty
+// one during planning, so both IsRequired and the minimum size are needed.
 func TestDataStreamTransformIsRequired(t *testing.T) {
-	ctx := context.Background()
-
-	attribute, diags := dataStreamSchema(t).Schema.AttributeAtPath(ctx, tfPath(t, "data_stream.transform"))
-	if diags.HasError() {
-		t.Fatalf("data_stream.transform: %v", diags)
+	if !validateList(t, "transform", types.ListNull(types.StringType)) {
+		t.Error("an absent transform list must be rejected")
 	}
-	if !attribute.IsRequired() {
-		t.Error("data_stream.transform: expected Required")
-	}
-
-	if !validateList(t, "data_stream.transform", listOfSize(0)) {
-		t.Error("an empty transform list must be rejected")
+	if !validateList(t, "transform", listOfSize(0)) {
+		t.Error("zero transform blocks must be rejected")
 	}
 	// A render_template entry plus sampling or filter_workloads is also
 	// required, but that is a cross-entry rule the API owns; the schema only
 	// enforces the size.
 	for _, size := range []int{1, 2, 3} {
-		if validateList(t, "data_stream.transform", listOfSize(size)) {
+		if validateList(t, "transform", listOfSize(size)) {
 			t.Errorf("a transform list of %d entries must be accepted", size)
 		}
 	}
@@ -145,27 +162,116 @@ func TestDataStreamTransformIsRequired(t *testing.T) {
 // inputs and outputs are both stored one-per-stream by the API. Given a longer
 // list it keeps a single entry and reports success, so the schema caps them
 // instead of letting the discarded entries surface as an inconsistent result.
+// IsRequired and the lower bound also make the blocks mandatory.
 func TestDataStreamInputsAndOutputsAreCappedAtOne(t *testing.T) {
-	ctx := context.Background()
-
 	for _, name := range []string{"inputs", "outputs"} {
-		dotted := "data_stream." + name
-
-		attribute, diags := dataStreamSchema(t).Schema.AttributeAtPath(ctx, tfPath(t, dotted))
-		if diags.HasError() {
-			t.Errorf("%s: %v", dotted, diags)
-			continue
+		if !validateList(t, name, types.ListNull(types.StringType)) {
+			t.Errorf("%s: an absent list must be rejected", name)
 		}
-		if !attribute.IsRequired() {
-			t.Errorf("%s: expected Required", dotted)
-		}
-
-		if validateList(t, dotted, listOfSize(1)) {
-			t.Errorf("%s: exactly one entry must be accepted", dotted)
+		if validateList(t, name, listOfSize(1)) {
+			t.Errorf("%s: exactly one entry must be accepted", name)
 		}
 		for _, size := range []int{0, 2, 3} {
-			if !validateList(t, dotted, listOfSize(size)) {
-				t.Errorf("%s: %d entries must be rejected", dotted, size)
+			if !validateList(t, name, listOfSize(size)) {
+				t.Errorf("%s: %d entries must be rejected", name, size)
+			}
+		}
+	}
+}
+
+// Nested objects are blocks so Terraform rejects unknown arguments instead of
+// dropping them. A nested attribute here would silently accept a typo.
+func TestDataStreamNestedObjectsAreBlocks(t *testing.T) {
+	ctx := context.Background()
+	sr := dataStreamSchema(t)
+
+	names := []string{
+		"data_stream",
+		"data_stream.inputs",
+		"data_stream.transform",
+		"data_stream.outputs",
+	}
+	for _, name := range names {
+		if _, diags := sr.Schema.AttributeAtPath(ctx, tfPath(t, name)); !diags.HasError() {
+			t.Errorf("%s: must be a block, not a nested attribute", name)
+		}
+	}
+
+	stream := sr.Schema.Blocks["data_stream"].(schema.SingleNestedBlock)
+	inputs := stream.Blocks["inputs"].(schema.ListNestedBlock)
+	if _, ok := inputs.NestedObject.Blocks["attributes"].(schema.SingleNestedBlock); !ok {
+		t.Error("data_stream.inputs.attributes: must be a single nested block")
+	}
+	for _, name := range []string{"sampling_attributes", "filter_workloads_attributes", "render_template_attributes"} {
+		if _, ok := stream.Blocks["transform"].(schema.ListNestedBlock).NestedObject.Blocks[name].(schema.SingleNestedBlock); !ok {
+			t.Errorf("data_stream.transform.%s: must be a single nested block", name)
+		}
+	}
+	for _, name := range []string{
+		"standard_attributes", "kafka_attributes", "s3_attributes", "big_query_attributes",
+		"elasticsearch_attributes", "splunk_attributes", "aws_kinesis_firehose_attributes",
+		"datadog_attributes", "qradar_attributes", "azure_monitor_attributes", "azure_blob_storage_attributes",
+	} {
+		if _, ok := stream.Blocks["outputs"].(schema.ListNestedBlock).NestedObject.Blocks[name].(schema.SingleNestedBlock); !ok {
+			t.Errorf("data_stream.outputs.%s: must be a single nested block", name)
+		}
+	}
+}
+
+// Single blocks that used to be Required nested attributes carry IsRequired, so
+// an omitted block is still a plan-time error.
+func TestDataStreamRequiredSingleBlocks(t *testing.T) {
+	stream := dataStreamSchema(t).Schema.Blocks["data_stream"].(schema.SingleNestedBlock)
+	if !rejectsMissingObject(t, stream) {
+		t.Error("data_stream: an omitted block must be rejected")
+	}
+
+	inputAttributes := stream.Blocks["inputs"].(schema.ListNestedBlock).NestedObject.Blocks["attributes"].(schema.SingleNestedBlock)
+	if !rejectsMissingObject(t, inputAttributes) {
+		t.Error("data_stream.inputs.attributes: an omitted block must be rejected")
+	}
+}
+
+// The framework checks Required on the children of an absent single nested
+// block too, so a Required attribute inside an optional `*_attributes` block
+// would reject every configuration that leaves the other types' blocks out.
+// Those attributes are Optional and the block's AlsoRequires validator enforces
+// them once the block is written.
+func TestDataStreamOptionalBlocksRequireTheirFieldsWhenSet(t *testing.T) {
+	ctx := context.Background()
+	stream := dataStreamSchema(t).Schema.Blocks["data_stream"].(schema.SingleNestedBlock)
+
+	for _, listName := range []string{"transform", "outputs"} {
+		entry := stream.Blocks[listName].(schema.ListNestedBlock).NestedObject
+		for blockName, b := range entry.Blocks {
+			block := b.(schema.SingleNestedBlock)
+			where := "data_stream." + listName + "." + blockName
+
+			// AlsoRequires describes its paths as `... these are set: "[a,b]"`.
+			validatorDescriptions := ""
+			alsoRequired := map[string]bool{}
+			for _, v := range block.ObjectValidators() {
+				description := v.Description(ctx)
+				validatorDescriptions += description
+				if start, end := strings.Index(description, "["), strings.LastIndex(description, "]"); start >= 0 && end > start {
+					for _, name := range strings.Split(description[start+1:end], ",") {
+						alsoRequired[name] = true
+					}
+				}
+			}
+
+			for attrName, attribute := range block.Attributes {
+				if attribute.IsRequired() {
+					t.Errorf("%s.%s: must be Optional; enforce it with dataStreamRequiredWhenSet", where, attrName)
+				}
+				mandatory := strings.HasPrefix(attribute.GetDescription(), "Required.")
+				enforced := alsoRequired[attrName]
+				if mandatory && !enforced {
+					t.Errorf("%s.%s: documented as Required but not in the block's AlsoRequires (%s)", where, attrName, validatorDescriptions)
+				}
+				if !mandatory && enforced {
+					t.Errorf("%s.%s: enforced by AlsoRequires but its description does not start with \"Required.\"", where, attrName)
+				}
 			}
 		}
 	}

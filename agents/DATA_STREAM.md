@@ -69,7 +69,7 @@ The SDK also exposes `DataStreamTemplatesAPI` and `DataStreamDataSourcesAPI`.
 A stream is a pipeline of three lists:
 
 ```
-inputs  ──▶  transform (ordered, optional)  ──▶  outputs
+inputs  ──▶  transform (1..n, required)  ──▶  outputs
 ```
 
 | Field | Cardinality | Polymorphic? | Notes |
@@ -187,21 +187,37 @@ Unlike Connectors, Create does **not** re-read the resource afterwards — the c
 
 ### Polymorphic entries: one optional block per type
 
-Each `transform` / `outputs` entry has a required `type` plus one optional `*_attributes` block per supported type, named `<type>_attributes`. This mirrors `azion_connector`'s `storage_attributes` / `http_attributes`.
+Every writable nested object is a **block** (see "Nested Objects Must Be Blocks" in `AGENTS.md`): `data_stream` is a `SingleNestedBlock` with `objectvalidator.IsRequired()`; `inputs`, `transform` and `outputs` are `ListNestedBlock`s; `inputs.attributes` is a required `SingleNestedBlock`; every `*_attributes` is an optional `SingleNestedBlock`. Users write `data_stream { ... }` and repeat `transform { ... }` once per step.
+
+Each `transform` / `outputs` block has a required `type` plus one optional `*_attributes` block per supported type, named `<type>_attributes`. This mirrors `azion_connector`'s `storage_attributes` / `http_attributes`.
 
 ```go
-"outputs": schema.ListNestedAttribute{
-    Required: true,
-    NestedObject: schema.NestedAttributeObject{
+"outputs": schema.ListNestedBlock{
+    Validators: []validator.List{listvalidator.IsRequired(), listvalidator.SizeBetween(1, 1)},
+    NestedObject: schema.NestedBlockObject{
         Attributes: map[string]schema.Attribute{
-            "type":                schema.StringAttribute{Required: true},
-            "standard_attributes": schema.SingleNestedAttribute{Optional: true, Attributes: ...},
-            "kafka_attributes":    schema.SingleNestedAttribute{Optional: true, Attributes: ...},
+            "type": schema.StringAttribute{Required: true},
+        },
+        Blocks: map[string]schema.Block{
+            "kafka_attributes": schema.SingleNestedBlock{
+                Validators: dataStreamRequiredWhenSet("bootstrap_servers", "kafka_topic", "use_tls"),
+                Attributes: map[string]schema.Attribute{
+                    "bootstrap_servers": schema.StringAttribute{Optional: true}, // "Required." in the description
+                    // ...
+                },
+            },
             // ... one per endpoint type
         },
     },
 },
 ```
+
+Two framework behaviors drive this shape:
+
+- **A list block has no `Required` flag.** Zero blocks reach the provider as a *null* list during validation (so `SizeAtLeast`/`SizeBetween` skip it) and as an empty list during planning. `inputs`, `transform` and `outputs` therefore carry `listvalidator.IsRequired()` **and** the size validator.
+- **The framework checks `Required` on the children of an *absent* `SingleNestedBlock`.** A `Required` attribute inside an optional `*_attributes` block would reject every configuration, because the other types' blocks are always absent. Attributes inside the optional `*_attributes` blocks are therefore `Optional`, documented with a `Required.` description prefix, and enforced by `dataStreamRequiredWhenSet(...)` (an `objectvalidator.AlsoRequires` on the block). `TestDataStreamOptionalBlocksRequireTheirFieldsWhenSet` keeps the two in sync. Required blocks (`data_stream`, `inputs.attributes`) keep `Required` children.
+
+State written by the old nested-attribute schema has the same shape and is read unchanged; no state upgrader.
 
 The "exactly one block, matching `type`" invariant is **not** expressible in the schema; it is enforced at build time and surfaces as a plan-time error from `buildDataStreamOutputAttributes`.
 
@@ -267,7 +283,7 @@ code can switch on the endpoint structs (`*azionapi.HttpPostEndpoint`, ...) dire
 out := []azionapi.TransformRequest{} // not: var out []azionapi.TransformRequest
 ```
 
-This matters most for `transform`, which is optional in the Terraform schema.
+This is defensive: the schema requires all three lists to be non-empty.
 
 ---
 
@@ -356,7 +372,7 @@ to the API's order when the types don't match so genuine drift still shows. With
 any config not already written in the API's order fails with `Provider produced inconsistent
 result after apply`.
 
-Both attributes stay `ListNestedAttribute`. Do not switch either to a `SetNestedAttribute`: it
+Both stay `ListNestedBlock`. Do not switch either to a `SetNestedBlock`: it
 would break the positional prior-state matching that keeps secrets stable.
 
 ### `transform` is required and carries cross-entry rules
@@ -374,7 +390,7 @@ All four point at `/data/transform`. The API treats the three transform types as
 cross-field rules rather than a free-form list, even though the schema models them as an ordered
 array.
 
-The schema enforces the first two (`Required` plus `listvalidator.SizeAtLeast(1)`), which
+The schema enforces the first two (`listvalidator.IsRequired()` plus `listvalidator.SizeAtLeast(1)`), which
 Terraform can express. The last two are cross-entry rules that schema validation cannot express
 and that are inferred from error messages rather than documented in the OpenAPI spec — do not add
 a client-side check that guesses at the full rule; let the API be the authority and surface its
@@ -431,7 +447,7 @@ value behind their back.
 The `render_template` transform takes a numeric template ID. Custom templates can be created with `azion_data_stream_template` and referenced directly:
 
 ```hcl
-render_template_attributes = {
+render_template_attributes {
   template = azion_data_stream_template.example.template.id
 }
 ```

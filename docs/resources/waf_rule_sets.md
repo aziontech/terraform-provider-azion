@@ -29,17 +29,59 @@ Use `azion_waf_rule_set` when other tools or people are allowed to manage some o
 a WAF's exceptions. Use `azion_waf_rule_sets` when Terraform must be the only
 source of truth.
 
-## Exceptions are keyed by name
+## One `rule_set` block per exception
 
-Each key of `rule_sets` is the exception's name. Renaming a key deletes the old
-exception and creates a new one. An exception renamed in Azion Console is treated
-the same way: the new name is deleted and the declared name is recreated.
+Each exception is one `rule_set` block, identified by its `name`. Names must be
+unique among the blocks; a duplicate is rejected by `terraform validate`. The
+blocks have no order: reordering them plans no change.
+
+Renaming a block deletes the old exception and creates a new one. An exception
+renamed in Azion Console is treated the same way: the new name is deleted and
+the declared name is recreated.
+
+**Declaring no `rule_set` block at all deletes every exception of the WAF.** A
+configuration with only `waf_id` is valid and means "this WAF has no
+exceptions".
 
 The API does not require exception names to be unique within a WAF. When it holds
 several exceptions with the same name, the one Terraform already manages keeps the
-name. Each of the others is keyed `<name>#<exception_id>`, appears in the plan
-for deletion, and triggers a warning. Keys of that form are therefore reserved and
-rejected in the configuration.
+name. Each of the others is shown in state with the name `<name>#<exception_id>`,
+appears in the plan for deletion, and triggers a warning. Names of that form are
+therefore reserved and rejected in the configuration.
+
+## Upgrading from the `rule_sets` map
+
+Before this version the exceptions were a map keyed by name:
+
+```terraform
+rule_sets = {
+  "Allow health check" = {
+    path       = "/health"
+    conditions = [{ condition = { match = "any_url", condition_type = "generic" } }]
+  }
+}
+```
+
+Rewrite each map entry as a `rule_set` block, moving the key into `name`, and
+each `conditions` list item into a `conditions { condition { ... } }` block:
+
+```terraform
+rule_set {
+  name = "Allow health check"
+  path = "/health"
+
+  conditions {
+    condition {
+      match          = "any_url"
+      condition_type = "generic"
+    }
+  }
+}
+```
+
+Existing state is upgraded automatically (each map key becomes the block's
+`name`), so the rewritten configuration plans no changes. An empty map
+(`rule_sets = {}`) becomes no `rule_set` block.
 
 ## Drift and enforcement
 
@@ -66,13 +108,13 @@ state, so the first plan shows exactly what would change.
 
 When the resource is created without importing:
 
-- A WAF exception with the same name as a declared key is adopted and updated
+- A WAF exception with the same name as a declared `rule_set` is adopted and updated
   in place, not duplicated.
 - Exceptions that are not declared are **left in place** by the first apply,
   with a warning, because that plan never showed them. They appear for deletion
-  in the next plan. Declare them in `rule_sets` to keep them.
+  in the next plan. Declare them in `rule_set` blocks to keep them.
 
-To migrate from `azion_waf_rule_set`, move each exception into `rule_sets`, then
+To migrate from `azion_waf_rule_set`, move each exception into a `rule_set` block, then
 remove the old resources from state without destroying them. Use a `removed`
 block with `destroy = false` (Terraform 1.7+) or `terraform state rm`.
 
@@ -90,57 +132,56 @@ Destroying this resource deletes **all** exceptions of the WAF.
 ```terraform
 # First, create the parent WAF
 resource "azion_waf" "example" {
-  result = {
+  result {
     name   = "My WAF"
     active = true
   }
 }
 
-# Then declare every exception of that WAF. Exceptions not listed here are
-# deleted on apply, including ones created in Azion Console.
+# Then declare every exception of that WAF, one rule_set block each. Exceptions
+# not listed here are deleted on apply, including ones created in Azion Console.
+# Declaring no rule_set block at all deletes every exception of the WAF.
 resource "azion_waf_rule_sets" "example" {
   waf_id = azion_waf.example.id
 
-  rule_sets = {
-    "Allow health check" = {
-      rule_id  = 0
-      path     = "/health"
-      operator = "contains"
-      conditions = [
-        {
-          condition = {
-            match          = "any_url"
-            condition_type = "generic"
-          }
-        }
-      ]
-    }
+  rule_set {
+    name     = "Allow health check"
+    rule_id  = 0
+    path     = "/health"
+    operator = "contains"
 
-    "Allow custom header" = {
-      rule_id = 0
-      conditions = [
-        {
-          condition = {
-            match          = "specific_http_header_name"
-            name           = "X-Custom-Header"
-            condition_type = "specific_on_name"
-          }
-        }
-      ]
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
+      }
     }
+  }
 
-    "Allow trusted query string" = {
-      rule_id = 0
-      active  = false
-      conditions = [
-        {
-          condition = {
-            match          = "specific_query_string_value"
-            value          = "trusted_value"
-            condition_type = "specific_on_value"
-          }
-        }
-      ]
+  rule_set {
+    name    = "Allow custom header"
+    rule_id = 0
+
+    conditions {
+      condition {
+        match          = "specific_http_header_name"
+        name           = "X-Custom-Header"
+        condition_type = "specific_on_name"
+      }
+    }
+  }
+
+  rule_set {
+    name    = "Allow trusted query string"
+    rule_id = 0
+    active  = false
+
+    conditions {
+      condition {
+        match          = "specific_query_string_value"
+        value          = "trusted_value"
+        condition_type = "specific_on_value"
+      }
     }
   }
 }
@@ -148,10 +189,11 @@ resource "azion_waf_rule_sets" "example" {
 
 ### Removing every exception
 
+With no `rule_set` block, every exception of the WAF is deleted.
+
 ```terraform
 resource "azion_waf_rule_sets" "example" {
-  waf_id    = azion_waf.example.id
-  rule_sets = {}
+  waf_id = azion_waf.example.id
 }
 ```
 
@@ -160,24 +202,28 @@ resource "azion_waf_rule_sets" "example" {
 
 ### Required
 
-- `rule_sets` (Attributes Map) Every exception of the WAF, keyed by exception name. An empty map deletes all exceptions. (see [below for nested schema](#nestedatt--rule_sets))
 - `waf_id` (Number) The WAF identifier. Changing it replaces the resource.
+
+### Optional
+
+- `rule_set` (Block Set) One exception of the WAF. Every exception of the WAF must be declared: those without a `rule_set` block are deleted on apply, and declaring no `rule_set` block at all deletes every exception of the WAF. `name` must be unique. (see [below for nested schema](#nestedblock--rule_set))
 
 ### Read-Only
 
 - `id` (String) Identifier of the resource. Same as `waf_id`.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
-<a id="nestedatt--rule_sets"></a>
-### Nested Schema for `rule_sets`
+<a id="nestedblock--rule_set"></a>
+### Nested Schema for `rule_set`
 
 Required:
 
-- `conditions` (Attributes List) Conditions for the WAF exception. Each item must contain a single `condition` object. (see [below for nested schema](#nestedatt--rule_sets--conditions))
+- `name` (String) Name of the WAF exception. Identifies the exception, so it must be unique among the `rule_set` blocks.
 
 Optional:
 
 - `active` (Boolean) Whether the exception is active. Defaults to `true`.
+- `conditions` (Block List) Required. Conditions for the WAF exception, one `conditions` block per condition, each holding a single `condition` block. At least one is required. (see [below for nested schema](#nestedblock--rule_set--conditions))
 - `operator` (String) The operator for the exception: regex or contains. Supplied by the API when not declared.
 - `path` (String) Path pattern for the exception. Supplied by the API when not declared.
 - `rule_id` (Number) The rule ID that this exception applies to. 0 means all rules. Supplied by the API when not declared.
@@ -188,15 +234,15 @@ Read-Only:
 - `last_editor` (String) Last editor of the exception.
 - `last_modified` (String) Last modified timestamp.
 
-<a id="nestedatt--rule_sets--conditions"></a>
-### Nested Schema for `rule_sets.conditions`
+<a id="nestedblock--rule_set--conditions"></a>
+### Nested Schema for `rule_set.conditions`
 
-Required:
+Optional:
 
-- `condition` (Attributes) A single condition for the WAF exception. (see [below for nested schema](#nestedatt--rule_sets--conditions--condition))
+- `condition` (Block, Optional) Required. A single condition for the WAF exception. (see [below for nested schema](#nestedblock--rule_set--conditions--condition))
 
-<a id="nestedatt--rule_sets--conditions--condition"></a>
-### Nested Schema for `rule_sets.conditions.condition`
+<a id="nestedblock--rule_set--conditions--condition"></a>
+### Nested Schema for `rule_set.conditions.condition`
 
 Required:
 

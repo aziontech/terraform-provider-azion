@@ -9,11 +9,14 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -90,8 +93,13 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"result": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"result": schema.SingleNestedBlock{
+				Description: "Required. The WAF exception.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"exception_id": schema.Int64Attribute{
 						Description: "The ID of the WAF exception.",
@@ -111,38 +119,6 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Optional:    true,
 						Computed:    true,
 					},
-					"conditions": schema.ListNestedAttribute{
-						Description: "Conditions for the WAF exception.",
-						Required:    true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"condition": schema.SingleNestedAttribute{
-									Description: "A single condition for the WAF exception.",
-									Required:    true,
-									Attributes: map[string]schema.Attribute{
-										"match": schema.StringAttribute{
-											Description: "The match type for the condition.",
-											Required:    true,
-										},
-										"name": schema.StringAttribute{
-											Description: "The name for specific condition on name. Supplied by the API when not declared.",
-											Optional:    true,
-											Computed:    true,
-										},
-										"value": schema.StringAttribute{
-											Description: "The value for specific condition on value. Supplied by the API when not declared.",
-											Optional:    true,
-											Computed:    true,
-										},
-										"condition_type": schema.StringAttribute{
-											Description: "Type of condition: generic, specific_on_name, or specific_on_value.",
-											Required:    true,
-										},
-									},
-								},
-							},
-						},
-					},
 					"operator": schema.StringAttribute{
 						Description: "The operator for the exception: regex or contains. Supplied by the API when not declared.",
 						Optional:    true,
@@ -161,6 +137,58 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					"last_modified": schema.StringAttribute{
 						Description: "Last modified timestamp.",
 						Computed:    true,
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"conditions": wafExceptionConditionsBlock(
+						"Required. Conditions for the WAF exception, one `conditions` block per condition. At least one is required.",
+						nil,
+					),
+				},
+			},
+		},
+	}
+}
+
+// wafExceptionConditionsBlock is the `conditions { condition { ... } }` block
+// shared by azion_waf_rule_set and azion_waf_rule_sets. It was a Required list
+// attribute. A block cannot be Required: zero blocks reach validation as a null
+// list (the framework nullifies empty collection blocks), which SizeAtLeast
+// skips, so IsRequired rejects that and SizeAtLeast an explicit empty list.
+func wafExceptionConditionsBlock(description string, conditionTypeValidators []validator.String) schema.ListNestedBlock {
+	return schema.ListNestedBlock{
+		Description: description,
+		Validators: []validator.List{
+			listvalidator.IsRequired(),
+			listvalidator.SizeAtLeast(1),
+		},
+		NestedObject: schema.NestedBlockObject{
+			Blocks: map[string]schema.Block{
+				"condition": schema.SingleNestedBlock{
+					Description: "Required. A single condition for the WAF exception.",
+					Validators: []validator.Object{
+						objectvalidator.IsRequired(),
+					},
+					Attributes: map[string]schema.Attribute{
+						"match": schema.StringAttribute{
+							Description: "The match type for the condition.",
+							Required:    true,
+						},
+						"name": schema.StringAttribute{
+							Description: "The name for specific condition on name. Supplied by the API when not declared.",
+							Optional:    true,
+							Computed:    true,
+						},
+						"value": schema.StringAttribute{
+							Description: "The value for specific condition on value. Supplied by the API when not declared.",
+							Optional:    true,
+							Computed:    true,
+						},
+						"condition_type": schema.StringAttribute{
+							Description: "Type of condition: generic, specific_on_name, or specific_on_value.",
+							Required:    true,
+							Validators:  conditionTypeValidators,
+						},
 					},
 				},
 			},

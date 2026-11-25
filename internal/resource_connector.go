@@ -9,11 +9,15 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -184,8 +188,13 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
-			"connector": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"connector": schema.SingleNestedBlock{
+				Description: "Required. The connector settings.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The connector identifier.",
@@ -228,13 +237,20 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Description: "The identifier of the current connector version.",
 						Computed:    true,
 					},
-					"storage_attributes": schema.SingleNestedAttribute{
+				},
+				Blocks: map[string]schema.Block{
+					"storage_attributes": schema.SingleNestedBlock{
 						Description: "Attributes for storage type connectors. Required when type is 'storage'.",
-						Optional:    true,
+						// bucket is required inside the block, but it is declared Optional and
+						// enforced by AlsoRequires: the framework reports a Required attribute
+						// as missing even when its enclosing optional block is omitted.
+						Validators: []validator.Object{
+							objectvalidator.AlsoRequires(path.MatchRelative().AtName("bucket")),
+						},
 						Attributes: map[string]schema.Attribute{
 							"bucket": schema.StringAttribute{
-								Description: "The name of the bucket.",
-								Required:    true,
+								Description: "Required. The name of the bucket.",
+								Optional:    true,
 							},
 							"prefix": schema.StringAttribute{
 								Description: "The prefix path within the bucket.",
@@ -242,18 +258,28 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 							},
 						},
 					},
-					"http_attributes": schema.SingleNestedAttribute{
+					"http_attributes": schema.SingleNestedBlock{
 						Description: "Attributes for HTTP type connectors. Required when type is 'http'.",
-						Optional:    true,
-						Attributes: map[string]schema.Attribute{
-							"addresses": schema.ListNestedAttribute{
-								Description: "List of origin endpoints.",
-								Required:    true,
-								NestedObject: schema.NestedAttributeObject{
-									Attributes: map[string]schema.Attribute{
-										"endpoint": schema.SingleNestedAttribute{
-											Description: "A single origin endpoint configuration.",
-											Required:    true,
+						// Zero `addresses` blocks arrive as a null list, which SizeAtLeast
+						// skips. A list IsRequired would also fire when http_attributes itself
+						// is omitted (the framework validates nested blocks of a null block),
+						// so the requirement is enforced from this block instead.
+						Validators: []validator.Object{
+							objectvalidator.AlsoRequires(path.MatchRelative().AtName("addresses")),
+						},
+						Blocks: map[string]schema.Block{
+							"addresses": schema.ListNestedBlock{
+								Description: "Required. At least one `addresses` block: the origin endpoints.",
+								Validators: []validator.List{
+									listvalidator.SizeAtLeast(1),
+								},
+								NestedObject: schema.NestedBlockObject{
+									Blocks: map[string]schema.Block{
+										"endpoint": schema.SingleNestedBlock{
+											Description: "Required. A single origin endpoint configuration.",
+											Validators: []validator.Object{
+												objectvalidator.IsRequired(),
+											},
 											Attributes: map[string]schema.Attribute{
 												"address": schema.StringAttribute{
 													Description: "The origin address (IP or hostname).",
@@ -274,13 +300,13 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 													Optional:    true,
 													Computed:    true,
 												},
-												"modules": schema.SingleNestedAttribute{
+											},
+											Blocks: map[string]schema.Block{
+												"modules": schema.SingleNestedBlock{
 													Description: "Address-level modules.",
-													Optional:    true,
-													Attributes: map[string]schema.Attribute{
-														"load_balancer": schema.SingleNestedAttribute{
+													Blocks: map[string]schema.Block{
+														"load_balancer": schema.SingleNestedBlock{
 															Description: "Load balancer module at address level.",
-															Optional:    true,
 															Attributes: map[string]schema.Attribute{
 																"server_role": schema.StringAttribute{
 																	Description: "Role of the address in load balancing (primary or backup).",
@@ -299,9 +325,8 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									},
 								},
 							},
-							"connection_options": schema.SingleNestedAttribute{
+							"connection_options": schema.SingleNestedBlock{
 								Description: "HTTP connection options.",
-								Optional:    true,
 								Attributes: map[string]schema.Attribute{
 									"dns_resolution": schema.StringAttribute{
 										Description: "DNS resolution strategy.",
@@ -337,21 +362,20 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 									},
 								},
 							},
-							"modules": schema.SingleNestedAttribute{
+							"modules": schema.SingleNestedBlock{
 								Description: "HTTP modules configuration.",
-								Optional:    true,
-								Attributes: map[string]schema.Attribute{
-									"load_balancer": schema.SingleNestedAttribute{
+								Blocks: map[string]schema.Block{
+									"load_balancer": schema.SingleNestedBlock{
 										Description: "Load balancer module.",
-										Optional:    true,
 										Attributes: map[string]schema.Attribute{
 											"enabled": schema.BoolAttribute{
 												Description: "Whether load balancer is enabled.",
 												Optional:    true,
 											},
-											"config": schema.SingleNestedAttribute{
+										},
+										Blocks: map[string]schema.Block{
+											"config": schema.SingleNestedBlock{
 												Description: "Load balancer configuration.",
-												Optional:    true,
 												Attributes: map[string]schema.Attribute{
 													"method": schema.StringAttribute{
 														Description: "Load balancing method (round_robin, least_conn, ip_hash).",
@@ -373,21 +397,20 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 											},
 										},
 									},
-									"origin_shield": schema.SingleNestedAttribute{
+									"origin_shield": schema.SingleNestedBlock{
 										Description: "Origin shield module.",
-										Optional:    true,
 										Attributes: map[string]schema.Attribute{
 											"enabled": schema.BoolAttribute{
 												Description: "Whether origin shield is enabled.",
 												Optional:    true,
 											},
-											"config": schema.SingleNestedAttribute{
+										},
+										Blocks: map[string]schema.Block{
+											"config": schema.SingleNestedBlock{
 												Description: "Origin shield configuration.",
-												Optional:    true,
-												Attributes: map[string]schema.Attribute{
-													"origin_ip_acl": schema.SingleNestedAttribute{
+												Blocks: map[string]schema.Block{
+													"origin_ip_acl": schema.SingleNestedBlock{
 														Description: "Origin IP ACL configuration.",
-														Optional:    true,
 														Attributes: map[string]schema.Attribute{
 															"enabled": schema.BoolAttribute{
 																Description: "Whether the origin IP ACL is enabled.",
@@ -395,25 +418,26 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 															},
 														},
 													},
-													"hmac": schema.SingleNestedAttribute{
+													"hmac": schema.SingleNestedBlock{
 														Description: "HMAC configuration for origin shield.",
-														Optional:    true,
 														Attributes: map[string]schema.Attribute{
 															"enabled": schema.BoolAttribute{
 																Description: "Whether HMAC is enabled.",
 																Optional:    true,
 															},
-															"config": schema.SingleNestedAttribute{
+														},
+														Blocks: map[string]schema.Block{
+															"config": schema.SingleNestedBlock{
 																Description: "AWS4 HMAC configuration.",
-																Optional:    true,
 																Attributes: map[string]schema.Attribute{
 																	"type": schema.StringAttribute{
 																		Description: "HMAC type (e.g., aws4_hmac_sha256).",
 																		Optional:    true,
 																	},
-																	"attributes": schema.SingleNestedAttribute{
+																},
+																Blocks: map[string]schema.Block{
+																	"attributes": schema.SingleNestedBlock{
 																		Description: "AWS4 HMAC attributes.",
-																		Optional:    true,
 																		Attributes: map[string]schema.Attribute{
 																			"region": schema.StringAttribute{
 																				Description: "AWS region.",

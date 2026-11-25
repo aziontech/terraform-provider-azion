@@ -17,7 +17,7 @@ Provides a resource to manage DNSSEC (DNS Security Extensions) settings for an I
 ```terraform
 # First, create the parent DNS zone
 resource "azion_intelligent_dns_zone" "example" {
-  zone = {
+  zone {
     name    = "example.com"
     active  = true
     domain  = "example.com"
@@ -27,7 +27,7 @@ resource "azion_intelligent_dns_zone" "example" {
 # Then configure DNSSEC for that zone
 resource "azion_intelligent_dns_dnssec" "example" {
   zone_id = azion_intelligent_dns_zone.example.id
-  dnssec = {
+  dnssec {
     is_enabled = true
   }
 }
@@ -38,7 +38,7 @@ resource "azion_intelligent_dns_dnssec" "example" {
 ```terraform
 resource "azion_intelligent_dns_dnssec" "example" {
   zone_id = "12345"
-  dnssec = {
+  dnssec {
     is_enabled = true
   }
 }
@@ -54,15 +54,18 @@ terraform import azion_intelligent_dns_dnssec.example <zone_id>
 
 ### Required
 
-- `dnssec` (Attributes) DNSSEC configuration block. (see [below for nested schema](#nestedatt--dnssec))
 - `zone_id` (String) The zone identifier to target for the resource.
+
+### Optional
+
+- `dnssec` (Block, Optional) Required. DNSSEC configuration block. (see [below for nested schema](#nestedblock--dnssec))
 
 ### Read-Only
 
 - `last_updated` (String) Timestamp of the last Terraform update of the order.
 - `schema_version` (Number) Schema Version.
 
-<a id="nestedatt--dnssec"></a>
+<a id="nestedblock--dnssec"></a>
 ### Nested Schema for `dnssec`
 
 Required:

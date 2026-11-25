@@ -17,7 +17,7 @@ Creates and manages a firewall rules engine rule. The firewall rules engine allo
 ```terraform
 # First, create the parent firewall
 resource "azion_firewall_main_setting" "example" {
-  data = {
+  data {
     name   = "My Firewall"
     active = true
   }
@@ -26,31 +26,25 @@ resource "azion_firewall_main_setting" "example" {
 # Then create the rule engine for that firewall
 resource "azion_firewall_rule_engine" "example" {
   firewall_id = azion_firewall_main_setting.example.data.id
-  results = {
+  results {
     name        = "Block Specific Path"
     description = "Block requests to specific path"
     active      = true
-    behaviors = [
-      {
-        behavior = {
-          type = "drop"
+    behaviors {
+      behavior {
+        type = "drop"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "${request_uri}"
+          operator    = "matches"
+          conditional = "if"
+          argument    = "/admin.*"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "${request_uri}"
-              operator    = "matches"
-              conditional = "if"
-              argument    = "/admin.*"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 ```
@@ -60,31 +54,25 @@ resource "azion_firewall_rule_engine" "example" {
 ```terraform
 resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
-  results = {
+  results {
     name        = "Block Specific Path"
     description = "Block requests to specific path"
     active      = true
-    behaviors = [
-      {
-        behavior = {
-          type = "drop"
+    behaviors {
+      behavior {
+        type = "drop"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "${request_uri}"
+          operator    = "matches"
+          conditional = "if"
+          argument    = "/admin.*"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "${request_uri}"
-              operator    = "matches"
-              conditional = "if"
-              argument    = "/admin.*"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 ```
@@ -94,34 +82,28 @@ resource "azion_firewall_rule_engine" "example" {
 ```terraform
 resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
-  results = {
+  results {
     name        = "Run Function on API Requests"
     description = "Execute edge function for API requests"
     active      = true
-    behaviors = [
-      {
-        behavior = {
-          type = "run_function"
-          attributes = {
-            value = 12345  # Function instance ID
-          }
+    behaviors {
+      behavior {
+        type = "run_function"
+        attributes {
+          value = 12345 # Function instance ID
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "${request_uri}"
-              operator    = "starts_with"
-              conditional = "if"
-              argument    = "/api/"
-            }
-          }
-        ]
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "${request_uri}"
+          operator    = "starts_with"
+          conditional = "if"
+          argument    = "/api/"
+        }
       }
-    ]
+    }
   }
 }
 ```
@@ -131,36 +113,30 @@ resource "azion_firewall_rule_engine" "example" {
 ```terraform
 resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
-  results = {
+  results {
     name        = "Custom Response for Maintenance"
     description = "Return maintenance page"
     active      = true
-    behaviors = [
-      {
-        behavior = {
-          type = "set_custom_response"
-          attributes = {
-            status_code  = 503
-            content_type = "text/html"
-            content_body = "<html><body><h1>Under Maintenance</h1></body></html>"
-          }
+    behaviors {
+      behavior {
+        type = "set_custom_response"
+        attributes {
+          status_code  = 503
+          content_type = "text/html"
+          content_body = "<html><body><h1>Under Maintenance</h1></body></html>"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "${host}"
-              operator    = "is_equal"
-              conditional = "if"
-              argument    = "maintenance.example.com"
-            }
-          }
-        ]
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "${host}"
+          operator    = "is_equal"
+          conditional = "if"
+          argument    = "maintenance.example.com"
+        }
       }
-    ]
+    }
   }
 }
 ```
@@ -170,35 +146,29 @@ resource "azion_firewall_rule_engine" "example" {
 ```terraform
 resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
-  results = {
+  results {
     name        = "Enable WAF"
     description = "Enable WAF protection"
     active      = true
-    behaviors = [
-      {
-        behavior = {
-          type = "set_waf"
-          attributes = {
-            waf_id = 98765
-            mode   = "blocking"
-          }
+    behaviors {
+      behavior {
+        type = "set_waf"
+        attributes {
+          waf_id = 98765
+          mode   = "blocking"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "${host}"
-              operator    = "is_equal"
-              conditional = "if"
-              argument    = "api.example.com"
-            }
-          }
-        ]
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "${host}"
+          operator    = "is_equal"
+          conditional = "if"
+          argument    = "api.example.com"
+        }
       }
-    ]
+    }
   }
 }
 ```
@@ -208,37 +178,31 @@ resource "azion_firewall_rule_engine" "example" {
 ```terraform
 resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
-  results = {
+  results {
     name        = "Rate Limit API Requests"
     description = "Limit API request rate"
     active      = true
-    behaviors = [
-      {
-        behavior = {
-          type = "set_rate_limit"
-          attributes = {
-            type               = "second"
-            limit_by           = "client_ip"
-            average_rate_limit = 100
-            maximum_burst_size = 200
-          }
+    behaviors {
+      behavior {
+        type = "set_rate_limit"
+        attributes {
+          type               = "second"
+          limit_by           = "client_ip"
+          average_rate_limit = 100
+          maximum_burst_size = 200
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "${request_uri}"
-              operator    = "starts_with"
-              conditional = "if"
-              argument    = "/api/"
-            }
-          }
-        ]
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "${request_uri}"
+          operator    = "starts_with"
+          conditional = "if"
+          argument    = "/api/"
+        }
       }
-    ]
+    }
   }
 }
 ```
@@ -259,43 +223,35 @@ resource "azion_firewall_rule_engine" "example" {
 ```terraform
 resource "azion_firewall_rule_engine" "example" {
   firewall_id = 1234567890
-  results = {
+  results {
     name        = "Complex Rule"
     description = "Rule with multiple criteria groups"
     active      = true
-    behaviors = [
-      {
-        behavior = {
-          type = "drop"
+    behaviors {
+      behavior {
+        type = "drop"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "${request_uri}"
+          operator    = "matches"
+          conditional = "if"
+          argument    = "/admin.*"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "${request_uri}"
-              operator    = "matches"
-              conditional = "if"
-              argument    = "/admin.*"
-            }
-          }
-        ]
-      },
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "${network}"
-              operator    = "is_in_list"
-              conditional = "and"
-              argument    = "12345"
-            }
-          }
-        ]
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "${network}"
+          operator    = "is_in_list"
+          conditional = "and"
+          argument    = "12345"
+        }
       }
-    ]
+    }
   }
 }
 ```
@@ -305,20 +261,20 @@ resource "azion_firewall_rule_engine" "example" {
 ### Required
 
 - `firewall_id` (Number) The firewall identifier.
-- `results` (Attributes) The rule configuration. (see [below for nested schema](#nestedatt--results))
+- `results` (Block) The rule configuration. Exactly one `results` block is required. (see [below for nested schema](#nestedblock--results))
 
 ### Read-Only
 
 - `id` (String) The ID of this resource in the format `{firewall_id}/{rule_id}`.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
-<a id="nestedatt--results"></a>
+<a id="nestedblock--results"></a>
 ### Nested Schema for `results`
 
 Required:
 
-- `behaviors` (Attributes List) Behaviors for the rule. Each item must contain a single `behavior` object. (see [below for nested schema](#nestedatt--results--behaviors))
-- `criteria` (Attributes List) Criteria for the rule. (see [below for nested schema](#nestedatt--results--criteria))
+- `behaviors` (Block List, Min: 1) Behaviors for the rule; repeat the block for each behavior. Each block must contain a single `behavior` block. (see [below for nested schema](#nestedblock--results--behaviors))
+- `criteria` (Block List, Min: 1) Criteria for the rule; repeat the block for each criteria group. (see [below for nested schema](#nestedblock--results--criteria))
 - `name` (String) The name of the rule.
 
 Optional:
@@ -334,14 +290,14 @@ Read-Only:
 - `last_modified` (String) Last modified timestamp.
 - `order` (Int64) Order of the rule.
 
-<a id="nestedatt--results--behaviors"></a>
+<a id="nestedblock--results--behaviors"></a>
 ### Nested Schema for `results.behaviors`
 
 Required:
 
-- `behavior` (Attributes) A single behavior to apply on this rule. (see [below for nested schema](#nestedatt--results--behaviors--behavior))
+- `behavior` (Block) A single behavior to apply on this rule. (see [below for nested schema](#nestedblock--results--behaviors--behavior))
 
-<a id="nestedatt--results--behaviors--behavior"></a>
+<a id="nestedblock--results--behaviors--behavior"></a>
 ### Nested Schema for `results.behaviors.behavior`
 
 Required:
@@ -350,9 +306,9 @@ Required:
 
 Optional:
 
-- `attributes` (Attributes) Behavior attributes. Required for `run_function`, `set_custom_response`, `set_waf`, and `set_rate_limit` behaviors. Not needed for `deny` or `drop`. (see [below for nested schema](#nestedatt--results--behaviors--behavior--attributes))
+- `attributes` (Block) Behavior attributes. Required for `run_function`, `set_custom_response`, `set_waf`, and `set_rate_limit` behaviors. Not needed for `deny` or `drop`. (see [below for nested schema](#nestedblock--results--behaviors--behavior--attributes))
 
-<a id="nestedatt--results--behaviors--behavior--attributes"></a>
+<a id="nestedblock--results--behaviors--behavior--attributes"></a>
 ### Nested Schema for `results.behaviors.behavior.attributes`
 
 The attributes available depend on the behavior type:
@@ -375,21 +331,21 @@ The attributes available depend on the behavior type:
 - `average_rate_limit` (Int64, Required) Maximum requests per time window.
 - `maximum_burst_size` (Int64, Optional) Maximum burst size allowed.
 
-<a id="nestedatt--results--criteria"></a>
+<a id="nestedblock--results--criteria"></a>
 ### Nested Schema for `results.criteria`
 
 Required:
 
-- `entries` (Attributes List) List of criteria entries. Each item must contain a single `criterion` object. (see [below for nested schema](#nestedatt--results--criteria--entries))
+- `entries` (Block List, Min: 1) Criteria entries; repeat the block for each entry. Each block must contain a single `criterion` block. (see [below for nested schema](#nestedblock--results--criteria--entries))
 
-<a id="nestedatt--results--criteria--entries"></a>
+<a id="nestedblock--results--criteria--entries"></a>
 ### Nested Schema for `results.criteria.entries`
 
 Required:
 
-- `criterion` (Attributes) A single criterion entry. (see [below for nested schema](#nestedatt--results--criteria--entries--criterion))
+- `criterion` (Block) A single criterion entry. (see [below for nested schema](#nestedblock--results--criteria--entries--criterion))
 
-<a id="nestedatt--results--criteria--entries--criterion"></a>
+<a id="nestedblock--results--criteria--entries--criterion"></a>
 ### Nested Schema for `results.criteria.entries.criterion`
 
 Required:
@@ -444,7 +400,7 @@ against, not a value to compare. Write it as a string containing only digits —
 it to the numeric ID the API expects:
 
 ```terraform
-criterion = {
+criterion {
   variable    = "${network}"
   operator    = "is_in_list"
   conditional = "if"

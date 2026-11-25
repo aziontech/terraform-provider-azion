@@ -1,5 +1,5 @@
 resource "azion_network_list" "example_countries" {
-  results = {
+  results {
     name = "NetworkList Countries Example"
     type = "countries"
     items = [
@@ -11,7 +11,7 @@ resource "azion_network_list" "example_countries" {
 }
 
 resource "azion_network_list" "example_ip_cidr" {
-  results = {
+  results {
     name = "NetworkList IP CIDR Example"
     type = "ip_cidr"
     items = [
@@ -23,7 +23,7 @@ resource "azion_network_list" "example_ip_cidr" {
 }
 
 resource "azion_network_list" "example_asn" {
-  results = {
+  results {
     name = "NetworkList ASN Example"
     type = "asn"
     items = [

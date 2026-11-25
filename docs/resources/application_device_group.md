@@ -15,7 +15,7 @@ Creates an application device group resource. Device groups allow you to categor
 ```terraform
 # First, create the parent application
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
   }
@@ -24,7 +24,7 @@ resource "azion_application_main_setting" "example" {
 # Then create the device group for that application
 resource "azion_application_device_group" "mobile" {
   application_id = azion_application_main_setting.example.application.application_id
-  device_group = {
+  device_group {
     name       = "mobiledevices"
     user_agent = ".*(Mobile|Android|iPhone).*"
   }
@@ -36,7 +36,7 @@ resource "azion_application_device_group" "mobile" {
 ```terraform
 resource "azion_application_device_group" "mobile" {
   application_id = 12345
-  device_group = {
+  device_group {
     name       = "mobiledevices"
     user_agent = ".*(Mobile|Android|iPhone).*"
   }
@@ -48,7 +48,7 @@ resource "azion_application_device_group" "mobile" {
 ```terraform
 resource "azion_application_device_group" "tablet" {
   application_id = 12345
-  device_group = {
+  device_group {
     name       = "tablets"
     user_agent = ".*(iPad|Tablet|Kindle).*"
   }
@@ -61,7 +61,7 @@ resource "azion_application_device_group" "tablet" {
 # Mobile devices group
 resource "azion_application_device_group" "mobile" {
   application_id = 12345
-  device_group = {
+  device_group {
     name       = "mobile"
     user_agent = ".*(Mobile|Android|iPhone).*"
   }
@@ -70,7 +70,7 @@ resource "azion_application_device_group" "mobile" {
 # Desktop browsers group
 resource "azion_application_device_group" "desktop" {
   application_id = 12345
-  device_group = {
+  device_group {
     name       = "desktop"
     user_agent = ".*(Windows NT|Macintosh|Linux).*"
   }
@@ -97,7 +97,10 @@ terraform import azion_application_device_group.mobile "12345:67890"
 ### Required
 
 - `application_id` (Number) The application identifier.
-- `device_group` (Attributes) The device group configuration. (see [below for nested schema](#nestedatt--device_group))
+
+### Optional
+
+- `device_group` (Block, Optional) Required. The device group configuration. (see [below for nested schema](#nestedblock--device_group))
 
 ### Read-Only
 
@@ -105,7 +108,7 @@ terraform import azion_application_device_group.mobile "12345:67890"
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
 - `schema_version` (Number) Schema Version.
 
-<a id="nestedatt--device_group"></a>
+<a id="nestedblock--device_group"></a>
 ### Nested Schema for `device_group`
 
 Required:

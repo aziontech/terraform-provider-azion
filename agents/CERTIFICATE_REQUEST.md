@@ -81,6 +81,10 @@ _, err := client.api.DigitalCertificatesCertificatesAPI.
 
 ## Schema Definition
 
+**Schema:** `results` is a `SingleNestedBlock` (`results { ... }`, not `results = { ... }`) with `objectvalidator.IsRequired()` and a description starting with `Required.`, so Terraform rejects unknown or misplaced arguments with `Unsupported argument`. State is unchanged (same object shape). See "Nested Objects Must Be Blocks" in `AGENTS.md`.
+
+The fields below go inside the `results` block.
+
 ### Required Fields
 
 | Field | Type | Description |

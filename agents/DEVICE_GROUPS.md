@@ -956,6 +956,8 @@ func (r *applicationDeviceGroupResource) ImportState(ctx context.Context, req re
 
 ### Resource Schema
 
+`device_group` is a `SingleNestedBlock` (`device_group { ... }`), not a nested attribute, so Terraform rejects unknown or misplaced arguments (see "Nested Objects Must Be Blocks" in `AGENTS.md`). Blocks have no `Required` flag: `objectvalidator.IsRequired()` plus a description starting with `Required.` take its place. The request payloads did not change.
+
 ```go
 func (r *applicationDeviceGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
     resp.Schema = schema.Schema{
@@ -978,8 +980,13 @@ func (r *applicationDeviceGroupResource) Schema(_ context.Context, _ resource.Sc
             "schema_version": schema.Int64Attribute{
                 Computed: true,
             },
-            "device_group": schema.SingleNestedAttribute{
-                Required: true,
+        },
+        Blocks: map[string]schema.Block{
+            "device_group": schema.SingleNestedBlock{
+                Description: "Required. The device group configuration.",
+                Validators: []validator.Object{
+                    objectvalidator.IsRequired(),
+                },
                 Attributes: map[string]schema.Attribute{
                     "id": schema.Int64Attribute{
                         Description: "The device group identifier.",
@@ -1171,7 +1178,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent application
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
   }
@@ -1180,7 +1187,7 @@ resource "azion_application_main_setting" "example" {
 # Then create the device group for that application
 resource "azion_application_device_group" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  device_group = {
+  device_group {
     name       = "mobiledevices"
     user_agent = ".*(Mobile|Android|iPhone).*"
   }
@@ -1275,7 +1282,7 @@ Creates an Application Device Group resource.
 ```hcl
 resource "azion_application_device_group" "example" {
   application_id = 12345
-  device_group = {
+  device_group {
     name       = "Mobile Devices"
     user_agent = "(?i)(mobile|android|iphone)"
   }
@@ -1335,7 +1342,7 @@ data "azion_application_device_groups" "example" {
 ```hcl
 resource "azion_application_device_group" "example" {
   application_id = 12345
-  device_group = {
+  device_group {
     name       = "Mobile Devices"
     user_agent = "(?i)(mobile|android|iphone)"
   }

@@ -469,6 +469,8 @@ func (n *NetworkListsDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 ## Resource Implementation
 
+**Schema:** `results` is a `SingleNestedBlock` (`results { ... }`, not `results = { ... }`) with `objectvalidator.IsRequired()` and a description starting with `Required.`, so Terraform rejects unknown or misplaced arguments with `Unsupported argument`. State is unchanged (same object shape). See "Nested Objects Must Be Blocks" in `AGENTS.md`.
+
 **File:** `internal/resource_network_list.go`
 
 The resource implementation follows these patterns:
@@ -681,7 +683,7 @@ id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
 ```terraform
 # Network List with country codes
 resource "azion_network_list" "countries_example" {
-  results = {
+  results {
     name = "Blocked Countries"
     type = "countries"
     items = [
@@ -694,7 +696,7 @@ resource "azion_network_list" "countries_example" {
 
 # Network List with IP CIDR addresses
 resource "azion_network_list" "ip_cidr_example" {
-  results = {
+  results {
     name = "Allowed IPs"
     type = "ip_cidr"
     items = [
@@ -707,7 +709,7 @@ resource "azion_network_list" "ip_cidr_example" {
 
 # Network List with ASN numbers
 resource "azion_network_list" "asn_example" {
-  results = {
+  results {
     name = "Allowed ASNs"
     type = "asn"
     items = [

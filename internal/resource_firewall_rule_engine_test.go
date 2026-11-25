@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -77,5 +80,47 @@ func TestBuildFirewallCriterionArgument(t *testing.T) {
 				t.Errorf("got %s, want %s", got, tt.want)
 			}
 		})
+	}
+}
+
+// Nested objects are blocks so Terraform rejects unknown arguments instead of
+// dropping them, and the required ones carry a validator because tfplugindocs and
+// Terraform treat every block as optional.
+func TestFirewallRuleEngineNestedObjectsAreBlocks(t *testing.T) {
+	ctx := context.Background()
+
+	schemaResponse := &fwresource.SchemaResponse{}
+	NewFirewallRuleEngineResource().Schema(ctx, fwresource.SchemaRequest{}, schemaResponse)
+	if diags := schemaResponse.Schema.ValidateImplementation(ctx); diags.HasError() {
+		t.Fatalf("invalid schema implementation: %v", diags)
+	}
+
+	results, ok := schemaResponse.Schema.Blocks["results"].(schema.SingleNestedBlock)
+	if !ok || len(results.Validators) == 0 {
+		t.Fatal("results: must be a required single block")
+	}
+
+	criteria, ok := results.Blocks["criteria"].(schema.ListNestedBlock)
+	if !ok || len(criteria.Validators) == 0 {
+		t.Fatal("results.criteria: must be a list block with a size validator")
+	}
+	entries, ok := criteria.NestedObject.Blocks["entries"].(schema.ListNestedBlock)
+	if !ok || len(entries.Validators) == 0 {
+		t.Fatal("results.criteria.entries: must be a list block with a size validator")
+	}
+	if criterion, ok := entries.NestedObject.Blocks["criterion"].(schema.SingleNestedBlock); !ok || len(criterion.Validators) == 0 {
+		t.Error("results.criteria.entries.criterion: must be a required single block")
+	}
+
+	behaviors, ok := results.Blocks["behaviors"].(schema.ListNestedBlock)
+	if !ok || len(behaviors.Validators) == 0 {
+		t.Fatal("results.behaviors: must be a list block with a size validator")
+	}
+	behavior, ok := behaviors.NestedObject.Blocks["behavior"].(schema.SingleNestedBlock)
+	if !ok || len(behavior.Validators) == 0 {
+		t.Fatal("results.behaviors.behavior: must be a required single block")
+	}
+	if attributes, ok := behavior.Blocks["attributes"].(schema.SingleNestedBlock); !ok || len(attributes.Validators) != 0 {
+		t.Error("results.behaviors.behavior.attributes: must be an optional single block")
 	}
 }

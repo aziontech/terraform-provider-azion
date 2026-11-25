@@ -1,34 +1,32 @@
 resource "azion_custom_page" "example" {
-  custom_page = {
+  custom_page {
     name   = "My Custom Error Pages"
     active = true
-    pages = [
-      {
-        entry = {
-          code = "404"
-          page = {
-            type = "application"
-            attributes = {
-              connector = 12345
-              ttl       = 60
-              uri       = "/errors/404.html"
-            }
-          }
-        }
-      },
-      {
-        entry = {
-          code = "500"
-          page = {
-            type = "application"
-            attributes = {
-              connector = 12345
-              ttl       = 60
-              uri       = "/errors/500.html"
-            }
+    pages {
+      entry {
+        code = "404"
+        page {
+          type = "application"
+          attributes {
+            connector = 12345
+            ttl       = 60
+            uri       = "/errors/404.html"
           }
         }
       }
-    ]
+    }
+    pages {
+      entry {
+        code = "500"
+        page {
+          type = "application"
+          attributes {
+            connector = 12345
+            ttl       = 60
+            uri       = "/errors/500.html"
+          }
+        }
+      }
+    }
   }
 }

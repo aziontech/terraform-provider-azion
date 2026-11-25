@@ -1,7 +1,7 @@
 # Example: Complete setup with parent WAF
 # First, create the parent WAF
 resource "azion_waf" "example" {
-  result = {
+  result {
     name   = "My WAF"
     active = true
   }
@@ -10,21 +10,19 @@ resource "azion_waf" "example" {
 # Then create the rule set for that WAF
 resource "azion_waf_rule_set" "example_with_parent" {
   waf_id = azion_waf.example.id
-  result = {
+  result {
     name     = "My WAF Exception"
     path     = "/api/*"
     active   = true
     operator = "regex"
     rule_id  = 0
 
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
 
@@ -32,21 +30,19 @@ resource "azion_waf_rule_set" "example_with_parent" {
 # Generic conditions only use the 'match' field
 resource "azion_waf_rule_set" "example" {
   waf_id = 12345
-  result = {
+  result {
     name     = "My WAF Exception"
     path     = "/api/*"
     active   = true
     operator = "regex"
     rule_id  = 0
 
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
 
@@ -54,20 +50,18 @@ resource "azion_waf_rule_set" "example" {
 # Specific on name conditions require the 'name' field
 resource "azion_waf_rule_set" "header_example" {
   waf_id = 12345
-  result = {
+  result {
     name    = "Header Exception"
     active  = true
     rule_id = 0
 
-    conditions = [
-      {
-        condition = {
-          match          = "specific_http_header_name"
-          name           = "X-Custom-Header"
-          condition_type = "specific_on_name"
-        }
+    conditions {
+      condition {
+        match          = "specific_http_header_name"
+        name           = "X-Custom-Header"
+        condition_type = "specific_on_name"
       }
-    ]
+    }
   }
 }
 
@@ -75,47 +69,43 @@ resource "azion_waf_rule_set" "header_example" {
 # Specific on value conditions require the 'value' field
 resource "azion_waf_rule_set" "value_example" {
   waf_id = 12345
-  result = {
+  result {
     name    = "Query String Exception"
     active  = true
     rule_id = 0
 
-    conditions = [
-      {
-        condition = {
-          match          = "specific_query_string_value"
-          value          = "trusted_value"
-          condition_type = "specific_on_value"
-        }
+    conditions {
+      condition {
+        match          = "specific_query_string_value"
+        value          = "trusted_value"
+        condition_type = "specific_on_value"
       }
-    ]
+    }
   }
 }
 
 # Create a WAF rule set with multiple conditions
 resource "azion_waf_rule_set" "multi_condition_example" {
   waf_id = 12345
-  result = {
+  result {
     name     = "Multi Condition Exception"
     path     = "/api/v1/*"
     operator = "regex"
     active   = true
     rule_id  = 0
 
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
-      },
-      {
-        condition = {
-          match          = "specific_http_header_name"
-          name           = "Authorization"
-          condition_type = "specific_on_name"
-        }
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
+    conditions {
+      condition {
+        match          = "specific_http_header_name"
+        name           = "Authorization"
+        condition_type = "specific_on_name"
+      }
+    }
   }
 }

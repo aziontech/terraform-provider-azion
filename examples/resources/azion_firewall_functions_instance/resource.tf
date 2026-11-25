@@ -1,11 +1,11 @@
 # Example: Complete setup with parent firewall
 # First, create the parent firewall with functions module enabled
 resource "azion_firewall_main_setting" "example" {
-  data = {
+  data {
     name   = "My Firewall"
     active = true
-    modules = {
-      functions = {
+    modules {
+      functions {
         enabled = true
       }
     }
@@ -15,7 +15,7 @@ resource "azion_firewall_main_setting" "example" {
 # Then create the function instance for that firewall
 resource "azion_firewall_functions_instance" "example" {
   firewall_id = azion_firewall_main_setting.example.data.id
-  data = {
+  data {
     name     = "Terraform Test"
     function = 9359
     args = jsonencode({
@@ -27,7 +27,7 @@ resource "azion_firewall_functions_instance" "example" {
 # Example: Using hardcoded firewall ID
 resource "azion_firewall_functions_instance" "example_simple" {
   firewall_id = 12464
-  data = {
+  data {
     name     = "Terraform Test"
     function = 9359
     args = jsonencode({

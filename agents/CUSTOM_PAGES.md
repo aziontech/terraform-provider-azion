@@ -706,75 +706,54 @@ customPageRequest.SetPages(pages)
 ## Resource Schema Definition
 
 ```go
-func (r *CustomPageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
     resp.Schema = schema.Schema{
         Description: "Creates a Custom Page resource.",
         Attributes: map[string]schema.Attribute{
-            "id": schema.StringAttribute{
-                Computed: true,
-                PlanModifiers: []planmodifier.String{
-                    stringplanmodifier.UseStateForUnknown(),
-                },
-            },
-            "last_updated": schema.StringAttribute{
-                Description: "Timestamp of the last Terraform update of the resource.",
-                Computed:    true,
-            },
-            "custom_page": schema.SingleNestedAttribute{
-                Required: true,
+            "id":           schema.StringAttribute{Computed: true, /* UseStateForUnknown */},
+            "last_updated": schema.StringAttribute{Computed: true},
+        },
+        Blocks: map[string]schema.Block{
+            "custom_page": schema.SingleNestedBlock{
+                Description: "Required. The custom page settings.",
+                Validators:  []validator.Object{objectvalidator.IsRequired()},
                 Attributes: map[string]schema.Attribute{
-                    "id": schema.Int64Attribute{
-                        Description: "The custom page identifier.",
-                        Computed:    true,
-                    },
-                    "name": schema.StringAttribute{
-                        Description: "Name of the custom page.",
-                        Required:    true,
-                    },
-                    "active": schema.BoolAttribute{
-                        Description: "Status of the custom page.",
-                        Optional:    true,
-                        Computed:    true,
-                    },
-                    "pages": schema.ListNestedAttribute{
-                        Description: "List of pages associated with the custom page.",
-                        Required:    true,
-                        NestedObject: schema.NestedAttributeObject{
-                            Attributes: map[string]schema.Attribute{
-                                "code": schema.StringAttribute{
-                                    Description: "HTTP status code for the page.",
-                                    Required:    true,
-                                },
-                                "page": schema.SingleNestedAttribute{
-                                    Description: "Page connector configuration.",
-                                    Required:    true,
+                    "name":   schema.StringAttribute{Required: true},
+                    "active": schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true)},
+                    // id, last_editor, last_modified, created_at, product_version,
+                    // state, version_id: Computed.
+                },
+                Blocks: map[string]schema.Block{
+                    "pages": schema.ListNestedBlock{
+                        Description: "Required. At least one `pages` block: ...",
+                        // Zero blocks arrive as a NULL list: IsRequired rejects it,
+                        // SizeAtLeast alone would let it through.
+                        Validators: []validator.List{
+                            listvalidator.IsRequired(),
+                            listvalidator.SizeAtLeast(1),
+                        },
+                        NestedObject: schema.NestedBlockObject{
+                            Blocks: map[string]schema.Block{
+                                "entry": schema.SingleNestedBlock{
+                                    Validators: []validator.Object{objectvalidator.IsRequired()},
                                     Attributes: map[string]schema.Attribute{
-                                        "type": schema.StringAttribute{
-                                            Description: "Type of the page connector.",
-                                            Required:    true,
-                                        },
-                                        "attributes": schema.SingleNestedAttribute{
-                                            Description: "Attributes of the page connector.",
-                                            Required:    true,
+                                        "code": schema.StringAttribute{Required: true},
+                                    },
+                                    Blocks: map[string]schema.Block{
+                                        "page": schema.SingleNestedBlock{
+                                            Validators: []validator.Object{objectvalidator.IsRequired()},
                                             Attributes: map[string]schema.Attribute{
-                                                "connector": schema.Int64Attribute{
-                                                    Description: "Connector ID.",
-                                                    Required:    true,
-                                                },
-                                                "ttl": schema.Int64Attribute{
-                                                    Description: "Time to live for the page.",
-                                                    Optional:    true,
-                                                    Computed:    true,
-                                                },
-                                                "uri": schema.StringAttribute{
-                                                    Description: "URI for the page.",
-                                                    Optional:    true,
-                                                    Computed:    true,
-                                                },
-                                                "custom_status_code": schema.Int64Attribute{
-                                                    Description: "Custom status code for the page.",
-                                                    Optional:    true,
-                                                    Computed:    true,
+                                                "type": schema.StringAttribute{Required: true},
+                                            },
+                                            Blocks: map[string]schema.Block{
+                                                "attributes": schema.SingleNestedBlock{
+                                                    Validators: []validator.Object{objectvalidator.IsRequired()},
+                                                    Attributes: map[string]schema.Attribute{
+                                                        "connector":          schema.Int64Attribute{Required: true},
+                                                        "ttl":                schema.Int64Attribute{Optional: true, Computed: true},
+                                                        "uri":                schema.StringAttribute{Optional: true, Computed: true},
+                                                        "custom_status_code": schema.Int64Attribute{Optional: true, Computed: true},
+                                                    },
                                                 },
                                             },
                                         },
@@ -783,36 +762,12 @@ func (r *CustomPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
                             },
                         },
                     },
-                    // Computed fields...
-                    "last_editor": schema.StringAttribute{
-                        Description: "The last editor of the custom page.",
-                        Computed:    true,
-                    },
-                    "last_modified": schema.StringAttribute{
-                        Description: "Last modified timestamp of the custom page.",
-                        Computed:    true,
-                    },
-                    "created_at": schema.StringAttribute{
-                        Description: "The creation timestamp of the custom page.",
-                        Computed:    true,
-                    },
-                    "product_version": schema.StringAttribute{
-                        Description: "Product version of the custom page.",
-                        Computed:    true,
-                    },
-                    "state": schema.StringAttribute{
-                        Description: "The state of the current custom page version.",
-                        Computed:    true,
-                    },
-                    "version_id": schema.StringAttribute{
-                        Description: "The identifier of the current custom page version.",
-                        Computed:    true,
-                    },
                 },
             },
         },
     }
 }
+```
 
 ---
 
@@ -836,7 +791,9 @@ func (r *CustomPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 
 ### Nested Object Patterns
 
-For complex nested structures like `pages`, use `ListNestedAttribute`:
+In the **resource**, every nested object is a block (`custom_page { pages { entry { page { attributes { ... } } } } }`), so Terraform rejects unknown arguments with `Unsupported argument`; see the schema above and "Nested Objects Must Be Blocks" in `AGENTS.md`. All of them are required, so `Required` leaves inside them are safe (a `Required` attribute inside an *optional* block would be reported missing when the block is omitted). State written with the old nested-attribute syntax is read unchanged.
+
+In the **data sources**, nested objects are Computed, so `ListNestedAttribute` stays:
 
 ```go
 "pages": schema.ListNestedAttribute{

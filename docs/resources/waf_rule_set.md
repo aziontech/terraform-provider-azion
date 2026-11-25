@@ -43,7 +43,7 @@ Creates a WAF exception (rule set) resource. WAF exceptions allow you to bypass 
 ```terraform
 # First, create the parent WAF
 resource "azion_waf" "example" {
-  result = {
+  result {
     name   = "My WAF"
     active = true
   }
@@ -52,20 +52,19 @@ resource "azion_waf" "example" {
 # Then create the rule set for that WAF
 resource "azion_waf_rule_set" "example" {
   waf_id = azion_waf.example.id
-  result = {
+  result {
     name     = "My WAF Exception"
     path     = "/api/*"
     active   = true
     operator = "regex"
     rule_id  = 0
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
+
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
 ```
@@ -75,20 +74,19 @@ resource "azion_waf_rule_set" "example" {
 ```terraform
 resource "azion_waf_rule_set" "example" {
   waf_id = 12345
-  result = {
+  result {
     name     = "My WAF Exception"
     path     = "/api/*"
     active   = true
     operator = "regex"
     rule_id  = 0
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
+
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
 ```
@@ -98,19 +96,18 @@ resource "azion_waf_rule_set" "example" {
 ```terraform
 resource "azion_waf_rule_set" "header_example" {
   waf_id = 12345
-  result = {
+  result {
     name    = "Header Exception"
     active  = true
     rule_id = 0
-    conditions = [
-      {
-        condition = {
-          match          = "specific_http_header_name"
-          name           = "X-Custom-Header"
-          condition_type = "specific_on_name"
-        }
+
+    conditions {
+      condition {
+        match          = "specific_http_header_name"
+        name           = "X-Custom-Header"
+        condition_type = "specific_on_name"
       }
-    ]
+    }
   }
 }
 ```
@@ -120,19 +117,18 @@ resource "azion_waf_rule_set" "header_example" {
 ```terraform
 resource "azion_waf_rule_set" "value_example" {
   waf_id = 12345
-  result = {
+  result {
     name    = "Query String Exception"
     active  = true
     rule_id = 0
-    conditions = [
-      {
-        condition = {
-          match          = "specific_query_string_value"
-          value          = "trusted_value"
-          condition_type = "specific_on_value"
-        }
+
+    conditions {
+      condition {
+        match          = "specific_query_string_value"
+        value          = "trusted_value"
+        condition_type = "specific_on_value"
       }
-    ]
+    }
   }
 }
 ```
@@ -143,27 +139,30 @@ resource "azion_waf_rule_set" "value_example" {
 ### Required
 
 - `waf_id` (Number) The WAF identifier.
-- `result` (Attributes) The WAF exception configuration. (see [below for nested schema](#nestedatt--result))
+
+### Optional
+
+- `result` (Block, Optional) Required. The WAF exception. (see [below for nested schema](#nestedblock--result))
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) Identifier of the resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
-<a id="nestedatt--result"></a>
+<a id="nestedblock--result"></a>
 ### Nested Schema for `result`
 
 Required:
 
 - `name` (String) Name of the WAF exception.
-- `conditions` (Attributes List) Conditions for the WAF exception. Each item must contain a single `condition` object. (see [below for nested schema](#nestedatt--result--conditions))
 
 Optional:
 
 - `active` (Boolean) Whether the exception is active.
-- `operator` (String) The operator for the exception (regex or contains).
-- `path` (String) Path pattern for the exception.
-- `rule_id` (Number) The rule ID that this exception applies to. 0 means all rules.
+- `conditions` (Block List) Required. Conditions for the WAF exception, one `conditions` block per condition. At least one is required. (see [below for nested schema](#nestedblock--result--conditions))
+- `operator` (String) The operator for the exception: regex or contains. Supplied by the API when not declared.
+- `path` (String) Path pattern for the exception. Supplied by the API when not declared.
+- `rule_id` (Number) The rule ID that this exception applies to. 0 means all rules. Supplied by the API when not declared.
 
 Read-Only:
 
@@ -171,14 +170,14 @@ Read-Only:
 - `last_editor` (String) Last editor of the exception.
 - `last_modified` (String) Last modified timestamp.
 
-<a id="nestedatt--result--conditions"></a>
+<a id="nestedblock--result--conditions"></a>
 ### Nested Schema for `result.conditions`
 
-Required:
+Optional:
 
-- `condition` (Attributes) A single condition for the WAF exception. (see [below for nested schema](#nestedatt--result--conditions--condition))
+- `condition` (Block, Optional) Required. A single condition for the WAF exception. (see [below for nested schema](#nestedblock--result--conditions--condition))
 
-<a id="nestedatt--result--conditions--condition"></a>
+<a id="nestedblock--result--conditions--condition"></a>
 ### Nested Schema for `result.conditions.condition`
 
 Required:
@@ -188,8 +187,8 @@ Required:
 
 Optional:
 
-- `name` (String) The name for specific condition on name.
-- `value` (String) The value for specific condition on value.
+- `name` (String) The name for specific condition on name. Supplied by the API when not declared.
+- `value` (String) The value for specific condition on value. Supplied by the API when not declared.
 
 ## Condition Match Types
 

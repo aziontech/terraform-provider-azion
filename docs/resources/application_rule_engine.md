@@ -17,7 +17,7 @@ description: |-
 ```terraform
 # First, create the parent application
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
   }
@@ -26,36 +26,30 @@ resource "azion_application_main_setting" "example" {
 # Then create the rule engine for that application
 resource "azion_application_rule_engine" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  results = {
+  results {
     name        = "Terraform Example"
     phase       = "request"
     description = "My rule engine"
-    behaviors = [
-      {
-        behavior = {
-          type = "deliver"
-        }
-      },
-      {
-        behavior = {
-          type = "bypass_cache"
+    behaviors {
+      behavior {
+        type = "deliver"
+      }
+    }
+    behaviors {
+      behavior {
+        type = "bypass_cache"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "is_equal"
+          conditional = "if"
+          argument    = "/"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "is_equal"
-              conditional = "if"
-              argument    = "/"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 ```
@@ -65,36 +59,30 @@ resource "azion_application_rule_engine" "example" {
 ```terraform
 resource "azion_application_rule_engine" "example" {
   application_id = 1234567890
-  results = {
+  results {
     name        = "Terraform Example"
     phase       = "request"
     description = "My rule engine"
-    behaviors = [
-      {
-        behavior = {
-          type = "deliver"
-        }
-      },
-      {
-        behavior = {
-          type = "bypass_cache"
+    behaviors {
+      behavior {
+        type = "deliver"
+      }
+    }
+    behaviors {
+      behavior {
+        type = "bypass_cache"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "is_equal"
+          conditional = "if"
+          argument    = "/"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "is_equal"
-              conditional = "if"
-              argument    = "/"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 ```
@@ -104,37 +92,31 @@ resource "azion_application_rule_engine" "example" {
 ```terraform
 resource "azion_application_rule_engine" "example_with_args" {
   application_id = 1234567890
-  results = {
+  results {
     name        = "Add Header Example"
     phase       = "request"
     active      = true
     description = "Rule with behavior that has arguments"
 
-    behaviors = [
-      {
-        behavior = {
-          type = "add_request_header"
-          attributes = {
-            value = "X-Custom-Header: MyValue"
-          }
+    behaviors {
+      behavior {
+        type = "add_request_header"
+        attributes {
+          value = "X-Custom-Header: MyValue"
         }
       }
-    ]
+    }
 
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "starts_with"
-              conditional = "if"
-              argument    = "/api/"
-            }
-          }
-        ]
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "starts_with"
+          conditional = "if"
+          argument    = "/api/"
+        }
       }
-    ]
+    }
   }
 }
 ```
@@ -144,38 +126,32 @@ resource "azion_application_rule_engine" "example_with_args" {
 ```terraform
 resource "azion_application_rule_engine" "example_capture" {
   application_id = 1234567890
-  results = {
+  results {
     name        = "Capture Match Groups Example"
     phase       = "request"
     description = "Rule with capture_match_groups behavior"
 
-    behaviors = [
-      {
-        behavior = {
-          type = "capture_match_groups"
-          capture_attributes = {
-            subject        = "$${uri}"
-            regex          = "/api/([a-z]+)"
-            captured_array = "api_paths"
-          }
+    behaviors {
+      behavior {
+        type = "capture_match_groups"
+        capture_attributes {
+          subject        = "$${uri}"
+          regex          = "/api/([a-z]+)"
+          captured_array = "api_paths"
         }
       }
-    ]
+    }
 
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "matches"
-              conditional = "if"
-              argument    = "^/api/"
-            }
-          }
-        ]
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "matches"
+          conditional = "if"
+          argument    = "^/api/"
+        }
       }
-    ]
+    }
   }
 }
 ```
@@ -185,36 +161,30 @@ resource "azion_application_rule_engine" "example_capture" {
 ```terraform
 resource "azion_application_rule_engine" "example_response" {
   application_id = 1234567890
-  results = {
+  results {
     name        = "Response Phase Example"
     phase       = "response"
     description = "Response phase rule"
 
-    behaviors = [
-      {
-        behavior = {
-          type = "add_response_header"
-          attributes = {
-            value = "X-Response-Processed: true"
-          }
+    behaviors {
+      behavior {
+        type = "add_response_header"
+        attributes {
+          value = "X-Response-Processed: true"
         }
       }
-    ]
+    }
 
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${status}"
-              operator    = "is_equal"
-              conditional = "if"
-              argument    = "200"
-            }
-          }
-        ]
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${status}"
+          operator    = "is_equal"
+          conditional = "if"
+          argument    = "200"
+        }
       }
-    ]
+    }
   }
 }
 ```
@@ -229,36 +199,30 @@ resource "azion_connector" "storage_connector" {
 
 resource "azion_application_rule_engine" "example_set_connector" {
   application_id = 1234567890
-  results = {
+  results {
     name        = "Route to Storage Connector"
     phase       = "request"
     description = "Forward matching requests to the configured connector"
 
-    behaviors = [
-      {
-        behavior = {
-          type = "set_connector"
-          attributes = {
-            value = azion_connector.storage_connector.connector.id
-          }
+    behaviors {
+      behavior {
+        type = "set_connector"
+        attributes {
+          value = azion_connector.storage_connector.connector.id
         }
       }
-    ]
+    }
 
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "starts_with"
-              conditional = "if"
-              argument    = "/static/"
-            }
-          }
-        ]
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "starts_with"
+          conditional = "if"
+          argument    = "/static/"
+        }
       }
-    ]
+    }
   }
 }
 ```
@@ -312,7 +276,10 @@ The behaviors available for a rule depend on the rule's `phase` (`request` or `r
 ### Required
 
 - `application_id` (Number) The application identifier.
-- `results` (Attributes) (see [below for nested schema](#nestedatt--results))
+
+### Optional
+
+- `results` (Block, Optional) Required. The rules engine rule. (see [below for nested schema](#nestedblock--results))
 
 ### Read-Only
 
@@ -320,19 +287,19 @@ The behaviors available for a rule depend on the rule's `phase` (`request` or `r
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
 - `schema_version` (Number)
 
-<a id="nestedatt--results"></a>
+<a id="nestedblock--results"></a>
 ### Nested Schema for `results`
 
 Required:
 
-- `behaviors` (Attributes List) Behaviors for the rule. Each item must contain a single `behavior` object. (see [below for nested schema](#nestedatt--results--behaviors))
-- `criteria` (Attributes List) Criteria for the rule. (see [below for nested schema](#nestedatt--results--criteria))
 - `name` (String) The name of the rules engine rule.
 - `phase` (String) The phase in which the rule is executed (request or response).
 
 Optional:
 
 - `active` (Boolean) Whether the rule is active.
+- `behaviors` (Block List) Required. Behaviors for the rule: at least one `behaviors` block, each containing a single `behavior` block. (see [below for nested schema](#nestedblock--results--behaviors))
+- `criteria` (Block List) Criteria for the rule. Each `criteria` block is a group of `entries`. (see [below for nested schema](#nestedblock--results--criteria))
 - `description` (String) The description of the rules engine rule.
 
 Read-Only:
@@ -343,14 +310,14 @@ Read-Only:
 - `last_modified` (String) The last modified timestamp.
 - `order` (Number) The order of the rule in the rules engine.
 
-<a id="nestedatt--results--behaviors"></a>
+<a id="nestedblock--results--behaviors"></a>
 ### Nested Schema for `results.behaviors`
 
-Required:
+Optional:
 
-- `behavior` (Attributes) A single behavior to apply on this rule. (see [below for nested schema](#nestedatt--results--behaviors--behavior))
+- `behavior` (Block, Optional) Required. A single behavior to apply on this rule. (see [below for nested schema](#nestedblock--results--behaviors--behavior))
 
-<a id="nestedatt--results--behaviors--behavior"></a>
+<a id="nestedblock--results--behaviors--behavior"></a>
 ### Nested Schema for `results.behaviors.behavior`
 
 Required:
@@ -359,40 +326,44 @@ Required:
 
 Optional:
 
-- `attributes` (Attributes) Behavior attributes for behaviors that require arguments. (see [below for nested schema](#nestedatt--results--behaviors--behavior--attributes))
-- `capture_attributes` (Attributes) Capture attributes for capture_match_groups behavior. (see [below for nested schema](#nestedatt--results--behaviors--behavior--capture_attributes))
+- `attributes` (Block, Optional) Behavior attributes for behaviors that require arguments. (see [below for nested schema](#nestedblock--results--behaviors--behavior--attributes))
+- `capture_attributes` (Block, Optional) Capture attributes for capture_match_groups behavior. (see [below for nested schema](#nestedblock--results--behaviors--behavior--capture_attributes))
 
-<a id="nestedatt--results--behaviors--behavior--attributes"></a>
+<a id="nestedblock--results--behaviors--behavior--attributes"></a>
 ### Nested Schema for `results.behaviors.behavior.attributes`
 
-Required:
+Optional:
 
-- `value` (String) Value for the behavior.
+- `value` (String) Required. Value for the behavior.
 
-<a id="nestedatt--results--behaviors--behavior--capture_attributes"></a>
+
+<a id="nestedblock--results--behaviors--behavior--capture_attributes"></a>
 ### Nested Schema for `results.behaviors.behavior.capture_attributes`
 
-Required:
+Optional:
 
-- `captured_array` (String) Captured array name.
-- `regex` (String) Regex pattern.
-- `subject` (String) Subject for capture.
+- `captured_array` (String) Required. Captured array name.
+- `regex` (String) Required. Regex pattern.
+- `subject` (String) Required. Subject for capture.
 
-<a id="nestedatt--results--criteria"></a>
+
+
+
+<a id="nestedblock--results--criteria"></a>
 ### Nested Schema for `results.criteria`
 
-Required:
+Optional:
 
-- `entries` (Attributes List) List of criteria entries. Each item must contain a single `criterion` object. (see [below for nested schema](#nestedatt--results--criteria--entries))
+- `entries` (Block List) Required. Criteria entries: at least one `entries` block, each containing a single `criterion` block. (see [below for nested schema](#nestedblock--results--criteria--entries))
 
-<a id="nestedatt--results--criteria--entries"></a>
+<a id="nestedblock--results--criteria--entries"></a>
 ### Nested Schema for `results.criteria.entries`
 
-Required:
+Optional:
 
-- `criterion` (Attributes) A single criterion entry. (see [below for nested schema](#nestedatt--results--criteria--entries--criterion))
+- `criterion` (Block, Optional) Required. A single criterion entry. (see [below for nested schema](#nestedblock--results--criteria--entries--criterion))
 
-<a id="nestedatt--results--criteria--entries--criterion"></a>
+<a id="nestedblock--results--criteria--entries--criterion"></a>
 ### Nested Schema for `results.criteria.entries.criterion`
 
 Required:

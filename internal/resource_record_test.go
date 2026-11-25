@@ -16,7 +16,7 @@ func TestAccResourceRecord(t *testing.T) {
 	//				Config: providerConfig + `
 	//				resource "azion_intelligent_dns_record" "dev" {
 	//					zone_id = "2638"
-	//					record = {
+	//					record {
 	//					  type = "A"
 	//					  name = "www"
 	//					  rdata = [
@@ -46,7 +46,7 @@ func TestAccResourceRecord(t *testing.T) {
 	//		Config: providerConfig + `
 	//		resource "azion_intelligent_dns_record" "dev" {
 	//			zone_id = "2638"
-	//			record = {
+	//			record {
 	//			  type = "A"
 	//			  name = "ww2"
 	//			  rdata = [

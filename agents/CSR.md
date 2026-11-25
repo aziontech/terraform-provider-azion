@@ -148,9 +148,13 @@ func (r *csrResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
                 Description: "Timestamp of the last Terraform update.",
                 Computed:    true,
             },
-            "results": schema.SingleNestedAttribute{
-                Description: "The CSR details.",
-                Required:    true,
+        },
+        Blocks: map[string]schema.Block{
+            "results": schema.SingleNestedBlock{
+                Description: "Required. The CSR details.",
+                Validators: []validator.Object{
+                    objectvalidator.IsRequired(),
+                },
                 Attributes: map[string]schema.Attribute{
                     // Required input fields
                     "name": schema.StringAttribute{
@@ -451,7 +455,7 @@ func (r *csrResource) ImportState(ctx context.Context, req resource.ImportStateR
 
 ```hcl
 resource "azion_certificate_signing_request" "example" {
-  results = {
+  results {
     name              = "my-certificate"
     common_name       = "example.com"
     country           = "US"

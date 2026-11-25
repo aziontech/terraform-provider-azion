@@ -156,7 +156,7 @@ locals {
 # }
 
 resource "azion_function" "testfunc" {
-  function = {
+  function {
     name                  = "Terraform Function ${local.name_suffix}"
     code                  = trimspace(file("${path.module}/mock_files/dummy_script.txt"))
     active                = true
@@ -167,7 +167,7 @@ resource "azion_function" "testfunc" {
 }
 
 resource "azion_function" "testfunc2firewall" {
-  function = {
+  function {
     name                  = "Terraform Function 2 Firewall ${local.name_suffix}"
     code                  = trimspace(file("${path.module}/mock_files/dummy_script2firewall.txt"))
     active                = true
@@ -216,21 +216,21 @@ resource "azion_function" "testfunc2firewall" {
 # }
 
 # resource "azion_firewall_main_setting" "testfunc" {
-#   data = {
+#   data {
 #     name   = "EdgeFirewall ${local.name_suffix}"
 #     active = true
 #     debug  = false
 #     
-#     modules = {
-#       functions = {
+#     modules {
+#       functions {
 #         enabled = true
 #       }
 #       
-#       network_protection = {
+#       network_protection {
 #         enabled = true
 #       }
 #       
-#       waf = {
+#       waf {
 #         enabled = true
 #       }
 #     }
@@ -262,10 +262,10 @@ resource "azion_function" "testfunc2firewall" {
 # }
 
 resource "azion_intelligent_dns_zone" "testfunc" {
-  zone = {
-    domain : "terraformtest-func-${local.timestamp}.qa",
-    active : true,
-    name : "example"
+  zone {
+    domain = "terraformtest-func-${local.timestamp}.qa"
+    active = true
+    name   = "example"
   }
 }
 
@@ -279,7 +279,7 @@ resource "azion_intelligent_dns_zone" "testfunc" {
 
 resource "azion_intelligent_dns_record" "testfunc" {
   zone_id = azion_intelligent_dns_zone.testfunc.zone.id
-  record = {
+  record {
     type = "A"
     name = "site"
     rdata = [
@@ -294,7 +294,7 @@ resource "azion_intelligent_dns_record" "testfunc" {
 }
 
 resource "azion_network_list" "exampleOne" {
-  results = {
+  results {
     name = "NetworkList Terraform ${local.name_suffix} Countries"
     type = "countries"
     items = [
@@ -306,7 +306,7 @@ resource "azion_network_list" "exampleOne" {
 }
 
 resource "azion_network_list" "exampleTwo" {
-  results = {
+  results {
     name = "NetworkList Terraform ${local.name_suffix} ip_cidr"
     type = "ip_cidr"
     items = [
@@ -340,7 +340,7 @@ resource "azion_network_list" "exampleTwo" {
 # one back fails with "data matches more than one schema in oneOf(Output)".
 
 resource "azion_data_stream_template" "testfunc" {
-  template = {
+  template {
     name   = "Terraform Data Stream Template ${local.name_suffix}"
     active = true
     data_set = jsonencode({
@@ -354,105 +354,88 @@ resource "azion_data_stream_template" "testfunc" {
 }
 
 resource "azion_data_stream" "testfunc" {
-  data_stream = {
+
+  depends_on = [azion_data_stream_template.testfunc]
+  data_stream {
     name   = "Terraform Data Stream ${local.name_suffix}"
     active = false
-
-    inputs = [
-      {
-        type = "raw_logs"
-        attributes = {
-          data_source = "workloads"
-        }
+    inputs {
+      type = "raw_logs"
+      attributes {
+        data_source = "workloads"
       }
-    ]
+    }
 
     # render_template listed first on purpose: the API stores the pipeline in
     # its own canonical order, so this also covers the provider mapping the
     # response back onto the configured order.
-    transform = [
-      {
-        type = "render_template"
-        render_template_attributes = {
-          template = azion_data_stream_template.testfunc.template.id
-        }
-      },
-      {
-        type = "sampling"
-        sampling_attributes = {
-          rate = 100
-        }
+    transform {
+      type = "render_template"
+      render_template_attributes {
+        template = azion_data_stream_template.testfunc.template.id
       }
-    ]
-
-    outputs = [
-      {
-        type = "standard"
-        standard_attributes = {
-          url = "https://logs.example.com/ingest"
-          headers = {
-            "Authorization" = "Bearer terraform-func-test"
-          }
-          log_line_separator = "\\n"
-          payload_format     = "$dataset"
-          max_size           = 1000000
-        }
+    }
+    transform {
+      type = "sampling"
+      sampling_attributes {
+        rate = 100
       }
-    ]
+    }
+    outputs {
+      type = "standard"
+      standard_attributes {
+        url = "https://logs.example.com/ingest"
+        headers = {
+          "Authorization" = "Bearer terraform-func-test"
+        }
+        log_line_separator = "\\n"
+        payload_format     = "$dataset"
+        max_size           = 1000000
+      }
+    }
   }
-
-  depends_on = [azion_data_stream_template.testfunc]
 }
 
 # A second stream on a different endpoint type, to cover an output whose
 # credentials come back masked. One stream per endpoint, since outputs cannot
 # fan out.
 resource "azion_data_stream" "testfunc_s3" {
-  data_stream = {
-    name   = "Terraform Data Stream S3 ${local.name_suffix}"
-    active = false
-
-    inputs = [
-      {
-        type = "raw_logs"
-        attributes = {
-          data_source = "waf"
-        }
-      }
-    ]
-
-    transform = [
-      {
-        type = "sampling"
-        sampling_attributes = {
-          rate = 50
-        }
-      },
-      {
-        type = "render_template"
-        render_template_attributes = {
-          template = azion_data_stream_template.testfunc.template.id
-        }
-      }
-    ]
-
-    outputs = [
-      {
-        type = "s3"
-        s3_attributes = {
-          host_url          = "https://s3.us-east-1.amazonaws.com"
-          bucket_name       = "terraform-func-test-bucket"
-          region            = "us-east-1"
-          object_key_prefix = "azion/waf"
-          content_type      = "application/gzip"
-          access_key        = "AKIAIOSFODNN7EXAMPLE"
-          secret_key        = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-        }
-      }
-    ]
-  }
 
   depends_on = [azion_data_stream_template.testfunc]
+  data_stream {
+    name   = "Terraform Data Stream S3 ${local.name_suffix}"
+    active = false
+    inputs {
+      type = "raw_logs"
+      attributes {
+        data_source = "waf"
+      }
+    }
+    transform {
+      type = "sampling"
+      sampling_attributes {
+        rate = 50
+      }
+    }
+    transform {
+      type = "render_template"
+      render_template_attributes {
+        template = azion_data_stream_template.testfunc.template.id
+      }
+    }
+    outputs {
+      type = "s3"
+      s3_attributes {
+        host_url          = "https://s3.us-east-1.amazonaws.com"
+        bucket_name       = "terraform-func-test-bucket"
+        region            = "us-east-1"
+        object_key_prefix = "azion/waf"
+        content_type      = "application/gzip"
+        access_key        = "AKIAIOSFODNN7EXAMPLE"
+        secret_key        = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+      }
+    }
+  }
 }
 
 # Removed due to 401 Unauthorized error

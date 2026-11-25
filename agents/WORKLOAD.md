@@ -194,30 +194,37 @@ type TLSWorkloadsModel struct {
 
 ## Schema Definition Patterns
 
-### IMPORTANT: Nested Attributes in Resources vs Data Sources
+### IMPORTANT: Blocks in Resources, Nested Attributes in Data Sources
 
-**For Resources:** Nested `SingleNestedAttribute` attributes must use `Optional: true` **without** `Computed: true`. This prevents Terraform from sending unknown values that concrete struct pointers cannot handle.
+**For Resources:** every writable nested object is a **block** (`SingleNestedBlock`), never a nested attribute, so Terraform rejects unknown or misplaced arguments with "Unsupported argument" (see "Nested Objects Must Be Blocks" in `AGENTS.md`). `workload` is a required block (`objectvalidator.IsRequired()`, description starting with `Required.`); `tls`, `protocols` → `http` and `mtls` → `config` are optional blocks. Blocks cannot be `Computed` or carry a `Default`, so:
+
+- **Request:** `workloadTLSRequest`, `workloadProtocolsRequest` and `workloadMTLSRequest` substitute the defaults (`defaultWorkloadTLS()`, `defaultWorkloadHTTP()`, `defaultWorkloadMTLS()`) for an omitted block, so the payload is the same as when these were Computed objects with object defaults.
+- **State:** `keepDeclaredWorkloadBlocks(prior, results)` drops every block the prior plan/state does not declare (including `protocols.http` / `mtls.config` inside a declared parent). Nil prior (import) keeps everything; the first plan after import then removes undeclared blocks in place.
+- Leaves inside a declared block keep `Optional + Computed (+ Default)` and keep mirroring the API, so drift is detected while the block is declared.
 
 **For Data Sources:** Nested attributes use `Computed: true` since they are read-only.
 
-### Resource Schema - TLS Configuration (Optional only, NO Computed)
+### Resource Schema - TLS Block
 
 ```go
-"tls": schema.SingleNestedAttribute{
-    Description: "TLS configuration for the workload.",
-    Optional:    true,  // NO Computed: true!
+"tls": schema.SingleNestedBlock{
+    Description: "TLS configuration for the workload. ...",
     Attributes: map[string]schema.Attribute{
         "certificate": schema.Int64Attribute{
-            Description: "Certificate ID for TLS.",
+            Description: "Certificate ID for TLS. Supplied by the API when not declared.",
             Optional:    true,
+            Computed:    true,
         },
         "ciphers": schema.Int64Attribute{
-            Description: "Cipher suite configuration.",
+            Description: "Cipher suite configuration. Supplied by the API when not declared.",
             Optional:    true,
+            Computed:    true,
         },
         "minimum_version": schema.StringAttribute{
-            Description: "Minimum TLS version.",
+            Description: "Minimum TLS version: tls_1_0, tls_1_1, tls_1_2 or tls_1_3.",
             Optional:    true,
+            Computed:    true,
+            Default:     stringdefault.StaticString(defaultWorkloadTLSMinimumVersion),
         },
     },
 },
@@ -246,80 +253,9 @@ type TLSWorkloadsModel struct {
 },
 ```
 
-### Protocols Configuration Schema (Resource - Optional only)
+### Protocols and MTLS Blocks (Resource)
 
-```go
-"protocols": schema.SingleNestedAttribute{
-    Description: "Protocol configurations for the workload.",
-    Optional:    true,  // NO Computed: true!
-    Attributes: map[string]schema.Attribute{
-        "http": schema.SingleNestedAttribute{
-            Description: "HTTP protocol configuration.",
-            Optional:    true,
-            Attributes: map[string]schema.Attribute{
-                "versions": schema.ListAttribute{
-                    ElementType: types.StringType,
-                    Description: "HTTP versions supported.",
-                    Optional:    true,
-                },
-                "http_ports": schema.ListAttribute{
-                    ElementType: types.Int64Type,
-                    Description: "HTTP ports.",
-                    Optional:    true,
-                },
-                "https_ports": schema.ListAttribute{
-                    ElementType: types.Int64Type,
-                    Description: "HTTPS ports.",
-                    Optional:    true,
-                },
-                "quic_ports": schema.ListAttribute{
-                    ElementType: types.Int64Type,
-                    Description: "QUIC ports. Defaults to [443] when the http protocol block is set but this attribute is omitted, matching the API default.",
-                    Optional:    true,
-                    Computed:    true,
-                    Default: listdefault.StaticValue(types.ListValueMust(types.Int64Type, []attr.Value{
-                        types.Int64Value(443),
-                    })),
-                },
-            },
-        },
-    },
-},
-```
-
-### MTLS Configuration Schema (Resource - Optional only)
-
-```go
-"mtls": schema.SingleNestedAttribute{
-    Description: "Mutual TLS configuration for the workload.",
-    Optional:    true,  // NO Computed: true!
-    Attributes: map[string]schema.Attribute{
-        "enabled": schema.BoolAttribute{
-            Description: "Whether MTLS is enabled.",
-            Optional:    true,
-        },
-        "config": schema.SingleNestedAttribute{
-            Description: "MTLS configuration.",
-            Optional:    true,
-            Attributes: map[string]schema.Attribute{
-                "certificate": schema.Int64Attribute{
-                    Description: "MTLS certificate ID.",
-                    Optional:    true,
-                },
-                "crl": schema.ListAttribute{
-                    ElementType: types.Int64Type,
-                    Description: "Certificate Revocation List.",
-                    Optional:    true,
-                },
-                "verification": schema.StringAttribute{
-                    Description: "MTLS verification type: enforce or permissive.",
-                    Optional:    true,
-                },
-            },
-        },
-    },
-},
-```
+`protocols` holds a nested `http` block; `mtls` holds `enabled` plus a nested `config` block. Same rules as `tls`: blocks without `Computed`/`Default`, leaves `Optional + Computed`, with `Default` only on enforced leaves (`http_ports` `[80]`, `https_ports` `[443]`, `mtls.enabled` `false`). `versions`, `quic_ports` and the `mtls.config` leaves have no default: the API supplies them. See `Schema()` in `internal/resource_workload.go`.
 
 ---
 
@@ -496,99 +432,22 @@ LastModified: types.StringValue(workloadResponse.Data.LastModified.Format(time.R
 
 ## Common Issues
 
-### 1. Unknown Value Errors with Nested Attributes
+### 1. Unknown Value Errors with Nested Objects
 
-**Problem:** Using `Computed: true` on `SingleNestedAttribute` with struct pointer types causes errors:
-```
-Received unknown value, however the target type cannot handle unknown values.
-Use the corresponding `types` package type or a custom type that handles unknown values.
-```
-
-**Solution:** Remove `Computed: true` from nested attributes in resources. Use `Optional: true` only:
-```go
-// WRONG - causes unknown value errors
-"tls": schema.SingleNestedAttribute{
-    Optional: true,
-    Computed: true,  // <-- REMOVE THIS
-    Attributes: map[string]schema.Attribute{...},
-}
-
-// CORRECT - use Optional only for nested attributes in resources
-"tls": schema.SingleNestedAttribute{
-    Optional: true,
-    Attributes: map[string]schema.Attribute{...},
-}
-```
+`workloadResourceResults` reads nested objects into `*Struct` fields, which cannot hold unknown values ("Received unknown value, however the target type cannot handle unknown values"). With blocks this cannot happen: an omitted block is null, never unknown. Do not turn the blocks back into `Optional + Computed` nested attributes.
 
 ### 2. Inconsistent Result After Apply
 
-**Problem:** When the API returns default values for nested fields that were `null` in the plan:
 ```
 Provider produced inconsistent result after apply
-.workload.tls: was null, but now cty.ObjectVal(...)
+.workload.tls: block count changed from 0 to 1
 ```
 
-**Solution:** Only populate nested fields from API response if they were specified in the plan. Modify `populateWorkloadResults` to accept the plan and context:
+An omitted block is planned as null, so the API echo must not put it back in state. Create, Read and Update pass the result through `keepDeclaredWorkloadBlocks(prior, results)` (prior = plan in Create/Update, state in Read). Apply it to every nested block, not only the top-level ones (`protocols.http`, `mtls.config`).
 
-```go
-func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadResponse, plan *workloadResourceResults) *workloadResourceResults {
-    result := &workloadResourceResults{
-        // ... basic fields ...
-    }
+#### 2a. Empty `mtls.config` echo
 
-    // Handle TLS - only populate from API if it was specified in the plan
-    if plan.Tls != nil && response.Data.Tls != nil {
-        tlsModel := &TLSWorkloadResourceModel{}
-        // ... populate tlsModel ...
-        result.Tls = tlsModel
-    }
-    // If plan.Tls was nil, result.Tls stays nil (not populated from API defaults)
-
-    // Same pattern for Protocols and MTLS
-    if plan.Protocols != nil && response.Data.Protocols != nil {
-        // ... populate protocols ...
-    }
-
-    if plan.Mtls != nil && response.Data.Mtls != nil {
-        // ... populate mtls ...
-    }
-
-    return result
-}
-```
-
-#### 2a. Inconsistent Result on Nested-Within-Nested Blocks
-
-**Problem:** Same class of error, but on a child block when the parent block IS set:
-```
-.workload.mtls.config: was null, but now cty.ObjectVal(map[string]cty.Value{
-  "certificate":cty.NullVal(cty.Number),
-  "crl":cty.NullVal(cty.List(cty.Number)),
-  "verification":cty.NullVal(cty.String),
-})
-```
-
-This happens when the user specifies the parent block (e.g. `mtls = { enabled = false }`) but omits a child block (`config`). The API echoes back the child as a set-but-all-null object, and unconditionally copying it into state produces an empty struct that differs from the plan's `null`.
-
-**Solution:** Gate the child population on both the plan and the API response. Gating only on the API response is not enough — the API will return the child even when the user didn't ask for it:
-
-```go
-// WRONG - populates Config whenever the API returns it
-if response.Data.Mtls.Config.IsSet() {
-    config := response.Data.Mtls.Config.Get()
-    // ... build configModel ...
-    mtlsModel.Config = configModel
-}
-
-// CORRECT - only populate Config when the user specified it in the plan
-if plan.Mtls.Config != nil && response.Data.Mtls.Config.IsSet() {
-    config := response.Data.Mtls.Config.Get()
-    // ... build configModel ...
-    mtlsModel.Config = configModel
-}
-```
-
-Apply this rule recursively: every nested struct pointer in the model needs its own `plan.X != nil` gate, not just the top-level one.
+When `mtls.config` is declared, the API may still echo an all-null config (see "The API echoes an empty `mtls.config`" below); `populateWorkloadResults` treats it as absent.
 
 #### 2b. Inconsistent Result From Missing Setter in Create/Update
 
@@ -853,8 +712,13 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
                 Description: "Timestamp of the last Terraform update of the resource.",
                 Computed:    true,
             },
-            "workload": schema.SingleNestedAttribute{
-                Required: true,
+        },
+        Blocks: map[string]schema.Block{
+            "workload": schema.SingleNestedBlock{
+                Description: "Required. The workload settings.",
+                Validators: []validator.Object{
+                    objectvalidator.IsRequired(),
+                },
                 Attributes: map[string]schema.Attribute{
                     "id": schema.Int64Attribute{
                         Description: "The workload identifier.",
@@ -864,13 +728,10 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
                         Description: "Name of the workload.",
                         Required:    true,
                     },
-                    "active": schema.BoolAttribute{
-                        Description: "Status of the workload.",
-                        Optional:    true,
-                        Computed:    true,
-                    },
-                    // tls, protocols, mtls - Optional only (NO Computed)
-                    // ... other attributes
+                    // ... other leaf attributes
+                },
+                Blocks: map[string]schema.Block{
+                    // tls, protocols (-> http), mtls (-> config): SingleNestedBlock
                 },
             },
         },
@@ -987,7 +848,9 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
     }
 
     // Populate state from response, passing plan to preserve optional nested field values
-    plan.Workload = populateWorkloadResults(ctx, createWorkload, plan.Workload)
+    results := populateWorkloadResults(ctx, createWorkload)
+    keepDeclaredWorkloadBlocks(plan.Workload, results)
+    plan.Workload = results
     plan.ID = types.StringValue(strconv.FormatInt(createWorkload.Data.Id, 10))
     plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -998,11 +861,11 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 
 ### Drift and enforcement
 
-Read mirrors the API response through `populateWorkloadResults` without filtering, so a change made in Azion Console is reverted on the next apply instead of being silently kept. **Do not reintroduce the `plan` parameter** that the function used to take to gate population: it made Read a state-preserving merge, so the API response could never introduce a value and out-of-band changes were invisible on every plan.
+Read mirrors the API response through `populateWorkloadResults`, so a change made in Azion Console is reverted on the next apply instead of being silently kept. The only filter is `keepDeclaredWorkloadBlocks`, which drops whole blocks the configuration does not declare; it never filters values inside a declared block. **Do not gate leaf values on the plan**: that made Read a state-preserving merge, so out-of-band changes were invisible on every plan.
 
-Perpetual drift is prevented in the schema instead — optional attributes are `Optional + Computed`, either with a `Default` (enforced) or without one (the API supplies the value).
+Perpetual drift is prevented in the schema instead — optional leaf attributes are `Optional + Computed`, either with a `Default` (enforced) or without one (the API supplies the value).
 
-Every optional nested block needs a default even when its contents are not enforced. A `Computed` block without one is *unknown* in the plan whenever the configuration omits it, and `workloadResourceResults` reads nested blocks into `*Struct` fields, which cannot hold unknown values — the framework fails with "Received unknown value, however the target type cannot handle unknown values". Inside such a default, a **null leaf means "let the API decide"**: the leaf is Computed, so the framework turns that null into an unknown and the response fills it. That is how `tls.certificate`, `protocols.http.versions` and the `mtls.config` fields stay unenforced without drifting.
+An omitted `tls`/`protocols`/`mtls` block still sends its defaults on every apply (request builders), but it is null in state, so drift in its fields is only shown while the block is declared — the same trade-off as `modules` in `azion_application_main_setting`.
 
 ### The API echoes an empty `mtls.config`
 
@@ -1063,7 +926,9 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
     // ... error handling similar to Create
 
     // Populate state, passing plan to preserve optional nested field values
-    plan.Workload = populateWorkloadResults(ctx, updateWorkload, plan.Workload)
+    results := populateWorkloadResults(ctx, updateWorkload)
+    keepDeclaredWorkloadBlocks(plan.Workload, results)
+    plan.Workload = results
     plan.ID = types.StringValue(strconv.FormatInt(updateWorkload.Data.Id, 10))
     plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -1105,7 +970,9 @@ func (r *workloadResource) Read(ctx context.Context, req resource.ReadRequest, r
     }
 
     // Pass existing state to preserve optional nested field values
-    state.Workload = populateWorkloadResults(ctx, getWorkload, state.Workload)
+    results := populateWorkloadResults(ctx, getWorkload)
+    keepDeclaredWorkloadBlocks(state.Workload, results)
+    state.Workload = results
     state.ID = types.StringValue(strconv.FormatInt(getWorkload.Data.Id, 10))
 
     diags = resp.State.Set(ctx, &state)
@@ -1140,144 +1007,7 @@ func (r *workloadResource) Delete(ctx context.Context, req resource.DeleteReques
 
 ### Populate Results Helper Function
 
-**CRITICAL:** This function must accept the plan and only populate nested structures if they were specified in the plan. This prevents "inconsistent result after apply" errors when the API returns default values.
-
-```go
-// populateWorkloadResults populates workload results from API response.
-// plan is used to preserve optional nested field values - if a nested field was null in the plan,
-// it stays null in the result to avoid "Provider produced inconsistent result after apply" errors.
-func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadResponse, plan *workloadResourceResults) *workloadResourceResults {
-    result := &workloadResourceResults{
-        ID:             types.Int64Value(response.Data.Id),
-        Name:           types.StringValue(response.Data.Name),
-        LastEditor:     types.StringValue(response.Data.LastEditor),
-        LastModified:   types.StringValue(response.Data.LastModified.Format(time.RFC850)),
-        ProductVersion: types.StringValue(response.Data.ProductVersion),
-        WorkloadDomain: types.StringValue(response.Data.WorkloadDomain),
-    }
-
-    if response.Data.Active != nil {
-        result.Active = types.BoolValue(*response.Data.Active)
-    }
-
-    if response.Data.Infrastructure != nil {
-        result.Infrastructure = types.Int64Value(*response.Data.Infrastructure)
-    }
-
-    if response.Data.WorkloadDomainAllowAccess != nil {
-        result.WorkloadDomainAllowAccess = types.BoolValue(*response.Data.WorkloadDomainAllowAccess)
-    }
-
-    // Handle TLS - only populate from API if it was specified in the plan
-    if plan.Tls != nil && response.Data.Tls != nil {
-        tlsModel := &TLSWorkloadResourceModel{}
-        if response.Data.Tls.Certificate.IsSet() {
-            cert := response.Data.Tls.Certificate.Get()
-            if cert != nil {
-                tlsModel.Certificate = types.Int64Value(*cert)
-            }
-        }
-        if response.Data.Tls.Ciphers != nil {
-            tlsModel.Ciphers = types.Int64Value(*response.Data.Tls.Ciphers)
-        }
-        if response.Data.Tls.MinimumVersion.IsSet() {
-            minVer := response.Data.Tls.MinimumVersion.Get()
-            if minVer != nil {
-                tlsModel.MinimumVersion = types.StringValue(*minVer)
-            }
-        }
-        result.Tls = tlsModel
-    }
-    // If plan.Tls was nil, result.Tls stays nil (not populated from API defaults)
-
-    // Handle Protocols - only populate from API if it was specified in the plan
-    if plan.Protocols != nil && response.Data.Protocols != nil {
-        protocolsModel := &ProtocolsResourceModel{}
-        // Only populate Http if it was specified in the plan to avoid
-        // "Provider produced inconsistent result after apply" when the API
-        // echoes back an http object the user didn't configure.
-        if plan.Protocols.Http != nil && response.Data.Protocols.Http != nil {
-            httpModel := &HttpProtocolResourceModel{}
-            if response.Data.Protocols.Http.Versions != nil {
-                versionsList, _ := types.ListValueFrom(ctx, types.StringType, response.Data.Protocols.Http.Versions)
-                httpModel.Versions = versionsList
-            } else {
-                httpModel.Versions = types.ListNull(types.StringType)
-            }
-            if response.Data.Protocols.Http.HttpPorts != nil {
-                httpPortsList, _ := types.ListValueFrom(ctx, types.Int64Type, response.Data.Protocols.Http.HttpPorts)
-                httpModel.HttpPorts = httpPortsList
-            } else {
-                httpModel.HttpPorts = types.ListNull(types.Int64Type)
-            }
-            if response.Data.Protocols.Http.HttpsPorts != nil {
-                httpsPortsList, _ := types.ListValueFrom(ctx, types.Int64Type, response.Data.Protocols.Http.HttpsPorts)
-                httpModel.HttpsPorts = httpsPortsList
-            } else {
-                httpModel.HttpsPorts = types.ListNull(types.Int64Type)
-            }
-            if response.Data.Protocols.Http.QuicPorts != nil {
-                quicPortsList, _ := types.ListValueFrom(ctx, types.Int64Type, response.Data.Protocols.Http.QuicPorts)
-                httpModel.QuicPorts = quicPortsList
-            } else {
-                httpModel.QuicPorts = types.ListNull(types.Int64Type)
-            }
-            protocolsModel.Http = httpModel
-        }
-        result.Protocols = protocolsModel
-    }
-
-    // Handle MTLS - only populate from API if it was specified in the plan
-    if plan.Mtls != nil && response.Data.Mtls != nil {
-        mtlsModel := &MTLSResourceModel{}
-        if response.Data.Mtls.Enabled.IsSet() {
-            enabled := response.Data.Mtls.Enabled.Get()
-            if enabled != nil {
-                mtlsModel.Enabled = types.BoolValue(*enabled)
-            }
-        }
-        // Only populate Config if it was specified in the plan to avoid
-        // "Provider produced inconsistent result after apply" when the API
-        // echoes back a config object with all-null inner fields.
-        if plan.Mtls.Config != nil && response.Data.Mtls.Config.IsSet() {
-            config := response.Data.Mtls.Config.Get()
-            if config != nil {
-                configModel := &MTLSConfigResourceModel{}
-                if config.Certificate.IsSet() {
-                    cert := config.Certificate.Get()
-                    if cert != nil {
-                        configModel.Certificate = types.Int64Value(*cert)
-                    }
-                }
-                if config.Crl != nil {
-                    crlList, _ := types.ListValueFrom(ctx, types.Int64Type, config.Crl)
-                    configModel.Crl = crlList
-                } else {
-                    configModel.Crl = types.ListNull(types.Int64Type)
-                }
-                if config.Verification.IsSet() {
-                    verif := config.Verification.Get()
-                    if verif != nil {
-                        configModel.Verification = types.StringValue(*verif)
-                    }
-                }
-                mtlsModel.Config = configModel
-            }
-        }
-        result.Mtls = mtlsModel
-    }
-
-    // Handle Domains (types.Set — order-insensitive, no duplicates)
-    if response.Data.Domains != nil {
-        domainsSet, _ := types.SetValueFrom(ctx, types.StringType, response.Data.Domains)
-        result.Domains = domainsSet
-    } else {
-        result.Domains = types.SetNull(types.StringType)
-    }
-
-    return result
-}
-```
+`populateWorkloadResults(ctx, response)` mirrors the whole API response (no plan parameter); every caller then applies `keepDeclaredWorkloadBlocks(prior, results)` so blocks the configuration omits stay null. Leaf values inside declared blocks are never filtered. An all-null `mtls.config` echo is treated as absent (`MTLSConfigResourceModel.isEmpty()`). See `internal/resource_workload.go` for the current code.
 
 ### Import State Pattern
 
@@ -1370,8 +1100,6 @@ Workload uses **PATCH** (`PartialUpdateWorkload`) for updates, not PUT. This mea
 | `domains` | Optional | Optional |
 | `workload_domain_allow_access` | Optional | Optional |
 
-### 5. Preserving Optional Nested Field Values
+### 5. Keeping Undeclared Blocks Null
 
-**CRITICAL:** When populating results from API responses, always check if the nested field was specified in the plan. If it was `nil` in the plan, keep it `nil` in the result to avoid "Provider produced inconsistent result after apply" errors.
-
-This pattern follows the same approach used in `edge_application_main_setting.go` for the `modules` attribute.
+An omitted optional block must stay null in state: `keepDeclaredWorkloadBlocks` drops it from the API result. Values inside declared blocks are never filtered. This follows `keepDeclaredModules` in `resource_application_main_setting.go`.

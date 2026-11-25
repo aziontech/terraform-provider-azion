@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -26,6 +28,31 @@ func TestDataStreamTemplateSchemaImplementation(t *testing.T) {
 
 	if diags := dataStreamTemplateSchema(t).Schema.ValidateImplementation(ctx); diags.HasError() {
 		t.Errorf("invalid schema implementation: %v", diags)
+	}
+}
+
+// `template` is a block so Terraform rejects unknown arguments, and it keeps
+// IsRequired so omitting it is still a plan-time error.
+func TestDataStreamTemplateIsRequiredBlock(t *testing.T) {
+	ctx := context.Background()
+	sr := dataStreamTemplateSchema(t)
+
+	if _, diags := sr.Schema.AttributeAtPath(ctx, tfPath(t, "template")); !diags.HasError() {
+		t.Fatal("template: must be a block, not a nested attribute")
+	}
+
+	block, ok := sr.Schema.Blocks["template"].(schema.SingleNestedBlock)
+	if !ok {
+		t.Fatal("template: expected a single nested block")
+	}
+	resp := &validator.ObjectResponse{}
+	for _, v := range block.ObjectValidators() {
+		v.ValidateObject(ctx, validator.ObjectRequest{
+			ConfigValue: types.ObjectNull(block.Type().(types.ObjectType).AttrTypes),
+		}, resp)
+	}
+	if !resp.Diagnostics.HasError() {
+		t.Error("template: an omitted block must be rejected")
 	}
 }
 

@@ -910,6 +910,8 @@ func (r *applicationCacheSettingsResource) Configure(_ context.Context, req reso
 
 ## Resource Schema Definition
 
+Every writable nested object is a block (`cache_setting { ... }`, `browser_cache { ... }`, `modules { cache { stale_cache { ... } } }`, ...), never a nested attribute, so Terraform rejects unknown or misplaced arguments (see "Nested Objects Must Be Blocks" in `AGENTS.md`). `cache_setting` is required through `objectvalidator.IsRequired()`. Blocks cannot be `Computed` or carry a `Default`, so only the leaf attributes inside them keep `Optional + Computed + Default`; see "Omitted Blocks" below for how an omitted block is handled.
+
 ```go
 func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
     resp.Schema = schema.Schema{
@@ -929,8 +931,13 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
                 Description: "Timestamp of the last Terraform update of the resource.",
                 Computed:    true,
             },
-            "cache_setting": schema.SingleNestedAttribute{
-                Required: true,
+        },
+        Blocks: map[string]schema.Block{
+            "cache_setting": schema.SingleNestedBlock{
+                Description: "Required. Cache setting configuration.",
+                Validators: []validator.Object{
+                    objectvalidator.IsRequired(),
+                },
                 Attributes: map[string]schema.Attribute{
                     "id": schema.Int64Attribute{
                         Description: "Cache setting identifier.",
@@ -940,129 +947,174 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
                         Description: "Name of the cache setting.",
                         Required:    true,
                     },
-                    "browser_cache": schema.SingleNestedAttribute{
-                        Description: "Browser cache settings.",
-                        Optional:    true,
-                        Attributes: map[string]schema.Attribute{
-                            "behavior": schema.StringAttribute{
-                                Description: "Browser cache behavior: override, honor, no-cache.",
-                                Optional:    true,
-                            },
-                            "max_age": schema.Int64Attribute{
-                                Description: "Maximum TTL for browser cache.",
-                                Optional:    true,
-                            },
-                        },
-                    },
-                    "modules": schema.SingleNestedAttribute{
-                        Description: "Cache settings modules.",
-                        Optional:    true,
-                        Attributes: map[string]schema.Attribute{
-                            "cache": schema.SingleNestedAttribute{
-                                Description: "Edge cache module settings.",
-                                Optional:    true,
-                                Attributes: map[string]schema.Attribute{
-                                    "behavior": schema.StringAttribute{
-                                        Description: "Cache behavior: honor, override.",
-                                        Optional:    true,
-                                    },
-                                    "max_age": schema.Int64Attribute{
-                                        Description: "Maximum TTL for edge cache.",
-                                        Optional:    true,
-                                    },
-                                    "stale_cache": schema.SingleNestedAttribute{
-                                        Description: "Stale cache settings.",
-                                        Optional:    true,
-                                        Attributes: map[string]schema.Attribute{
-                                            "enabled": schema.BoolAttribute{
-                                                Optional: true,
-                                            },
-                                        },
-                                    },
-                                    "large_file_cache": schema.SingleNestedAttribute{
-                                        Description: "Large file cache settings.",
-                                        Optional:    true,
-                                        Attributes: map[string]schema.Attribute{
-                                            "enabled": schema.BoolAttribute{
-                                                Optional: true,
-                                            },
-                                            "offset": schema.Int64Attribute{
-                                                Optional: true,
-                                            },
-                                        },
-                                    },
-                                    "tiered_cache": schema.SingleNestedAttribute{
-                                        Description: "Tiered cache settings.",
-                                        Optional:    true,
-                                        Attributes: map[string]schema.Attribute{
-                                            "topology": schema.StringAttribute{
-                                                Description: "Tiered cache topology: nearest-region, br-east-1, us-east-1.",
-                                                Optional:    true,
-                                            },
-                                            "enabled": schema.BoolAttribute{
-                                                Optional: true,
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                            "application_accelerator": schema.SingleNestedAttribute{
-                                Description: "Application accelerator module settings.",
-                                Optional:    true,
-                                Attributes: map[string]schema.Attribute{
-                                    "cache_vary_by_method": schema.ListAttribute{
-                                        ElementType: types.StringType,
-                                        Optional:    true,
-                                    },
-                                    "cache_vary_by_querystring": schema.SingleNestedAttribute{
-                                        Optional: true,
-                                        Attributes: map[string]schema.Attribute{
-                                            "behavior": schema.StringAttribute{
-                                                Description: "Query string behavior: ignore, all, allowlist, denylist.",
-                                                Optional:    true,
-                                            },
-                                            "fields": schema.ListAttribute{
-                                                ElementType: types.StringType,
-                                                Optional:    true,
-                                            },
-                                            "sort_enabled": schema.BoolAttribute{
-                                                Optional: true,
-                                            },
-                                        },
-                                    },
-                                    "cache_vary_by_cookies": schema.SingleNestedAttribute{
-                                        Optional: true,
-                                        Attributes: map[string]schema.Attribute{
-                                            "behavior": schema.StringAttribute{
-                                                Description: "Cookies behavior: ignore, all, allowlist, denylist.",
-                                                Optional:    true,
-                                            },
-                                            "cookie_names": schema.ListAttribute{
-                                                ElementType: types.StringType,
-                                                Optional:    true,
-                                            },
-                                        },
-                                    },
-                                    "cache_vary_by_devices": schema.SingleNestedAttribute{
-                                        Optional: true,
-                                        Attributes: map[string]schema.Attribute{
-                                            "behavior": schema.StringAttribute{
-                                                Description: "Devices behavior: ignore, allowlist.",
-                                                Optional:    true,
-                                            },
-                                            "device_group": schema.ListAttribute{
-                                                ElementType: types.Int64Type,
-                                                Optional:    true,
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
                     "created_at": schema.StringAttribute{
                         Description: "The creation timestamp.",
                         Computed:    true,
+                    },
+                },
+                Blocks: map[string]schema.Block{
+                    "browser_cache": schema.SingleNestedBlock{
+                        Description: "Browser cache settings. Omitting this block resets it to the Azion defaults on every apply, but its drift is only detected while the block is declared.",
+                        Attributes: map[string]schema.Attribute{
+                            "behavior": schema.StringAttribute{
+                                Description: "Browser cache behavior: `override`, `honor`, `no-cache`.",
+                                Optional:    true,
+                                Computed:    true,
+                                Default:     stringdefault.StaticString(defaultBrowserCacheBehavior),
+                            },
+                            "max_age": schema.Int64Attribute{
+                                Description: "Maximum TTL for browser cache in seconds.",
+                                Optional:    true,
+                                Computed:    true,
+                                Default:     int64default.StaticInt64(defaultBrowserCacheMaxAge),
+                            },
+                        },
+                    },
+                    "modules": schema.SingleNestedBlock{
+                        Description: "Cache settings modules. A module left out is reset to the Azion defaults on every apply, but its drift is only detected while its block is declared.",
+                        Blocks: map[string]schema.Block{
+                            "cache": schema.SingleNestedBlock{
+                                Description: "Edge cache module settings.",
+                                Attributes: map[string]schema.Attribute{
+                                    "behavior": schema.StringAttribute{
+                                        Description: "Cache behavior: `honor`, `override`.",
+                                        Optional:    true,
+                                        Computed:    true,
+                                        Default:     stringdefault.StaticString(defaultCacheBehavior),
+                                    },
+                                    "max_age": schema.Int64Attribute{
+                                        Description: "Maximum TTL for edge cache in seconds.",
+                                        Optional:    true,
+                                        Computed:    true,
+                                        Default:     int64default.StaticInt64(defaultCacheMaxAge),
+                                    },
+                                },
+                                Blocks: map[string]schema.Block{
+                                    "stale_cache": schema.SingleNestedBlock{
+                                        Description: "Stale cache settings.",
+                                        Attributes: map[string]schema.Attribute{
+                                            "enabled": schema.BoolAttribute{
+                                                Description: "Enable stale cache.",
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     booldefault.StaticBool(defaultStaleCacheEnabled),
+                                            },
+                                        },
+                                    },
+                                    "large_file_cache": schema.SingleNestedBlock{
+                                        Description: "Large file cache settings.",
+                                        Attributes: map[string]schema.Attribute{
+                                            "enabled": schema.BoolAttribute{
+                                                Description: "Enable large file cache.",
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     booldefault.StaticBool(defaultLargeFileEnabled),
+                                            },
+                                            "offset": schema.Int64Attribute{
+                                                Description: "Offset for large file cache slicing.",
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     int64default.StaticInt64(defaultLargeFileOffset),
+                                            },
+                                        },
+                                    },
+                                    "tiered_cache": schema.SingleNestedBlock{
+                                        Description: "Tiered cache settings. Requires the tiered cache module on the application.",
+                                        Attributes: map[string]schema.Attribute{
+                                            "topology": schema.StringAttribute{
+                                                Description: "Tiered cache topology: `nearest-region`, `br-east-1`, `us-east-1`.",
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     nullStringDefault{},
+                                                PlanModifiers: []planmodifier.String{
+                                                    topologyFollowsTieredCache{},
+                                                },
+                                            },
+                                            "enabled": schema.BoolAttribute{
+                                                Description: "Enable tiered cache.",
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     booldefault.StaticBool(defaultTieredCacheEnabled),
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            "application_accelerator": schema.SingleNestedBlock{
+                                Description: "Application accelerator module settings. Requires the application accelerator module on the application.",
+                                Attributes: map[string]schema.Attribute{
+                                    "cache_vary_by_method": schema.ListAttribute{
+                                        Description: "HTTP methods to vary cache by.",
+                                        ElementType: types.StringType,
+                                        Optional:    true,
+                                        Computed:    true,
+                                        Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+                                    },
+                                },
+                                Blocks: map[string]schema.Block{
+                                    "cache_vary_by_querystring": schema.SingleNestedBlock{
+                                        Description: "Query string cache variation settings.",
+                                        Attributes: map[string]schema.Attribute{
+                                            "behavior": schema.StringAttribute{
+                                                Description: "Query string behavior: `ignore`, `all`, `allowlist`, `denylist`.",
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     stringdefault.StaticString(defaultVaryBehavior),
+                                            },
+                                            "fields": schema.ListAttribute{
+                                                Description: "Query string fields for allowlist/denylist.",
+                                                ElementType: types.StringType,
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+                                            },
+                                            "sort_enabled": schema.BoolAttribute{
+                                                Description: "Enable query string sorting.",
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     booldefault.StaticBool(defaultQuerystringSort),
+                                            },
+                                        },
+                                    },
+                                    "cache_vary_by_cookies": schema.SingleNestedBlock{
+                                        Description: "Cookies cache variation settings.",
+                                        Attributes: map[string]schema.Attribute{
+                                            "behavior": schema.StringAttribute{
+                                                Description: "Cookies behavior: `ignore`, `all`, `allowlist`, `denylist`.",
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     stringdefault.StaticString(defaultVaryBehavior),
+                                            },
+                                            "cookie_names": schema.ListAttribute{
+                                                Description: "Cookie names for allowlist/denylist.",
+                                                ElementType: types.StringType,
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+                                            },
+                                        },
+                                    },
+                                    "cache_vary_by_devices": schema.SingleNestedBlock{
+                                        Description: "Devices cache variation settings.",
+                                        Attributes: map[string]schema.Attribute{
+                                            "behavior": schema.StringAttribute{
+                                                Description: "Devices behavior: `ignore`, `allowlist`.",
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     stringdefault.StaticString(defaultVaryBehavior),
+                                            },
+                                            "device_group": schema.ListAttribute{
+                                                Description: "Device group IDs for allowlist.",
+                                                ElementType: types.Int64Type,
+                                                Optional:    true,
+                                                Computed:    true,
+                                                Default:     listdefault.StaticValue(types.ListValueMust(types.Int64Type, []attr.Value{})),
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
                     },
                 },
             },
@@ -1167,9 +1219,18 @@ func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resou
 
 Do NOT reintroduce prior-state gating (the removed `buildCacheSettingResultFromResponse`, which skipped any field that was null in state). It made Read a state-preserving merge, so the API response could never introduce a value, and out-of-band changes to undeclared fields were invisible on every plan.
 
-Unconfigured fields do not drift perpetually, because the mechanism that used to be gating is now in the schema: every optional attribute is `Optional + Computed` with a `Default`. When the configuration omits a field, the plan resolves it to that default rather than to null, so state and plan agree and the diff is empty. See the defaults block at the top of `internal/resource_application_cache_setting.go`.
+### Omitted Blocks
 
-**Every** optional attribute needs a default, nested blocks included. This is not only about enforcement: a `Computed` attribute with no default is *unknown* in the plan whenever the configuration omits it, and `req.Plan.Get(ctx, &plan)` reads nested objects into `*Struct` fields, which cannot hold unknown values. The framework fails with "Received unknown value, however the target type cannot handle unknown values", so a missing default breaks Create rather than just weakening enforcement. Use `objectdefault.StaticValue` with a complete subtree — the object default is also required because defaults cannot be applied to children of a block that is null in the plan.
+Every optional leaf attribute inside a block is `Optional + Computed` with a `Default`, so an argument left out of a *declared* block resolves to its default in the plan, state and plan agree, and a console change to it shows up as a diff.
+
+A block cannot be Computed or have a `Default`, so an *omitted* block is null in the plan. Two helpers keep the old behavior where Terraform allows it:
+
+1. **Request — `withCacheSettingDefaults`.** `buildCacheSettingRequest` fills every omitted block, at any depth, with its defaults (the `default*Model` constructors next to the default constants), so the POST/PUT body is byte-for-byte the one sent while the objects were nested attributes with object defaults. An omitted block is still reset to the Azion defaults on every apply. `TestBuildCacheSettingRequestSendsDefaultsForOmittedBlocks` pins this.
+2. **State — `keepDeclaredCacheSettingBlocks`.** Create, Read and Update filter the API result by the plan (or prior state): a block the configuration does not declare is dropped, because Terraform core rejects a block planned as absent that comes back present. Values inside a declared block still mirror the API. A nil prior (import) keeps everything; the first plan after import nulls the undeclared blocks with a one-time in-place update that sends the same defaults.
+
+Trade-off: a console change to a field inside an omitted block is reverted on the next apply but no longer appears in `terraform plan`. Declare the block (even empty) to have its drift detected. This is block *presence* following the configuration, which Terraform core enforces; values are never gated on prior state.
+
+Every optional leaf attribute still needs a default: a `Computed` attribute with no default is *unknown* in the plan whenever a declared block omits it, and `req.Plan.Get(ctx, &plan)` cannot read unknown values into the model's plain fields ("the target type cannot handle unknown values").
 
 Keep in mind that `modules.cache.tiered_cache` and `modules.application_accelerator` depend on modules being enabled on the parent application. They are enforced like everything else, which means their values are present in every PUT body. If the API rejects them for applications lacking those modules, that surfaces as a 400 on apply.
 
@@ -1740,11 +1801,11 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent application with edge cache enabled
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
-    modules = {
-      edge_cache = {
+    modules {
+      cache {
         enabled = true
       }
     }
@@ -1754,9 +1815,9 @@ resource "azion_application_main_setting" "example" {
 # Then create the cache setting for that application
 resource "azion_application_cache_setting" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  cache_setting = {
+  cache_setting {
     name = "My Cache Setting"
-    browser_cache = {
+    browser_cache {
       behavior = "override"
       max_age  = 3600
     }
@@ -1800,7 +1861,7 @@ When implementing or updating Cache Settings resources and data sources:
 5. **Import format**: `{application_id}/{cache_setting_id}`
 6. **Handle 429 errors**: Use `utils.RetryOn429`
 7. **Handle nullable fields**: Check `IsNull()` and `IsUnknown()` before accessing values
-8. **Keep optional attributes `Optional + Computed` with a `Default`**: this is what prevents perpetual drift now that Read is unfiltered. An optional attribute without a default is not enforced — remote changes to it are kept rather than reverted
+8. **Keep optional leaf attributes `Optional + Computed` with a `Default`, and nested objects as blocks**: the defaults prevent perpetual drift inside declared blocks now that Read mirrors values unfiltered; `withCacheSettingDefaults` and `keepDeclaredCacheSettingBlocks` handle omitted blocks (see "Omitted Blocks"). An optional attribute without a default is not enforced — remote changes to it are kept rather than reverted
 8. **Transform nested objects**: Use helper functions for complex module structures
 9. **Register in provider.go**: Add to both DataSources() and Resources()
 10. **Run linters**: `golangci-lint run --config .golintci.yml ./internal/...`

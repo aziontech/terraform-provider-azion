@@ -367,88 +367,43 @@ func buildWAFExceptionConditionsRequest(conditions []WafExceptionConditionModel)
 
 ### Resource Schema
 
+Writable nested objects are **blocks** (see AGENTS.md, "Nested Objects Must Be Blocks"); the full definition is in `internal/resource_waf_rule_set.go`. Shape:
+
 ```go
-resp.Schema = schema.Schema{
-    Attributes: map[string]schema.Attribute{
-        "id": schema.StringAttribute{
-            Description: "Identifier of the resource.",
-            Computed:    true,
-            PlanModifiers: []planmodifier.String{
-                stringplanmodifier.UseStateForUnknown(),
-            },
-        },
-        "waf_id": schema.Int64Attribute{
-            Description: "The WAF identifier.",
-            Required:    true,
-        },
-        "last_updated": schema.StringAttribute{
-            Description: "Timestamp of the last Terraform update of the resource.",
-            Computed:    true,
-        },
-        "result": schema.SingleNestedAttribute{
-            Required: true,
-            Attributes: map[string]schema.Attribute{
-                "exception_id": schema.Int64Attribute{
-                    Description: "The ID of the WAF exception.",
-                    Computed:    true,
-                },
-                "rule_id": schema.Int64Attribute{
-                    Description: "The rule ID that this exception applies to. 0 means all rules.",
-                    Optional:    true,
-                },
-                "name": schema.StringAttribute{
-                    Description: "Name of the WAF exception.",
-                    Required:    true,
-                },
-                "path": schema.StringAttribute{
-                    Description: "Path pattern for the exception.",
-                    Optional:    true,
-                },
-                "conditions": schema.ListNestedAttribute{
-                    Description: "Conditions for the WAF exception.",
-                    Required:    true,
-                    NestedObject: schema.NestedAttributeObject{
-                        Attributes: map[string]schema.Attribute{
-                            "match": schema.StringAttribute{
-                                Description: "The match type for the condition.",
-                                Required:    true,
-                            },
-                            "name": schema.StringAttribute{
-                                Description: "The name for specific condition on name.",
-                                Optional:    true,
-                            },
-                            "value": schema.StringAttribute{
-                                Description: "The value for specific condition on value.",
-                                Optional:    true,
-                            },
-                            "condition_type": schema.StringAttribute{
-                                Description: "Type of condition: generic, specific_on_name, or specific_on_value.",
-                                Required:    true,
-                            },
-                        },
-                    },
-                },
-                "operator": schema.StringAttribute{
-                    Description: "The operator for the exception (regex or contains).",
-                    Optional:    true,
-                },
-                "active": schema.BoolAttribute{
-                    Description: "Whether the exception is active.",
-                    Optional:    true,
-                },
-                "last_editor": schema.StringAttribute{
-                    Description: "Last editor of the exception.",
-                    Computed:    true,
-                },
-                "last_modified": schema.StringAttribute{
-                    Description: "Last modified timestamp.",
-                    Computed:    true,
-                },
-            },
+Attributes: id (computed), waf_id (required), last_updated (computed)
+Blocks: map[string]schema.Block{
+    "result": schema.SingleNestedBlock{            // Validators: objectvalidator.IsRequired(); description starts "Required."
+        Attributes: exception_id (computed), name (required),
+                    rule_id / path / operator (Optional+Computed, no default),
+                    active (Optional+Computed, default true), last_editor / last_modified (computed)
+        Blocks: map[string]schema.Block{
+            "conditions": wafExceptionConditionsBlock(...), // ListNestedBlock, shared with azion_waf_rule_sets
         },
     },
 }
+
+// wafExceptionConditionsBlock: ListNestedBlock with
+//   Validators: listvalidator.IsRequired(), listvalidator.SizeAtLeast(1)
+//   (zero blocks reach validators as a NULL list, so SizeAtLeast alone would let them through)
+//   NestedObject.Blocks["condition"] = SingleNestedBlock + objectvalidator.IsRequired()
+//     match, condition_type (required); name, value (Optional+Computed)
 ```
+
+User syntax:
+
+```hcl
+result {
+  name = "..."
+  conditions {
+    condition {
+      match          = "any_url"
+      condition_type = "generic"
+    }
+  }
+}
+```
+
+The `conditions` / `condition` nesting is kept 1:1 with the former `conditions = [{ condition = {...} }]` attribute, so migration is mechanical and state written by the attribute form is read unchanged (no state upgrader).
 
 ### Single Data Source Schema
 
@@ -990,7 +945,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent WAF
 resource "azion_waf" "example" {
-  result = {
+  result {
     name   = "My WAF"
     active = true
   }
@@ -999,20 +954,19 @@ resource "azion_waf" "example" {
 # Then create the rule set for that WAF
 resource "azion_waf_rule_set" "example" {
   waf_id = azion_waf.example.id
-  result = {
+  result {
     name     = "My WAF Exception"
     path     = "/api/*"
     active   = true
     operator = "regex"
     rule_id  = 0
-    conditions = [
-      {
-        condition = {
-          match          = "any_url"
-          condition_type = "generic"
-        }
+
+    conditions {
+      condition {
+        match          = "any_url"
+        condition_type = "generic"
       }
-    ]
+    }
   }
 }
 ```

@@ -8,14 +8,14 @@ import (
 
 	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -67,10 +67,8 @@ type FirewallResourceResults struct {
 // below on every apply, so a module toggled in Azion Console is undone rather
 // than silently adopted.
 //
-// Every optional nested block needs a default. A Computed block without one is
-// unknown in the plan whenever the configuration omits it, and the nested objects
-// here are read into pointer fields that cannot hold unknown values, so a missing
-// default breaks Create rather than merely weakening enforcement.
+// Module blocks cannot carry a default, so buildFirewallModulesRequest sends the
+// value below for every module whose block (or flag) is left out.
 const (
 	defaultFirewallActive            = true
 	defaultFirewallDebug             = false
@@ -86,42 +84,13 @@ const (
 	defaultFirewallDdosProtection = true
 )
 
-// Attribute types for the nested objects, needed to build object defaults whose
-// types must match the schema exactly.
-var (
-	firewallModuleAttrTypes = map[string]attr.Type{
-		"enabled": types.BoolType,
-	}
-
-	firewallModulesAttrTypes = map[string]attr.Type{
-		"ddos_protection":    types.ObjectType{AttrTypes: firewallModuleAttrTypes},
-		"functions":          types.ObjectType{AttrTypes: firewallModuleAttrTypes},
-		"network_protection": types.ObjectType{AttrTypes: firewallModuleAttrTypes},
-		"waf":                types.ObjectType{AttrTypes: firewallModuleAttrTypes},
-	}
-)
-
-var firewallModulesDefault = types.ObjectValueMust(firewallModulesAttrTypes, map[string]attr.Value{
-	"ddos_protection":    firewallModuleDefault(defaultFirewallDdosProtection),
-	"functions":          firewallModuleDefault(defaultFirewallFunctions),
-	"network_protection": firewallModuleDefault(defaultFirewallNetworkProtection),
-	"waf":                firewallModuleDefault(defaultFirewallWAF),
-})
-
-func firewallModuleDefault(enabled bool) types.Object {
-	return types.ObjectValueMust(firewallModuleAttrTypes, map[string]attr.Value{
-		"enabled": types.BoolValue(enabled),
-	})
-}
-
-// firewallModuleAttribute builds the schema for one configurable module, all of
-// which are a single `enabled` flag.
-func firewallModuleAttribute(description, flagDescription string, enabled bool) schema.SingleNestedAttribute {
-	return schema.SingleNestedAttribute{
+// firewallModuleBlock builds the schema for one configurable module, all of
+// which are a single `enabled` flag. Modules are blocks rather than nested
+// attributes so Terraform rejects arguments that do not exist instead of
+// silently dropping them.
+func firewallModuleBlock(description, flagDescription string, enabled bool) schema.SingleNestedBlock {
+	return schema.SingleNestedBlock{
 		Description: description,
-		Optional:    true,
-		Computed:    true,
-		Default:     objectdefault.StaticValue(firewallModuleDefault(enabled)),
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
 				Description: flagDescription,
@@ -137,7 +106,8 @@ func firewallModuleAttribute(description, flagDescription string, enabled bool) 
 // model without filtering. State has to match the remote firewall for Terraform
 // to plan a revert when a module was toggled outside Terraform; unconfigured
 // fields do not drift perpetually because every optional attribute is Computed
-// with a schema default.
+// with a schema default, and keepDeclaredFirewallModules drops the module blocks
+// the configuration leaves out.
 func transformFirewallResponseToModel(data *sdk.Firewall) *FirewallResourceResults {
 	if data == nil {
 		return nil
@@ -179,27 +149,67 @@ func transformFirewallResponseToModel(data *sdk.Firewall) *FirewallResourceResul
 	return results
 }
 
+// firewallModuleEnabled returns the configured flag, or the module's default
+// when the block or the flag is left out, so an omitted module is still reset to
+// its default on every apply.
+func firewallModuleEnabled(enabled *types.Bool, fallback bool) *bool {
+	if enabled != nil && isSet(*enabled) {
+		return enabled.ValueBoolPointer()
+	}
+	return &fallback
+}
+
 // buildFirewallModulesRequest builds the settable modules from a plan. Every
-// module the API accepts is always sent, so one toggled out-of-band is reset.
-// ddos_protection is deliberately absent: it is always on and has no request
-// field.
+// module the API accepts is always sent, with its default when its block is
+// omitted, so one toggled out-of-band is reset. ddos_protection is deliberately
+// absent: it is always on and has no request field.
 func buildFirewallModulesRequest(mods *FirewallResourceModules) sdk.FirewallModulesRequest {
-	modules := sdk.FirewallModulesRequest{}
 	if mods == nil {
-		return modules
+		mods = &FirewallResourceModules{}
 	}
 
-	if mods.Functions != nil && isSet(mods.Functions.Enabled) {
-		modules.Functions = &sdk.FirewallModuleRequest{Enabled: mods.Functions.Enabled.ValueBoolPointer()}
+	var functions, networkProtection, waf *types.Bool
+	if mods.Functions != nil {
+		functions = &mods.Functions.Enabled
 	}
-	if mods.NetworkProtection != nil && isSet(mods.NetworkProtection.Enabled) {
-		modules.NetworkProtection = &sdk.FirewallModuleRequest{Enabled: mods.NetworkProtection.Enabled.ValueBoolPointer()}
+	if mods.NetworkProtection != nil {
+		networkProtection = &mods.NetworkProtection.Enabled
 	}
-	if mods.WAF != nil && isSet(mods.WAF.Enabled) {
-		modules.Waf = &sdk.FirewallModuleRequest{Enabled: mods.WAF.Enabled.ValueBoolPointer()}
+	if mods.WAF != nil {
+		waf = &mods.WAF.Enabled
 	}
 
-	return modules
+	return sdk.FirewallModulesRequest{
+		Functions:         &sdk.FirewallModuleRequest{Enabled: firewallModuleEnabled(functions, defaultFirewallFunctions)},
+		NetworkProtection: &sdk.FirewallModuleRequest{Enabled: firewallModuleEnabled(networkProtection, defaultFirewallNetworkProtection)},
+		Waf:               &sdk.FirewallModuleRequest{Enabled: firewallModuleEnabled(waf, defaultFirewallWAF)},
+	}
+}
+
+// keepDeclaredFirewallModules drops from the API result every module block the
+// prior plan or state does not declare. Terraform rejects a block that is
+// planned as absent and comes back present, so an undeclared block must stay
+// null. A nil prior (import) keeps everything.
+func keepDeclaredFirewallModules(prior *FirewallResourceResults, results *FirewallResourceResults) {
+	if prior == nil || results == nil || results.Modules == nil {
+		return
+	}
+	if prior.Modules == nil {
+		results.Modules = nil
+		return
+	}
+	if prior.Modules.DdosProtection == nil {
+		results.Modules.DdosProtection = nil
+	}
+	if prior.Modules.Functions == nil {
+		results.Modules.Functions = nil
+	}
+	if prior.Modules.NetworkProtection == nil {
+		results.Modules.NetworkProtection = nil
+	}
+	if prior.Modules.WAF == nil {
+		results.Modules.WAF = nil
+	}
 }
 
 func (r *firewallResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -219,8 +229,13 @@ func (r *firewallResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"data": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"data": schema.SingleNestedBlock{
+				Description: "Required. The Firewall settings.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "ID of the firewall rule set.",
@@ -229,39 +244,6 @@ func (r *firewallResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"name": schema.StringAttribute{
 						Description: "Name of the firewall rule set.",
 						Required:    true,
-					},
-					"modules": schema.SingleNestedAttribute{
-						Description: "Modules configuration for the firewall. Omitting a module resets it to its default on every apply.",
-						Optional:    true,
-						Computed:    true,
-						Default:     objectdefault.StaticValue(firewallModulesDefault),
-						Attributes: map[string]schema.Attribute{
-							// Stays Optional so existing configurations that declare
-							// it keep working, even though the API has no
-							// ddos_protection field and the module is always on.
-							// Computed with a default of true keeps it stable: the
-							// value the API reports is the value the plan holds.
-							"ddos_protection": firewallModuleAttribute(
-								"DDoS protection module configuration. Always enabled; the API accepts no value for it.",
-								"Whether DDoS protection is enabled. Always true — it cannot be disabled.",
-								defaultFirewallDdosProtection,
-							),
-							"functions": firewallModuleAttribute(
-								"Functions module configuration.",
-								"Whether functions are enabled.",
-								defaultFirewallFunctions,
-							),
-							"network_protection": firewallModuleAttribute(
-								"Network protection module configuration.",
-								"Whether network protection is enabled.",
-								defaultFirewallNetworkProtection,
-							),
-							"waf": firewallModuleAttribute(
-								"WAF module configuration.",
-								"Whether WAF is enabled.",
-								defaultFirewallWAF,
-							),
-						},
 					},
 					"debug": schema.BoolAttribute{
 						Description: "Whether debug is enabled for the rule set.",
@@ -298,6 +280,38 @@ func (r *firewallResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"version_id": schema.StringAttribute{
 						Description: "The identifier of the current firewall version.",
 						Computed:    true,
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"modules": schema.SingleNestedBlock{
+						Description: "Modules configuration for the firewall. A module left out is reset to its default on every apply, but its drift is only detected while its block is declared.",
+						Blocks: map[string]schema.Block{
+							// Stays Optional so existing configurations that declare
+							// it keep working, even though the API has no
+							// ddos_protection field and the module is always on.
+							// Its `enabled` flag is Computed with a default of true, so
+							// the value the API reports is the value the plan holds.
+							"ddos_protection": firewallModuleBlock(
+								"DDoS protection module configuration. Always enabled; the API accepts no value for it.",
+								"Whether DDoS protection is enabled. Always true — it cannot be disabled.",
+								defaultFirewallDdosProtection,
+							),
+							"functions": firewallModuleBlock(
+								"Functions module configuration.",
+								"Whether functions are enabled.",
+								defaultFirewallFunctions,
+							),
+							"network_protection": firewallModuleBlock(
+								"Network protection module configuration.",
+								"Whether network protection is enabled.",
+								defaultFirewallNetworkProtection,
+							),
+							"waf": firewallModuleBlock(
+								"WAF module configuration.",
+								"Whether WAF is enabled.",
+								defaultFirewallWAF,
+							),
+						},
 					},
 				},
 			},
@@ -353,7 +367,9 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	plan.Firewall = transformFirewallResponseToModel(&firewallResponse.Data)
+	results := transformFirewallResponseToModel(&firewallResponse.Data)
+	keepDeclaredFirewallModules(plan.Firewall, results)
+	plan.Firewall = results
 
 	plan.ID = types.StringValue(strconv.FormatInt(firewallResponse.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -420,7 +436,9 @@ func (r *firewallResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
-	state.Firewall = transformFirewallResponseToModel(&firewallResponse.Data)
+	results := transformFirewallResponseToModel(&firewallResponse.Data)
+	keepDeclaredFirewallModules(state.Firewall, results)
+	state.Firewall = results
 	state.ID = types.StringValue(strconv.FormatInt(firewallID, 10))
 
 	diags = resp.State.Set(ctx, &state)
@@ -500,7 +518,9 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	plan.Firewall = transformFirewallResponseToModel(&firewallResponse.Data)
+	results := transformFirewallResponseToModel(&firewallResponse.Data)
+	keepDeclaredFirewallModules(plan.Firewall, results)
+	plan.Firewall = results
 
 	plan.ID = types.StringValue(strconv.FormatInt(firewallResponse.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
