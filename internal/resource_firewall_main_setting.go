@@ -35,9 +35,8 @@ type firewallResource struct {
 }
 
 type FirewallResourceModel struct {
-	Firewall    *FirewallResourceResults `tfsdk:"data"`
-	ID          types.String             `tfsdk:"id"`
-	LastUpdated types.String             `tfsdk:"last_updated"`
+	Firewall *FirewallResourceResults `tfsdk:"data"`
+	ID       types.String             `tfsdk:"id"`
 }
 
 type FirewallResourceModules struct {
@@ -53,8 +52,6 @@ type FirewallResourceResults struct {
 	Modules        *FirewallResourceModules `tfsdk:"modules"`
 	Debug          types.Bool               `tfsdk:"debug"`
 	Active         types.Bool               `tfsdk:"active"`
-	LastEditor     types.String             `tfsdk:"last_editor"`
-	LastModified   types.String             `tfsdk:"last_modified"`
 	CreatedAt      types.String             `tfsdk:"created_at"`
 	ProductVersion types.String             `tfsdk:"product_version"`
 	State          types.String             `tfsdk:"state"`
@@ -118,8 +115,6 @@ func transformFirewallResponseToModel(data *sdk.Firewall) *FirewallResourceResul
 		Name:           types.StringValue(data.GetName()),
 		Debug:          types.BoolValue(data.GetDebug()),
 		Active:         types.BoolValue(data.GetActive()),
-		LastEditor:     types.StringValue(data.GetLastEditor()),
-		LastModified:   types.StringValue(data.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:      types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(data.GetProductVersion()),
 		State:          types.StringPointerValue(data.VersionState.Get()),
@@ -225,10 +220,6 @@ func (r *firewallResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 		Blocks: map[string]schema.Block{
 			"data": schema.SingleNestedBlock{
@@ -256,14 +247,6 @@ func (r *firewallResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(defaultFirewallActive),
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the firewall rule set.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the firewall rule set.",
-						Computed:    true,
 					},
 					"created_at": schema.StringAttribute{
 						Description: "Creation timestamp of the firewall rule set.",
@@ -372,7 +355,6 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 	plan.Firewall = results
 
 	plan.ID = types.StringValue(strconv.FormatInt(firewallResponse.Data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -523,7 +505,6 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 	plan.Firewall = results
 
 	plan.ID = types.StringValue(strconv.FormatInt(firewallResponse.Data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

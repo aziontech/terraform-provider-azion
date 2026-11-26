@@ -64,7 +64,6 @@ The JSON body for both endpoints has identical shape:
 | `application_id` | int64 | yes | — | The application whose order is being managed |
 | `phase` | string | yes | — | `"request"` or `"response"` (validated with `stringvalidator.OneOf`) |
 | `order` | list of int64 | yes | — | Ordered rule IDs; first ID is evaluated first |
-| `last_updated` | string | — | yes | Timestamp of the last Terraform update |
 
 ### CRUD Lifecycle
 

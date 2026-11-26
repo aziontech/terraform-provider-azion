@@ -189,7 +189,6 @@ type WAFExceptionSpecificConditionOnValue struct {
 type WafRuleSetResourceModel struct {
     ID          types.String               `tfsdk:"id"`
     WafID       types.Int64                `tfsdk:"waf_id"`
-    LastUpdated types.String               `tfsdk:"last_updated"`
     Result      *WafRuleSetResourceResults `tfsdk:"result"`
 }
 
@@ -201,8 +200,6 @@ type WafRuleSetResourceResults struct {
     Conditions   []WafExceptionConditionModel `tfsdk:"conditions"`
     Operator     types.String                 `tfsdk:"operator"`
     Active       types.Bool                   `tfsdk:"active"`
-    LastEditor   types.String                 `tfsdk:"last_editor"`
-    LastModified types.String                 `tfsdk:"last_modified"`
 }
 ```
 
@@ -370,12 +367,12 @@ func buildWAFExceptionConditionsRequest(conditions []WafExceptionConditionModel)
 Writable nested objects are **blocks** (see AGENTS.md, "Nested Objects Must Be Blocks"); the full definition is in `internal/resource_waf_rule_set.go`. Shape:
 
 ```go
-Attributes: id (computed), waf_id (required), last_updated (computed)
+Attributes: id (computed), waf_id (required)
 Blocks: map[string]schema.Block{
     "result": schema.SingleNestedBlock{            // Validators: objectvalidator.IsRequired(); description starts "Required."
         Attributes: exception_id (computed), name (required),
                     rule_id / path / operator (Optional+Computed, no default),
-                    active (Optional+Computed, default true), last_editor / last_modified (computed)
+                    active (Optional+Computed, default true)
         Blocks: map[string]schema.Block{
             "conditions": wafExceptionConditionsBlock(...), // ListNestedBlock, shared with azion_waf_rule_sets
         },
@@ -600,7 +597,6 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
     data := exceptionResponse.GetData()
     plan.Result = transformWAFRuleToResourceModel(data)
     plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -796,7 +792,6 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
     data := exceptionResponse.GetData()
     plan.Result = transformWAFRuleToResourceModel(data)
     plan.ID = types.StringValue(strconv.FormatInt(exceptionID, 10))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)

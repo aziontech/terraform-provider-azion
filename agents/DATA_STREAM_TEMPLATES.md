@@ -125,7 +125,7 @@ Unlike the Streams data sources, no field needs to be flattened to a JSON string
 
 `internal/resource_data_stream_template.go` → `azion_data_stream_template`.
 
-Standard V4 resource shape: a `template` single-nested attribute holding the body, plus root-level `id` (string), `last_updated`, and `schema_version`.
+Standard V4 resource shape: a `template` single-nested attribute holding the body, plus root-level `id` (string) and `schema_version`.
 
 | Method | API call | Notes |
 |--------|----------|-------|
@@ -152,7 +152,7 @@ Flat `SingleNestedBlock` (users write `template { ... }`, see "Nested Objects Mu
         "data_set": schema.StringAttribute{Required: true},
         "active":   schema.BoolAttribute{Optional: true, Computed: true},
         "custom":   schema.BoolAttribute{Computed: true},
-        // id, last_editor, created_at, last_modified: Computed
+        // id, created_at: Computed
     },
 },
 ```

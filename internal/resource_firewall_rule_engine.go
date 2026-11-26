@@ -38,23 +38,20 @@ type firewallRuleEngineResource struct {
 }
 
 type FirewallRuleEngineResourceModel struct {
-	ID          types.String                      `tfsdk:"id"`
-	FirewallID  types.Int64                       `tfsdk:"firewall_id"`
-	LastUpdated types.String                      `tfsdk:"last_updated"`
-	Results     *FirewallRuleEngineResultResource `tfsdk:"results"`
+	ID         types.String                      `tfsdk:"id"`
+	FirewallID types.Int64                       `tfsdk:"firewall_id"`
+	Results    *FirewallRuleEngineResultResource `tfsdk:"results"`
 }
 
 type FirewallRuleEngineResultResource struct {
-	ID           types.Int64                            `tfsdk:"id"`
-	Name         types.String                           `tfsdk:"name"`
-	Active       types.Bool                             `tfsdk:"active"`
-	Criteria     []FirewallCriteriaResourceModel        `tfsdk:"criteria"`
-	Behaviors    []FirewallBehaviorWrapperResourceModel `tfsdk:"behaviors"`
-	Description  types.String                           `tfsdk:"description"`
-	Order        types.Int64                            `tfsdk:"order"`
-	LastEditor   types.String                           `tfsdk:"last_editor"`
-	LastModified types.String                           `tfsdk:"last_modified"`
-	CreatedAt    types.String                           `tfsdk:"created_at"`
+	ID          types.Int64                            `tfsdk:"id"`
+	Name        types.String                           `tfsdk:"name"`
+	Active      types.Bool                             `tfsdk:"active"`
+	Criteria    []FirewallCriteriaResourceModel        `tfsdk:"criteria"`
+	Behaviors   []FirewallBehaviorWrapperResourceModel `tfsdk:"behaviors"`
+	Description types.String                           `tfsdk:"description"`
+	Order       types.Int64                            `tfsdk:"order"`
+	CreatedAt   types.String                           `tfsdk:"created_at"`
 }
 
 type FirewallCriteriaResourceModel struct {
@@ -115,10 +112,6 @@ func (r *firewallRuleEngineResource) Schema(_ context.Context, _ resource.Schema
 				Description: "The firewall identifier.",
 				Required:    true,
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 		Blocks: map[string]schema.Block{
 			"results": schema.SingleNestedBlock{
@@ -147,14 +140,6 @@ func (r *firewallRuleEngineResource) Schema(_ context.Context, _ resource.Schema
 					},
 					"order": schema.Int64Attribute{
 						Description: "Order of the rule.",
-						Computed:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the rule.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp.",
 						Computed:    true,
 					},
 					"created_at": schema.StringAttribute{
@@ -759,10 +744,9 @@ func buildFirewallBehaviorsRequest(behaviors []FirewallBehaviorWrapperResourceMo
 func buildFirewallRuleStateFromResponse(rule azionapi.FirewallRule, firewallID types.Int64) FirewallRuleEngineResourceModel {
 	result := transformFirewallRuleToResultModel(rule)
 	return FirewallRuleEngineResourceModel{
-		FirewallID:  firewallID,
-		ID:          types.StringValue(fmt.Sprintf("%d/%d", firewallID.ValueInt64(), result.ID.ValueInt64())),
-		LastUpdated: types.StringValue(time.Now().Format(time.RFC850)),
-		Results:     result,
+		FirewallID: firewallID,
+		ID:         types.StringValue(fmt.Sprintf("%d/%d", firewallID.ValueInt64(), result.ID.ValueInt64())),
+		Results:    result,
 	}
 }
 
@@ -779,8 +763,6 @@ func transformFirewallRuleToResultModel(rule azionapi.FirewallRule) *FirewallRul
 	if rule.Description != nil {
 		result.Description = types.StringValue(*rule.Description)
 	}
-	result.LastEditor = types.StringValue(rule.GetLastEditor())
-	result.LastModified = types.StringValue(rule.GetLastModified().Format(time.RFC3339))
 	result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))
 
 	// Transform criteria.

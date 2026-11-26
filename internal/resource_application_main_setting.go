@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
-	"time"
 
 	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -39,7 +38,6 @@ type applicationResource struct {
 type ApplicationResourceModel struct {
 	Application *ApplicationResults `tfsdk:"application"`
 	ID          types.String        `tfsdk:"id"`
-	LastUpdated types.String        `tfsdk:"last_updated"`
 }
 
 type ApplicationResults struct {
@@ -100,10 +98,6 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -226,7 +220,6 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
 	keepDeclaredModules(plan.Application, results)
 	plan.Application = results
 	plan.ID = types.StringValue(fmt.Sprintf("%d", createApplication.Data.GetId()))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -340,7 +333,6 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
 	plan.Application = results
 
 	plan.ID = types.StringValue(fmt.Sprintf("%d", updateApplication.Data.GetId()))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

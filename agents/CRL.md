@@ -226,16 +226,13 @@ The resource uses a nested `crl` attribute to group all CRL-specific fields, fol
 type crlResourceModel struct {
     Crl         *crlResourceResults `tfsdk:"crl"`
     ID          types.String        `tfsdk:"id"`
-    LastUpdated types.String        `tfsdk:"last_updated"`
 }
 
 type crlResourceResults struct {
     ID             types.Int64  `tfsdk:"id"`
     Name           types.String `tfsdk:"name"`
     Active         types.Bool   `tfsdk:"active"`
-    LastEditor     types.String `tfsdk:"last_editor"`
     CreatedAt      types.String `tfsdk:"created_at"`
-    LastModified   types.String `tfsdk:"last_modified"`
     ProductVersion types.String `tfsdk:"product_version"`
     Issuer         types.String `tfsdk:"issuer"`
     LastUpdate     types.String `tfsdk:"last_update"`
@@ -258,10 +255,6 @@ func (r *crlResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
                     stringplanmodifier.UseStateForUnknown(),
                 },
             },
-            "last_updated": schema.StringAttribute{
-                Description: "Timestamp of the last Terraform update of the resource.",
-                Computed:    true,
-            },
         },
         Blocks: map[string]schema.Block{
             "crl": schema.SingleNestedBlock{
@@ -283,16 +276,8 @@ func (r *crlResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
                         Optional:    true,
                         Computed:    true,
                     },
-                    "last_editor": schema.StringAttribute{
-                        Description: "Last editor of the certificate revocation list.",
-                        Computed:    true,
-                    },
                     "created_at": schema.StringAttribute{
                         Description: "Timestamp of the certificate revocation list creation on the platform.",
-                        Computed:    true,
-                    },
-                    "last_modified": schema.StringAttribute{
-                        Description: "Timestamp of the last modification made to the certificate content on the platform.",
                         Computed:    true,
                     },
                     "product_version": schema.StringAttribute{
@@ -386,7 +371,6 @@ func (r *crlResource) Create(ctx context.Context, req resource.CreateRequest, re
     crlData := createCrl.GetData()
     plan.Crl = populateCrlResourceResults(ctx, crlData)
     plan.ID = types.StringValue(strconv.FormatInt(crlData.GetId(), 10))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -502,7 +486,6 @@ func (r *crlResource) Update(ctx context.Context, req resource.UpdateRequest, re
     crlData := updateCrl.GetData()
     plan.Crl = populateCrlResourceResults(ctx, crlData)
     plan.ID = types.StringValue(strconv.FormatInt(crlData.GetId(), 10))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -588,9 +571,7 @@ func populateCrlResourceResults(ctx context.Context, crl azionapi.CertificateRev
     result := &crlResourceResults{
         ID:             types.Int64Value(crl.GetId()),
         Name:           types.StringValue(crl.GetName()),
-        LastEditor:     types.StringValue(crl.GetLastEditor()),
         CreatedAt:      types.StringValue(createdAt),
-        LastModified:   types.StringValue(crl.GetLastModified().Format(time.RFC3339)),
         ProductVersion: types.StringValue(crl.GetProductVersion()),
         Issuer:         types.StringValue(crl.GetIssuer()),
         LastUpdate:     types.StringValue(crl.GetLastUpdate().Format(time.RFC3339)),

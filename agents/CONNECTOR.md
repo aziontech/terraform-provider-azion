@@ -87,15 +87,12 @@ The connector resource uses nested blocks for type-specific configuration. Omitt
 type connectorResourceModel struct {
     Connector     *connectorResourceResults `tfsdk:"connector"`
     ID            types.String              `tfsdk:"id"`
-    LastUpdated   types.String              `tfsdk:"last_updated"`
     SchemaVersion types.Int64               `tfsdk:"schema_version"`
 }
 
 type connectorResourceResults struct {
     ID             types.Int64             `tfsdk:"id"`
     Name           types.String            `tfsdk:"name"`
-    LastEditor     types.String            `tfsdk:"last_editor"`
-    LastModified   types.String            `tfsdk:"last_modified"`
     CreatedAt      types.String            `tfsdk:"created_at"`
     ProductVersion types.String            `tfsdk:"product_version"`
     Active         types.Bool              `tfsdk:"active"`

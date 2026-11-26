@@ -42,14 +42,12 @@ func (wafRuleSetsTestProvider) DataSources(context.Context) []func() datasource.
 // are null, and so are the optional ones it does not declare.
 func configItem(path string) WafRuleSetsItemModel {
 	return WafRuleSetsItemModel{
-		ExceptionID:  types.Int64Null(),
-		RuleID:       types.Int64Value(0),
-		Path:         types.StringValue(path),
-		Conditions:   []WafExceptionConditionWrapperModel{genericCondition("any_url")},
-		Operator:     types.StringValue("regex"),
-		Active:       types.BoolNull(),
-		LastEditor:   types.StringNull(),
-		LastModified: types.StringNull(),
+		ExceptionID: types.Int64Null(),
+		RuleID:      types.Int64Value(0),
+		Path:        types.StringValue(path),
+		Conditions:  []WafExceptionConditionWrapperModel{genericCondition("any_url")},
+		Operator:    types.StringValue("regex"),
+		Active:      types.BoolNull(),
 	}
 }
 
@@ -61,15 +59,12 @@ func configItem(path string) WafRuleSetsItemModel {
 func proposedNewState(config, prior WafRuleSetsResourceModel) WafRuleSetsResourceModel {
 	proposed := config
 	proposed.ID = prior.ID
-	proposed.LastUpdated = prior.LastUpdated
 	proposed.RuleSets = nil
 
 	held := wafRuleSetsByName(prior.RuleSets)
 	for _, item := range config.RuleSets {
 		if p, ok := held[item.Name.ValueString()]; ok && !wafRuleSetsItemNeedsUpdate(item, p) {
 			item.ExceptionID = p.ExceptionID
-			item.LastEditor = p.LastEditor
-			item.LastModified = p.LastModified
 			if item.Active.IsNull() {
 				item.Active = p.Active
 			}
@@ -156,10 +151,10 @@ func planWithPrior(t *testing.T, config WafRuleSetsResourceModel, prior tftypes.
 // into the plan, and apply failed with "Provider produced inconsistent result
 // after apply: .rule_sets[...].exception_id: was null, but now ...".
 func TestWAFRuleSetsPlanNewExceptionOnExistingResource(t *testing.T) {
-	prior := wafRuleSetsModel(types.StringValue("before"), map[string]WafRuleSetsItemModel{
+	prior := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"kept": wafItem(1, "/kept", true),
 	})
-	config := wafRuleSetsModel(types.StringNull(), map[string]WafRuleSetsItemModel{
+	config := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"kept":     configItem("/kept"),
 		"recreate": configItem("/new"),
 	})
@@ -171,19 +166,16 @@ func TestWAFRuleSetsPlanNewExceptionOnExistingResource(t *testing.T) {
 	if got := byName["recreate"].ExceptionID; !got.IsUnknown() {
 		t.Errorf("new exception: exception_id planned as %s, want unknown", got)
 	}
-	if got := byName["recreate"].LastModified; !got.IsUnknown() {
-		t.Errorf("new exception: last_modified planned as %s, want unknown", got)
-	}
-	if got := byName["kept"]; !got.ExceptionID.Equal(types.Int64Value(1)) || got.LastModified.IsUnknown() {
+	if got := byName["kept"]; !reflect.DeepEqual(got, wafRuleSetsByName(prior.RuleSets)["kept"]) {
 		t.Errorf("unchanged exception should plan as its state, got %+v", got)
 	}
 }
 
 func TestWAFRuleSetsPlanChangedExceptionKeepsID(t *testing.T) {
-	prior := wafRuleSetsModel(types.StringValue("before"), map[string]WafRuleSetsItemModel{
+	prior := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"changed": wafItem(1, "/old", true),
 	})
-	config := wafRuleSetsModel(types.StringNull(), map[string]WafRuleSetsItemModel{
+	config := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"changed": configItem("/new"),
 	})
 	config.ID = types.StringNull()
@@ -194,23 +186,20 @@ func TestWAFRuleSetsPlanChangedExceptionKeepsID(t *testing.T) {
 	if !got.ExceptionID.Equal(types.Int64Value(1)) {
 		t.Errorf("updated exception must keep its exception_id, got %s", got.ExceptionID)
 	}
-	if !got.LastModified.IsUnknown() {
-		t.Errorf("updated exception: last_modified planned as %s, want unknown", got.LastModified)
-	}
 }
 
 func TestWAFRuleSetsPlanNoChangesIsEmpty(t *testing.T) {
-	prior := wafRuleSetsModel(types.StringValue("before"), map[string]WafRuleSetsItemModel{
+	prior := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"a": wafItem(1, "/a", true),
 	})
-	config := wafRuleSetsModel(types.StringNull(), map[string]WafRuleSetsItemModel{
+	config := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"a": configItem("/a"),
 	})
 	config.ID = types.StringNull()
 
 	planned := planThroughFramework(t, config, prior)
 
-	if !planned.LastUpdated.Equal(prior.LastUpdated) || !reflect.DeepEqual(planned.RuleSets, prior.RuleSets) {
+	if !reflect.DeepEqual(planned.RuleSets, prior.RuleSets) {
 		t.Errorf("plan should equal prior state, got %+v", planned)
 	}
 }
@@ -220,13 +209,13 @@ func TestWAFRuleSetsPlanNoChangesIsEmpty(t *testing.T) {
 // values filled in by core) is not equal to the configured one, so the lookup
 // found nothing and `active = false` was planned as the default `true`.
 func TestWAFRuleSetsPlanKeepsDeclaredActiveFalse(t *testing.T) {
-	prior := wafRuleSetsModel(types.StringValue("before"), map[string]WafRuleSetsItemModel{
+	prior := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"off": wafItem(1, "/off", false),
 		"on":  wafItem(2, "/on", true),
 	})
 	off := configItem("/off")
 	off.Active = types.BoolValue(false)
-	config := wafRuleSetsModel(types.StringNull(), map[string]WafRuleSetsItemModel{
+	config := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"off": off,
 		"on":  configItem("/on"),
 	})
@@ -242,7 +231,7 @@ func TestWAFRuleSetsPlanKeepsDeclaredActiveFalse(t *testing.T) {
 	off.Active = types.BoolValue(true)
 	on := configItem("/on")
 	on.Active = types.BoolValue(false)
-	config = wafRuleSetsModel(types.StringNull(), map[string]WafRuleSetsItemModel{"off": off, "on": on})
+	config = wafRuleSetsModel(map[string]WafRuleSetsItemModel{"off": off, "on": on})
 	config.ID = types.StringNull()
 
 	byName := wafRuleSetsByName(planThroughFramework(t, config, prior).RuleSets)
@@ -257,11 +246,11 @@ func TestWAFRuleSetsPlanKeepsDeclaredActiveFalse(t *testing.T) {
 // Declaring no rule_set block deletes every exception: the plan holds no
 // exception, and reconcile deletes everything state holds.
 func TestWAFRuleSetsPlanZeroBlocksDeletesAll(t *testing.T) {
-	prior := wafRuleSetsModel(types.StringValue("before"), map[string]WafRuleSetsItemModel{
+	prior := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"a": wafItem(1, "/a", true),
 		"b": wafItem(2, "/b", true),
 	})
-	config := wafRuleSetsModel(types.StringNull(), nil)
+	config := wafRuleSetsModel(nil)
 	config.ID = types.StringNull()
 
 	planned := planThroughFramework(t, config, prior)
@@ -282,7 +271,7 @@ func TestWAFRuleSetsPlanCreateMarksAPIValuesUnknown(t *testing.T) {
 	item := configItem("/a")
 	item.RuleID = types.Int64Null()
 	item.Operator = types.StringNull()
-	config := wafRuleSetsModel(types.StringNull(), map[string]WafRuleSetsItemModel{"a": item})
+	config := wafRuleSetsModel(map[string]WafRuleSetsItemModel{"a": item})
 	config.ID = types.StringNull()
 
 	sr := &fwresource.SchemaResponse{}
@@ -292,7 +281,7 @@ func TestWAFRuleSetsPlanCreateMarksAPIValuesUnknown(t *testing.T) {
 	planned := planWithPrior(t, config, nullState.Raw, config)
 
 	got := wafRuleSetsByName(planned.RuleSets)["a"]
-	if !got.ExceptionID.IsUnknown() || !got.RuleID.IsUnknown() || !got.Operator.IsUnknown() || !got.LastModified.IsUnknown() {
+	if !got.ExceptionID.IsUnknown() || !got.RuleID.IsUnknown() || !got.Operator.IsUnknown() {
 		t.Errorf("undeclared values must be unknown on create, got %+v", got)
 	}
 	if !got.Path.Equal(types.StringValue("/a")) || !got.Active.Equal(types.BoolValue(true)) {
@@ -322,7 +311,7 @@ func TestWAFRuleSetsNamesValidator(t *testing.T) {
 				item.Name = types.StringValue(n)
 				items = append(items, item)
 			}
-			model := wafRuleSetsModel(types.StringNull(), nil)
+			model := wafRuleSetsModel(nil)
 			model.RuleSets = items
 
 			sr := &fwresource.SchemaResponse{}
@@ -396,7 +385,7 @@ func TestWAFRuleSetsUpgradeStateV0(t *testing.T) {
 		t.Fatalf("decoding: %v", diags)
 	}
 
-	if !got.ID.Equal(types.StringValue("42")) || !got.WafID.Equal(types.Int64Value(42)) || got.LastUpdated.ValueString() == "" {
+	if !got.ID.Equal(types.StringValue("42")) || !got.WafID.Equal(types.Int64Value(42)) {
 		t.Errorf("top-level values not carried over: %+v", got)
 	}
 	byName := wafRuleSetsByName(got.RuleSets)

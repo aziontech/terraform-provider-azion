@@ -58,9 +58,6 @@ The import format is: `workloadID/deploymentID`
 The following attributes are exported:
 
 * `id` - The identifier of the resource in the format `workloadID/deploymentID`.
-* `last_updated` - Timestamp of the last Terraform update of the resource.
 * `deployment` - The deployment configuration.
   * `id` - The deployment identifier (computed).
-  * `last_editor` - The last editor of the deployment.
-  * `last_modified` - Last modified timestamp of the deployment.
   * `created_at` - Creation timestamp of the deployment.

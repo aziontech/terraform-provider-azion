@@ -168,7 +168,6 @@ resource "azion_application_cache_setting" "example" {
 ### Read-Only
 
 - `id` (Number) Resource identifier.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
 <a id="nestedblock--cache_setting"></a>
 ### Nested Schema for `cache_setting`

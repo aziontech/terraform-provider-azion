@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"strconv"
-	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -36,17 +35,14 @@ type wafResource struct {
 }
 
 type WafResourceModel struct {
-	ID          types.String        `tfsdk:"id"`
-	LastUpdated types.String        `tfsdk:"last_updated"`
-	Result      *WafResourceResults `tfsdk:"result"`
+	ID     types.String        `tfsdk:"id"`
+	Result *WafResourceResults `tfsdk:"result"`
 }
 
 type WafResourceResults struct {
 	ID             types.Int64                     `tfsdk:"id"`
 	Name           types.String                    `tfsdk:"name"`
 	Active         types.Bool                      `tfsdk:"active"`
-	LastEditor     types.String                    `tfsdk:"last_editor"`
-	LastModified   types.String                    `tfsdk:"last_modified"`
 	ProductVersion types.String                    `tfsdk:"product_version"`
 	State          types.String                    `tfsdk:"state"`
 	VersionID      types.String                    `tfsdk:"version_id"`
@@ -142,10 +138,6 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 		Blocks: map[string]schema.Block{
 			"result": schema.SingleNestedBlock{
@@ -167,14 +159,6 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(defaultWAFActive),
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the WAF.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp.",
-						Computed:    true,
 					},
 					"product_version": schema.StringAttribute{
 						Description: "Product version of the WAF.",
@@ -316,7 +300,6 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 	data := wafResponse.GetData()
 	plan.Result = transformWAFToResourceModel(data)
 	plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	plan.Result.EngineSettings = alignWAFEngineSettings(planEngineSettings, plan.Result.EngineSettings)
 
@@ -499,7 +482,6 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	data := wafResponse.GetData()
 	plan.Result = transformWAFToResourceModel(data)
 	plan.ID = types.StringValue(strconv.FormatInt(wafID, 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	plan.Result.EngineSettings = alignWAFEngineSettings(planEngineSettings, plan.Result.EngineSettings)
 
@@ -607,12 +589,10 @@ func buildWAFEngineSettingsAttributesRequest(model *WafEngineSettingsAttributesR
 // transformWAFToResourceModel transforms an SDK WAF to a Terraform resource model.
 func transformWAFToResourceModel(waf azionapi.WAF) *WafResourceResults {
 	result := &WafResourceResults{
-		ID:           types.Int64Value(waf.GetId()),
-		Name:         types.StringValue(waf.GetName()),
-		LastEditor:   types.StringValue(waf.GetLastEditor()),
-		LastModified: types.StringValue(waf.GetLastModified().Format(time.RFC3339)),
-		State:        types.StringPointerValue(waf.VersionState.Get()),
-		VersionID:    types.StringPointerValue(waf.VersionId.Get()),
+		ID:        types.Int64Value(waf.GetId()),
+		Name:      types.StringValue(waf.GetName()),
+		State:     types.StringPointerValue(waf.VersionState.Get()),
+		VersionID: types.StringPointerValue(waf.VersionId.Get()),
 	}
 
 	// Optional active.

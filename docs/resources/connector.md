@@ -178,8 +178,6 @@ An optional block you omit is not sent to the API and is not tracked in state, s
   * `active` - (Optional) Status of the connector. Default is `true`.
   * `id` - (Computed) The connector identifier.
   * `created_at` - (Computed) The creation timestamp of the connector.
-  * `last_editor` - (Computed) The last editor of the connector.
-  * `last_modified` - (Computed) Last modified timestamp of the connector.
   * `product_version` - (Computed) Product version of the connector.
   * `state` - (Computed) The state of the current connector version.
   * `version_id` - (Computed) The identifier of the current connector version.
@@ -244,7 +242,6 @@ When `type = "http"`, include `http_attributes` inside the `connector` block:
 The following attributes are exported:
 
 * `id` - The ID of the connector (as a string for Terraform state management).
-* `last_updated` - Timestamp of the last Terraform update.
 * `schema_version` - Schema version.
 
 ## Timeouts

@@ -76,10 +76,6 @@ terraform import azion_intelligent_dns_record.example "zone_id/record_id"
 
 * `record` (Block, Optional) Required. The record configuration. (see below for nested schema)
 
-### Read-Only
-
-* `last_updated` (String) Timestamp of the last Terraform update.
-
 <a id="nestedblock--record"></a>
 ### Nested Schema for `record`
 

@@ -99,4 +99,3 @@ terraform import azion_firewall_rule_engine_order.example 1234567890
 ## Attribute Reference
 
 * `id` - The resource identifier (same as `firewall_id`).
-* `last_updated` - Timestamp of the last Terraform update of the resource.

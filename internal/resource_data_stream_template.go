@@ -40,20 +40,17 @@ type dataStreamTemplateResource struct {
 type dataStreamTemplateResourceModel struct {
 	Template      *dataStreamTemplateResourceResults `tfsdk:"template"`
 	ID            types.String                       `tfsdk:"id"`
-	LastUpdated   types.String                       `tfsdk:"last_updated"`
 	SchemaVersion types.Int64                        `tfsdk:"schema_version"`
 }
 
 // Template results - the template body plus computed metadata.
 type dataStreamTemplateResourceResults struct {
-	ID           types.Int64  `tfsdk:"id"`
-	Name         types.String `tfsdk:"name"`
-	Active       types.Bool   `tfsdk:"active"`
-	DataSet      types.String `tfsdk:"data_set"`
-	Custom       types.Bool   `tfsdk:"custom"`
-	LastEditor   types.String `tfsdk:"last_editor"`
-	CreatedAt    types.String `tfsdk:"created_at"`
-	LastModified types.String `tfsdk:"last_modified"`
+	ID        types.Int64  `tfsdk:"id"`
+	Name      types.String `tfsdk:"name"`
+	Active    types.Bool   `tfsdk:"active"`
+	DataSet   types.String `tfsdk:"data_set"`
+	Custom    types.Bool   `tfsdk:"custom"`
+	CreatedAt types.String `tfsdk:"created_at"`
 }
 
 func (r *dataStreamTemplateResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -69,10 +66,6 @@ func (r *dataStreamTemplateResource) Schema(_ context.Context, _ resource.Schema
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
 			},
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
@@ -106,16 +99,8 @@ func (r *dataStreamTemplateResource) Schema(_ context.Context, _ resource.Schema
 						Description: "Whether the template is user-defined. Always true for templates managed by Terraform; Azion's built-in templates are false.",
 						Computed:    true,
 					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the template.",
-						Computed:    true,
-					},
 					"created_at": schema.StringAttribute{
 						Description: "The creation timestamp of the template.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the template.",
 						Computed:    true,
 					},
 				},
@@ -176,7 +161,6 @@ func (r *dataStreamTemplateResource) Create(ctx context.Context, req resource.Cr
 
 	populateDataStreamTemplateFromResponse(plan.Template, createTemplate.GetData())
 	plan.ID = types.StringValue(strconv.FormatInt(plan.Template.ID.ValueInt64(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.SchemaVersion = types.Int64Value(0)
 
 	diags = resp.State.Set(ctx, plan)
@@ -288,7 +272,6 @@ func (r *dataStreamTemplateResource) Update(ctx context.Context, req resource.Up
 
 	populateDataStreamTemplateFromResponse(plan.Template, updateTemplate.GetData())
 	plan.ID = types.StringValue(strconv.FormatInt(plan.Template.ID.ValueInt64(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.SchemaVersion = types.Int64Value(0)
 
 	diags = resp.State.Set(ctx, plan)
@@ -376,9 +359,7 @@ func populateDataStreamTemplateFromResponse(model *dataStreamTemplateResourceRes
 	model.Active = types.BoolPointerValue(template.Active)
 	model.DataSet = preferConfiguredDataSet(model.DataSet, template.GetDataSet())
 	model.Custom = types.BoolValue(template.GetCustom())
-	model.LastEditor = types.StringValue(template.GetLastEditor())
 	model.CreatedAt = types.StringValue(template.GetCreatedAt().Format(time.RFC850))
-	model.LastModified = types.StringValue(template.GetLastModified().Format(time.RFC850))
 }
 
 // preferConfiguredDataSet keeps the configured `data_set` when the API's echo

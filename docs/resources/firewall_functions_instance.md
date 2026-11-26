@@ -70,7 +70,6 @@ resource "azion_firewall_functions_instance" "example" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 - `state` (String) State of the function instance.
 
 <a id="nestedblock--data"></a>
@@ -90,8 +89,6 @@ Read-Only:
 
 - `created_at` (String) The creation timestamp of the firewall function instance.
 - `id` (Number) The function instance identifier.
-- `last_editor` (String) Last editor of the firewall function instance.
-- `last_modified` (String) Last modified timestamp of the firewall function instance.
 
 ## Import
 

@@ -226,13 +226,10 @@ terraform import azion_data_stream.example 1234
 ## Attribute Reference
 
 * `id` - The data stream identifier, as a string.
-* `last_updated` - Timestamp of the last Terraform update of the resource.
 * `schema_version` - Schema version of the resource.
 * `data_stream`
   * `id` - The data stream identifier.
-  * `last_editor` - The last editor of the data stream.
   * `created_at` - The creation timestamp of the data stream.
-  * `last_modified` - Last modified timestamp of the data stream.
   * `product_version` - Product version of the data stream.
 
 ## Notes

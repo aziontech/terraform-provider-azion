@@ -42,21 +42,18 @@ type RulesEngineResourceModel struct {
 	RulesEngine   *RulesEngineResourceResults `tfsdk:"results"`
 	ID            types.String                `tfsdk:"id"`
 	ApplicationID types.Int64                 `tfsdk:"application_id"`
-	LastUpdated   types.String                `tfsdk:"last_updated"`
 }
 
 type RulesEngineResourceResults struct {
-	ID           types.Int64                       `tfsdk:"id"`
-	Name         types.String                      `tfsdk:"name"`
-	Phase        types.String                      `tfsdk:"phase"`
-	Active       types.Bool                        `tfsdk:"active"`
-	Behaviors    []RulesEngineBehaviorWrapperModel `tfsdk:"behaviors"`
-	Criteria     []CriteriaResourceModel           `tfsdk:"criteria"`
-	Description  types.String                      `tfsdk:"description"`
-	Order        types.Int64                       `tfsdk:"order"`
-	LastEditor   types.String                      `tfsdk:"last_editor"`
-	LastModified types.String                      `tfsdk:"last_modified"`
-	CreatedAt    types.String                      `tfsdk:"created_at"`
+	ID          types.Int64                       `tfsdk:"id"`
+	Name        types.String                      `tfsdk:"name"`
+	Phase       types.String                      `tfsdk:"phase"`
+	Active      types.Bool                        `tfsdk:"active"`
+	Behaviors   []RulesEngineBehaviorWrapperModel `tfsdk:"behaviors"`
+	Criteria    []CriteriaResourceModel           `tfsdk:"criteria"`
+	Description types.String                      `tfsdk:"description"`
+	Order       types.Int64                       `tfsdk:"order"`
+	CreatedAt   types.String                      `tfsdk:"created_at"`
 }
 
 type RulesEngineBehaviorWrapperModel struct {
@@ -114,10 +111,6 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 		Blocks: map[string]schema.Block{
 			"results": schema.SingleNestedBlock{
@@ -150,14 +143,6 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
 					},
 					"order": schema.Int64Attribute{
 						Description: "The order of the rule in the rules engine.",
-						Computed:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the rule.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "The last modified timestamp.",
 						Computed:    true,
 					},
 					"created_at": schema.StringAttribute{
@@ -953,7 +938,6 @@ func buildStateFromResponse(rule azionapi.RequestPhaseRule, applicationID types.
 	return RulesEngineResourceModel{
 		ApplicationID: applicationID,
 		ID:            types.StringValue(fmt.Sprintf("%d/%s/%d", applicationID.ValueInt64(), phase.ValueString(), result.ID.ValueInt64())),
-		LastUpdated:   types.StringValue(time.Now().Format(time.RFC850)),
 		RulesEngine:   result,
 	}
 }
@@ -971,12 +955,6 @@ func transformRuleToResultsModel(rule azionapi.RequestPhaseRule, phase string) *
 	}
 	if rule.Description != nil {
 		result.Description = types.StringValue(*rule.Description)
-	}
-	if rule.LastEditor.IsSet() && rule.LastEditor.Get() != nil {
-		result.LastEditor = types.StringValue(*rule.LastEditor.Get())
-	}
-	if rule.LastModified.IsSet() && rule.LastModified.Get() != nil {
-		result.LastModified = types.StringValue(rule.LastModified.Get().Format(time.RFC3339))
 	}
 	// CreatedAt
 	result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))
@@ -1047,12 +1025,6 @@ func transformRuleToResultsModelFromResponse(rule azionapi.ResponsePhaseRule, ph
 	}
 	if rule.Description != nil {
 		result.Description = types.StringValue(*rule.Description)
-	}
-	if rule.LastEditor.IsSet() && rule.LastEditor.Get() != nil {
-		result.LastEditor = types.StringValue(*rule.LastEditor.Get())
-	}
-	if rule.LastModified.IsSet() && rule.LastModified.Get() != nil {
-		result.LastModified = types.StringValue(rule.LastModified.Get().Format(time.RFC3339))
 	}
 	// CreatedAt
 	result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))

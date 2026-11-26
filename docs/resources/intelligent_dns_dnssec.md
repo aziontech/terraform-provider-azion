@@ -62,7 +62,6 @@ terraform import azion_intelligent_dns_dnssec.example <zone_id>
 
 ### Read-Only
 
-- `last_updated` (String) Timestamp of the last Terraform update of the order.
 - `schema_version` (Number) Schema Version.
 
 <a id="nestedblock--dnssec"></a>

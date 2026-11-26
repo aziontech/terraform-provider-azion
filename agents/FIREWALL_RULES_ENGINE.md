@@ -139,7 +139,6 @@ Note: The plural data source reuses the same `FirewallCriteriaDataModel`, `Firew
 type FirewallRuleEngineResourceModel struct {
     ID          types.String                      `tfsdk:"id"`
     FirewallID  types.Int64                       `tfsdk:"firewall_id"`
-    LastUpdated types.String                      `tfsdk:"last_updated"`
     Results     *FirewallRuleEngineResultResource `tfsdk:"results"`
 }
 
@@ -151,8 +150,6 @@ type FirewallRuleEngineResultResource struct {
     Behaviors    []FirewallBehaviorResourceModel    `tfsdk:"behaviors"`
     Description  types.String                        `tfsdk:"description"`
     Order        types.Int64                         `tfsdk:"order"`
-    LastEditor   types.String                        `tfsdk:"last_editor"`
-    LastModified types.String                        `tfsdk:"last_modified"`
     CreatedAt    types.String                        `tfsdk:"created_at"`
 }
 ```
@@ -641,8 +638,6 @@ func transformFirewallRuleToResultModel(rule azionapi.FirewallRule) *FirewallRul
     if rule.Description != nil {
         result.Description = types.StringValue(*rule.Description)
     }
-    result.LastEditor = types.StringValue(rule.GetLastEditor())
-    result.LastModified = types.StringValue(rule.GetLastModified().Format(time.RFC3339))
     result.CreatedAt = types.StringValue(rule.GetCreatedAt().Format(time.RFC3339))
 
     // Transform criteria

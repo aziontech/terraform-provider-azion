@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -38,9 +37,8 @@ type recordResource struct {
 }
 
 type recordResourceModel struct {
-	ZoneId      types.String `tfsdk:"zone_id"`
-	Record      *recordModel `tfsdk:"record"`
-	LastUpdated types.String `tfsdk:"last_updated"`
+	ZoneId types.String `tfsdk:"zone_id"`
+	Record *recordModel `tfsdk:"record"`
 }
 
 type recordModel struct {
@@ -61,10 +59,6 @@ func (r *recordResource) Metadata(_ context.Context, req resource.MetadataReques
 func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update.",
-				Computed:    true,
-			},
 			"zone_id": schema.StringAttribute{
 				Description: "The zone identifier to target for the resource.",
 				Required:    true,
@@ -210,7 +204,6 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	// Update plan with response.
 	plan.ZoneId = types.StringValue(plan.ZoneId.ValueString())
 	plan.Record = populateRecordModel(createRecord.GetData(), plan.Record.Policy.ValueString())
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -386,7 +379,6 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 	// Update plan with response.
 	plan.ZoneId = types.StringValue(plan.ZoneId.ValueString())
 	plan.Record = populateRecordModel(updateRecord.GetData(), plan.Record.Policy.ValueString())
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"strconv"
-	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -34,16 +33,13 @@ type functionResource struct {
 }
 
 type functionResourceModel struct {
-	Function    *functionResourceResults `tfsdk:"function"`
-	ID          types.String             `tfsdk:"id"`
-	LastUpdated types.String             `tfsdk:"last_updated"`
+	Function *functionResourceResults `tfsdk:"function"`
+	ID       types.String             `tfsdk:"id"`
 }
 
 type functionResourceResults struct {
 	ID                   types.Int64  `tfsdk:"id"`
 	Name                 types.String `tfsdk:"name"`
-	LastEditor           types.String `tfsdk:"last_editor"`
-	LastModified         types.String `tfsdk:"last_modified"`
 	ProductVersion       types.String `tfsdk:"product_version"`
 	Active               types.Bool   `tfsdk:"active"`
 	Runtime              types.String `tfsdk:"runtime"`
@@ -75,10 +71,6 @@ func (r *functionResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 		Blocks: map[string]schema.Block{
 			"function": schema.SingleNestedBlock{
@@ -94,14 +86,6 @@ func (r *functionResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"name": schema.StringAttribute{
 						Description: "Name of the function.",
 						Required:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the function.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the function.",
-						Computed:    true,
 					},
 					"product_version": schema.StringAttribute{
 						Description: "Product version of the function.",
@@ -244,8 +228,6 @@ func (r *functionResource) Create(ctx context.Context, req resource.CreateReques
 		DefaultArgs:          types.StringValue(jsonArgsStr),
 		ExecutionEnvironment: types.StringValue(*createFunction.Data.ExecutionEnvironment),
 		Active:               types.BoolValue(*createFunction.Data.Active),
-		LastEditor:           types.StringValue(createFunction.Data.GetLastEditor()),
-		LastModified:         types.StringValue(createFunction.Data.GetLastModified().Format(time.RFC850)),
 		ProductVersion:       types.StringValue(createFunction.Data.GetProductVersion()),
 		Version:              types.StringValue(createFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(createFunction.Data.GetVendor()),
@@ -259,7 +241,6 @@ func (r *functionResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(createFunction.Data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -337,8 +318,6 @@ func (r *functionResource) Read(ctx context.Context, req resource.ReadRequest, r
 		DefaultArgs:          types.StringValue(jsonArgsStr),
 		ExecutionEnvironment: types.StringValue(*getFunction.Data.ExecutionEnvironment),
 		Active:               types.BoolValue(*getFunction.Data.Active),
-		LastEditor:           types.StringValue(getFunction.Data.GetLastEditor()),
-		LastModified:         types.StringValue(getFunction.Data.GetLastModified().Format(time.RFC850)),
 		ProductVersion:       types.StringValue(getFunction.Data.GetProductVersion()),
 		Version:              types.StringValue(getFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(getFunction.Data.GetVendor()),
@@ -466,8 +445,6 @@ func (r *functionResource) Update(ctx context.Context, req resource.UpdateReques
 		DefaultArgs:          types.StringValue(jsonArgsStr),
 		ExecutionEnvironment: types.StringValue(*updateFunction.Data.ExecutionEnvironment),
 		Active:               types.BoolValue(*updateFunction.Data.Active),
-		LastEditor:           types.StringValue(updateFunction.Data.GetLastEditor()),
-		LastModified:         types.StringValue(updateFunction.Data.GetLastModified().Format(time.RFC850)),
 		ProductVersion:       types.StringValue(updateFunction.Data.GetProductVersion()),
 		Version:              types.StringValue(updateFunction.Data.GetVersion()),
 		Vendor:               types.StringValue(updateFunction.Data.GetVendor()),
@@ -481,7 +458,6 @@ func (r *functionResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(updateFunction.Data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

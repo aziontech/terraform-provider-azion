@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -34,16 +33,13 @@ type bucketResource struct {
 }
 
 type bucketResourceModel struct {
-	Bucket      *bucketResourceResults `tfsdk:"bucket"`
-	ID          types.String           `tfsdk:"id"`
-	LastUpdated types.String           `tfsdk:"last_updated"`
+	Bucket *bucketResourceResults `tfsdk:"bucket"`
+	ID     types.String           `tfsdk:"id"`
 }
 
 type bucketResourceResults struct {
 	Name            types.String `tfsdk:"name"`
 	WorkloadsAccess types.String `tfsdk:"workloads_access"`
-	LastEditor      types.String `tfsdk:"last_editor"`
-	LastModified    types.String `tfsdk:"last_modified"`
 	ProductVersion  types.String `tfsdk:"product_version"`
 }
 
@@ -60,10 +56,6 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -83,14 +75,6 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					"workloads_access": schema.StringAttribute{
 						Description: "Access type for workloads: read_only, read_write, or restricted.",
 						Required:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the bucket.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the bucket.",
-						Computed:    true,
 					},
 					"product_version": schema.StringAttribute{
 						Description: "Product version of the bucket.",
@@ -157,7 +141,6 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	plan.Bucket = populateBucketResults(createBucket)
 	plan.ID = types.StringValue(createBucket.Data.Name)
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -283,7 +266,6 @@ func (r *bucketResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	plan.Bucket = populateBucketResults(updateBucket)
 	plan.ID = types.StringValue(updateBucket.Data.Name)
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -328,8 +310,6 @@ func populateBucketResults(response *azionapi.BucketCreateResponse) *bucketResou
 	result := &bucketResourceResults{
 		Name:            types.StringValue(response.Data.Name),
 		WorkloadsAccess: types.StringValue(response.Data.WorkloadsAccess),
-		LastEditor:      types.StringValue(response.Data.LastEditor),
-		LastModified:    types.StringValue(response.Data.GetLastModified().Format(time.RFC3339)),
 		ProductVersion:  types.StringValue(response.Data.ProductVersion),
 	}
 	return result

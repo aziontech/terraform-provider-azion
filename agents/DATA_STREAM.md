@@ -169,7 +169,7 @@ Both data sources call `dataStreamDataSourceAttributes()` (defined in `data_sour
 
 `internal/resource_data_stream.go` → `azion_data_stream`.
 
-Standard V4 resource shape: a `data_stream` single-nested attribute holding the body, plus root-level `id` (string), `last_updated`, and `schema_version`.
+Standard V4 resource shape: a `data_stream` single-nested attribute holding the body, plus root-level `id` (string) and `schema_version`.
 
 | Method | API call | Notes |
 |--------|----------|-------|

@@ -643,15 +643,12 @@ For managing Workload resources (Create, Read, Update, Delete, Import):
 type workloadResourceModel struct {
     Workload    *workloadResourceResults `tfsdk:"workload"`
     ID          types.String             `tfsdk:"id"`
-    LastUpdated types.String             `tfsdk:"last_updated"`
 }
 
 type workloadResourceResults struct {
     ID                        types.Int64               `tfsdk:"id"`
     Name                      types.String              `tfsdk:"name"`
     Active                    types.Bool                `tfsdk:"active"`
-    LastEditor                types.String              `tfsdk:"last_editor"`
-    LastModified              types.String              `tfsdk:"last_modified"`
     CreatedAt                 types.String              `tfsdk:"created_at"`
     Infrastructure            types.Int64               `tfsdk:"infrastructure"`
     Tls                       *TLSWorkloadResourceModel `tfsdk:"tls"`
@@ -707,10 +704,6 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
                 PlanModifiers: []planmodifier.String{
                     stringplanmodifier.UseStateForUnknown(),
                 },
-            },
-            "last_updated": schema.StringAttribute{
-                Description: "Timestamp of the last Terraform update of the resource.",
-                Computed:    true,
             },
         },
         Blocks: map[string]schema.Block{
@@ -852,7 +845,6 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
     keepDeclaredWorkloadBlocks(plan.Workload, results)
     plan.Workload = results
     plan.ID = types.StringValue(strconv.FormatInt(createWorkload.Data.Id, 10))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -930,7 +922,6 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
     keepDeclaredWorkloadBlocks(plan.Workload, results)
     plan.Workload = results
     plan.ID = types.StringValue(strconv.FormatInt(updateWorkload.Data.Id, 10))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)

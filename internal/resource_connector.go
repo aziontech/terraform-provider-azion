@@ -40,7 +40,6 @@ type connectorResource struct {
 type connectorResourceModel struct {
 	Connector     *connectorResourceResults `tfsdk:"connector"`
 	ID            types.String              `tfsdk:"id"`
-	LastUpdated   types.String              `tfsdk:"last_updated"`
 	SchemaVersion types.Int64               `tfsdk:"schema_version"`
 }
 
@@ -48,8 +47,6 @@ type connectorResourceModel struct {
 type connectorResourceResults struct {
 	ID             types.Int64             `tfsdk:"id"`
 	Name           types.String            `tfsdk:"name"`
-	LastEditor     types.String            `tfsdk:"last_editor"`
-	LastModified   types.String            `tfsdk:"last_modified"`
 	CreatedAt      types.String            `tfsdk:"created_at"`
 	ProductVersion types.String            `tfsdk:"product_version"`
 	Active         types.Bool              `tfsdk:"active"`
@@ -181,10 +178,6 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
@@ -203,14 +196,6 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 					"name": schema.StringAttribute{
 						Description: "Name of the connector.",
 						Required:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the connector.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the connector.",
-						Computed:    true,
 					},
 					"created_at": schema.StringAttribute{
 						Description: "The creation timestamp of the connector.",
@@ -594,7 +579,6 @@ func (r *connectorResource) Create(ctx context.Context, req resource.CreateReque
 
 	r.populateConnectorFromResponse(ctx, plan.Connector, getConnector.GetData())
 	plan.ID = types.StringValue(strconv.FormatInt(plan.Connector.ID.ValueInt64(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.SchemaVersion = types.Int64Value(0)
 
 	diags = resp.State.Set(ctx, plan)
@@ -777,7 +761,6 @@ func (r *connectorResource) Update(ctx context.Context, req resource.UpdateReque
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(plan.Connector.ID.ValueInt64(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.SchemaVersion = types.Int64Value(0)
 
 	diags = resp.State.Set(ctx, plan)
@@ -1119,8 +1102,6 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 		// Storage connector.
 		model.ID = types.Int64Value(c.GetId())
 		model.Name = types.StringValue(c.Name)
-		model.LastEditor = types.StringValue(c.GetLastEditor())
-		model.LastModified = types.StringValue(c.GetLastModified().Format(time.RFC850))
 		model.CreatedAt = types.StringValue(c.GetCreatedAt().Format(time.RFC850))
 		model.ProductVersion = types.StringValue(c.GetProductVersion())
 		model.Type = types.StringValue(c.Type)
@@ -1147,8 +1128,6 @@ func (r *connectorResource) populateConnectorFromResponse(ctx context.Context, m
 
 		model.ID = types.Int64Value(c.GetId())
 		model.Name = types.StringValue(c.Name)
-		model.LastEditor = types.StringValue(c.GetLastEditor())
-		model.LastModified = types.StringValue(c.GetLastModified().Format(time.RFC850))
 		model.CreatedAt = types.StringValue(c.GetCreatedAt().Format(time.RFC850))
 		model.ProductVersion = types.StringValue(c.GetProductVersion())
 		model.Type = types.StringValue(c.Type)

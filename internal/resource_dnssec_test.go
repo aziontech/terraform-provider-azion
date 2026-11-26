@@ -34,7 +34,7 @@ package provider
 //				ResourceName:            resourceName,
 //				ImportState:             true,
 //				ImportStateVerify:       true,
-//				ImportStateVerifyIgnore: []string{"last_updated", "schema_version"},
+//				ImportStateVerifyIgnore: []string{"schema_version"},
 //			},
 //		},
 //	})

@@ -34,7 +34,6 @@ There is no batch endpoint. Everything is built from the per-exception endpoints
 Version 1
 id            string  computed (= waf_id), UseStateForUnknown
 waf_id        int64   required, RequiresReplace
-last_updated  string  computed
 rule_set      SetNestedBlock, optional; zero blocks = delete every exception
   Validators: wafRuleSetsNamesValidator (unique names, no "<name>#<digits>")
   name          string required (identifies the exception)
@@ -43,7 +42,6 @@ rule_set      SetNestedBlock, optional; zero blocks = delete every exception
   active                         Optional+Computed, default true
   conditions {condition {match, condition_type, name, value}}  ListNestedBlock (wafExceptionConditionsBlock):
                                  listvalidator.IsRequired + SizeAtLeast(1); condition is objectvalidator.IsRequired
-  last_editor / last_modified    computed
 ```
 
 ```hcl
@@ -94,9 +92,9 @@ The plan and state differ on a field only when the planned value is **known** an
 
 ### Plan noise and unknowns (`ModifyPlan`, `wafRuleSetsItemPlannedForApply`)
 
-`ModifyPlan` matches planned exceptions to state **by name** and replaces each one that does not need an update with its state value; when nothing changes at all it also restores `last_updated`. The result: the plan lists only the exceptions that actually change, and a converged WAF plans empty.
+`ModifyPlan` matches planned exceptions to state **by name** and replaces each one that does not need an update with its state value. The result: the plan lists only the exceptions that actually change, and a converged WAF plans empty.
 
-For exceptions that apply creates or updates, `ModifyPlan` itself marks unknown everything the API supplies: `last_editor`, `last_modified`, `exception_id` (new only), and any null `rule_id`/`path`/`operator`/condition `name`/`value` (null in a block = not declared). The framework's `MarkComputedNilsAsUnknown` cannot be relied on inside a set block: it locates each element in the configuration by value, and an element whose value differs (a default applied, prior values filled in by core) is not found and keeps its nulls, which apply would then contradict. `ModifyPlan` therefore also runs on create (null prior state). If any planned `name` is unknown it does nothing.
+For exceptions that apply creates or updates, `ModifyPlan` itself marks unknown everything the API supplies: `exception_id` (new only), and any null `rule_id`/`path`/`operator`/condition `name`/`value` (null in a block = not declared). The framework's `MarkComputedNilsAsUnknown` cannot be relied on inside a set block: it locates each element in the configuration by value, and an element whose value differs (a default applied, prior values filled in by core) is not found and keeps its nulls, which apply would then contradict. `ModifyPlan` therefore also runs on create (null prior state). If any planned `name` is unknown it does nothing.
 
 ### Create does not delete what the plan did not show
 

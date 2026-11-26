@@ -116,14 +116,11 @@ terraform import azion_data_stream_template.example 1234
 ## Attribute Reference
 
 * `id` - The template identifier, as a string.
-* `last_updated` - Timestamp of the last Terraform update of the resource.
 * `schema_version` - Schema version of the resource.
 * `template`
   * `id` - The template identifier.
   * `custom` - Whether the template is user-defined. Always `true` for templates managed by Terraform; Azion's built-in templates are `false`.
-  * `last_editor` - The last editor of the template.
   * `created_at` - The creation timestamp of the template.
-  * `last_modified` - Last modified timestamp of the template.
 
 ## Notes
 

@@ -30,7 +30,6 @@ resource "azion_crl" "example" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
 <a id="nestedblock--crl"></a>
 ### Nested Schema for `crl`
@@ -49,8 +48,6 @@ Read-Only:
 
 - `created_at` (String) Timestamp of the certificate revocation list creation on the platform.
 - `id` (Number) The identifier of the certificate revocation list.
-- `last_editor` (String) The last editor of the certificate revocation list.
-- `last_modified` (String) Timestamp of the last modification made to the certificate content on the platform.
 - `last_update` (String) Timestamp of the last update issued by the certification revocation list issuer.
 - `next_update` (String) Timestamp of the next scheduled update from the certification revocation list issuer.
 - `product_version` (String) Product version of the certificate revocation list.

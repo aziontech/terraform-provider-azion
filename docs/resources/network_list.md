@@ -61,7 +61,6 @@ resource "azion_network_list" "asn_example" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 - `schema_version` (Number)
 
 <a id="nestedblock--results"></a>
@@ -77,8 +76,6 @@ Read-Only:
 
 - `created_at` (String) Creation timestamp of the network list.
 - `id` (Number) Identification of this entry.
-- `last_editor` (String) Last editor of the network list.
-- `last_modified` (String) Last modified timestamp of the network list.
 - `version_id` (String) The identifier of the current network list version.
 - `state` (String) The state of the current network list version.
 

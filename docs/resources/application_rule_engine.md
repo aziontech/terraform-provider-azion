@@ -284,7 +284,6 @@ The behaviors available for a rule depend on the rule's `phase` (`request` or `r
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 - `schema_version` (Number)
 
 <a id="nestedblock--results"></a>
@@ -306,8 +305,6 @@ Read-Only:
 
 - `created_at` (String) The creation timestamp.
 - `id` (Number) The ID of the rules engine rule.
-- `last_editor` (String) The last editor of the rule.
-- `last_modified` (String) The last modified timestamp.
 - `order` (Number) The order of the rule in the rules engine.
 
 <a id="nestedblock--results--behaviors"></a>

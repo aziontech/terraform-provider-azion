@@ -819,7 +819,6 @@ When working with WAF resources:
 ```go
 type WafResourceModel struct {
     ID          types.String          `tfsdk:"id"`
-    LastUpdated types.String          `tfsdk:"last_updated"`
     Result      *WafResourceResults   `tfsdk:"result"`
 }
 
@@ -827,8 +826,6 @@ type WafResourceResults struct {
     ID             types.Int64                       `tfsdk:"id"`
     Name           types.String                      `tfsdk:"name"`
     Active         types.Bool                        `tfsdk:"active"`
-    LastEditor     types.String                      `tfsdk:"last_editor"`
-    LastModified   types.String                      `tfsdk:"last_modified"`
     ProductVersion types.String                      `tfsdk:"product_version"`
     State          types.String                      `tfsdk:"state"`
     VersionID      types.String                      `tfsdk:"version_id"`
@@ -857,10 +854,10 @@ type WafThresholdConfigResourceModel struct {
 Writable nested objects are **blocks** (see AGENTS.md, "Nested Objects Must Be Blocks"); the full definition is in `internal/resource_waf.go`. Shape:
 
 ```go
-Attributes: id (computed, UseStateForUnknown), last_updated (computed)
+Attributes: id (computed, UseStateForUnknown)
 Blocks: map[string]schema.Block{
     "result": schema.SingleNestedBlock{                // objectvalidator.IsRequired(); "Required." description
-        Attributes: id, last_editor, last_modified, product_version, state, version_id (computed),
+        Attributes: id, product_version, state, version_id (computed),
                     name (required), active (Optional+Computed, default true)
         Blocks: "engine_settings": schema.SingleNestedBlock{     // optional
             Attributes: engine_version (default "2021-Q3"), type (default "score")  // Optional+Computed
@@ -949,7 +946,6 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
     data := wafResponse.GetData()
     plan.Result = transformWAFToResourceModel(data)
     plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -1020,7 +1016,6 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
     data := wafResponse.GetData()
     plan.Result = transformWAFToResourceModel(data)
     plan.ID = types.StringValue(strconv.FormatInt(wafID, 10))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -1238,9 +1233,6 @@ terraform import azion_waf.example 12345
 ## Attribute Reference
 
 * `id` - The ID of the WAF.
-* `last_editor` - Last editor of the WAF.
-* `last_modified` - Last modified timestamp.
-* `last_updated` - Timestamp of the last Terraform update of the resource.
 * `result.state` - The state of the current WAF version.
 * `result.version_id` - The identifier of the current WAF version.
 ```

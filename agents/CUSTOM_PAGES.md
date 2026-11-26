@@ -567,8 +567,6 @@ func (r *customPageResource) Create(ctx context.Context, req resource.CreateRequ
     plan.CustomPage = &customPageResourceResults{
         ID:             types.Int64Value(createResponse.Data.Id),
         Name:           types.StringValue(createResponse.Data.Name),
-        LastEditor:     types.StringValue(createResponse.Data.LastEditor),
-        LastModified:   types.StringValue(createResponse.Data.LastModified.Format(time.RFC3339)),
         CreatedAt:      types.StringValue(createResponse.Data.CreatedAt.Format(time.RFC3339)),
         ProductVersion: types.StringValue(createResponse.Data.ProductVersion),
         State:          types.StringPointerValue(createResponse.Data.State.Get()),
@@ -711,7 +709,6 @@ func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
         Description: "Creates a Custom Page resource.",
         Attributes: map[string]schema.Attribute{
             "id":           schema.StringAttribute{Computed: true, /* UseStateForUnknown */},
-            "last_updated": schema.StringAttribute{Computed: true},
         },
         Blocks: map[string]schema.Block{
             "custom_page": schema.SingleNestedBlock{
@@ -720,7 +717,7 @@ func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
                 Attributes: map[string]schema.Attribute{
                     "name":   schema.StringAttribute{Required: true},
                     "active": schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true)},
-                    // id, last_editor, last_modified, created_at, product_version,
+                    // id, created_at, product_version,
                     // state, version_id: Computed.
                 },
                 Blocks: map[string]schema.Block{
@@ -782,8 +779,8 @@ func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 | `name` | Computed | Computed | Required | Computed |
 | `active` | Computed | Computed | Optional | Computed |
 | `pages` | Computed | Computed | Required | Computed |
-| `last_editor` | Computed | Computed | Computed | Computed |
-| `last_modified` | Computed | Computed | Computed | Computed |
+| `last_editor` | Computed | Computed | - | - |
+| `last_modified` | Computed | Computed | - | - |
 | `created_at` | Computed | Computed | Computed | Computed |
 | `product_version` | Computed | Computed | Computed | Computed |
 | `state` | Computed | Computed | Computed | Computed |
