@@ -74,7 +74,6 @@ resource "azion_digital_certificate" "example" {
 ### Read-Only
 
 - `id` (String) Identifier of the resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 - `schema_version` (Number) Schema version of the resource.
 
 <a id="nestedblock--results"></a>
@@ -96,8 +95,6 @@ Read-Only:
 - `id` (Number) Identifier of the certificate.
 - `issuer` (String) Issuer of the certificate.
 - `key_algorithm` (String) Key algorithm used for the certificate.
-- `last_editor` (String) Last editor of the certificate.
-- `last_modified` (String) Last modified timestamp of the certificate.
 - `created_at` (String) Creation timestamp of the certificate.
 - `managed` (Boolean) Whether the certificate is managed.
 - `product_version` (String) Product version of the certificate.

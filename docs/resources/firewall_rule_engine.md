@@ -266,7 +266,6 @@ resource "azion_firewall_rule_engine" "example" {
 ### Read-Only
 
 - `id` (String) The ID of this resource in the format `{firewall_id}/{rule_id}`.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
 <a id="nestedblock--results"></a>
 ### Nested Schema for `results`
@@ -286,8 +285,6 @@ Read-Only:
 
 - `created_at` (String) Creation timestamp.
 - `id` (Int64) The ID of the rule.
-- `last_editor` (String) Last editor of the rule.
-- `last_modified` (String) Last modified timestamp.
 - `order` (Int64) Order of the rule.
 
 <a id="nestedblock--results--behaviors"></a>

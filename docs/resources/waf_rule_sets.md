@@ -211,7 +211,6 @@ resource "azion_waf_rule_sets" "example" {
 ### Read-Only
 
 - `id` (String) Identifier of the resource. Same as `waf_id`.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
 <a id="nestedblock--rule_set"></a>
 ### Nested Schema for `rule_set`
@@ -231,8 +230,6 @@ Optional:
 Read-Only:
 
 - `exception_id` (Number) The ID of the WAF exception.
-- `last_editor` (String) Last editor of the exception.
-- `last_modified` (String) Last modified timestamp.
 
 <a id="nestedblock--rule_set--conditions"></a>
 ### Nested Schema for `rule_set.conditions`

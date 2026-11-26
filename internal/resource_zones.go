@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -35,9 +34,8 @@ type zoneResource struct {
 }
 
 type zoneResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	LastUpdated types.String `tfsdk:"last_updated"`
-	Zone        *zoneModel   `tfsdk:"zone"`
+	ID   types.String `tfsdk:"id"`
+	Zone *zoneModel   `tfsdk:"zone"`
 }
 
 type zoneModel struct {
@@ -62,10 +60,6 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -187,8 +181,6 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		Nameservers:    nameserversList,
 		ProductVersion: types.StringValue(zoneData.GetProductVersion()),
 	}
-
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -361,7 +353,6 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		Nameservers:    nameserversList,
 		ProductVersion: types.StringValue(zoneData.GetProductVersion()),
 	}
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

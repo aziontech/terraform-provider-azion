@@ -52,7 +52,6 @@ terraform import azion_certificate_signing_request.example 12345
 ### Read-Only
 
 - `id` (String) Identifier of the resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 - `schema_version` (Number) Schema version of the resource.
 
 <a id="nestedblock--results"></a>
@@ -86,8 +85,6 @@ Read-Only:
 - `csr` (String) The Certificate Signing Request content.
 - `id` (Number) Identifier of the certificate.
 - `issuer` (String) Issuer of the certificate.
-- `last_editor` (String) Last editor of the certificate.
-- `last_modified` (String) Last modified timestamp of the certificate.
 - `managed` (Boolean) Whether the certificate is managed.
 - `product_version` (String) Product version of the certificate.
 - `renewed_at` (String) Renewal timestamp of the certificate.

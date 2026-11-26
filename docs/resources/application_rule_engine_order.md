@@ -101,4 +101,3 @@ terraform import azion_application_rule_engine_order.request_order 1234567890/re
 ## Attribute Reference
 
 * `id` - The resource identifier in the form `{application_id}/{phase}`.
-* `last_updated` - Timestamp of the last Terraform update of the resource.

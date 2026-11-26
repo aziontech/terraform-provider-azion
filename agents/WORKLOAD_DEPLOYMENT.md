@@ -691,7 +691,6 @@ type WorkloadDeploymentResourceModel struct {
     Deployment   *WorkloadDeploymentResourceResults `tfsdk:"deployment"`
     ID           types.String                        `tfsdk:"id"`
     WorkloadID   types.Int64                         `tfsdk:"workload_id"`
-    LastUpdated  types.String                        `tfsdk:"last_updated"`
 }
 
 type WorkloadDeploymentResourceResults struct {
@@ -700,8 +699,6 @@ type WorkloadDeploymentResourceResults struct {
     Current      types.Bool                            `tfsdk:"current"`
     Active       types.Bool                            `tfsdk:"active"`
     Strategy     *DeploymentStrategyResourceModel      `tfsdk:"strategy"`
-    LastEditor   types.String                          `tfsdk:"last_editor"`
-    LastModified types.String                          `tfsdk:"last_modified"`
     CreatedAt    types.String                          `tfsdk:"created_at"`
 }
 
@@ -866,10 +863,6 @@ func (r *workloadDeploymentResource) Schema(_ context.Context, _ resource.Schema
                 Description: "The workload identifier.",
                 Required:    true,
             },
-            "last_updated": schema.StringAttribute{
-                Description: "Timestamp of the last Terraform update of the resource.",
-                Computed:    true,
-            },
         },
         Blocks: map[string]schema.Block{
             "deployment": schema.SingleNestedBlock{
@@ -894,14 +887,6 @@ func (r *workloadDeploymentResource) Schema(_ context.Context, _ resource.Schema
                     "active": schema.BoolAttribute{
                         Description: "Status of the deployment.",
                         Optional:    true,
-                        Computed:    true,
-                    },
-                    "last_editor": schema.StringAttribute{
-                        Description: "The last editor of the deployment.",
-                        Computed:    true,
-                    },
-                    "last_modified": schema.StringAttribute{
-                        Description: "Last modified timestamp of the deployment.",
                         Computed:    true,
                     },
                     "created_at": schema.StringAttribute{

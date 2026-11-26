@@ -33,21 +33,18 @@ type workloadDeploymentResource struct {
 }
 
 type WorkloadDeploymentResourceModel struct {
-	Deployment  *WorkloadDeploymentResourceResults `tfsdk:"deployment"`
-	ID          types.String                       `tfsdk:"id"`
-	WorkloadID  types.Int64                        `tfsdk:"workload_id"`
-	LastUpdated types.String                       `tfsdk:"last_updated"`
+	Deployment *WorkloadDeploymentResourceResults `tfsdk:"deployment"`
+	ID         types.String                       `tfsdk:"id"`
+	WorkloadID types.Int64                        `tfsdk:"workload_id"`
 }
 
 type WorkloadDeploymentResourceResults struct {
-	ID           types.Int64                      `tfsdk:"id"`
-	Name         types.String                     `tfsdk:"name"`
-	Current      types.Bool                       `tfsdk:"current"`
-	Active       types.Bool                       `tfsdk:"active"`
-	Strategy     *DeploymentStrategyResourceModel `tfsdk:"strategy"`
-	LastEditor   types.String                     `tfsdk:"last_editor"`
-	LastModified types.String                     `tfsdk:"last_modified"`
-	CreatedAt    types.String                     `tfsdk:"created_at"`
+	ID        types.Int64                      `tfsdk:"id"`
+	Name      types.String                     `tfsdk:"name"`
+	Current   types.Bool                       `tfsdk:"current"`
+	Active    types.Bool                       `tfsdk:"active"`
+	Strategy  *DeploymentStrategyResourceModel `tfsdk:"strategy"`
+	CreatedAt types.String                     `tfsdk:"created_at"`
 }
 
 type DeploymentStrategyResourceModel struct {
@@ -77,10 +74,6 @@ func (r *workloadDeploymentResource) Schema(_ context.Context, _ resource.Schema
 				Description: "The workload identifier.",
 				Required:    true,
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 		Blocks: map[string]schema.Block{
 			"deployment": schema.SingleNestedBlock{
@@ -105,14 +98,6 @@ func (r *workloadDeploymentResource) Schema(_ context.Context, _ resource.Schema
 					"active": schema.BoolAttribute{
 						Description: "Status of the deployment.",
 						Optional:    true,
-						Computed:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the deployment.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the deployment.",
 						Computed:    true,
 					},
 					"created_at": schema.StringAttribute{
@@ -240,7 +225,6 @@ func (r *workloadDeploymentResource) Create(ctx context.Context, req resource.Cr
 	// Populate the state from the response
 	plan.Deployment = populateDeploymentResults(createDeployment)
 	plan.ID = types.StringValue(fmt.Sprintf("%d/%d", plan.WorkloadID.ValueInt64(), createDeployment.Data.GetId()))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -425,7 +409,6 @@ func (r *workloadDeploymentResource) Update(ctx context.Context, req resource.Up
 
 	plan.Deployment = populateDeploymentResults(updateResponse)
 	plan.ID = types.StringValue(fmt.Sprintf("%d/%d", plan.WorkloadID.ValueInt64(), updateResponse.Data.GetId()))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -546,11 +529,9 @@ func (r *workloadDeploymentResource) ImportState(ctx context.Context, req resour
 // populateDeploymentResults populates the deployment results model from the API response.
 func populateDeploymentResults(response *azionapi.WorkloadDeploymentResponse) *WorkloadDeploymentResourceResults {
 	result := &WorkloadDeploymentResourceResults{
-		ID:           types.Int64Value(response.Data.GetId()),
-		Name:         types.StringValue(response.Data.Name),
-		LastEditor:   types.StringValue(response.Data.GetLastEditor()),
-		LastModified: types.StringValue(response.Data.GetLastModified().Format(time.RFC850)),
-		CreatedAt:    types.StringValue(response.Data.GetCreatedAt().Format(time.RFC3339)),
+		ID:        types.Int64Value(response.Data.GetId()),
+		Name:      types.StringValue(response.Data.Name),
+		CreatedAt: types.StringValue(response.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	// Set optional fields

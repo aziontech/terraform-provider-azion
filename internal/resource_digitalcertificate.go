@@ -40,7 +40,6 @@ type certificateResourceModel struct {
 	SchemaVersion types.Int64              `tfsdk:"schema_version"`
 	Results       *certificateResultsModel `tfsdk:"results"`
 	ID            types.String             `tfsdk:"id"`
-	LastUpdated   types.String             `tfsdk:"last_updated"`
 }
 
 // certificateResultsModel represents the certificate data in Terraform state.
@@ -60,8 +59,6 @@ type certificateResultsModel struct {
 	KeyAlgorithm       types.String `tfsdk:"key_algorithm"`
 	Active             types.Bool   `tfsdk:"active"`
 	ProductVersion     types.String `tfsdk:"product_version"`
-	LastEditor         types.String `tfsdk:"last_editor"`
-	LastModified       types.String `tfsdk:"last_modified"`
 	CreatedAt          types.String `tfsdk:"created_at"`
 	RenewedAt          types.String `tfsdk:"renewed_at"`
 	CertificateContent types.String `tfsdk:"certificate_content"`
@@ -93,10 +90,6 @@ func (r *certificateResource) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema version of the resource.",
-				Computed:    true,
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
 		},
@@ -166,14 +159,6 @@ func (r *certificateResource) Schema(_ context.Context, _ resource.SchemaRequest
 					},
 					"product_version": schema.StringAttribute{
 						Description: "Product version of the certificate.",
-						Computed:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the certificate.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the certificate.",
 						Computed:    true,
 					},
 					"created_at": schema.StringAttribute{
@@ -256,7 +241,6 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 	plan.Results = populateCertificateResultsFromAPI(ctx, cert, plan.Results.CertificateContent.ValueString(), plan.Results.PrivateKey.ValueString())
 	plan.SchemaVersion = types.Int64Value(1)
 	plan.ID = types.StringValue(fmt.Sprintf("%d", cert.GetId()))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -402,7 +386,6 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 	plan.Results = populateCertificateResultsFromAPI(ctx, cert, plan.Results.CertificateContent.ValueString(), plan.Results.PrivateKey.ValueString())
 	plan.SchemaVersion = types.Int64Value(1)
 	plan.ID = types.StringValue(fmt.Sprintf("%d", cert.GetId()))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -501,8 +484,6 @@ func populateCertificateResultsFromAPI(ctx context.Context, cert azionapi.Certif
 		Authority:          types.StringValue(cert.GetAuthority()),
 		KeyAlgorithm:       types.StringValue(cert.GetKeyAlgorithm()),
 		ProductVersion:     types.StringValue(cert.GetProductVersion()),
-		LastEditor:         types.StringValue(cert.GetLastEditor()),
-		LastModified:       types.StringValue(cert.GetLastModified().Format(time.RFC3339)),
 		CreatedAt:          types.StringValue(createdAt),
 		RenewedAt:          types.StringValue(renewedAt),
 		CertificateContent: types.StringValue(certificateContent),

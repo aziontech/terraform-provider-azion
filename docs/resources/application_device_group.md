@@ -105,7 +105,6 @@ terraform import azion_application_device_group.mobile "12345:67890"
 ### Read-Only
 
 - `id` (String) The composite identifier of the resource (format: `application_id:device_group_id`).
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 - `schema_version` (Number) Schema Version.
 
 <a id="nestedblock--device_group"></a>
@@ -120,4 +119,3 @@ Read-Only:
 
 - `created_at` (String) The creation timestamp of the device group.
 - `id` (Number) The device group identifier.
-- `last_modified` (String) The last modified timestamp of the device group.

@@ -67,14 +67,12 @@ func genericCondition(match string) WafExceptionConditionWrapperModel {
 
 func wafItem(id int64, path string, active bool) WafRuleSetsItemModel {
 	return WafRuleSetsItemModel{
-		ExceptionID:  types.Int64Value(id),
-		RuleID:       types.Int64Value(0),
-		Path:         types.StringValue(path),
-		Conditions:   []WafExceptionConditionWrapperModel{genericCondition("any_url")},
-		Operator:     types.StringValue("regex"),
-		Active:       types.BoolValue(active),
-		LastEditor:   types.StringValue("someone"),
-		LastModified: types.StringValue("2026-01-01T00:00:00Z"),
+		ExceptionID: types.Int64Value(id),
+		RuleID:      types.Int64Value(0),
+		Path:        types.StringValue(path),
+		Conditions:  []WafExceptionConditionWrapperModel{genericCondition("any_url")},
+		Operator:    types.StringValue("regex"),
+		Active:      types.BoolValue(active),
 	}
 }
 
@@ -82,14 +80,12 @@ func wafItem(id int64, path string, active bool) WafRuleSetsItemModel {
 // conditions: everything else the API supplies is unknown.
 func plannedItem() WafRuleSetsItemModel {
 	return WafRuleSetsItemModel{
-		ExceptionID:  types.Int64Unknown(),
-		RuleID:       types.Int64Unknown(),
-		Path:         types.StringUnknown(),
-		Conditions:   []WafExceptionConditionWrapperModel{genericCondition("any_url")},
-		Operator:     types.StringUnknown(),
-		Active:       types.BoolValue(true),
-		LastEditor:   types.StringUnknown(),
-		LastModified: types.StringUnknown(),
+		ExceptionID: types.Int64Unknown(),
+		RuleID:      types.Int64Unknown(),
+		Path:        types.StringUnknown(),
+		Conditions:  []WafExceptionConditionWrapperModel{genericCondition("any_url")},
+		Operator:    types.StringUnknown(),
+		Active:      types.BoolValue(true),
 	}
 }
 
@@ -479,12 +475,11 @@ func wafRuleSetsPlanAndState(t *testing.T, plan, state WafRuleSetsResourceModel)
 	return req, &fwresource.ModifyPlanResponse{Plan: tfPlan}
 }
 
-func wafRuleSetsModel(lastUpdated types.String, items map[string]WafRuleSetsItemModel) WafRuleSetsResourceModel {
+func wafRuleSetsModel(items map[string]WafRuleSetsItemModel) WafRuleSetsResourceModel {
 	return WafRuleSetsResourceModel{
-		ID:          types.StringValue("42"),
-		WafID:       types.Int64Value(42),
-		LastUpdated: lastUpdated,
-		RuleSets:    wafRuleSetsList(items),
+		ID:       types.StringValue("42"),
+		WafID:    types.Int64Value(42),
+		RuleSets: wafRuleSetsList(items),
 	}
 }
 
@@ -494,13 +489,13 @@ func wafRuleSetsModel(lastUpdated types.String, items map[string]WafRuleSetsItem
 func TestWAFRuleSetsModifyPlanOnlyShowsChangedExceptions(t *testing.T) {
 	ctx := context.Background()
 
-	state := wafRuleSetsModel(types.StringValue("before"), map[string]WafRuleSetsItemModel{
+	state := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"changed":   wafItem(1, "/api", true),
 		"untouched": wafItem(2, "/other", true),
 	})
 	changed := plannedItem()
 	changed.Path = types.StringValue("/new")
-	plan := wafRuleSetsModel(types.StringUnknown(), map[string]WafRuleSetsItemModel{
+	plan := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"changed":   changed,
 		"untouched": plannedItem(),
 	})
@@ -523,21 +518,18 @@ func TestWAFRuleSetsModifyPlanOnlyShowsChangedExceptions(t *testing.T) {
 	if gotByName["changed"].ExceptionID.ValueInt64() != 1 {
 		t.Error("changed exception should keep its exception_id")
 	}
-	if !gotByName["changed"].LastModified.IsUnknown() {
-		t.Error("changed exception's last_modified should be unknown")
-	}
-	if !got.LastUpdated.IsUnknown() {
-		t.Error("last_updated should be unknown when something changes")
+	if !gotByName["changed"].RuleID.IsUnknown() {
+		t.Error("changed exception's undeclared rule_id should be unknown")
 	}
 }
 
 func TestWAFRuleSetsModifyPlanEmptyWhenNothingChanges(t *testing.T) {
 	ctx := context.Background()
 
-	state := wafRuleSetsModel(types.StringValue("before"), map[string]WafRuleSetsItemModel{
+	state := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"a": wafItem(1, "/api", true),
 	})
-	plan := wafRuleSetsModel(types.StringUnknown(), map[string]WafRuleSetsItemModel{
+	plan := wafRuleSetsModel(map[string]WafRuleSetsItemModel{
 		"a": plannedItem(),
 	})
 

@@ -163,15 +163,12 @@ The `config` block supports:
 The following attributes are exported:
 
 * `id` - The ID of the workload.
-* `last_updated` - Timestamp of the last Terraform update of the resource.
 
 ### Workload Attributes
 
 The following attributes are exported in the `workload` block:
 
 * `id` - The workload identifier.
-* `last_editor` - The last editor of the workload.
-* `last_modified` - Last modified timestamp of the workload.
 * `created_at` - Creation timestamp of the workload.
 * `workload_domain` - The workload domain.
 * `product_version` - Product version of the workload.

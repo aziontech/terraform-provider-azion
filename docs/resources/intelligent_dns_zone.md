@@ -32,7 +32,6 @@ resource "azion_intelligent_dns_zone" "example" {
 ### Read-Only
 
 - `id` (String) Numeric identifier of the resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
 <a id="nestedblock--zone"></a>
 ### Nested Schema for `zone`

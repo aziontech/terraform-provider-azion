@@ -61,7 +61,6 @@ resource "azion_function" "example2" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
 <a id="nestedblock--function"></a>
 ### Nested Schema for `function`
@@ -81,8 +80,6 @@ Optional:
 Read-Only:
 
 - `id` (Number) The function identifier.
-- `last_editor` (String) The last editor of the function.
-- `last_modified` (String) Last modified timestamp of the function.
 - `product_version` (String) Product version of the function.
 - `reference_count` (Number) The reference count of the function.
 - `vendor` (String) Vendor of the function.

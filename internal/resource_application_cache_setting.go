@@ -45,7 +45,6 @@ type ApplicationCacheSettingsResourceModel struct {
 	ApplicationID types.Int64                `tfsdk:"application_id"`
 	CacheSetting  *CacheSettingResourceModel `tfsdk:"cache_setting"`
 	ID            types.Int64                `tfsdk:"id"`
-	LastUpdated   types.String               `tfsdk:"last_updated"`
 }
 
 type CacheSettingResourceModel struct {
@@ -386,10 +385,6 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 				Description: "Numeric identifier of the Application.",
 				Required:    true,
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 		Blocks: map[string]schema.Block{
 			"cache_setting": schema.SingleNestedBlock{
@@ -650,7 +645,6 @@ func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resou
 	plan.CacheSetting = results
 	plan.ApplicationID = applicationID
 	plan.ID = types.Int64Value(cacheSettingData.GetId())
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -816,7 +810,6 @@ func (r *applicationCacheSettingsResource) Update(ctx context.Context, req resou
 	plan.CacheSetting = results
 	plan.ApplicationID = applicationID
 	plan.ID = types.Int64Value(cacheSettingData.GetId())
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)

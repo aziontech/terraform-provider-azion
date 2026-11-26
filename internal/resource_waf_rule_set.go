@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -36,22 +35,19 @@ type wafRuleSetResource struct {
 }
 
 type WafRuleSetResourceModel struct {
-	ID          types.String               `tfsdk:"id"`
-	WafID       types.Int64                `tfsdk:"waf_id"`
-	LastUpdated types.String               `tfsdk:"last_updated"`
-	Result      *WafRuleSetResourceResults `tfsdk:"result"`
+	ID     types.String               `tfsdk:"id"`
+	WafID  types.Int64                `tfsdk:"waf_id"`
+	Result *WafRuleSetResourceResults `tfsdk:"result"`
 }
 
 type WafRuleSetResourceResults struct {
-	ID           types.Int64                         `tfsdk:"exception_id"`
-	RuleID       types.Int64                         `tfsdk:"rule_id"`
-	Name         types.String                        `tfsdk:"name"`
-	Path         types.String                        `tfsdk:"path"`
-	Conditions   []WafExceptionConditionWrapperModel `tfsdk:"conditions"`
-	Operator     types.String                        `tfsdk:"operator"`
-	Active       types.Bool                          `tfsdk:"active"`
-	LastEditor   types.String                        `tfsdk:"last_editor"`
-	LastModified types.String                        `tfsdk:"last_modified"`
+	ID         types.Int64                         `tfsdk:"exception_id"`
+	RuleID     types.Int64                         `tfsdk:"rule_id"`
+	Name       types.String                        `tfsdk:"name"`
+	Path       types.String                        `tfsdk:"path"`
+	Conditions []WafExceptionConditionWrapperModel `tfsdk:"conditions"`
+	Operator   types.String                        `tfsdk:"operator"`
+	Active     types.Bool                          `tfsdk:"active"`
 }
 
 // Azion API defaults for WAF exception fields.
@@ -89,10 +85,6 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "The WAF identifier.",
 				Required:    true,
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 		Blocks: map[string]schema.Block{
 			"result": schema.SingleNestedBlock{
@@ -129,14 +121,6 @@ func (r *wafRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(defaultWAFRuleActive),
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the exception.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp.",
-						Computed:    true,
 					},
 				},
 				Blocks: map[string]schema.Block{
@@ -267,7 +251,6 @@ func (r *wafRuleSetResource) Create(ctx context.Context, req resource.CreateRequ
 	data := exceptionResponse.GetData()
 	plan.Result = transformWAFRuleToResourceModel(data)
 	plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -458,7 +441,6 @@ func (r *wafRuleSetResource) Update(ctx context.Context, req resource.UpdateRequ
 	data := exceptionResponse.GetData()
 	plan.Result = transformWAFRuleToResourceModel(data)
 	plan.ID = types.StringValue(strconv.FormatInt(exceptionID, 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -545,10 +527,8 @@ func (r *wafRuleSetResource) ImportState(ctx context.Context, req resource.Impor
 // transformWAFRuleToResourceModel transforms an SDK WAFRule to a Terraform resource model.
 func transformWAFRuleToResourceModel(rule azionapi.WAFRule) *WafRuleSetResourceResults {
 	result := &WafRuleSetResourceResults{
-		ID:           types.Int64Value(rule.GetId()),
-		Name:         types.StringValue(rule.GetName()),
-		LastEditor:   types.StringValue(rule.GetLastEditor()),
-		LastModified: types.StringValue(rule.GetLastModified().Format(time.RFC3339)),
+		ID:   types.Int64Value(rule.GetId()),
+		Name: types.StringValue(rule.GetName()),
 	}
 
 	// Optional rule_id.

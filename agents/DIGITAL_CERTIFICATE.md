@@ -351,7 +351,6 @@ type certificateResourceModel struct {
     SchemaVersion types.Int64              `tfsdk:"schema_version"`
     Results       *certificateResultsModel `tfsdk:"results"`
     ID            types.String             `tfsdk:"id"`
-    LastUpdated   types.String             `tfsdk:"last_updated"`
 }
 
 // Results model - represents the certificate data
@@ -371,8 +370,6 @@ type certificateResultsModel struct {
     KeyAlgorithm       types.String   `tfsdk:"key_algorithm"`
     Active             types.Bool     `tfsdk:"active"`
     ProductVersion     types.String   `tfsdk:"product_version"`
-    LastEditor         types.String   `tfsdk:"last_editor"`
-    LastModified       types.String   `tfsdk:"last_modified"`
     RenewedAt          types.String   `tfsdk:"renewed_at"`
     CertificateContent types.String   `tfsdk:"certificate_content"`
     PrivateKey         types.String   `tfsdk:"private_key"`
@@ -426,7 +423,6 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
     plan.Results = populateCertificateResultsFromAPI(ctx, cert, plan.Results.CertificateContent.ValueString(), plan.Results.PrivateKey.ValueString())
     plan.SchemaVersion = types.Int64Value(1)
     plan.ID = types.StringValue(fmt.Sprintf("%d", cert.GetId()))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -518,7 +514,6 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
     plan.Results = populateCertificateResultsFromAPI(ctx, cert, plan.Results.CertificateContent.ValueString(), plan.Results.PrivateKey.ValueString())
     plan.SchemaVersion = types.Int64Value(1)
     plan.ID = types.StringValue(fmt.Sprintf("%d", cert.GetId()))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -618,8 +613,6 @@ func populateCertificateResultsFromAPI(ctx context.Context, cert azionapi.Certif
         Authority:          types.StringValue(cert.GetAuthority()),
         KeyAlgorithm:       types.StringValue(cert.GetKeyAlgorithm()),
         ProductVersion:     types.StringValue(cert.GetProductVersion()),
-        LastEditor:         types.StringValue(cert.GetLastEditor()),
-        LastModified:       types.StringValue(cert.GetLastModified().Format(time.RFC3339)),
         RenewedAt:          types.StringValue(renewedAt),
         CertificateContent: types.StringValue(certificateContent),
         PrivateKey:         types.StringValue(privateKey),

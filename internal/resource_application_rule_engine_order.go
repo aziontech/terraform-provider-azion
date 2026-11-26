@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -41,7 +40,6 @@ type applicationRuleEngineOrderModel struct {
 	ApplicationID types.Int64   `tfsdk:"application_id"`
 	Phase         types.String  `tfsdk:"phase"`
 	Order         []types.Int64 `tfsdk:"order"`
-	LastUpdated   types.String  `tfsdk:"last_updated"`
 }
 
 func (r *applicationRuleEngineOrderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -73,10 +71,6 @@ func (r *applicationRuleEngineOrderResource) Schema(_ context.Context, _ resourc
 				Required:    true,
 				ElementType: types.Int64Type,
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 	}
 }
@@ -101,7 +95,6 @@ func (r *applicationRuleEngineOrderResource) Create(ctx context.Context, req res
 		return
 	}
 
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.ID = types.StringValue(fmt.Sprintf("%d/%s", plan.ApplicationID.ValueInt64(), plan.Phase.ValueString()))
 
 	diags = resp.State.Set(ctx, &plan)
@@ -166,7 +159,6 @@ func (r *applicationRuleEngineOrderResource) Update(ctx context.Context, req res
 		return
 	}
 
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.ID = types.StringValue(fmt.Sprintf("%d/%s", plan.ApplicationID.ValueInt64(), plan.Phase.ValueString()))
 
 	diags = resp.State.Set(ctx, &plan)

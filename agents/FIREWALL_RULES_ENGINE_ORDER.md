@@ -56,7 +56,6 @@ The JSON body has the same shape as the application ordering endpoints:
 | `id` | string | — | yes | Same value as `firewall_id` (string-encoded) |
 | `firewall_id` | int64 | yes | — | The firewall whose order is being managed |
 | `order` | list of int64 | yes | — | Ordered rule IDs; first ID is evaluated first |
-| `last_updated` | string | — | yes | Timestamp of the last Terraform update |
 
 Note the absence of a `phase` attribute — firewall rules don't have phases.
 

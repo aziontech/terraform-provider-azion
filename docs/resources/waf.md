@@ -101,9 +101,6 @@ terraform import azion_waf.example 12345
 ## Attribute Reference
 
 * `id` - The ID of the WAF.
-* `last_editor` - Last editor of the WAF.
-* `last_modified` - Last modified timestamp.
-* `last_updated` - Timestamp of the last Terraform update of the resource.
 * `result`
   * `state` - The state of the current WAF version.
   * `version_id` - The identifier of the current WAF version.

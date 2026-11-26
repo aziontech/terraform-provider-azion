@@ -43,7 +43,6 @@ type dataStreamResource struct {
 type dataStreamResourceModel struct {
 	DataStream    *dataStreamResourceResults `tfsdk:"data_stream"`
 	ID            types.String               `tfsdk:"id"`
-	LastUpdated   types.String               `tfsdk:"last_updated"`
 	SchemaVersion types.Int64                `tfsdk:"schema_version"`
 }
 
@@ -52,9 +51,7 @@ type dataStreamResourceResults struct {
 	ID             types.Int64                `tfsdk:"id"`
 	Name           types.String               `tfsdk:"name"`
 	Active         types.Bool                 `tfsdk:"active"`
-	LastEditor     types.String               `tfsdk:"last_editor"`
 	CreatedAt      types.String               `tfsdk:"created_at"`
-	LastModified   types.String               `tfsdk:"last_modified"`
 	ProductVersion types.String               `tfsdk:"product_version"`
 	Inputs         []DataStreamInputModel     `tfsdk:"inputs"`
 	Transform      []DataStreamTransformModel `tfsdk:"transform"`
@@ -197,10 +194,6 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
@@ -225,16 +218,8 @@ func (r *dataStreamResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Optional:    true,
 						Computed:    true,
 					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the data stream.",
-						Computed:    true,
-					},
 					"created_at": schema.StringAttribute{
 						Description: "The creation timestamp of the data stream.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the data stream.",
 						Computed:    true,
 					},
 					"product_version": schema.StringAttribute{
@@ -636,7 +621,6 @@ func (r *dataStreamResource) Create(ctx context.Context, req resource.CreateRequ
 
 	populateDataStreamFromResponse(plan.DataStream, createDataStream.GetData())
 	plan.ID = types.StringValue(strconv.FormatInt(plan.DataStream.ID.ValueInt64(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.SchemaVersion = types.Int64Value(0)
 
 	diags = resp.State.Set(ctx, plan)
@@ -749,7 +733,6 @@ func (r *dataStreamResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	populateDataStreamFromResponse(plan.DataStream, updateDataStream.GetData())
 	plan.ID = types.StringValue(strconv.FormatInt(plan.DataStream.ID.ValueInt64(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.SchemaVersion = types.Int64Value(0)
 
 	diags = resp.State.Set(ctx, plan)
@@ -1097,9 +1080,7 @@ func populateDataStreamFromResponse(model *dataStreamResourceResults, stream azi
 	model.ID = types.Int64Value(stream.GetId())
 	model.Name = types.StringValue(stream.GetName())
 	model.Active = types.BoolPointerValue(stream.Active)
-	model.LastEditor = types.StringValue(stream.GetLastEditor())
 	model.CreatedAt = types.StringValue(stream.GetCreated().Format(time.RFC850))
-	model.LastModified = types.StringValue(stream.GetLastModified().Format(time.RFC850))
 	model.ProductVersion = types.StringValue(stream.GetProductVersion())
 	model.Inputs = populateDataStreamInputs(stream.GetInputs())
 	model.Transform = populateDataStreamTransforms(priorTransforms, stream.GetTransform())

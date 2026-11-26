@@ -211,7 +211,6 @@ The record resource uses a nested structure for the record configuration:
 type recordResourceModel struct {
     ZoneId      types.String  `tfsdk:"zone_id"`
     Record      *recordModel  `tfsdk:"record"`
-    LastUpdated types.String  `tfsdk:"last_updated"`
 }
 
 type recordModel struct {
@@ -284,7 +283,6 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 
     // Update plan with response.
     plan.Record = populateRecordModel(createRecord.GetData(), plan.Record.Policy.ValueString())
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)

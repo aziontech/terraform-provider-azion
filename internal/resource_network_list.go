@@ -37,19 +37,16 @@ type NetworkListResourceModel struct {
 	SchemaVersion types.Int64                 `tfsdk:"schema_version"`
 	NetworkList   *NetworkListResourceResults `tfsdk:"results"`
 	ID            types.String                `tfsdk:"id"`
-	LastUpdated   types.String                `tfsdk:"last_updated"`
 }
 
 type NetworkListResourceResults struct {
-	ID           types.Int64  `tfsdk:"id"`
-	LastEditor   types.String `tfsdk:"last_editor"`
-	LastModified types.String `tfsdk:"last_modified"`
-	CreatedAt    types.String `tfsdk:"created_at"`
-	Type         types.String `tfsdk:"type"`
-	Name         types.String `tfsdk:"name"`
-	Items        types.Set    `tfsdk:"items"`
-	State        types.String `tfsdk:"state"`
-	VersionID    types.String `tfsdk:"version_id"`
+	ID        types.Int64  `tfsdk:"id"`
+	CreatedAt types.String `tfsdk:"created_at"`
+	Type      types.String `tfsdk:"type"`
+	Name      types.String `tfsdk:"name"`
+	Items     types.Set    `tfsdk:"items"`
+	State     types.String `tfsdk:"state"`
+	VersionID types.String `tfsdk:"version_id"`
 }
 
 func (r *networkListResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -68,10 +65,6 @@ func (r *networkListResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"schema_version": schema.Int64Attribute{
 				Computed: true,
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 		Blocks: map[string]schema.Block{
 			"results": schema.SingleNestedBlock{
@@ -83,14 +76,6 @@ func (r *networkListResource) Schema(_ context.Context, _ resource.SchemaRequest
 					"id": schema.Int64Attribute{
 						Computed:    true,
 						Description: "Identification of this entry.",
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the network list.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the network list.",
-						Computed:    true,
 					},
 					"created_at": schema.StringAttribute{
 						Description: "Creation timestamp of the network list.",
@@ -191,19 +176,16 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	plan.NetworkList = &NetworkListResourceResults{
-		ID:           types.Int64Value(data.GetId()),
-		LastEditor:   types.StringValue(data.GetLastEditor()),
-		LastModified: types.StringValue(data.GetLastModified().Format(time.RFC3339)),
-		CreatedAt:    types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
-		Type:         types.StringValue(data.GetType()),
-		Name:         types.StringValue(data.GetName()),
-		Items:        utils.SliceStringTypeToSet(sliceString),
-		State:        types.StringPointerValue(data.VersionState.Get()),
-		VersionID:    types.StringPointerValue(data.VersionId.Get()),
+		ID:        types.Int64Value(data.GetId()),
+		CreatedAt: types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
+		Type:      types.StringValue(data.GetType()),
+		Name:      types.StringValue(data.GetName()),
+		Items:     utils.SliceStringTypeToSet(sliceString),
+		State:     types.StringPointerValue(data.VersionState.Get()),
+		VersionID: types.StringPointerValue(data.VersionId.Get()),
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -286,15 +268,13 @@ func (r *networkListResource) Read(ctx context.Context, req resource.ReadRequest
 	networkListState := NetworkListResourceModel{
 		SchemaVersion: types.Int64Value(1),
 		NetworkList: &NetworkListResourceResults{
-			ID:           types.Int64Value(data.GetId()),
-			LastEditor:   types.StringValue(data.GetLastEditor()),
-			LastModified: types.StringValue(data.GetLastModified().Format(time.RFC3339)),
-			CreatedAt:    types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
-			Type:         types.StringValue(data.GetType()),
-			Name:         types.StringValue(data.GetName()),
-			Items:        utils.SliceStringTypeToSet(sliceString),
-			State:        types.StringPointerValue(data.VersionState.Get()),
-			VersionID:    types.StringPointerValue(data.VersionId.Get()),
+			ID:        types.Int64Value(data.GetId()),
+			CreatedAt: types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
+			Type:      types.StringValue(data.GetType()),
+			Name:      types.StringValue(data.GetName()),
+			Items:     utils.SliceStringTypeToSet(sliceString),
+			State:     types.StringPointerValue(data.VersionState.Get()),
+			VersionID: types.StringPointerValue(data.VersionId.Get()),
 		},
 		ID: types.StringValue(strconv.FormatInt(data.GetId(), 10)),
 	}
@@ -396,19 +376,16 @@ func (r *networkListResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	plan.NetworkList = &NetworkListResourceResults{
-		ID:           types.Int64Value(data.GetId()),
-		LastEditor:   types.StringValue(data.GetLastEditor()),
-		LastModified: types.StringValue(data.GetLastModified().Format(time.RFC3339)),
-		CreatedAt:    types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
-		Type:         types.StringValue(data.GetType()),
-		Name:         types.StringValue(data.GetName()),
-		Items:        utils.SliceStringTypeToSet(sliceString),
-		State:        types.StringPointerValue(data.VersionState.Get()),
-		VersionID:    types.StringPointerValue(data.VersionId.Get()),
+		ID:        types.Int64Value(data.GetId()),
+		CreatedAt: types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
+		Type:      types.StringValue(data.GetType()),
+		Name:      types.StringValue(data.GetName()),
+		Items:     utils.SliceStringTypeToSet(sliceString),
+		State:     types.StringPointerValue(data.VersionState.Get()),
+		VersionID: types.StringPointerValue(data.VersionId.Get()),
 	}
 
 	plan.ID = types.StringValue(strconv.FormatInt(data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

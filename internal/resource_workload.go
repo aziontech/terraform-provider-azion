@@ -40,17 +40,14 @@ type workloadResource struct {
 }
 
 type workloadResourceModel struct {
-	Workload    *workloadResourceResults `tfsdk:"workload"`
-	ID          types.String             `tfsdk:"id"`
-	LastUpdated types.String             `tfsdk:"last_updated"`
+	Workload *workloadResourceResults `tfsdk:"workload"`
+	ID       types.String             `tfsdk:"id"`
 }
 
 type workloadResourceResults struct {
 	ID                        types.Int64               `tfsdk:"id"`
 	Name                      types.String              `tfsdk:"name"`
 	Active                    types.Bool                `tfsdk:"active"`
-	LastEditor                types.String              `tfsdk:"last_editor"`
-	LastModified              types.String              `tfsdk:"last_modified"`
 	CreatedAt                 types.String              `tfsdk:"created_at"`
 	Infrastructure            types.Int64               `tfsdk:"infrastructure"`
 	Tls                       *TLSWorkloadResourceModel `tfsdk:"tls"`
@@ -172,10 +169,6 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
-			},
 		},
 		Blocks: map[string]schema.Block{
 			"workload": schema.SingleNestedBlock{
@@ -195,14 +188,6 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"active": schema.BoolAttribute{
 						Description: "Status of the workload.",
 						Optional:    true,
-						Computed:    true,
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the workload.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the workload.",
 						Computed:    true,
 					},
 					"created_at": schema.StringAttribute{
@@ -425,7 +410,6 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 	keepDeclaredWorkloadBlocks(plan.Workload, results)
 	plan.Workload = results
 	plan.ID = types.StringValue(strconv.FormatInt(createWorkload.Data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -605,7 +589,6 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 	keepDeclaredWorkloadBlocks(plan.Workload, results)
 	plan.Workload = results
 	plan.ID = types.StringValue(strconv.FormatInt(updateWorkload.Data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -778,8 +761,6 @@ func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadRes
 		ID:             types.Int64Value(response.Data.GetId()),
 		Name:           types.StringValue(response.Data.Name),
 		Active:         types.BoolPointerValue(response.Data.Active),
-		LastEditor:     types.StringValue(response.Data.GetLastEditor()),
-		LastModified:   types.StringValue(response.Data.GetLastModified().Format(time.RFC850)),
 		CreatedAt:      types.StringValue(response.Data.GetCreatedAt().Format(time.RFC3339)),
 		ProductVersion: types.StringValue(response.Data.GetProductVersion()),
 		WorkloadDomain: types.StringValue(response.Data.GetWorkloadDomain()),

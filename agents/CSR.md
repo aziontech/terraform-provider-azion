@@ -144,10 +144,6 @@ func (r *csrResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
                 Description: "Schema version of the resource.",
                 Computed:    true,
             },
-            "last_updated": schema.StringAttribute{
-                Description: "Timestamp of the last Terraform update.",
-                Computed:    true,
-            },
         },
         Blocks: map[string]schema.Block{
             "results": schema.SingleNestedBlock{
@@ -253,16 +249,8 @@ func (r *csrResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
                         Description: "Product version.",
                         Computed:    true,
                     },
-                    "last_editor": schema.StringAttribute{
-                        Description: "Last editor.",
-                        Computed:    true,
-                    },
                     "created_at": schema.StringAttribute{
                         Description: "Creation timestamp.",
-                        Computed:    true,
-                    },
-                    "last_modified": schema.StringAttribute{
-                        Description: "Last modified timestamp.",
                         Computed:    true,
                     },
                     "renewed_at": schema.StringAttribute{
@@ -362,7 +350,6 @@ func (r *csrResource) Create(ctx context.Context, req resource.CreateRequest, re
     plan.Results = populateCSRResultsFromAPI(ctx, cert, plan.Results)
     plan.SchemaVersion = types.Int64Value(1)
     plan.ID = types.StringValue(fmt.Sprintf("%d", cert.GetId()))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)

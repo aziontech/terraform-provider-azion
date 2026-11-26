@@ -37,22 +37,19 @@ type FirewallFunctionsInstanceResource struct {
 }
 
 type FirewallFunctionInstanceResourceModel struct {
-	State       types.String                          `tfsdk:"state"`
-	Data        *FirewallFunctionInstanceResourceData `tfsdk:"data"`
-	ID          types.String                          `tfsdk:"id"`
-	FirewallID  types.Int64                           `tfsdk:"firewall_id"`
-	LastUpdated types.String                          `tfsdk:"last_updated"`
+	State      types.String                          `tfsdk:"state"`
+	Data       *FirewallFunctionInstanceResourceData `tfsdk:"data"`
+	ID         types.String                          `tfsdk:"id"`
+	FirewallID types.Int64                           `tfsdk:"firewall_id"`
 }
 
 type FirewallFunctionInstanceResourceData struct {
-	ID           types.Int64  `tfsdk:"id"`
-	Name         types.String `tfsdk:"name"`
-	Args         types.String `tfsdk:"args"`
-	Function     types.Int64  `tfsdk:"function"`
-	Active       types.Bool   `tfsdk:"active"`
-	LastEditor   types.String `tfsdk:"last_editor"`
-	LastModified types.String `tfsdk:"last_modified"`
-	CreatedAt    types.String `tfsdk:"created_at"`
+	ID        types.Int64  `tfsdk:"id"`
+	Name      types.String `tfsdk:"name"`
+	Args      types.String `tfsdk:"args"`
+	Function  types.Int64  `tfsdk:"function"`
+	Active    types.Bool   `tfsdk:"active"`
+	CreatedAt types.String `tfsdk:"created_at"`
 }
 
 func (r *FirewallFunctionsInstanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -74,10 +71,6 @@ func (r *FirewallFunctionsInstanceResource) Schema(_ context.Context, _ resource
 			},
 			"state": schema.StringAttribute{
 				Description: "State of the function instance.",
-				Computed:    true,
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
 		},
@@ -111,14 +104,6 @@ func (r *FirewallFunctionsInstanceResource) Schema(_ context.Context, _ resource
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the firewall function instance.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the firewall function instance.",
-						Computed:    true,
 					},
 					"created_at": schema.StringAttribute{
 						Description: "The creation timestamp of the firewall function instance.",
@@ -232,20 +217,17 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 	}
 
 	plan.Data = &FirewallFunctionInstanceResourceData{
-		Name:         types.StringValue(functionInstanceResponse.Data.GetName()),
-		Args:         types.StringValue(jsonArgsStr),
-		Function:     types.Int64Value(functionInstanceResponse.Data.GetFunction()),
-		ID:           types.Int64Value(functionInstanceResponse.Data.GetId()),
-		Active:       types.BoolValue(functionInstanceResponse.Data.GetActive()),
-		LastEditor:   types.StringValue(functionInstanceResponse.Data.GetLastEditor()),
-		LastModified: types.StringValue(functionInstanceResponse.Data.GetLastModified().Format(time.RFC850)),
-		CreatedAt:    types.StringValue(functionInstanceResponse.Data.GetCreatedAt().Format(time.RFC3339)),
+		Name:      types.StringValue(functionInstanceResponse.Data.GetName()),
+		Args:      types.StringValue(jsonArgsStr),
+		Function:  types.Int64Value(functionInstanceResponse.Data.GetFunction()),
+		ID:        types.Int64Value(functionInstanceResponse.Data.GetId()),
+		Active:    types.BoolValue(functionInstanceResponse.Data.GetActive()),
+		CreatedAt: types.StringValue(functionInstanceResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	plan.State = types.StringValue(functionInstanceResponse.GetState())
 	plan.ID = types.StringValue(strconv.FormatInt(functionInstanceResponse.Data.GetId(), 10))
 	plan.FirewallID = firewallID
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -350,14 +332,12 @@ func (r *FirewallFunctionsInstanceResource) Read(ctx context.Context, req resour
 		State:      types.StringValue(stateValue),
 		ID:         types.StringValue(strconv.FormatInt(functionInstanceResponse.Data.GetId(), 10)),
 		Data: &FirewallFunctionInstanceResourceData{
-			ID:           types.Int64Value(functionInstanceResponse.Data.GetId()),
-			LastEditor:   types.StringValue(functionInstanceResponse.Data.GetLastEditor()),
-			LastModified: types.StringValue(functionInstanceResponse.Data.GetLastModified().Format(time.RFC850)),
-			Name:         types.StringValue(functionInstanceResponse.Data.GetName()),
-			Args:         types.StringValue(jsonArgsStr),
-			Function:     types.Int64Value(functionInstanceResponse.Data.GetFunction()),
-			Active:       types.BoolValue(functionInstanceResponse.Data.GetActive()),
-			CreatedAt:    types.StringValue(functionInstanceResponse.Data.GetCreatedAt().Format(time.RFC3339)),
+			ID:        types.Int64Value(functionInstanceResponse.Data.GetId()),
+			Name:      types.StringValue(functionInstanceResponse.Data.GetName()),
+			Args:      types.StringValue(jsonArgsStr),
+			Function:  types.Int64Value(functionInstanceResponse.Data.GetFunction()),
+			Active:    types.BoolValue(functionInstanceResponse.Data.GetActive()),
+			CreatedAt: types.StringValue(functionInstanceResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 		},
 	}
 
@@ -479,20 +459,17 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 	}
 
 	plan.Data = &FirewallFunctionInstanceResourceData{
-		Function:     types.Int64Value(updateResponse.Data.GetFunction()),
-		Name:         types.StringValue(updateResponse.Data.GetName()),
-		LastEditor:   types.StringValue(updateResponse.Data.GetLastEditor()),
-		LastModified: types.StringValue(updateResponse.Data.GetLastModified().Format(time.RFC850)),
-		Args:         types.StringValue(jsonArgsStr),
-		ID:           types.Int64Value(updateResponse.Data.GetId()),
-		Active:       types.BoolValue(updateResponse.Data.GetActive()),
-		CreatedAt:    types.StringValue(updateResponse.Data.GetCreatedAt().Format(time.RFC3339)),
+		Function:  types.Int64Value(updateResponse.Data.GetFunction()),
+		Name:      types.StringValue(updateResponse.Data.GetName()),
+		Args:      types.StringValue(jsonArgsStr),
+		ID:        types.Int64Value(updateResponse.Data.GetId()),
+		Active:    types.BoolValue(updateResponse.Data.GetActive()),
+		CreatedAt: types.StringValue(updateResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	plan.State = types.StringValue(updateResponse.GetState())
 	plan.ID = types.StringValue(strconv.FormatInt(updateResponse.Data.GetId(), 10))
 	plan.FirewallID = firewallID
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

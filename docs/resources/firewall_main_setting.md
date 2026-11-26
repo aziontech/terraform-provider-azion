@@ -83,7 +83,6 @@ resource "azion_firewall_main_setting" "example" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
 <a id="nestedblock--data"></a>
 ### Nested Schema for `data`
@@ -102,8 +101,6 @@ Read-Only:
 
 - `created_at` (String) Creation timestamp of the firewall rule set.
 - `id` (Number) ID of the firewall rule set.
-- `last_editor` (String) Last editor of the firewall rule set.
-- `last_modified` (String) Last modified timestamp of the firewall rule set.
 - `product_version` (String) Product version of the firewall rule set.
 - `state` (String) The state of the current firewall version.
 - `version_id` (String) The identifier of the current firewall version.

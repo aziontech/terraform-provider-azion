@@ -1066,7 +1066,6 @@ type RulesEngineResourceModel struct {
     RulesEngine   *RulesEngineResourceResults `tfsdk:"results"`
     ID            types.String                `tfsdk:"id"`
     ApplicationID types.Int64                 `tfsdk:"application_id"`
-    LastUpdated   types.String                `tfsdk:"last_updated"`
 }
 
 type RulesEngineResourceResults struct {
@@ -1078,8 +1077,6 @@ type RulesEngineResourceResults struct {
     Criteria     []CriteriaResourceModel            `tfsdk:"criteria"`
     Description  types.String                       `tfsdk:"description"`
     Order        types.Int64                        `tfsdk:"order"`
-    LastEditor   types.String                       `tfsdk:"last_editor"`
-    LastModified types.String                       `tfsdk:"last_modified"`
     CreatedAt    types.String                       `tfsdk:"created_at"`
 }
 
@@ -1130,10 +1127,6 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
             "schema_version": schema.Int64Attribute{
                 Computed: true,
             },
-            "last_updated": schema.StringAttribute{
-                Description: "Timestamp of the last Terraform update of the resource.",
-                Computed:    true,
-            },
         },
         Blocks: map[string]schema.Block{
             "results": schema.SingleNestedBlock{
@@ -1166,14 +1159,6 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
                     },
                     "order": schema.Int64Attribute{
                         Description: "The order of the rule in the rules engine.",
-                        Computed:    true,
-                    },
-                    "last_editor": schema.StringAttribute{
-                        Description: "The last editor of the rule.",
-                        Computed:    true,
-                    },
-                    "last_modified": schema.StringAttribute{
-                        Description: "The last modified timestamp.",
                         Computed:    true,
                     },
                     "created_at": schema.StringAttribute{

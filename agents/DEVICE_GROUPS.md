@@ -591,7 +591,6 @@ type applicationDeviceGroupResourceModel struct {
     ApplicationID types.Int64                 `tfsdk:"application_id"`
     DeviceGroup   *deviceGroupResourceResults `tfsdk:"device_group"`
     ID            types.String                `tfsdk:"id"`
-    LastUpdated   types.String                `tfsdk:"last_updated"`
     SchemaVersion types.Int64                 `tfsdk:"schema_version"`
 }
 
@@ -601,7 +600,6 @@ type deviceGroupResourceResults struct {
     Name         types.String `tfsdk:"name"`
     UserAgent    types.String `tfsdk:"user_agent"`
     CreatedAt    types.String `tfsdk:"created_at"`
-    LastModified types.String `tfsdk:"last_modified"`
 }
 ```
 
@@ -672,7 +670,6 @@ func (r *applicationDeviceGroupResource) Create(ctx context.Context, req resourc
     }
     plan.SchemaVersion = types.Int64Value(1)
     plan.ID = types.StringValue(fmt.Sprintf("%d:%d", plan.ApplicationID.ValueInt64(), data.GetId()))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -842,7 +839,6 @@ func (r *applicationDeviceGroupResource) Update(ctx context.Context, req resourc
     }
     plan.SchemaVersion = types.Int64Value(1)
     plan.ID = types.StringValue(fmt.Sprintf("%d:%d", applicationID, data.GetId()))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -950,8 +946,6 @@ func (r *applicationDeviceGroupResource) ImportState(ctx context.Context, req re
 | `device_group.name` | Computed | Computed | Required |
 | `device_group.user_agent` | Computed | Computed | Required |
 | `device_group.created_at` | Computed | Computed | Computed |
-| `device_group.last_modified` | N/A | N/A | Computed |
-| `last_updated` | N/A | N/A | Computed |
 | `schema_version` | N/A | N/A | Computed |
 
 ### Resource Schema
@@ -972,10 +966,6 @@ func (r *applicationDeviceGroupResource) Schema(_ context.Context, _ resource.Sc
                 PlanModifiers: []planmodifier.String{
                     stringplanmodifier.UseStateForUnknown(),
                 },
-            },
-            "last_updated": schema.StringAttribute{
-                Description: "Timestamp of the last Terraform update of the resource.",
-                Computed:    true,
             },
             "schema_version": schema.Int64Attribute{
                 Computed: true,
@@ -1002,10 +992,6 @@ func (r *applicationDeviceGroupResource) Schema(_ context.Context, _ resource.Sc
                     },
                     "created_at": schema.StringAttribute{
                         Description: "The creation timestamp of the device group.",
-                        Computed:    true,
-                    },
-                    "last_modified": schema.StringAttribute{
-                        Description: "The last modified timestamp of the device group.",
                         Computed:    true,
                     },
                 },
@@ -1305,7 +1291,6 @@ terraform import azion_application_device_group.example "12345:678"
 ## Attribute Reference
 
 * `id` - The composite ID in format `application_id:device_group_id`.
-* `last_updated` - Timestamp of the last Terraform update.
 * `schema_version` - Schema version.
 * `device_group.id` - The device group identifier.
 ```

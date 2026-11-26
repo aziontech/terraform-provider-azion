@@ -77,7 +77,6 @@ resource "azion_custom_page" "example" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
 <a id="nestedblock--custom_page"></a>
 ### Nested Schema for `custom_page`
@@ -95,8 +94,6 @@ Read-Only:
 
 - `created_at` (String) The creation timestamp of the custom page.
 - `id` (Number) The custom page identifier.
-- `last_editor` (String) The last editor of the custom page.
-- `last_modified` (String) Last modified timestamp of the custom page.
 - `product_version` (String) Product version of the custom page.
 - `state` (String) The state of the current custom page version.
 - `version_id` (String) The identifier of the current custom page version.

@@ -800,8 +800,8 @@ func (r *edgeFunctionResource) Delete(ctx context.Context, req resource.DeleteRe
 |-----------|---------------------|------|-------|
 | `id` | `id` | `Int64` | Function identifier |
 | `name` | `name` | `String` | Function name |
-| `last_editor` | `last_editor` | `String` | Last user to edit |
-| `last_modified` | `last_modified` | `String` | `time.Time` formatted to RFC850 |
+| `last_editor` | `last_editor` | `String` | Last user to edit (data sources only) |
+| `last_modified` | `last_modified` | `String` | `time.Time` formatted to RFC850 (data sources only) |
 | `product_version` | `product_version` | `String` | Product version |
 | `active` | `active` | `Bool` | Pointer in API |
 | `runtime` | `runtime` | `String` | Optional (pointer in API) |

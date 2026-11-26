@@ -39,7 +39,6 @@ func TestAccResourceRecord(t *testing.T) {
 	//		ResourceName:            "azion_intelligent_dns_record.dev",
 	//		ImportState:             true,
 	//		ImportStateVerify:       true,
-	//		ImportStateVerifyIgnore: []string{"last_updated"},
 	//	},
 	//	// Update and Read testing
 	//	{

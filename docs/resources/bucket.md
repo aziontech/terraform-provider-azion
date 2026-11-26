@@ -36,12 +36,9 @@ The `bucket` block contains:
 In addition to all arguments above, the following attributes are exported:
 
 * `id` - The ID of the bucket (same as the bucket name).
-* `last_updated` - Timestamp of the last Terraform update of the resource.
 
 The `bucket` block also exports:
 
-* `last_editor` - The last editor of the bucket.
-* `last_modified` - The last modified timestamp of the bucket.
 * `product_version` - The product version of the bucket.
 
 ## Import

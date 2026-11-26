@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
-	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -68,23 +67,20 @@ type wafRuleSetsResource struct {
 }
 
 type WafRuleSetsResourceModel struct {
-	ID          types.String           `tfsdk:"id"`
-	WafID       types.Int64            `tfsdk:"waf_id"`
-	LastUpdated types.String           `tfsdk:"last_updated"`
-	RuleSets    []WafRuleSetsItemModel `tfsdk:"rule_set"`
+	ID       types.String           `tfsdk:"id"`
+	WafID    types.Int64            `tfsdk:"waf_id"`
+	RuleSets []WafRuleSetsItemModel `tfsdk:"rule_set"`
 }
 
 // WafRuleSetsItemModel is one exception, one `rule_set` block.
 type WafRuleSetsItemModel struct {
-	Name         types.String                        `tfsdk:"name"`
-	ExceptionID  types.Int64                         `tfsdk:"exception_id"`
-	RuleID       types.Int64                         `tfsdk:"rule_id"`
-	Path         types.String                        `tfsdk:"path"`
-	Conditions   []WafExceptionConditionWrapperModel `tfsdk:"conditions"`
-	Operator     types.String                        `tfsdk:"operator"`
-	Active       types.Bool                          `tfsdk:"active"`
-	LastEditor   types.String                        `tfsdk:"last_editor"`
-	LastModified types.String                        `tfsdk:"last_modified"`
+	Name        types.String                        `tfsdk:"name"`
+	ExceptionID types.Int64                         `tfsdk:"exception_id"`
+	RuleID      types.Int64                         `tfsdk:"rule_id"`
+	Path        types.String                        `tfsdk:"path"`
+	Conditions  []WafExceptionConditionWrapperModel `tfsdk:"conditions"`
+	Operator    types.String                        `tfsdk:"operator"`
+	Active      types.Bool                          `tfsdk:"active"`
 }
 
 // wafRuleSetsByName indexes the exceptions by name, the key reconcile works
@@ -140,10 +136,6 @@ func (r *wafRuleSetsResource) Schema(_ context.Context, _ resource.SchemaRequest
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
 				},
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -201,14 +193,6 @@ func wafRuleSetsBlock() schema.SetNestedBlock {
 					Optional:    true,
 					Computed:    true,
 					Default:     booldefault.StaticBool(defaultWAFRuleActive),
-				},
-				"last_editor": schema.StringAttribute{
-					Description: "Last editor of the exception.",
-					Computed:    true,
-				},
-				"last_modified": schema.StringAttribute{
-					Description: "Last modified timestamp.",
-					Computed:    true,
 				},
 			},
 			Blocks: map[string]schema.Block{
@@ -344,11 +328,6 @@ func (r *wafRuleSetsResource) ModifyPlan(ctx context.Context, req resource.Modif
 	}
 	plan.RuleSets = wafRuleSetsList(planned)
 
-	// Nothing to do: keep last_updated as well, so the plan is empty.
-	if !req.State.Raw.IsNull() && !wafRuleSetsHasChanges(planned, current) && plan.WafID.Equal(state.WafID) {
-		plan.LastUpdated = state.LastUpdated
-	}
-
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 }
 
@@ -358,8 +337,6 @@ func (r *wafRuleSetsResource) ModifyPlan(ctx context.Context, req resource.Modif
 // declare: Optional+Computed attributes in a block are null only then.
 func wafRuleSetsItemPlannedForApply(item WafRuleSetsItemModel, exceptionID types.Int64) WafRuleSetsItemModel {
 	item.ExceptionID = exceptionID
-	item.LastEditor = types.StringUnknown()
-	item.LastModified = types.StringUnknown()
 	if item.RuleID.IsNull() {
 		item.RuleID = types.Int64Unknown()
 	}
@@ -427,7 +404,6 @@ func (r *wafRuleSetsResource) Create(ctx context.Context, req resource.CreateReq
 	// Saved even on a partial failure, so state holds what was applied.
 	plan.ID = types.StringValue(strconv.FormatInt(wafID, 10))
 	plan.RuleSets = wafRuleSetsList(result)
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 
 	if len(undeclared) > 0 {
@@ -484,7 +460,6 @@ func (r *wafRuleSetsResource) Update(ctx context.Context, req resource.UpdateReq
 	// Saved even on a partial failure, so state holds what was applied.
 	plan.ID = types.StringValue(strconv.FormatInt(plan.WafID.ValueInt64(), 10))
 	plan.RuleSets = wafRuleSetsList(result)
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -607,22 +582,19 @@ func upgradeWafRuleSetsStateV0(prior wafRuleSetsResourceModelV0) WafRuleSetsReso
 	items := make(map[string]WafRuleSetsItemModel, len(prior.RuleSets))
 	for name, item := range prior.RuleSets {
 		items[name] = WafRuleSetsItemModel{
-			ExceptionID:  item.ExceptionID,
-			RuleID:       item.RuleID,
-			Path:         item.Path,
-			Conditions:   item.Conditions,
-			Operator:     item.Operator,
-			Active:       item.Active,
-			LastEditor:   item.LastEditor,
-			LastModified: item.LastModified,
+			ExceptionID: item.ExceptionID,
+			RuleID:      item.RuleID,
+			Path:        item.Path,
+			Conditions:  item.Conditions,
+			Operator:    item.Operator,
+			Active:      item.Active,
 		}
 	}
 
 	return WafRuleSetsResourceModel{
-		ID:          prior.ID,
-		WafID:       prior.WafID,
-		LastUpdated: prior.LastUpdated,
-		RuleSets:    wafRuleSetsList(items),
+		ID:       prior.ID,
+		WafID:    prior.WafID,
+		RuleSets: wafRuleSetsList(items),
 	}
 }
 
@@ -706,11 +678,6 @@ func planWafRuleSetsOps(planned, current map[string]WafRuleSetsItemModel) wafRul
 	sort.Strings(ops.Creates)
 
 	return ops
-}
-
-func wafRuleSetsHasChanges(planned, current map[string]WafRuleSetsItemModel) bool {
-	ops := planWafRuleSetsOps(planned, current)
-	return len(ops.Deletes)+len(ops.Updates)+len(ops.Creates) > 0
 }
 
 // wafRuleSetsItemNeedsUpdate reports whether a planned exception differs from
@@ -801,15 +768,13 @@ func isWafRuleSetsDuplicateKey(key string) bool {
 func wafRuleToItemModel(rule azionapi.WAFRule) WafRuleSetsItemModel {
 	single := transformWAFRuleToResourceModel(rule)
 	return WafRuleSetsItemModel{
-		Name:         single.Name,
-		ExceptionID:  single.ID,
-		RuleID:       single.RuleID,
-		Path:         single.Path,
-		Conditions:   single.Conditions,
-		Operator:     single.Operator,
-		Active:       single.Active,
-		LastEditor:   single.LastEditor,
-		LastModified: single.LastModified,
+		Name:        single.Name,
+		ExceptionID: single.ID,
+		RuleID:      single.RuleID,
+		Path:        single.Path,
+		Conditions:  single.Conditions,
+		Operator:    single.Operator,
+		Active:      single.Active,
 	}
 }
 

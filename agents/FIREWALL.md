@@ -496,7 +496,6 @@ type firewallResource struct {
 type FirewallResourceModel struct {
 	Firewall    *FirewallResourceResults `tfsdk:"data"`
 	ID          types.String             `tfsdk:"id"`
-	LastUpdated types.String             `tfsdk:"last_updated"`
 }
 
 type FirewallResourceModules struct {
@@ -512,8 +511,6 @@ type FirewallResourceResults struct {
 	Modules        *FirewallResourceModules `tfsdk:"modules"`
 	Debug          types.Bool               `tfsdk:"debug"`
 	Active         types.Bool               `tfsdk:"active"`
-	LastEditor     types.String             `tfsdk:"last_editor"`
-	LastModified   types.String             `tfsdk:"last_modified"`
 	CreatedAt      types.String             `tfsdk:"created_at"`
 	ProductVersion types.String             `tfsdk:"product_version"`
 	State          types.String             `tfsdk:"state"`
@@ -590,7 +587,6 @@ func (r *firewallResource) Create(ctx context.Context, req resource.CreateReques
 		// ... other fields
 	}
 	plan.ID = types.StringValue(strconv.FormatInt(firewallResponse.Data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -709,7 +705,6 @@ func (r *firewallResource) Update(ctx context.Context, req resource.UpdateReques
 		// ... other fields
 	}
 	plan.ID = types.StringValue(strconv.FormatInt(firewallResponse.Data.GetId(), 10))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

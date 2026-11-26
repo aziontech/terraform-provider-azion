@@ -74,7 +74,6 @@ resource "azion_application_function_instance" "example" {
 ### Read-Only
 
 - `id` (Number) The ID of this resource.
-- `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
 <a id="nestedblock--data"></a>
 ### Nested Schema for `data`

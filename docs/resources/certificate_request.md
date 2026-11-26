@@ -96,7 +96,6 @@ The following attributes are exported:
 
 * `id` - Identifier of the resource.
 * `schema_version` - Schema version of the resource.
-* `last_updated` - Timestamp of the last Terraform update of the resource.
 * `results` - The certificate request details. See [Results Structure](#results-structure) for the structure.
 
 ### Results Structure (Computed Attributes)
@@ -114,8 +113,6 @@ The `results` block also exports the following computed attributes:
 * `csr` - Certificate Signing Request (CSR).
 * `active` - Whether the certificate is active.
 * `product_version` - Product version of the certificate.
-* `last_editor` - Last editor of the certificate.
-* `last_modified` - Last modified timestamp of the certificate.
 * `created_at` - Creation timestamp of the certificate.
 * `renewed_at` - Renewal timestamp of the certificate.
 * `certificate_content` - The content of the certificate (PEM format). This field is populated after the certificate is issued.

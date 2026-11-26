@@ -612,7 +612,6 @@ type zoneResource struct {
 
 type zoneResourceModel struct {
     ID          types.String `tfsdk:"id"`
-    LastUpdated types.String `tfsdk:"last_updated"`
     Zone        *zoneModel   `tfsdk:"zone"`
 }
 
@@ -708,7 +707,6 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
         ProductVersion: types.StringValue(zoneData.GetProductVersion()),
     }
 
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -889,7 +887,6 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
         Nameservers:    nameserversList,
         ProductVersion: types.StringValue(zoneData.GetProductVersion()),
     }
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)

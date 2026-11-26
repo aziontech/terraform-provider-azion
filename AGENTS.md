@@ -355,6 +355,16 @@ State written with a nested attribute is read by the equivalent block unchanged 
 
 ---
 
+## Resources Do Not Expose Audit Fields
+
+Resources must not have `last_editor`, `last_modified`, `last_updated` (or similar audit/timestamp attributes the API or the provider changes on every write). The user cannot set them, and because they change on every apply, every plan shows them as `(known after apply)`, which clutters the diff with changes the user did not make. Do not add them to resource schemas, models, or request builders, even if the API returns them.
+
+Data sources may still expose them: they are read-only and never show up in a plan.
+
+Removing such an attribute from an existing resource needs no state upgrader: when the schema version is unchanged, the framework ignores prior-state attributes that are no longer in the schema.
+
+---
+
 ## Testing Patterns
 
 ### Unit Test Structure

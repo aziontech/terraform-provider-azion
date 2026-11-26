@@ -512,8 +512,6 @@ func (r *networkListResource) Create(ctx context.Context, req resource.CreateReq
     data := createNetworkListResponse.GetData()
     plan.NetworkList = &NetworkListResourceResults{
         ID:           types.Int64Value(data.GetId()),
-        LastEditor:   types.StringValue(data.GetLastEditor()),
-        LastModified: types.StringValue(data.GetLastModified().Format(time.RFC3339)),
         CreatedAt:    types.StringValue(data.GetCreatedAt().Format(time.RFC3339)),
         Type:         types.StringValue(data.GetType()),
         Name:         types.StringValue(data.GetName()),
@@ -556,7 +554,7 @@ func (r *networkListResource) Delete(ctx context.Context, req resource.DeleteReq
 
 1. **Update Method**: Uses `UpdateNetworkList` with PUT (full update), not partial update
 2. **Items Field**: Uses `types.Set` for items in the schema
-3. **Time Format**: Use `time.RFC3339` for `LastModified` timestamp
+3. **No audit fields**: the resource does not expose `last_editor`/`last_modified`/`last_updated` (see "Resources Do Not Expose Audit Fields" in AGENTS.md); data sources format `LastModified` with `time.RFC3339`
 
 ---
 
@@ -589,8 +587,8 @@ For `ip_cidr` type, items can include:
 | `name` | `name` | Network list name |
 | `type` | `type` | Network list type (asn/countries/ip_cidr) |
 | `items` | `items` | List of items (use `types.Set`) |
-| `last_editor` | `last_editor` | Last editor (computed) |
-| `last_modified` | `last_modified` | Last modified timestamp (computed) |
+| `last_editor` | `last_editor` | Last editor (computed, data sources only) |
+| `last_modified` | `last_modified` | Last modified timestamp (computed, data sources only) |
 | `state` | `state` | The state of the current network list version (computed) |
 | `version_id` | `version_id` | The identifier of the current network list version (computed) |
 

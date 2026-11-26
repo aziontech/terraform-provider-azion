@@ -40,7 +40,6 @@ type certificateSigningRequestResourceModel struct {
 	SchemaVersion types.Int64                            `tfsdk:"schema_version"`
 	Results       *certificateSigningRequestResultsModel `tfsdk:"results"`
 	ID            types.String                           `tfsdk:"id"`
-	LastUpdated   types.String                           `tfsdk:"last_updated"`
 }
 
 // certificateSigningRequestResultsModel represents the CSR data in Terraform state.
@@ -70,8 +69,6 @@ type certificateSigningRequestResultsModel struct {
 	Challenge         types.String `tfsdk:"challenge"`
 	Authority         types.String `tfsdk:"authority"`
 	ProductVersion    types.String `tfsdk:"product_version"`
-	LastEditor        types.String `tfsdk:"last_editor"`
-	LastModified      types.String `tfsdk:"last_modified"`
 	CreatedAt         types.String `tfsdk:"created_at"`
 	RenewedAt         types.String `tfsdk:"renewed_at"`
 }
@@ -98,10 +95,6 @@ func (r *certificateSigningRequestResource) Schema(_ context.Context, _ resource
 			},
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema version of the resource.",
-				Computed:    true,
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
 		},
@@ -223,14 +216,6 @@ func (r *certificateSigningRequestResource) Schema(_ context.Context, _ resource
 						Description: "Product version of the certificate.",
 						Computed:    true,
 					},
-					"last_editor": schema.StringAttribute{
-						Description: "Last editor of the certificate.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the certificate.",
-						Computed:    true,
-					},
 					"created_at": schema.StringAttribute{
 						Description: "Creation timestamp of the certificate.",
 						Computed:    true,
@@ -337,7 +322,6 @@ func (r *certificateSigningRequestResource) Create(ctx context.Context, req reso
 	plan.Results = populateCSRResultsFromAPI(ctx, cert, plan.Results)
 	plan.SchemaVersion = types.Int64Value(1)
 	plan.ID = types.StringValue(fmt.Sprintf("%d", cert.GetId()))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -496,11 +480,6 @@ func populateCSRResultsFromAPI(ctx context.Context, cert azionapi.Certificate, o
 		createdAt = createdAtTime.Format(time.RFC3339)
 	}
 
-	var lastModified string
-	if lastModifiedTime, ok := cert.GetLastModifiedOk(); ok && lastModifiedTime != nil {
-		lastModified = lastModifiedTime.Format(time.RFC3339)
-	}
-
 	var renewedAt string
 	if renewedAtTime, ok := cert.GetRenewedAtOk(); ok && renewedAtTime != nil {
 		renewedAt = renewedAtTime.Format(time.RFC3339)
@@ -538,8 +517,6 @@ func populateCSRResultsFromAPI(ctx context.Context, cert azionapi.Certificate, o
 		KeyAlgorithm:   types.StringValue(cert.GetKeyAlgorithm()),
 		Active:         types.BoolValue(active),
 		ProductVersion: types.StringValue(cert.GetProductVersion()),
-		LastEditor:     types.StringValue(cert.GetLastEditor()),
-		LastModified:   types.StringValue(lastModified),
 		CreatedAt:      types.StringValue(createdAt),
 		RenewedAt:      types.StringValue(renewedAt),
 		// Handle certificate and private_key - use null if unknown, otherwise preserve original

@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -39,7 +38,6 @@ type dnssecResourceModel struct {
 	ZoneId        types.String `tfsdk:"zone_id"`
 	SchemaVersion types.Int64  `tfsdk:"schema_version"`
 	Dnssec        *dnssecModel `tfsdk:"dnssec"`
-	LastUpdated   types.String `tfsdk:"last_updated"`
 }
 
 type dnssecModel struct {
@@ -62,10 +60,6 @@ func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			},
 			"schema_version": schema.Int64Attribute{
 				Description: "Schema Version.",
-				Computed:    true,
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the order.",
 				Computed:    true,
 			},
 		},
@@ -176,8 +170,6 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 	plan.Dnssec = &dnssecModel{
 		IsEnabled: types.BoolValue(dnssecResp.Data.Enabled),
 	}
-
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -358,7 +350,6 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 	plan.Dnssec = &dnssecModel{
 		IsEnabled: types.BoolValue(dnssecResp.Data.Enabled),
 	}
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

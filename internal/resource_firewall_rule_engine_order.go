@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
-	"time"
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
@@ -33,10 +32,9 @@ type firewallRuleEngineOrderResource struct {
 }
 
 type firewallRuleEngineOrderModel struct {
-	ID          types.String  `tfsdk:"id"`
-	FirewallID  types.Int64   `tfsdk:"firewall_id"`
-	Order       []types.Int64 `tfsdk:"order"`
-	LastUpdated types.String  `tfsdk:"last_updated"`
+	ID         types.String  `tfsdk:"id"`
+	FirewallID types.Int64   `tfsdk:"firewall_id"`
+	Order      []types.Int64 `tfsdk:"order"`
 }
 
 func (r *firewallRuleEngineOrderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -60,10 +58,6 @@ func (r *firewallRuleEngineOrderResource) Schema(_ context.Context, _ resource.S
 				Description: "The ordered list of rule IDs. The first ID will be evaluated first.",
 				Required:    true,
 				ElementType: types.Int64Type,
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the resource.",
-				Computed:    true,
 			},
 		},
 	}
@@ -89,7 +83,6 @@ func (r *firewallRuleEngineOrderResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.ID = types.StringValue(strconv.FormatInt(plan.FirewallID.ValueInt64(), 10))
 
 	diags = resp.State.Set(ctx, &plan)
@@ -150,7 +143,6 @@ func (r *firewallRuleEngineOrderResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	plan.ID = types.StringValue(strconv.FormatInt(plan.FirewallID.ValueInt64(), 10))
 
 	diags = resp.State.Set(ctx, &plan)

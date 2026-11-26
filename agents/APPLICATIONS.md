@@ -798,7 +798,6 @@ type applicationResource struct {
 type ApplicationResourceModel struct {
     Application *ApplicationResults `tfsdk:"application"`
     ID          types.String         `tfsdk:"id"`
-    LastUpdated types.String         `tfsdk:"last_updated"`
 }
 
 type ApplicationResults struct {
@@ -839,10 +838,6 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
                 PlanModifiers: []planmodifier.String{
                     stringplanmodifier.UseStateForUnknown(),
                 },
-            },
-            "last_updated": schema.StringAttribute{
-                Description: "Timestamp of the last Terraform update of the resource.",
-                Computed:    true,
             },
         },
         // Nested objects are blocks, not nested attributes: Terraform drops
@@ -1009,7 +1004,6 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
 
     plan.Application = appResults
     plan.ID = types.StringValue(fmt.Sprintf("%d", createApplication.Data.GetId()))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)
@@ -1181,7 +1175,6 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
     }
 
     plan.ID = types.StringValue(fmt.Sprintf("%d", updateApplication.Data.GetId()))
-    plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
     diags = resp.State.Set(ctx, plan)
     resp.Diagnostics.Append(diags...)

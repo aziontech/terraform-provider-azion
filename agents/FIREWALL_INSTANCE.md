@@ -640,7 +640,6 @@ type FirewallFunctionInstanceResourceModel struct {
 	Data        *FirewallFunctionInstanceResourceData `tfsdk:"data"`
 	ID          types.String                         `tfsdk:"id"`
 	FirewallID  types.Int64                          `tfsdk:"firewall_id"`
-	LastUpdated types.String                         `tfsdk:"last_updated"`
 }
 
 // FirewallFunctionInstanceResourceData - the data nested block
@@ -650,8 +649,6 @@ type FirewallFunctionInstanceResourceData struct {
 	Args         types.String `tfsdk:"args"`
 	Function     types.Int64  `tfsdk:"function"`
 	Active       types.Bool   `tfsdk:"active"`
-	LastEditor   types.String `tfsdk:"last_editor"`
-	LastModified types.String `tfsdk:"last_modified"`
 	CreatedAt    types.String `tfsdk:"created_at"`
 }
 ```
@@ -729,15 +726,12 @@ func (r *FirewallFunctionsInstanceResource) Create(ctx context.Context, req reso
 		Function:     types.Int64Value(functionInstanceResponse.Data.GetFunction()),
 		ID:           types.Int64Value(functionInstanceResponse.Data.GetId()),
 		Active:       types.BoolValue(functionInstanceResponse.Data.GetActive()),
-		LastEditor:   types.StringValue(functionInstanceResponse.Data.GetLastEditor()),
-		LastModified: types.StringValue(functionInstanceResponse.Data.GetLastModified().Format(time.RFC850)),
 		CreatedAt:    types.StringValue(functionInstanceResponse.Data.GetCreatedAt().Format(time.RFC3339)),
 	}
 
 	plan.State = types.StringValue(functionInstanceResponse.GetState())
 	plan.ID = types.StringValue(strconv.FormatInt(functionInstanceResponse.Data.GetId(), 10))
 	plan.FirewallID = firewallID
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -807,8 +801,6 @@ func (r *FirewallFunctionsInstanceResource) Read(ctx context.Context, req resour
 		ID:         types.StringValue(strconv.FormatInt(functionInstanceResponse.Data.GetId(), 10)),
 		Data: FirewallFunctionInstanceResourceData{
 			ID:           types.Int64Value(functionInstanceResponse.Data.GetId()),
-			LastEditor:   types.StringValue(functionInstanceResponse.Data.GetLastEditor()),
-			LastModified: types.StringValue(functionInstanceResponse.Data.GetLastModified().Format(time.RFC850)),
 			Name:         types.StringValue(functionInstanceResponse.Data.GetName()),
 			Args:         types.StringValue(jsonArgsStr),
 			Function:     types.Int64Value(functionInstanceResponse.Data.GetFunction()),
@@ -901,8 +893,6 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 	plan.Data = FirewallFunctionInstanceResourceData{
 		Function:     types.Int64Value(updateResponse.Data.GetFunction()),
 		Name:         types.StringValue(updateResponse.Data.GetName()),
-		LastEditor:   types.StringValue(updateResponse.Data.GetLastEditor()),
-		LastModified: types.StringValue(updateResponse.Data.GetLastModified().Format(time.RFC850)),
 		Args:         types.StringValue(jsonArgsStr),
 		ID:           types.Int64Value(updateResponse.Data.GetId()),
 		Active:       types.BoolValue(updateResponse.Data.GetActive()),
@@ -912,7 +902,6 @@ func (r *FirewallFunctionsInstanceResource) Update(ctx context.Context, req reso
 	plan.State = types.StringValue(updateResponse.GetState())
 	plan.ID = types.StringValue(strconv.FormatInt(updateResponse.Data.GetId(), 10))
 	plan.FirewallID = firewallID
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -1030,14 +1019,6 @@ Blocks: map[string]schema.Block{
 ```go
 "id": schema.Int64Attribute{
     Description: "ID of the firewall function instance",
-    Computed:    true,
-},
-"last_editor": schema.StringAttribute{
-    Description: "Last editor of the firewall function instance",
-    Computed:    true,
-},
-"last_modified": schema.StringAttribute{
-    Description: "Last modified timestamp",
     Computed:    true,
 },
 "created_at": schema.StringAttribute{
@@ -1215,6 +1196,6 @@ When implementing firewall function instance data sources:
 4. **Unique struct names**: Differentiate singular and plural with `Instance` vs `Instances` or `Data` vs `Results`
 5. **Handle 429 errors**: Use `utils.RetryOn429`
 6. **Handle JSON args**: Use `utils.ConvertInterfaceToString` and `utils.UnmarshallJsonArgsFirewall`
-7. **Time formatting**: Use `time.RFC3339` for created_at, `time.RFC850` for last_modified and last_updated
+7. **Time formatting**: Use `time.RFC3339` for created_at, `time.RFC850` for last_modified (data sources only; resources do not expose audit fields, see AGENTS.md)
 8. **Register in provider.go**: Add to `DataSources()` and `Resources()` functions
 9. **Include created_at**: All data structs should include the `created_at` field
