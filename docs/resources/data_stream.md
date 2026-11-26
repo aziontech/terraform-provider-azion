@@ -10,7 +10,9 @@ description: |-
 
 Creates a Data Stream. A stream pipes logs from one or more **inputs** through a **transform** pipeline into one or more **outputs** (endpoints).
 
-Both `transform` and `outputs` entries are polymorphic: each entry carries a `type` and exactly one matching `*_attributes` block.
+Every nested object is a block (`data_stream { ... }`, one `transform { ... }` block per pipeline step), so Terraform rejects a misspelled or misplaced argument with `Unsupported argument` instead of ignoring it.
+
+Both `transform` and `outputs` blocks are polymorphic: each block carries a `type` and exactly one matching `*_attributes` block.
 
 ## Example Usage
 
@@ -18,47 +20,42 @@ Both `transform` and `outputs` entries are polymorphic: each entry carries a `ty
 
 ```terraform
 resource "azion_data_stream" "http_post" {
-  data_stream = {
+  data_stream {
     name   = "Applications to HTTP endpoint"
     active = true
 
-    inputs = [
-      {
-        type = "raw_logs"
-        attributes = {
-          data_source = "workloads"
-        }
+    inputs {
+      type = "raw_logs"
+      attributes {
+        data_source = "workloads"
       }
-    ]
+    }
 
     # transform is required. rate = 100 keeps every record, so this pipeline only
     # renders the template.
-    transform = [
-      {
-        type = "sampling"
-        sampling_attributes = {
-          rate = 100
-        }
-      },
-      {
-        type = "render_template"
-        render_template_attributes = {
-          template = 2
-        }
+    transform {
+      type = "sampling"
+      sampling_attributes {
+        rate = 100
       }
-    ]
+    }
+    transform {
+      type = "render_template"
+      render_template_attributes {
+        # Replace with the identifier of an existing Data Stream template.
+        template = 2
+      }
+    }
 
-    outputs = [
-      {
-        type = "standard"
-        standard_attributes = {
-          url = "https://logs.example.com/ingest"
-          headers = {
-            "Authorization" = "Bearer my-token"
-          }
+    outputs {
+      type = "standard"
+      standard_attributes {
+        url = "https://logs.example.com/ingest"
+        headers = {
+          "Authorization" = "Bearer my-token"
         }
       }
-    ]
+    }
   }
 }
 ```
@@ -67,48 +64,43 @@ resource "azion_data_stream" "http_post" {
 
 ```terraform
 resource "azion_data_stream" "waf_to_s3" {
-  data_stream = {
+  data_stream {
     name   = "WAF events to S3"
     active = true
 
-    inputs = [
-      {
-        type = "raw_logs"
-        attributes = {
-          data_source = "waf"
-        }
+    inputs {
+      type = "raw_logs"
+      attributes {
+        data_source = "waf"
       }
-    ]
+    }
 
-    transform = [
-      {
-        type = "sampling"
-        sampling_attributes = {
-          rate = 50
-        }
-      },
-      {
-        type = "render_template"
-        render_template_attributes = {
-          template = 4
-        }
+    transform {
+      type = "sampling"
+      sampling_attributes {
+        rate = 50
       }
-    ]
+    }
+    transform {
+      type = "render_template"
+      render_template_attributes {
+        # Replace with the identifier of an existing Data Stream template.
+        template = 4
+      }
+    }
 
-    outputs = [
-      {
-        type = "s3"
-        s3_attributes = {
-          host_url          = "https://s3.us-east-1.amazonaws.com"
-          bucket_name       = "my-log-bucket"
-          region            = "us-east-1"
-          object_key_prefix = "azion/waf"
-          content_type      = "application/gzip"
-          access_key        = "AKIAIOSFODNN7EXAMPLE"
-          secret_key        = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-        }
+    outputs {
+      type = "s3"
+      s3_attributes {
+        host_url          = "https://s3.us-east-1.amazonaws.com"
+        bucket_name       = "my-log-bucket"
+        region            = "us-east-1"
+        object_key_prefix = "azion/waf"
+        content_type      = "application/gzip"
+        access_key        = "AKIAIOSFODNN7EXAMPLE"
+        secret_key        = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
       }
-    ]
+    }
   }
 }
 ```
@@ -119,44 +111,40 @@ One stream carries one endpoint, so fanning logs out to Kafka *and* Datadog mean
 
 ```terraform
 resource "azion_data_stream" "filtered_to_kafka" {
-  data_stream = {
+  data_stream {
     name   = "Filtered logs to Kafka"
     active = true
 
-    inputs = [
-      {
-        type = "raw_logs"
-        attributes = {
-          data_source = "workloads"
-        }
+    inputs {
+      type = "raw_logs"
+      attributes {
+        data_source = "workloads"
       }
-    ]
+    }
 
-    transform = [
-      {
-        type = "filter_workloads"
-        filter_workloads_attributes = {
-          workloads = [1234, 5678]
-        }
-      },
-      {
-        type = "render_template"
-        render_template_attributes = {
-          template = 1
-        }
+    transform {
+      type = "filter_workloads"
+      filter_workloads_attributes {
+        # Replace with the identifiers of your own workloads.
+        workloads = [1234, 5678]
       }
-    ]
+    }
+    transform {
+      type = "render_template"
+      render_template_attributes {
+        # Replace with the identifier of an existing Data Stream template.
+        template = 1
+      }
+    }
 
-    outputs = [
-      {
-        type = "kafka"
-        kafka_attributes = {
-          bootstrap_servers = "kafka-1.example.com:9092,kafka-2.example.com:9092"
-          kafka_topic       = "azion-logs"
-          use_tls           = true
-        }
+    outputs {
+      type = "kafka"
+      kafka_attributes {
+        bootstrap_servers = "kafka-1.example.com:9092,kafka-2.example.com:9092"
+        kafka_topic       = "azion-logs"
+        use_tls           = true
       }
-    ]
+    }
   }
 }
 ```
@@ -169,34 +157,34 @@ terraform import azion_data_stream.example 1234
 
 ## Argument Reference
 
-* `data_stream` - (Required) The data stream configuration.
+* `data_stream` - (Required, Block) The data stream configuration.
   * `name` - (Required) Name of the data stream.
   * `active` - (Optional) Status of the data stream. Computed when omitted.
-  * `inputs` - (Required) Input feeding the stream. Must hold exactly one entry — see the notes below.
+  * `inputs` - (Required, Block) Input feeding the stream. Exactly one `inputs` block — see the notes below.
     * `type` - (Required) Type of the input. Supported value: `raw_logs`.
-    * `attributes` - (Required) Attributes of the input.
+    * `attributes` - (Required, Block) Attributes of the input.
       * `data_source` - (Required) Source of the logs. One of `workloads`, `waf`, `functions_console`, `activity_history` — the slugs served by the API's `GET /data_stream/data_sources` endpoint.
-  * `transform` - (Required) Transforms applied to the records. Each entry requires the `*_attributes` block matching its `type`. Must hold at least one entry, must include a `render_template` entry, and must include either a `sampling` or a `filter_workloads` entry — see the notes below. The API normalizes the pipeline order, so the order the entries are listed in does not change how they are applied.
+  * `transform` - (Required, Block) Transforms applied to the records, one `transform` block per step. Each block requires the `*_attributes` block matching its `type`. At least one block is required, one must be `render_template`, and one must be either `sampling` or `filter_workloads` — see the notes below. The API normalizes the pipeline order, so the order the blocks are written in does not change how they are applied.
     * `type` - (Required) One of `sampling`, `filter_workloads`, `render_template`.
-    * `sampling_attributes` - (Optional) Required when `type` is `sampling`.
+    * `sampling_attributes` - (Optional, Block) Required when `type` is `sampling`.
       * `rate` - (Required) Percentage of records to keep.
-    * `filter_workloads_attributes` - (Optional) Required when `type` is `filter_workloads`.
+    * `filter_workloads_attributes` - (Optional, Block) Required when `type` is `filter_workloads`.
       * `workloads` - (Required) List of workload identifiers whose logs are kept.
-    * `render_template_attributes` - (Optional) Required when `type` is `render_template`.
+    * `render_template_attributes` - (Optional, Block) Required when `type` is `render_template`.
       * `template` - (Required) Identifier of the Data Stream template used to render the payload. Create one with [`azion_data_stream_template`](data_stream_template.md) and reference `azion_data_stream_template.example.template.id`, or look up a built-in template's ID with the [`azion_data_stream_templates`](../data-sources/data_stream_templates.md) data source.
-  * `outputs` - (Required) Endpoint the records are delivered to. Requires the `*_attributes` block matching its `type`. Must hold exactly one entry — see the notes below.
+  * `outputs` - (Required, Block) Endpoint the records are delivered to. Requires the `*_attributes` block matching its `type`. Exactly one `outputs` block — see the notes below.
     * `type` - (Required) One of `standard`, `kafka`, `s3`, `big_query`, `elasticsearch`, `splunk`, `aws_kinesis_firehose`, `datadog`, `qradar`, `azure_monitor`, `azure_blob_storage`.
-    * `standard_attributes` - (Optional) Required when `type` is `standard`.
+    * `standard_attributes` - (Optional, Block) Required when `type` is `standard`.
       * `url` - (Required) Destination URL.
       * `headers` - (Required, Sensitive) Map of headers sent with each request.
       * `log_line_separator` - (Optional) Separator inserted between records in the payload.
       * `payload_format` - (Optional) Format of the payload, for example `$dataset`.
       * `max_size` - (Optional) Maximum payload size, in bytes.
-    * `kafka_attributes` - (Optional) Required when `type` is `kafka`.
+    * `kafka_attributes` - (Optional, Block) Required when `type` is `kafka`.
       * `bootstrap_servers` - (Required) Comma-separated list of Kafka bootstrap servers.
       * `kafka_topic` - (Required) Kafka topic the records are published to.
       * `use_tls` - (Required) Whether TLS is used to connect to the brokers.
-    * `s3_attributes` - (Optional) Required when `type` is `s3`.
+    * `s3_attributes` - (Optional, Block) Required when `type` is `s3`.
       * `access_key` - (Required, Sensitive) Access key of the S3-compatible service.
       * `secret_key` - (Required, Sensitive) Secret key of the S3-compatible service.
       * `region` - (Required) Region of the bucket.
@@ -204,33 +192,33 @@ terraform import azion_data_stream.example 1234
       * `bucket_name` - (Required) Name of the bucket.
       * `content_type` - (Required) One of `plain/text`, `application/gzip`.
       * `host_url` - (Required) Host URL of the S3-compatible service.
-    * `big_query_attributes` - (Optional) Required when `type` is `big_query`.
+    * `big_query_attributes` - (Optional, Block) Required when `type` is `big_query`.
       * `dataset_id` - (Required) BigQuery dataset identifier.
       * `project_id` - (Required) Google Cloud project identifier.
       * `table_id` - (Required) BigQuery table identifier.
       * `service_account_key` - (Required, Sensitive) Service account key, as a JSON string.
-    * `elasticsearch_attributes` - (Optional) Required when `type` is `elasticsearch`.
+    * `elasticsearch_attributes` - (Optional, Block) Required when `type` is `elasticsearch`.
       * `url` - (Required) Elasticsearch endpoint URL.
       * `api_key` - (Required, Sensitive) Elasticsearch API key.
-    * `splunk_attributes` - (Optional) Required when `type` is `splunk`.
+    * `splunk_attributes` - (Optional, Block) Required when `type` is `splunk`.
       * `url` - (Required) Splunk endpoint URL.
       * `api_key` - (Required, Sensitive) Splunk API key.
-    * `aws_kinesis_firehose_attributes` - (Optional) Required when `type` is `aws_kinesis_firehose`.
+    * `aws_kinesis_firehose_attributes` - (Optional, Block) Required when `type` is `aws_kinesis_firehose`.
       * `access_key` - (Required, Sensitive) AWS access key.
       * `stream_name` - (Required) Name of the Kinesis Data Firehose delivery stream.
       * `region` - (Required) AWS region of the delivery stream.
       * `secret_key` - (Required, Sensitive) AWS secret key.
-    * `datadog_attributes` - (Optional) Required when `type` is `datadog`.
+    * `datadog_attributes` - (Optional, Block) Required when `type` is `datadog`.
       * `url` - (Required) Datadog endpoint URL.
       * `api_key` - (Required, Sensitive) Datadog API key.
-    * `qradar_attributes` - (Optional) Required when `type` is `qradar`.
+    * `qradar_attributes` - (Optional, Block) Required when `type` is `qradar`.
       * `url` - (Required) IBM QRadar HTTP receiver URL.
-    * `azure_monitor_attributes` - (Optional) Required when `type` is `azure_monitor`.
+    * `azure_monitor_attributes` - (Optional, Block) Required when `type` is `azure_monitor`.
       * `log_type` - (Required) Record type of the data being submitted.
       * `shared_key` - (Required, Sensitive) Primary or secondary key of the workspace.
       * `time_generated_field` - (Optional) Name of the field used as the event timestamp.
       * `workspace_id` - (Required) Log Analytics workspace identifier.
-    * `azure_blob_storage_attributes` - (Optional) Required when `type` is `azure_blob_storage`.
+    * `azure_blob_storage_attributes` - (Optional, Block) Required when `type` is `azure_blob_storage`.
       * `storage_account` - (Required) Name of the storage account.
       * `container_name` - (Required) Name of the blob container.
       * `blob_sas_token` - (Required, Sensitive) Shared access signature token of the container.
@@ -261,29 +249,27 @@ terraform import azion_data_stream.example 1234
   So the smallest valid pipeline is a `render_template` entry paired with something that satisfies the last rule. To render a template without actually sampling or filtering, use a no-op `sampling` entry at `rate = 100`:
 
   ```terraform
-  transform = [
-    {
-      type = "sampling"
-      sampling_attributes = {
-        rate = 100
-      }
-    },
-    {
-      type = "render_template"
-      render_template_attributes = {
-        template = 2
-      }
+  transform {
+    type = "sampling"
+    sampling_attributes {
+      rate = 100
     }
-  ]
+  }
+  transform {
+    type = "render_template"
+    render_template_attributes {
+      template = 2
+    }
+  }
   ```
 
 * **The API normalizes the transform order.** It stores the pipeline in its own canonical order no matter which order the entries were submitted in. The provider re-orders the response back onto the configured order so this doesn't surface as `Provider produced inconsistent result after apply`, which also means the order written in the configuration has no effect on the pipeline.
 
-* **Only one `inputs` entry is stored.** Given a longer list the API keeps a single input and discards the rest, without reporting an error. The provider rejects more than one entry at plan time rather than letting the discarded inputs surface as `Provider produced inconsistent result after apply`.
+* **Only one `inputs` entry is stored.** Given a longer list the API keeps a single input and discards the rest, without reporting an error. The provider rejects more than one `inputs` block at plan time rather than letting the discarded inputs surface as `Provider produced inconsistent result after apply`.
 
 * **`data_source` is validated against a fixed list.** The API silently rewrites an unrecognized slug to a different one instead of returning an error, which would also read as an inconsistent-result failure. The four accepted slugs (`workloads`, `waf`, `functions_console`, `activity_history`) are what `GET /data_stream/data_sources` currently serves; the values `http`, `cells_console` and `rtm_activity` accepted by earlier API versions are gone.
 
-* **Only one `outputs` entry is stored.** Fan-out to several endpoints from a single stream does not currently work. Given a longer list the API either keeps just the last entry, when every entry shares the same `type`, or answers `500 - code 10067 "Internal Server Error"` when the types differ. Both lose the configuration silently or unhelpfully, so the provider rejects more than one entry at plan time. Use one stream per destination endpoint.
+* **Only one `outputs` entry is stored.** Fan-out to several endpoints from a single stream does not currently work. Given a longer list the API either keeps just the last entry, when every entry shares the same `type`, or answers `500 - code 10067 "Internal Server Error"` when the types differ. Both lose the configuration silently or unhelpfully, so the provider rejects more than one `outputs` block at plan time. Use one stream per destination endpoint.
 
 * **`log_line_separator` is trimmed by the API.** Surrounding whitespace is stripped, so a literal newline is stored as an empty string. Write a newline separator as the two-character escape `"\\n"` instead — that round-trips unchanged, and is also the API's own default. The provider rejects a value with leading or trailing whitespace at plan time rather than letting the trimmed echo fail as an inconsistent result.
 

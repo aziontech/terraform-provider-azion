@@ -10,14 +10,14 @@ import (
 
 	sdk "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -72,44 +72,12 @@ const (
 	defaultModuleImageProcessorEnabled = false
 )
 
-// Attribute types for the nested objects, needed to build object defaults whose
-// types must match the schema exactly.
-var (
-	moduleToggleAttrTypes = map[string]attr.Type{
-		"enabled": types.BoolType,
-	}
-
-	applicationModulesAttrTypes = map[string]attr.Type{
-		"cache":                   types.ObjectType{AttrTypes: moduleToggleAttrTypes},
-		"functions":               types.ObjectType{AttrTypes: moduleToggleAttrTypes},
-		"application_accelerator": types.ObjectType{AttrTypes: moduleToggleAttrTypes},
-		"image_processor":         types.ObjectType{AttrTypes: moduleToggleAttrTypes},
-	}
-)
-
-var (
-	applicationModulesDefault = types.ObjectValueMust(applicationModulesAttrTypes, map[string]attr.Value{
-		"cache":                   moduleToggleDefault(defaultModuleCacheEnabled),
-		"functions":               moduleToggleDefault(defaultModuleFunctionsEnabled),
-		"application_accelerator": moduleToggleDefault(defaultModuleAcceleratorEnabled),
-		"image_processor":         moduleToggleDefault(defaultModuleImageProcessorEnabled),
-	})
-)
-
-func moduleToggleDefault(enabled bool) types.Object {
-	return types.ObjectValueMust(moduleToggleAttrTypes, map[string]attr.Value{
-		"enabled": types.BoolValue(enabled),
-	})
-}
-
-// moduleToggleAttribute builds the schema for one module, all of which are a
-// single `enabled` flag.
-func moduleToggleAttribute(description string, enabled bool) schema.SingleNestedAttribute {
-	return schema.SingleNestedAttribute{
+// moduleToggleBlock builds the schema for one module, all of which are a single
+// `enabled` flag. Modules are blocks rather than nested attributes so Terraform
+// rejects arguments that do not exist instead of silently dropping them.
+func moduleToggleBlock(description string, enabled bool) schema.SingleNestedBlock {
+	return schema.SingleNestedBlock{
 		Description: description,
-		Optional:    true,
-		Computed:    true,
-		Default:     objectdefault.StaticValue(moduleToggleDefault(enabled)),
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
 				Optional: true,
@@ -137,8 +105,13 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"application": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"application": schema.SingleNestedBlock{
+				Description: "Required. The Application settings.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"application_id": schema.Int64Attribute{
 						Description: "The Application identifier.",
@@ -172,16 +145,15 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
 						Computed:    true,
 						Description: "The identifier of the current application version.",
 					},
-					"modules": schema.SingleNestedAttribute{
-						Description: "Modules enabled for the Application. Omitting a module resets it to its default on every apply.",
-						Optional:    true,
-						Computed:    true,
-						Default:     objectdefault.StaticValue(applicationModulesDefault),
-						Attributes: map[string]schema.Attribute{
-							"cache":                   moduleToggleAttribute("Cache module.", defaultModuleCacheEnabled),
-							"functions":               moduleToggleAttribute("Functions module.", defaultModuleFunctionsEnabled),
-							"application_accelerator": moduleToggleAttribute("Application Accelerator module.", defaultModuleAcceleratorEnabled),
-							"image_processor":         moduleToggleAttribute("Image Processor module.", defaultModuleImageProcessorEnabled),
+				},
+				Blocks: map[string]schema.Block{
+					"modules": schema.SingleNestedBlock{
+						Description: "Modules enabled for the Application. A module left out is reset to its default on every apply, but its drift is only detected while its block is declared.",
+						Blocks: map[string]schema.Block{
+							"cache":                   moduleToggleBlock("Cache module.", defaultModuleCacheEnabled),
+							"functions":               moduleToggleBlock("Functions module.", defaultModuleFunctionsEnabled),
+							"application_accelerator": moduleToggleBlock("Application Accelerator module.", defaultModuleAcceleratorEnabled),
+							"image_processor":         moduleToggleBlock("Image Processor module.", defaultModuleImageProcessorEnabled),
 						},
 					},
 				},
@@ -250,7 +222,9 @@ func (r *applicationResource) Create(ctx context.Context, req resource.CreateReq
 		}
 	}
 
-	plan.Application = transformApplicationResponseToModel(&createApplication.Data)
+	results := transformApplicationResponseToModel(&createApplication.Data)
+	keepDeclaredModules(plan.Application, results)
+	plan.Application = results
 	plan.ID = types.StringValue(fmt.Sprintf("%d", createApplication.Data.GetId()))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -300,7 +274,9 @@ func (r *applicationResource) Read(ctx context.Context, req resource.ReadRequest
 		}
 	}
 
-	state.Application = transformApplicationResponseToModel(&stateApplication.Data)
+	results := transformApplicationResponseToModel(&stateApplication.Data)
+	keepDeclaredModules(state.Application, results)
+	state.Application = results
 	state.ID = types.StringValue(fmt.Sprintf("%d", stateApplication.Data.GetId()))
 
 	diags = resp.State.Set(ctx, &state)
@@ -359,7 +335,9 @@ func (r *applicationResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 	}
 
-	plan.Application = transformApplicationResponseToModel(&updateApplication.Data)
+	results := transformApplicationResponseToModel(&updateApplication.Data)
+	keepDeclaredModules(plan.Application, results)
+	plan.Application = results
 
 	plan.ID = types.StringValue(fmt.Sprintf("%d", updateApplication.Data.GetId()))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -399,47 +377,68 @@ func (r *applicationResource) ImportState(ctx context.Context, req resource.Impo
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
+// moduleEnabled returns the configured flag, or the module's default when the
+// block or the flag is left out, so an omitted module is still reset to its
+// default on every apply.
+func moduleEnabled(enabled *types.Bool, fallback bool) *bool {
+	if enabled != nil && isSet(*enabled) {
+		return enabled.ValueBoolPointer()
+	}
+	return &fallback
+}
+
 func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationModulesRequest {
-	modsRequest := sdk.ApplicationModulesRequest{}
-	if modsPlan != nil {
-		cachePlan := modsPlan.Cache
-		if cachePlan != nil && isSet(cachePlan.Enabled) {
-			enabled := cachePlan.Enabled
-			cacheReq := sdk.CacheModuleRequest{
-				Enabled: enabled.ValueBoolPointer(),
-			}
-			modsRequest.SetCache(cacheReq)
-		}
-
-		functionsPlan := modsPlan.Functions
-		if functionsPlan != nil && isSet(functionsPlan.Enabled) {
-			enabled := functionsPlan.Enabled
-			functionsReq := sdk.FunctionModuleRequest{
-				Enabled: enabled.ValueBoolPointer(),
-			}
-			modsRequest.SetFunctions(functionsReq)
-		}
-
-		applicationAcceleratorPlan := modsPlan.ApplicationAccelerator
-		if applicationAcceleratorPlan != nil && isSet(applicationAcceleratorPlan.Enabled) {
-			enabled := applicationAcceleratorPlan.Enabled
-			appAccReq := sdk.ApplicationAcceleratorModuleRequest{
-				Enabled: enabled.ValueBoolPointer(),
-			}
-			modsRequest.SetApplicationAccelerator(appAccReq)
-		}
-
-		imageProcessorPlan := modsPlan.ImageProcessor
-		if imageProcessorPlan != nil && isSet(imageProcessorPlan.Enabled) {
-			enabled := imageProcessorPlan.Enabled
-			imgProcReq := sdk.ImageProcessorModuleRequest{
-				Enabled: enabled.ValueBoolPointer(),
-			}
-			modsRequest.SetImageProcessor(imgProcReq)
-		}
+	if modsPlan == nil {
+		modsPlan = &ApplicationModules{}
 	}
 
+	var cache, functions, accelerator, imageProcessor *types.Bool
+	if modsPlan.Cache != nil {
+		cache = &modsPlan.Cache.Enabled
+	}
+	if modsPlan.Functions != nil {
+		functions = &modsPlan.Functions.Enabled
+	}
+	if modsPlan.ApplicationAccelerator != nil {
+		accelerator = &modsPlan.ApplicationAccelerator.Enabled
+	}
+	if modsPlan.ImageProcessor != nil {
+		imageProcessor = &modsPlan.ImageProcessor.Enabled
+	}
+
+	modsRequest := sdk.ApplicationModulesRequest{}
+	modsRequest.SetCache(sdk.CacheModuleRequest{Enabled: moduleEnabled(cache, defaultModuleCacheEnabled)})
+	modsRequest.SetFunctions(sdk.FunctionModuleRequest{Enabled: moduleEnabled(functions, defaultModuleFunctionsEnabled)})
+	modsRequest.SetApplicationAccelerator(sdk.ApplicationAcceleratorModuleRequest{Enabled: moduleEnabled(accelerator, defaultModuleAcceleratorEnabled)})
+	modsRequest.SetImageProcessor(sdk.ImageProcessorModuleRequest{Enabled: moduleEnabled(imageProcessor, defaultModuleImageProcessorEnabled)})
+
 	return modsRequest
+}
+
+// keepDeclaredModules drops from the API result every module block the prior
+// plan or state does not declare. Terraform rejects a block that is planned as
+// absent and comes back present, so an undeclared block must stay null. A nil
+// prior (import) keeps everything.
+func keepDeclaredModules(prior *ApplicationResults, results *ApplicationResults) {
+	if prior == nil || results == nil || results.Modules == nil {
+		return
+	}
+	if prior.Modules == nil {
+		results.Modules = nil
+		return
+	}
+	if prior.Modules.Cache == nil {
+		results.Modules.Cache = nil
+	}
+	if prior.Modules.Functions == nil {
+		results.Modules.Functions = nil
+	}
+	if prior.Modules.ApplicationAccelerator == nil {
+		results.Modules.ApplicationAccelerator = nil
+	}
+	if prior.Modules.ImageProcessor == nil {
+		results.Modules.ImageProcessor = nil
+	}
 }
 
 // transformApplicationResponseToModel mirrors the API response into the resource

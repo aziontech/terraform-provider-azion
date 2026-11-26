@@ -262,8 +262,13 @@ func (r *crlResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
                 Description: "Timestamp of the last Terraform update of the resource.",
                 Computed:    true,
             },
-            "crl": schema.SingleNestedAttribute{
-                Required: true,
+        },
+        Blocks: map[string]schema.Block{
+            "crl": schema.SingleNestedBlock{
+                Description: "Required. The certificate revocation list configuration.",
+                Validators: []validator.Object{
+                    objectvalidator.IsRequired(),
+                },
                 Attributes: map[string]schema.Attribute{
                     "id": schema.Int64Attribute{
                         Description: "Identifier of the certificate revocation list.",

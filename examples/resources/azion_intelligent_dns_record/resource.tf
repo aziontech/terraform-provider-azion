@@ -1,7 +1,7 @@
 # Example: Complete setup with parent DNS zone
 # First, create the parent DNS zone
 resource "azion_intelligent_dns_zone" "example" {
-  zone = {
+  zone {
     name   = "example.com"
     active = true
     domain = "example.com"
@@ -11,7 +11,7 @@ resource "azion_intelligent_dns_zone" "example" {
 # Then create the DNS record for that zone
 resource "azion_intelligent_dns_record" "example_with_parent" {
   zone_id = azion_intelligent_dns_zone.example.id
-  record = {
+  record {
     type = "A"
     name = "site"
     rdata = [
@@ -27,7 +27,7 @@ resource "azion_intelligent_dns_record" "example_with_parent" {
 # Example: Using hardcoded zone ID
 resource "azion_intelligent_dns_record" "example" {
   zone_id = "12345"
-  record = {
+  record {
     type = "A"
     name = "site"
     rdata = [

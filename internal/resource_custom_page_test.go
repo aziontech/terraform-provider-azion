@@ -87,3 +87,28 @@ func TestCustomPagePageAttributesHaveNoDefaults(t *testing.T) {
 		}
 	}
 }
+
+// Nested objects are blocks so Terraform rejects unknown arguments instead of
+// dropping them. A nested attribute here would silently accept a typo.
+func TestCustomPageNestedObjectsAreBlocks(t *testing.T) {
+	ctx := context.Background()
+	sr := customPageSchema(t)
+
+	pagesPath := path.Root("custom_page").AtName("pages")
+	entryPath := pagesPath.AtListIndex(0).AtName("entry")
+	for _, p := range []path.Path{
+		path.Root("custom_page"),
+		pagesPath,
+		entryPath,
+		entryPath.AtName("page"),
+		entryPath.AtName("page").AtName("attributes"),
+	} {
+		if _, diags := sr.Schema.AttributeAtPath(ctx, p); !diags.HasError() {
+			t.Errorf("%s: must be a block, not a nested attribute", p)
+		}
+	}
+
+	if _, ok := sr.Schema.Blocks["custom_page"]; !ok {
+		t.Fatal("custom_page: expected a top-level block")
+	}
+}

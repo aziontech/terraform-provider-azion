@@ -16,14 +16,14 @@ Provides a resource to manage workload deployments within Azion workloads.
 resource "azion_workload_deployment" "example" {
   workload_id = 12345
 
-  deployment = {
+  deployment {
     name    = "My Deployment"
     current = true
     active  = true
 
-    strategy = {
+    strategy {
       type = "default"
-      attributes = {
+      attributes {
         application = 67890
       }
     }
@@ -46,9 +46,9 @@ The import format is: `workloadID/deploymentID`
   * `name` - (Required) Name of the deployment.
   * `current` - (Optional) Whether this is the current deployment. Defaults to `false`.
   * `active` - (Optional) Status of the deployment. Defaults to `false`.
-  * `strategy` - (Required) Deployment strategy configuration.
+  * `strategy` - (Required) Deployment strategy configuration block.
     * `type` - (Required) Type of deployment strategy.
-    * `attributes` - (Required) Strategy attributes.
+    * `attributes` - (Required) Strategy attributes block.
       * `application` - (Required) Application ID for the deployment.
       * `firewall` - (Optional) Firewall ID for the deployment.
       * `custom_page` - (Optional) Custom page ID for the deployment.

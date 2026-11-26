@@ -21,7 +21,7 @@ Use `dns` challenge for DNS-based validation or `http` challenge for HTTP-based 
 
 ```hcl
 resource "azion_certificate_request" "example" {
-  results = {
+  results {
     name        = "my-letsencrypt-certificate"
     common_name = "example.com"
     challenge   = "dns"
@@ -39,7 +39,7 @@ resource "azion_certificate_request" "example" {
 
 ```hcl
 resource "azion_certificate_request" "example" {
-  results = {
+  results {
     name        = "my-letsencrypt-certificate"
     common_name = "example.com"
     challenge   = "http"
@@ -52,7 +52,7 @@ resource "azion_certificate_request" "example" {
 
 ```hcl
 resource "azion_certificate_request" "example" {
-  results = {
+  results {
     name          = "my-letsencrypt-certificate"
     common_name   = "example.com"
     challenge     = "dns"

@@ -9,6 +9,7 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,9 +19,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -141,125 +142,167 @@ const (
 	defaultQuerystringSort      = false
 )
 
-// Attribute types for the nested objects, needed to build object defaults whose
-// types must match the schema exactly.
-var (
-	browserCacheAttrTypes = map[string]attr.Type{
-		"behavior": types.StringType,
-		"max_age":  types.Int64Type,
+// Default models for the optional blocks. Blocks cannot be Computed or carry a
+// Default, so an omitted block is null in the plan. buildCacheSettingRequest
+// fills it in with these values so the request is the same one sent while the
+// blocks were nested attributes with object defaults: an omitted block is still
+// reset to the Azion defaults on every apply.
+func defaultBrowserCacheModel() *BrowserCacheResourceModel {
+	return &BrowserCacheResourceModel{
+		Behavior: types.StringValue(defaultBrowserCacheBehavior),
+		MaxAge:   types.Int64Value(defaultBrowserCacheMaxAge),
+	}
+}
+
+func defaultStaleCacheModel() *StateCacheResourceModel {
+	return &StateCacheResourceModel{Enabled: types.BoolValue(defaultStaleCacheEnabled)}
+}
+
+func defaultLargeFileCacheModel() *LargeFileCacheResourceModel {
+	return &LargeFileCacheResourceModel{
+		Enabled: types.BoolValue(defaultLargeFileEnabled),
+		Offset:  types.Int64Value(defaultLargeFileOffset),
+	}
+}
+
+// defaultTieredCacheModel has a null topology: the API returns a null topology
+// for a cache setting whose tiered cache was never configured, so null is the
+// value to enforce (and a null value is left out of the request).
+func defaultTieredCacheModel() *CacheSettingsTieredCacheResourceModel {
+	return &CacheSettingsTieredCacheResourceModel{
+		Topology: types.StringNull(),
+		Enabled:  types.BoolValue(defaultTieredCacheEnabled),
+	}
+}
+
+func defaultQuerystringModel() *CacheVaryByQuerystringResourceModel {
+	return &CacheVaryByQuerystringResourceModel{
+		Behavior:    types.StringValue(defaultVaryBehavior),
+		Fields:      []types.String{},
+		SortEnabled: types.BoolValue(defaultQuerystringSort),
+	}
+}
+
+func defaultCookiesModel() *CacheVaryByCookiesResourceModel {
+	return &CacheVaryByCookiesResourceModel{
+		Behavior:    types.StringValue(defaultVaryBehavior),
+		CookieNames: []types.String{},
+	}
+}
+
+func defaultDevicesModel() *CacheVaryByDevicesResourceModel {
+	return &CacheVaryByDevicesResourceModel{
+		Behavior:    types.StringValue(defaultVaryBehavior),
+		DeviceGroup: []types.Int64{},
+	}
+}
+
+// withCacheSettingDefaults returns a copy of the plan in which every omitted
+// optional block, at any depth, carries its defaults. Declared blocks are kept
+// as they are: the framework already applied the attribute defaults inside them.
+func withCacheSettingDefaults(cs *CacheSettingResourceModel) *CacheSettingResourceModel {
+	result := *cs
+
+	if result.BrowserCache == nil {
+		result.BrowserCache = defaultBrowserCacheModel()
 	}
 
-	staleCacheAttrTypes = map[string]attr.Type{
-		"enabled": types.BoolType,
+	modules := CacheSettingsModulesResourceModel{}
+	if cs.Modules != nil {
+		modules = *cs.Modules
 	}
 
-	largeFileCacheAttrTypes = map[string]attr.Type{
-		"enabled": types.BoolType,
-		"offset":  types.Int64Type,
+	cache := CacheSettingsCacheResourceModel{
+		Behavior: types.StringValue(defaultCacheBehavior),
+		MaxAge:   types.Int64Value(defaultCacheMaxAge),
+	}
+	if modules.Cache != nil {
+		cache = *modules.Cache
+	}
+	if cache.StaleCache == nil {
+		cache.StaleCache = defaultStaleCacheModel()
+	}
+	if cache.LargeFileCache == nil {
+		cache.LargeFileCache = defaultLargeFileCacheModel()
+	}
+	if cache.TieredCache == nil {
+		cache.TieredCache = defaultTieredCacheModel()
+	}
+	modules.Cache = &cache
+
+	accelerator := CacheSettingsAppAcceleratorResourceModel{CacheVaryByMethod: []types.String{}}
+	if modules.ApplicationAccelerator != nil {
+		accelerator = *modules.ApplicationAccelerator
+	}
+	if accelerator.CacheVaryByQuerystring == nil {
+		accelerator.CacheVaryByQuerystring = defaultQuerystringModel()
+	}
+	if accelerator.CacheVaryByCookies == nil {
+		accelerator.CacheVaryByCookies = defaultCookiesModel()
+	}
+	if accelerator.CacheVaryByDevices == nil {
+		accelerator.CacheVaryByDevices = defaultDevicesModel()
+	}
+	modules.ApplicationAccelerator = &accelerator
+
+	result.Modules = &modules
+	return &result
+}
+
+// keepDeclaredCacheSettingBlocks drops from the API result every optional block
+// the prior plan or state does not declare, at any depth. Terraform rejects a
+// block that is planned as absent and comes back present, so an undeclared
+// block must stay null. Values inside a declared block still mirror the API, so
+// drift is detected there. A nil prior (import) keeps everything.
+func keepDeclaredCacheSettingBlocks(prior *CacheSettingResourceModel, results *CacheSettingResourceModel) {
+	if prior == nil || results == nil {
+		return
 	}
 
-	tieredCacheAttrTypes = map[string]attr.Type{
-		"topology": types.StringType,
-		"enabled":  types.BoolType,
+	if prior.BrowserCache == nil {
+		results.BrowserCache = nil
 	}
 
-	cacheModuleAttrTypes = map[string]attr.Type{
-		"behavior":         types.StringType,
-		"max_age":          types.Int64Type,
-		"stale_cache":      types.ObjectType{AttrTypes: staleCacheAttrTypes},
-		"large_file_cache": types.ObjectType{AttrTypes: largeFileCacheAttrTypes},
-		"tiered_cache":     types.ObjectType{AttrTypes: tieredCacheAttrTypes},
+	if results.Modules == nil {
+		return
+	}
+	if prior.Modules == nil {
+		results.Modules = nil
+		return
 	}
 
-	varyByQuerystringAttrTypes = map[string]attr.Type{
-		"behavior":     types.StringType,
-		"fields":       types.ListType{ElemType: types.StringType},
-		"sort_enabled": types.BoolType,
+	if cache := results.Modules.Cache; cache != nil {
+		if prior.Modules.Cache == nil {
+			results.Modules.Cache = nil
+		} else {
+			if prior.Modules.Cache.StaleCache == nil {
+				cache.StaleCache = nil
+			}
+			if prior.Modules.Cache.LargeFileCache == nil {
+				cache.LargeFileCache = nil
+			}
+			if prior.Modules.Cache.TieredCache == nil {
+				cache.TieredCache = nil
+			}
+		}
 	}
 
-	varyByCookiesAttrTypes = map[string]attr.Type{
-		"behavior":     types.StringType,
-		"cookie_names": types.ListType{ElemType: types.StringType},
+	if accelerator := results.Modules.ApplicationAccelerator; accelerator != nil {
+		if prior.Modules.ApplicationAccelerator == nil {
+			results.Modules.ApplicationAccelerator = nil
+		} else {
+			if prior.Modules.ApplicationAccelerator.CacheVaryByQuerystring == nil {
+				accelerator.CacheVaryByQuerystring = nil
+			}
+			if prior.Modules.ApplicationAccelerator.CacheVaryByCookies == nil {
+				accelerator.CacheVaryByCookies = nil
+			}
+			if prior.Modules.ApplicationAccelerator.CacheVaryByDevices == nil {
+				accelerator.CacheVaryByDevices = nil
+			}
+		}
 	}
-
-	varyByDevicesAttrTypes = map[string]attr.Type{
-		"behavior":     types.StringType,
-		"device_group": types.ListType{ElemType: types.Int64Type},
-	}
-
-	appAcceleratorAttrTypes = map[string]attr.Type{
-		"cache_vary_by_method":      types.ListType{ElemType: types.StringType},
-		"cache_vary_by_querystring": types.ObjectType{AttrTypes: varyByQuerystringAttrTypes},
-		"cache_vary_by_cookies":     types.ObjectType{AttrTypes: varyByCookiesAttrTypes},
-		"cache_vary_by_devices":     types.ObjectType{AttrTypes: varyByDevicesAttrTypes},
-	}
-
-	modulesAttrTypes = map[string]attr.Type{
-		"cache":                   types.ObjectType{AttrTypes: cacheModuleAttrTypes},
-		"application_accelerator": types.ObjectType{AttrTypes: appAcceleratorAttrTypes},
-	}
-)
-
-var (
-	browserCacheDefault = types.ObjectValueMust(browserCacheAttrTypes, map[string]attr.Value{
-		"behavior": types.StringValue(defaultBrowserCacheBehavior),
-		"max_age":  types.Int64Value(defaultBrowserCacheMaxAge),
-	})
-
-	staleCacheDefault = types.ObjectValueMust(staleCacheAttrTypes, map[string]attr.Value{
-		"enabled": types.BoolValue(defaultStaleCacheEnabled),
-	})
-
-	largeFileCacheDefault = types.ObjectValueMust(largeFileCacheAttrTypes, map[string]attr.Value{
-		"enabled": types.BoolValue(defaultLargeFileEnabled),
-		"offset":  types.Int64Value(defaultLargeFileOffset),
-	})
-
-	// The API returns a null topology for a cache setting whose tiered cache was
-	// never configured, so null is the value to enforce. Enforcing a concrete
-	// topology instead makes every apply fail with "unexpected new value:
-	// .tiered_cache.topology: was ..., but now null".
-	tieredCacheDefault = types.ObjectValueMust(tieredCacheAttrTypes, map[string]attr.Value{
-		"topology": types.StringNull(),
-		"enabled":  types.BoolValue(defaultTieredCacheEnabled),
-	})
-
-	cacheModuleDefault = types.ObjectValueMust(cacheModuleAttrTypes, map[string]attr.Value{
-		"behavior":         types.StringValue(defaultCacheBehavior),
-		"max_age":          types.Int64Value(defaultCacheMaxAge),
-		"stale_cache":      staleCacheDefault,
-		"large_file_cache": largeFileCacheDefault,
-		"tiered_cache":     tieredCacheDefault,
-	})
-
-	varyByQuerystringDefault = types.ObjectValueMust(varyByQuerystringAttrTypes, map[string]attr.Value{
-		"behavior":     types.StringValue(defaultVaryBehavior),
-		"fields":       types.ListValueMust(types.StringType, []attr.Value{}),
-		"sort_enabled": types.BoolValue(defaultQuerystringSort),
-	})
-
-	varyByCookiesDefault = types.ObjectValueMust(varyByCookiesAttrTypes, map[string]attr.Value{
-		"behavior":     types.StringValue(defaultVaryBehavior),
-		"cookie_names": types.ListValueMust(types.StringType, []attr.Value{}),
-	})
-
-	varyByDevicesDefault = types.ObjectValueMust(varyByDevicesAttrTypes, map[string]attr.Value{
-		"behavior":     types.StringValue(defaultVaryBehavior),
-		"device_group": types.ListValueMust(types.Int64Type, []attr.Value{}),
-	})
-
-	appAcceleratorDefault = types.ObjectValueMust(appAcceleratorAttrTypes, map[string]attr.Value{
-		"cache_vary_by_method":      types.ListValueMust(types.StringType, []attr.Value{}),
-		"cache_vary_by_querystring": varyByQuerystringDefault,
-		"cache_vary_by_cookies":     varyByCookiesDefault,
-		"cache_vary_by_devices":     varyByDevicesDefault,
-	})
-
-	modulesDefault = types.ObjectValueMust(modulesAttrTypes, map[string]attr.Value{
-		"cache":                   cacheModuleDefault,
-		"application_accelerator": appAcceleratorDefault,
-	})
-)
+}
 
 // nullStringDefault enforces null for an omitted attribute. The framework ships
 // stringdefault.StaticString only, but null is a real desired value here: the API
@@ -347,8 +390,13 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"cache_setting": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"cache_setting": schema.SingleNestedBlock{
+				Description: "Required. Cache setting configuration.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "Cache setting identifier.",
@@ -358,89 +406,82 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 						Description: "Name of the cache setting.",
 						Required:    true,
 					},
-					"browser_cache": schema.SingleNestedAttribute{
-						Description: "Browser cache settings. Omitting this block resets it to the Azion defaults on every apply.",
-						Optional:    true,
+					"created_at": schema.StringAttribute{
+						Description: "The creation timestamp.",
 						Computed:    true,
-						Default:     objectdefault.StaticValue(browserCacheDefault),
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"browser_cache": schema.SingleNestedBlock{
+						Description: "Browser cache settings. Omitting this block resets it to the Azion defaults on every apply, but its drift is only detected while the block is declared.",
 						Attributes: map[string]schema.Attribute{
 							"behavior": schema.StringAttribute{
-								Description: "Browser cache behavior: override, honor, no-cache.",
+								Description: "Browser cache behavior: `override`, `honor`, `no-cache`.",
 								Optional:    true,
 								Computed:    true,
 								Default:     stringdefault.StaticString(defaultBrowserCacheBehavior),
 							},
 							"max_age": schema.Int64Attribute{
-								Description: "Maximum TTL for browser cache.",
+								Description: "Maximum TTL for browser cache in seconds.",
 								Optional:    true,
 								Computed:    true,
 								Default:     int64default.StaticInt64(defaultBrowserCacheMaxAge),
 							},
 						},
 					},
-					"modules": schema.SingleNestedAttribute{
-						Description: "Cache settings modules.",
-						Optional:    true,
-						Computed:    true,
-						Default:     objectdefault.StaticValue(modulesDefault),
-						Attributes: map[string]schema.Attribute{
-							"cache": schema.SingleNestedAttribute{
+					"modules": schema.SingleNestedBlock{
+						Description: "Cache settings modules. A module left out is reset to the Azion defaults on every apply, but its drift is only detected while its block is declared.",
+						Blocks: map[string]schema.Block{
+							"cache": schema.SingleNestedBlock{
 								Description: "Edge cache module settings.",
-								Optional:    true,
-								Computed:    true,
-								Default:     objectdefault.StaticValue(cacheModuleDefault),
 								Attributes: map[string]schema.Attribute{
 									"behavior": schema.StringAttribute{
-										Description: "Cache behavior: honor, override.",
+										Description: "Cache behavior: `honor`, `override`.",
 										Optional:    true,
 										Computed:    true,
 										Default:     stringdefault.StaticString(defaultCacheBehavior),
 									},
 									"max_age": schema.Int64Attribute{
-										Description: "Maximum TTL for edge cache.",
+										Description: "Maximum TTL for edge cache in seconds.",
 										Optional:    true,
 										Computed:    true,
 										Default:     int64default.StaticInt64(defaultCacheMaxAge),
 									},
-									"stale_cache": schema.SingleNestedAttribute{
+								},
+								Blocks: map[string]schema.Block{
+									"stale_cache": schema.SingleNestedBlock{
 										Description: "Stale cache settings.",
-										Optional:    true,
-										Computed:    true,
-										Default:     objectdefault.StaticValue(staleCacheDefault),
 										Attributes: map[string]schema.Attribute{
 											"enabled": schema.BoolAttribute{
-												Optional: true,
-												Computed: true,
-												Default:  booldefault.StaticBool(defaultStaleCacheEnabled),
+												Description: "Enable stale cache.",
+												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(defaultStaleCacheEnabled),
 											},
 										},
 									},
-									"large_file_cache": schema.SingleNestedAttribute{
+									"large_file_cache": schema.SingleNestedBlock{
 										Description: "Large file cache settings.",
-										Optional:    true,
-										Computed:    true,
-										Default:     objectdefault.StaticValue(largeFileCacheDefault),
 										Attributes: map[string]schema.Attribute{
 											"enabled": schema.BoolAttribute{
-												Optional: true,
-												Computed: true,
-												Default:  booldefault.StaticBool(defaultLargeFileEnabled),
+												Description: "Enable large file cache.",
+												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(defaultLargeFileEnabled),
 											},
 											"offset": schema.Int64Attribute{
-												Optional: true,
-												Computed: true,
-												Default:  int64default.StaticInt64(defaultLargeFileOffset),
+												Description: "Offset for large file cache slicing.",
+												Optional:    true,
+												Computed:    true,
+												Default:     int64default.StaticInt64(defaultLargeFileOffset),
 											},
 										},
 									},
-									"tiered_cache": schema.SingleNestedAttribute{
+									"tiered_cache": schema.SingleNestedBlock{
 										Description: "Tiered cache settings. Requires the tiered cache module on the application.",
-										Optional:    true,
-										Computed:    true,
-										Default:     objectdefault.StaticValue(tieredCacheDefault),
 										Attributes: map[string]schema.Attribute{
 											"topology": schema.StringAttribute{
-												Description: "Tiered cache topology: nearest-region, br-east-1, us-east-1.",
+												Description: "Tiered cache topology: `nearest-region`, `br-east-1`, `us-east-1`.",
 												Optional:    true,
 												Computed:    true,
 												Default:     nullStringDefault{},
@@ -449,62 +490,62 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 												},
 											},
 											"enabled": schema.BoolAttribute{
-												Optional: true,
-												Computed: true,
-												Default:  booldefault.StaticBool(defaultTieredCacheEnabled),
+												Description: "Enable tiered cache.",
+												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(defaultTieredCacheEnabled),
 											},
 										},
 									},
 								},
 							},
-							"application_accelerator": schema.SingleNestedAttribute{
+							"application_accelerator": schema.SingleNestedBlock{
 								Description: "Application accelerator module settings. Requires the application accelerator module on the application.",
-								Optional:    true,
-								Computed:    true,
-								Default:     objectdefault.StaticValue(appAcceleratorDefault),
 								Attributes: map[string]schema.Attribute{
 									"cache_vary_by_method": schema.ListAttribute{
+										Description: "HTTP methods to vary cache by.",
 										ElementType: types.StringType,
 										Optional:    true,
 										Computed:    true,
 										Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 									},
-									"cache_vary_by_querystring": schema.SingleNestedAttribute{
-										Optional: true,
-										Computed: true,
-										Default:  objectdefault.StaticValue(varyByQuerystringDefault),
+								},
+								Blocks: map[string]schema.Block{
+									"cache_vary_by_querystring": schema.SingleNestedBlock{
+										Description: "Query string cache variation settings.",
 										Attributes: map[string]schema.Attribute{
 											"behavior": schema.StringAttribute{
-												Description: "Query string behavior: ignore, all, allowlist, denylist.",
+												Description: "Query string behavior: `ignore`, `all`, `allowlist`, `denylist`.",
 												Optional:    true,
 												Computed:    true,
 												Default:     stringdefault.StaticString(defaultVaryBehavior),
 											},
 											"fields": schema.ListAttribute{
+												Description: "Query string fields for allowlist/denylist.",
 												ElementType: types.StringType,
 												Optional:    true,
 												Computed:    true,
 												Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 											},
 											"sort_enabled": schema.BoolAttribute{
-												Optional: true,
-												Computed: true,
-												Default:  booldefault.StaticBool(defaultQuerystringSort),
+												Description: "Enable query string sorting.",
+												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(defaultQuerystringSort),
 											},
 										},
 									},
-									"cache_vary_by_cookies": schema.SingleNestedAttribute{
-										Optional: true,
-										Computed: true,
-										Default:  objectdefault.StaticValue(varyByCookiesDefault),
+									"cache_vary_by_cookies": schema.SingleNestedBlock{
+										Description: "Cookies cache variation settings.",
 										Attributes: map[string]schema.Attribute{
 											"behavior": schema.StringAttribute{
-												Description: "Cookies behavior: ignore, all, allowlist, denylist.",
+												Description: "Cookies behavior: `ignore`, `all`, `allowlist`, `denylist`.",
 												Optional:    true,
 												Computed:    true,
 												Default:     stringdefault.StaticString(defaultVaryBehavior),
 											},
 											"cookie_names": schema.ListAttribute{
+												Description: "Cookie names for allowlist/denylist.",
 												ElementType: types.StringType,
 												Optional:    true,
 												Computed:    true,
@@ -512,18 +553,17 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 											},
 										},
 									},
-									"cache_vary_by_devices": schema.SingleNestedAttribute{
-										Optional: true,
-										Computed: true,
-										Default:  objectdefault.StaticValue(varyByDevicesDefault),
+									"cache_vary_by_devices": schema.SingleNestedBlock{
+										Description: "Devices cache variation settings.",
 										Attributes: map[string]schema.Attribute{
 											"behavior": schema.StringAttribute{
-												Description: "Devices behavior: ignore, allowlist.",
+												Description: "Devices behavior: `ignore`, `allowlist`.",
 												Optional:    true,
 												Computed:    true,
 												Default:     stringdefault.StaticString(defaultVaryBehavior),
 											},
 											"device_group": schema.ListAttribute{
+												Description: "Device group IDs for allowlist.",
 												ElementType: types.Int64Type,
 												Optional:    true,
 												Computed:    true,
@@ -535,16 +575,11 @@ func (r *applicationCacheSettingsResource) Schema(_ context.Context, _ resource.
 							},
 						},
 					},
-					"created_at": schema.StringAttribute{
-						Description: "The creation timestamp.",
-						Computed:    true,
-					},
 				},
 			},
 		},
 	}
 }
-
 func (r *applicationCacheSettingsResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -567,8 +602,8 @@ func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resou
 		return
 	}
 
-	// Build the V4 API request from the plan, which carries the schema defaults
-	// for every field the configuration left out.
+	// Build the V4 API request from the plan. Attribute defaults cover fields left
+	// out of a declared block; buildCacheSettingRequest fills in omitted blocks.
 	cacheSettingRequest := buildCacheSettingRequest(plan.CacheSetting)
 
 	// Call V4 API
@@ -610,7 +645,9 @@ func (r *applicationCacheSettingsResource) Create(ctx context.Context, req resou
 		return
 	}
 
-	plan.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSettingData)
+	results := transformCacheSettingResponseToResourceModel(cacheSettingData)
+	keepDeclaredCacheSettingBlocks(plan.CacheSetting, results)
+	plan.CacheSetting = results
 	plan.ApplicationID = applicationID
 	plan.ID = types.Int64Value(cacheSettingData.GetId())
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -682,12 +719,14 @@ func (r *applicationCacheSettingsResource) Read(ctx context.Context, req resourc
 		resp.Diagnostics.AddError("Empty response", "cacheSettingResponse has no data after successful API call")
 		return
 	}
-	// Refresh state from the API without filtering: state has to mirror the
-	// remote resource for Terraform to plan a revert when it was changed
-	// out-of-band. Fields the configuration omits do not drift perpetually
-	// because they are Computed with a schema default, so the plan resolves them
-	// to that default rather than to null.
-	state.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSettingData)
+	// Refresh state from the API: values inside a declared block mirror the
+	// remote resource, so Terraform plans a revert when one was changed
+	// out-of-band. Block presence follows the prior state: a block the
+	// configuration omits is planned as null (blocks cannot be Computed), so it
+	// has to stay null here or every plan would show a change.
+	results := transformCacheSettingResponseToResourceModel(cacheSettingData)
+	keepDeclaredCacheSettingBlocks(state.CacheSetting, results)
+	state.CacheSetting = results
 	// Preserve top-level ID from state if not already set (it should come from req.State.Get())
 	// Only set it from CacheSetting.ID if state.ID is null/unknown
 	if state.ID.IsNull() || state.ID.IsUnknown() {
@@ -772,7 +811,9 @@ func (r *applicationCacheSettingsResource) Update(ctx context.Context, req resou
 		return
 	}
 
-	plan.CacheSetting = transformCacheSettingResponseToResourceModel(cacheSettingData)
+	results := transformCacheSettingResponseToResourceModel(cacheSettingData)
+	keepDeclaredCacheSettingBlocks(plan.CacheSetting, results)
+	plan.CacheSetting = results
 	plan.ApplicationID = applicationID
 	plan.ID = types.Int64Value(cacheSettingData.GetId())
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -901,9 +942,11 @@ func (r *applicationCacheSettingsResource) ImportState(ctx context.Context, req 
 // Helper: Build Modules Request.
 // buildCacheSettingRequest builds the full API payload from a plan. Shared by
 // Create (POST) and Update (PUT): both send the complete desired state, so a
-// field the practitioner omitted carries its schema default rather than being
-// left to whatever the remote currently holds.
+// field the practitioner omitted carries its default (an attribute default
+// inside a declared block, withCacheSettingDefaults for an omitted block) rather
+// than being left to whatever the remote currently holds.
 func buildCacheSettingRequest(cs *CacheSettingResourceModel) *azionapi.CacheSettingRequest {
+	cs = withCacheSettingDefaults(cs)
 	request := azionapi.NewCacheSettingRequest(cs.Name.ValueString())
 
 	if cs.BrowserCache != nil {

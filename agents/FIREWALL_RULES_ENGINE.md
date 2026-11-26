@@ -198,6 +198,30 @@ type FirewallBehaviorAttrsResourceModel struct {
 }
 ```
 
+#### Schema: Nested Objects Are Blocks
+
+Every writable nested object is a block, so Terraform rejects unknown or
+misplaced arguments with "Unsupported argument" (a nested attribute silently
+dropped them). Names and nesting are unchanged; lists become repeated blocks:
+
+| Path | Block | Validators |
+|---|---|---|
+| `results` | `SingleNestedBlock` | `objectvalidator.IsRequired()` |
+| `results.criteria` | `ListNestedBlock` | `listvalidator.IsRequired()`, `SizeAtLeast(1)` |
+| `results.criteria.entries` | `ListNestedBlock` | `listvalidator.IsRequired()`, `SizeAtLeast(1)` |
+| `results.criteria.entries.criterion` | `SingleNestedBlock` | `objectvalidator.IsRequired()` |
+| `results.behaviors` | `ListNestedBlock` | `listvalidator.IsRequired()`, `SizeAtLeast(1)` |
+| `results.behaviors.behavior` | `SingleNestedBlock` | `objectvalidator.IsRequired()` |
+| `results.behaviors.behavior.attributes` | `SingleNestedBlock` | none (optional) |
+
+Zero list blocks reach the validators as a **null** list, which `SizeAtLeast`
+skips, so `listvalidator.IsRequired()` is what rejects a missing `criteria`,
+`entries` or `behaviors`. Required-ness of blocks is only enforced by these
+validators, and descriptions start with `Required.`. Request payloads and state
+shape are unchanged, so state written by the old nested-attribute schema is read
+as is. The schema section of `docs/resources/firewall_rule_engine.md` is
+hand-written (no tfplugindocs marker): edit it by hand when the schema changes.
+
 #### Resource Registration
 
 ```go
@@ -326,7 +350,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent firewall
 resource "azion_firewall_main_setting" "example" {
-  data = {
+  data {
     name   = "My Firewall"
     active = true
   }
@@ -335,31 +359,25 @@ resource "azion_firewall_main_setting" "example" {
 # Then create the rule engine for that firewall
 resource "azion_firewall_rule_engine" "example" {
   firewall_id = azion_firewall_main_setting.example.data.id
-  results = {
+  results {
     name        = "Block Specific Path"
     description = "Block requests to specific path"
     active      = true
-    behaviors = [
-      {
-        behavior = {
-          type = "drop"
+    behaviors {
+      behavior {
+        type = "drop"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "${request_uri}"
+          operator    = "matches"
+          conditional = "if"
+          argument    = "/admin.*"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "${request_uri}"
-              operator    = "matches"
-              conditional = "if"
-              argument    = "/admin.*"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 ```

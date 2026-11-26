@@ -30,8 +30,14 @@ both intentional:
 Everything else is **not enforced**. `active`, `domains`, `tls.certificate`,
 `tls.ciphers`, `protocols.http.versions`, `protocols.http.quic_ports` and the
 `mtls.config` fields are sent only when you declare them; otherwise the value the
-API reports is kept rather than being reset. `mtls.config` stays null while MTLS
-is disabled — declare it when you enable MTLS.
+API reports is kept rather than being reset. Leave the `mtls.config` block out
+while MTLS is disabled — declare it when you enable MTLS.
+
+`tls`, `protocols` (with its `http` block) and `mtls` (with its `config` block)
+are nested blocks. When one is left out, its enforced defaults above are still
+sent on every apply, but the block is not kept in state, so a change made outside
+Terraform to its fields is only shown in `terraform plan` while the block is
+declared. Declare the block to track it.
 
 Note that drift is only reverted when an apply runs, and only when state is
 refreshed — `terraform plan -refresh=false` will not detect it. Terraform also
@@ -47,19 +53,21 @@ Creates and manages an Azion Workload resource.
 
 ```hcl
 resource "azion_workload" "example" {
-  workload = {
-    name           = "My Workload"
-    active         = true
-    infrastructure = 1
+  workload {
+    name                         = "My Workload"
+    active                       = true
+    infrastructure               = 1
+    domains                      = ["example.com", "www.example.com"]
+    workload_domain_allow_access = true
 
-    tls = {
+    tls {
       certificate     = 1234
       ciphers         = 3
       minimum_version = "tls_1_2"
     }
 
-    protocols = {
-      http = {
+    protocols {
+      http {
         versions    = ["http1", "http2", "http3"]
         http_ports  = [80]
         https_ports = [443]
@@ -67,17 +75,14 @@ resource "azion_workload" "example" {
       }
     }
 
-    mtls = {
+    mtls {
       enabled = true
-      config = {
+      config {
         certificate  = 5678
         crl          = [9012]
         verification = "enforce"
       }
     }
-
-    domains                      = ["example.com", "www.example.com"]
-    workload_domain_allow_access = true
   }
 }
 ```
@@ -92,7 +97,7 @@ terraform import azion_workload.example 123456
 
 The following arguments are supported:
 
-* `workload` - (Required) The workload configuration. See [Workload Configuration](#workload-configuration) below.
+* `workload` - (Required) The workload configuration block. See [Workload Configuration](#workload-configuration) below.
 
 ### Workload Configuration
 
@@ -101,9 +106,9 @@ The `workload` block supports:
 * `name` - (Required) Name of the workload.
 * `active` - (Optional) Status of the workload. Default is `false`.
 * `infrastructure` - (Optional) Infrastructure type: `1` for Production (All Locations), `2` for Staging.
-* `tls` - (Optional) TLS configuration for the workload. See [TLS Configuration](#tls-configuration) below.
-* `protocols` - (Optional) Protocol configurations for the workload. See [Protocols Configuration](#protocols-configuration) below.
-* `mtls` - (Optional) Mutual TLS configuration for the workload. See [MTLS Configuration](#mtls-configuration) below.
+* `tls` - (Optional) Block. TLS configuration for the workload. See [TLS Configuration](#tls-configuration) below.
+* `protocols` - (Optional) Block. Protocol configurations for the workload. See [Protocols Configuration](#protocols-configuration) below.
+* `mtls` - (Optional) Block. Mutual TLS configuration for the workload. See [MTLS Configuration](#mtls-configuration) below.
 * `domains` - (Optional) Set of domains associated with the workload. Order is not significant and duplicates are not allowed.
 * `workload_domain_allow_access` - (Optional) Whether domain access is allowed.
 
@@ -127,7 +132,7 @@ The `tls` block supports:
 
 The `protocols` block supports:
 
-* `http` - (Optional) HTTP protocol configuration. See [HTTP Protocol Configuration](#http-protocol-configuration) below.
+* `http` - (Optional) Block. HTTP protocol configuration. When omitted, `http_ports = [80]` and `https_ports = [443]` are sent. See [HTTP Protocol Configuration](#http-protocol-configuration) below.
 
 #### HTTP Protocol Configuration
 
@@ -143,7 +148,7 @@ The `http` block supports:
 The `mtls` block supports:
 
 * `enabled` - (Optional) Whether MTLS is enabled.
-* `config` - (Optional) MTLS configuration. See [MTLS Config](#mtls-config) below.
+* `config` - (Optional) Block. MTLS configuration. See [MTLS Config](#mtls-config) below.
 
 #### MTLS Config
 

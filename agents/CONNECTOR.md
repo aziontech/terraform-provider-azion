@@ -81,7 +81,7 @@ type apiClient struct {
 
 ### Resource Model
 
-The connector resource uses nested attributes for type-specific configuration:
+The connector resource uses nested blocks for type-specific configuration. Omitted optional blocks are nil pointers:
 
 ```go
 type connectorResourceModel struct {
@@ -112,42 +112,32 @@ type StorageAttributesModel struct {
     Prefix types.String `tfsdk:"prefix"`
 }
 
-// HTTP connector attributes
-// Note: ConnectionOptions and Modules use types.Object because they are
-// both Optional and Computed - the API returns default values
+// HTTP connector attributes. Every nested object is a block (never Computed),
+// so plain pointers work: an omitted block is nil.
 type HTTPAttributesModel struct {
-    Addresses         []AddressModel     `tfsdk:"addresses"`
-    ConnectionOptions types.Object       `tfsdk:"connection_options"`
-    Modules           types.Object       `tfsdk:"modules"`
+    Addresses         []AddressWrapperModel       `tfsdk:"addresses"` // repeated `addresses { endpoint { ... } }`
+    ConnectionOptions *HTTPConnectionOptionsModel `tfsdk:"connection_options"`
+    Modules           *HTTPModulesModel           `tfsdk:"modules"`
 }
 ```
 
-### Important: Handling Computed Nested Attributes
+### Important: Nested Objects Are Blocks
 
-When nested attributes have both `Optional: true` and `Computed: true`, you **must** use `types.Object` instead of pointer types. This is because Terraform needs to handle unknown values during planning.
+Every nested object (`connector`, `storage_attributes`, `http_attributes`, `addresses`, `endpoint`, `connection_options`, `modules` and everything below `modules`) is a block, so Terraform rejects unknown arguments with `Unsupported argument` (see "Nested Objects Must Be Blocks" in `AGENTS.md`). Blocks cannot be `Computed`, so:
 
-**Wrong (pointer types can't handle unknown values):**
-```go
-type HTTPAttributesModel struct {
-    ConnectionOptions *HTTPConnectionOptionsModel `tfsdk:"connection_options"` // WRONG!
-}
-```
-
-**Correct (use types.Object for Optional+Computed):**
-```go
-type HTTPAttributesModel struct {
-    ConnectionOptions types.Object `tfsdk:"connection_options"` // Correct
-}
-```
+- **Omitted blocks stay null.** `populateConnectorFromResponse` filters the API response by the prior plan/state with `shouldPopulate`: a block (or leaf) that was not declared is not written to state, even if the API echoes it. A nil prior (import) keeps everything; the first plan after import removes undeclared blocks from state. Changes made outside Terraform to an undeclared block are therefore not reported.
+- **Required attributes inside an optional block must not be `Required`.** The framework reports a `Required` attribute as missing even when its enclosing optional block is omitted. `storage_attributes.bucket` is `Optional` and enforced by `objectvalidator.AlsoRequires(path.MatchRelative().AtName("bucket"))` on the block.
+- **Zero `addresses` blocks arrive as a null list**, which `listvalidator.SizeAtLeast(1)` skips, and a `listvalidator.IsRequired()` would also fire when `http_attributes` itself is omitted. `http_attributes` carries `objectvalidator.AlsoRequires(path.MatchRelative().AtName("addresses"))` instead (plus `SizeAtLeast(1)` on the list).
 
 ### Schema Definition
 
 ```go
 func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
     resp.Schema = schema.Schema{
-        Attributes: map[string]schema.Attribute{
-            "connector": schema.SingleNestedAttribute{
-                Required: true,
+        Blocks: map[string]schema.Block{
+            "connector": schema.SingleNestedBlock{
+                Description: "Required. The connector settings.",
+                Validators:  []validator.Object{objectvalidator.IsRequired()},
                 Attributes: map[string]schema.Attribute{
                     "name": schema.StringAttribute{Required: true},
                     "type": schema.StringAttribute{Required: true},
@@ -159,29 +149,37 @@ func (r *connectorResource) Schema(_ context.Context, _ resource.SchemaRequest, 
                         Description: "The identifier of the current connector version.",
                         Computed:    true,
                     },
+                },
+                Blocks: map[string]schema.Block{
                     // Storage attributes - nested inside connector
-                    "storage_attributes": schema.SingleNestedAttribute{
-                        Optional: true,
+                    "storage_attributes": schema.SingleNestedBlock{
+                        Validators: []validator.Object{
+                            objectvalidator.AlsoRequires(path.MatchRelative().AtName("bucket")),
+                        },
                         Attributes: map[string]schema.Attribute{
-                            "bucket": schema.StringAttribute{Required: true},
+                            "bucket": schema.StringAttribute{Optional: true}, // required via AlsoRequires
                             "prefix": schema.StringAttribute{Optional: true},
                         },
                     },
                     // HTTP attributes - nested inside connector
-                    "http_attributes": schema.SingleNestedAttribute{
-                        Optional: true,
-                        Attributes: map[string]schema.Attribute{
-                            "addresses": schema.ListNestedAttribute{Required: true, /* ... */},
-                            "connection_options": schema.SingleNestedAttribute{
-                                Optional: true,
-                                Computed: true, // API provides defaults
-                                Attributes: map[string]schema.Attribute{ /* ... */ },
+                    "http_attributes": schema.SingleNestedBlock{
+                        Validators: []validator.Object{
+                            objectvalidator.AlsoRequires(path.MatchRelative().AtName("addresses")),
+                        },
+                        Blocks: map[string]schema.Block{
+                            "addresses": schema.ListNestedBlock{
+                                Validators: []validator.List{listvalidator.SizeAtLeast(1)},
+                                NestedObject: schema.NestedBlockObject{
+                                    Blocks: map[string]schema.Block{
+                                        "endpoint": schema.SingleNestedBlock{
+                                            Validators: []validator.Object{objectvalidator.IsRequired()},
+                                            /* address (Required), active/http_port/https_port (Optional+Computed), modules block */
+                                        },
+                                    },
+                                },
                             },
-                            "modules": schema.SingleNestedAttribute{
-                                Optional: true,
-                                Computed: true, // API provides defaults
-                                Attributes: map[string]schema.Attribute{ /* ... */ },
-                            },
+                            "connection_options": schema.SingleNestedBlock{ /* Optional leaves */ },
+                            "modules":            schema.SingleNestedBlock{ /* load_balancer, origin_shield blocks */ },
                         },
                     },
                 },
@@ -588,20 +586,20 @@ type ConnectorHTTPAttributes struct {
 #   1. Use an existing bucket name directly (string value)
 #   2. Reference a bucket created via azion_bucket resource
 resource "azion_connector" "storage_connector" {
-  connector = {
+  connector {
     name   = "tf-test-storage-connector"
     type   = "storage"
     active = true
-    storage_attributes = {
+    storage_attributes {
       # Option 1: Use an existing bucket name directly
       # bucket = "my-existing-bucket"
-      
+
       # Option 2: Reference a bucket resource (recommended)
       bucket = azion_bucket.example.bucket.name
       prefix = "path/to/files/"
     }
   }
-  
+
   # When referencing a bucket resource, add depends_on to ensure
   # the bucket is created before the connector
   depends_on = [
@@ -620,48 +618,44 @@ resource "azion_connector" "storage_connector" {
 # HTTP Connector Example
 # Used to connect to HTTP origins
 resource "azion_connector" "http_connector" {
-  connector = {
+  connector {
     name   = "tf-test-http-connector"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          endpoint = {
-            address   = "192.168.1.100"
-            http_port = 80
-            active    = true
-          }
+    http_attributes {
+      addresses {
+        endpoint {
+          address   = "192.168.1.100"
+          http_port = 80
+          active    = true
         }
-      ]
+      }
     }
   }
 }
 
 # HTTP Connector with all options
 resource "azion_connector" "http_connector_full" {
-  connector = {
+  connector {
     name   = "tf-test-http-connector-full"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          endpoint = {
-            address    = "192.168.1.100"
-            http_port  = 80
-            https_port = 443
-            active     = true
-            modules = {
-              load_balancer = {
-                server_role = "primary"
-                weight      = 1
-              }
+    http_attributes {
+      addresses {
+        endpoint {
+          address    = "192.168.1.100"
+          http_port  = 80
+          https_port = 443
+          active     = true
+          modules {
+            load_balancer {
+              server_role = "primary"
+              weight      = 1
             }
           }
         }
-      ]
-      connection_options = {
+      }
+      connection_options {
         dns_resolution      = "both"
         following_redirect  = false
         host                = "$${host}"
@@ -671,17 +665,17 @@ resource "azion_connector" "http_connector_full" {
         real_port_header    = "X-Real-PORT"
         transport_policy    = "preserve"
       }
-      modules = {
-        load_balancer = {
+      modules {
+        load_balancer {
           enabled = true
-          config = {
-            method              = "round_robin"
-            max_retries         = 3
-            connection_timeout  = 60
-            read_write_timeout  = 120
+          config {
+            method             = "round_robin"
+            max_retries        = 3
+            connection_timeout = 60
+            read_write_timeout = 120
           }
         }
-        origin_shield = {
+        origin_shield {
           enabled = false
         }
       }
@@ -814,58 +808,21 @@ if response != nil && response.StatusCode == http.StatusNotFound {
 
 ## Common Issues
 
-### 1. "Provider returned invalid result object after apply" - Unknown Values
+### 1. "Provider produced inconsistent result after apply"
 
-**Problem:** When using `Optional: true` and `Computed: true` with pointer types:
-```
-Error: Provider returned invalid result object after apply
-After the apply operation, the provider still indicated an unknown value
-```
-
-**Solution:** Use `types.Object` instead of pointer types for nested attributes that are both Optional and Computed:
-
-```go
-// Wrong
-ConnectionOptions *HTTPConnectionOptionsModel `tfsdk:"connection_options"`
-
-// Correct
-ConnectionOptions types.Object `tfsdk:"connection_options"`
-```
-
-### 2. "Provider produced inconsistent result after apply"
-
-**Problem:** API returns default values that weren't in the plan:
+**Problem:** API returns values for a block that was not in the plan:
 ```
 Error: Provider produced inconsistent result after apply
 unexpected new value: .connection_options: was null, but now cty.ObjectVal(...)
 ```
 
-**Solution:** Add `Computed: true` to the schema for attributes where the API provides defaults:
+**Solution:** Blocks cannot be `Computed`. Filter the API response by the prior plan/state (`shouldPopulate` in `populateConnectorFromResponse`) so undeclared blocks stay null.
 
-```go
-"connection_options": schema.SingleNestedAttribute{
-    Optional: true,
-    Computed: true, // Important: API provides defaults
-    Attributes: map[string]schema.Attribute{ /* ... */ },
-},
-```
+### 2. "Missing Configuration for Required Attribute" for an omitted block
 
-### 3. Converting types.Object to Model
+**Problem:** A `Required` attribute inside an optional `SingleNestedBlock` is reported missing even when the block is omitted.
 
-Use `As()` with `basetypes.ObjectAsOptions{}`:
-
-```go
-var model HTTPConnectionOptionsModel
-diags := objectValue.As(ctx, &model, basetypes.ObjectAsOptions{})
-```
-
-### 4. Converting Model to types.Object
-
-Use `types.ObjectValueFrom()` with attrTypes:
-
-```go
-objectValue, diags := types.ObjectValueFrom(ctx, model.attrTypes(), model)
-```
+**Solution:** Make the attribute `Optional` and add `objectvalidator.AlsoRequires(...)` on the block (see `storage_attributes.bucket`).
 
 ---
 
@@ -873,11 +830,11 @@ objectValue, diags := types.ObjectValueFrom(ctx, model.attrTypes(), model)
 
 When implementing the connector resource:
 
-1. [ ] Use `types.Object` for nested attributes with `Optional: true` and `Computed: true`
-2. [ ] Add `Computed: true` for attributes where API returns defaults
-3. [ ] Implement `attrTypes()` method for each model used as `types.Object`
-4. [ ] Use `basetypes.ObjectAsOptions{}` when calling `As()` on types.Object
-5. [ ] Use `types.ObjectValueFrom()` when converting models to types.Object
+1. [ ] Every nested object is a block (`SingleNestedBlock` / `ListNestedBlock`), never a nested attribute
+2. [ ] Keep undeclared blocks null in state (`shouldPopulate` filter by prior plan/state; nil prior = import = keep all)
+3. [ ] No `Required` attributes inside optional blocks: use `Optional` + `objectvalidator.AlsoRequires` on the block
+4. [ ] `addresses`: `SizeAtLeast(1)` on the list and `AlsoRequires(addresses)` on `http_attributes`
+5. [ ] Required blocks: `objectvalidator.IsRequired()` and a description starting with `Required.`
 6. [ ] Nest `storage_attributes` and `http_attributes` inside `connector` block
 7. [ ] Only support `storage` and `http` types (no `live_ingest`)
 8. [ ] Close response bodies BEFORE error checking (`defer response.Body.Close()`)

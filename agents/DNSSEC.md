@@ -594,8 +594,13 @@ func (r *dnssecResource) Schema(_ context.Context, _ resource.SchemaRequest, res
                 Description: "Timestamp of the last Terraform update of the order.",
                 Computed:    true,
             },
-            "dnssec": schema.SingleNestedAttribute{
-                Required: true,
+        },
+        Blocks: map[string]schema.Block{
+            "dnssec": schema.SingleNestedBlock{
+                Description: "Required. DNSSEC configuration block.",
+                Validators: []validator.Object{
+                    objectvalidator.IsRequired(),
+                },
                 Attributes: map[string]schema.Attribute{
                     "is_enabled": schema.BoolAttribute{
                         Required:    true,
@@ -921,7 +926,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent DNS zone
 resource "azion_intelligent_dns_zone" "example" {
-  zone = {
+  zone {
     name    = "example.com"
     active  = true
     domain  = "example.com"
@@ -931,7 +936,7 @@ resource "azion_intelligent_dns_zone" "example" {
 # Then configure DNSSEC for that zone
 resource "azion_intelligent_dns_dnssec" "example" {
   zone_id = azion_intelligent_dns_zone.example.id
-  dnssec = {
+  dnssec {
     is_enabled = true
   }
 }

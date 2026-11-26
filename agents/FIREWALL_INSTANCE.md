@@ -637,7 +637,7 @@ type FirewallFunctionsInstanceResource struct {
 // FirewallFunctionInstanceResourceModel - the state model
 type FirewallFunctionInstanceResourceModel struct {
 	State       types.String                         `tfsdk:"state"`
-	Data        FirewallFunctionInstanceResourceData `tfsdk:"data"`
+	Data        *FirewallFunctionInstanceResourceData `tfsdk:"data"`
 	ID          types.String                         `tfsdk:"id"`
 	FirewallID  types.Int64                          `tfsdk:"firewall_id"`
 	LastUpdated types.String                         `tfsdk:"last_updated"`
@@ -971,6 +971,26 @@ The Read method handles parsing the imported ID in the format `firewallId/functi
 
 ## Schema Definition Patterns
 
+### `data` Is a Required Block
+
+In the resource, `data` is a `schema.SingleNestedBlock` (written `data { ... }`,
+not `data = { ... }`) so Terraform rejects unknown or misplaced arguments with
+"Unsupported argument". Blocks are always optional to Terraform, so it carries
+`objectvalidator.IsRequired()` and a description starting with `Required.`. The
+attributes below live inside it (except `firewall_id`). State written by the old
+nested-attribute schema has the same shape and is read unchanged. The data
+sources keep Computed-only nested attributes.
+
+```go
+Blocks: map[string]schema.Block{
+    "data": schema.SingleNestedBlock{
+        Description: "Required. The Function Instance settings.",
+        Validators:  []validator.Object{objectvalidator.IsRequired()},
+        Attributes:  map[string]schema.Attribute{ /* see below */ },
+    },
+},
+```
+
 ### Required Attributes
 
 ```go
@@ -1159,11 +1179,11 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent firewall with functions module enabled
 resource "azion_firewall_main_setting" "example" {
-  data = {
+  data {
     name   = "My Firewall"
     active = true
-    modules = {
-      functions = {
+    modules {
+      functions {
         enabled = true
       }
     }
@@ -1173,7 +1193,7 @@ resource "azion_firewall_main_setting" "example" {
 # Then create the function instance for that firewall
 resource "azion_firewall_functions_instance" "example" {
   firewall_id = azion_firewall_main_setting.example.data.id
-  data = {
+  data {
     name     = "Terraform Test"
     function = 9359
     args = jsonencode({

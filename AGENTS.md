@@ -62,9 +62,10 @@ For detailed documentation on specific packages, see the `agents/` folder:
 2. [SDK and API Client Configuration](#sdk-and-api-client-configuration)
 3. [Error Handling](#error-handling)
 4. [Type Conversions](#type-conversions)
-5. [Testing Patterns](#testing-patterns)
-6. [Documentation Generation](#documentation-generation)
-7. [Provider Registration](#provider-registration)
+5. [Nested Objects Must Be Blocks](#nested-objects-must-be-blocks)
+6. [Testing Patterns](#testing-patterns)
+7. [Documentation Generation](#documentation-generation)
+8. [Provider Registration](#provider-registration)
 
 ---
 
@@ -329,6 +330,31 @@ lastUpdated := types.StringValue(time.Now().Format(time.RFC850))
 
 ---
 
+## Nested Objects Must Be Blocks
+
+Every nested object a practitioner can write must be a **block** (`application { ... }`), never a **nested attribute** (`application = { ... }`).
+
+Terraform converts the value of a nested attribute to the schema's object type, and that conversion silently drops arguments the schema does not define. A misspelled argument, or one written at the wrong nesting level, is ignored instead of reported. Blocks are validated by Terraform itself and fail with `Unsupported argument`. `TestResourceNestedObjectsAreBlocks` (`internal/schema_blocks_test.go`) fails the build if a resource exposes a Required or Optional nested attribute. Computed-only nested attributes (results the provider fills in, and data source outputs) are fine.
+
+| Nested attribute | Block |
+|---|---|
+| `SingleNestedAttribute{Required: true}` | `SingleNestedBlock` + `Validators: []validator.Object{objectvalidator.IsRequired()}` and a description starting with `Required.` (tfplugindocs lists every block as Optional) |
+| `SingleNestedAttribute{Optional: true}` | `SingleNestedBlock` |
+| `ListNestedAttribute` / `SetNestedAttribute` | `ListNestedBlock` / `SetNestedBlock`. Zero blocks reach validators as a **null** list, so a required list needs `listvalidator.IsRequired()` (`SizeAtLeast(1)` alone lets a missing block through). Add `SizeAtLeast(1)` too only if the API rejects an empty list |
+| `MapNestedAttribute` | No map block exists: use a `SetNestedBlock` / `ListNestedBlock` with an explicit key attribute (for example `name`) and validate uniqueness |
+
+**Required attributes inside an optional block:** the framework validates `Required` children of a `SingleNestedBlock` even when the block is omitted ("Missing Configuration for Required Attribute"). Inside an optional block, declare those children `Optional`, start their description with `Required.`, and enforce them with `objectvalidator.AlsoRequires(path.MatchRelative().AtName("<name>"), ...)` on the block (see `dataStreamRequiredWhenSet` in `resource_data_stream.go`). Children of a required block can stay `Required`.
+
+Blocks cannot be `Computed` and cannot have a `Default`. When an object used to be `Optional + Computed` with an object default:
+
+- **Request:** an omitted block must still send what was sent before (usually the defaults), so the API payload does not change.
+- **State:** an omitted block must stay null. Terraform core rejects a block planned as absent that comes back present, so filter the API result by the prior plan/state (see `keepDeclaredModules` in `resource_application_main_setting.go`). Attributes *inside* a declared block keep `Optional + Computed + Default` and keep mirroring the API, so drift is still detected while the block is declared.
+- **Import:** there is no prior value, so keep everything; the first plan removes undeclared blocks from state.
+
+State written with a nested attribute is read by the equivalent block unchanged (same object/list shape), so no state upgrader is needed.
+
+---
+
 ## Testing Patterns
 
 ### Unit Test Structure
@@ -478,7 +504,7 @@ Example for a child resource (`azion_application_rule_engine`):
 ```terraform
 # First, create the parent application
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
   }
@@ -487,7 +513,7 @@ resource "azion_application_main_setting" "example" {
 # Then create the rule engine for that application
 resource "azion_application_rule_engine" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  results = {
+  results {
     name  = "My Rule"
     phase = "request"
     # ... rest of configuration
@@ -536,7 +562,7 @@ When generating a new resource or data source from OpenAPI:
 2. **Determine ID types**: `int64` or `string` based on SDK
 3. **Determine update method**: PUT (full update) or PATCH (partial update)
 4. **Create model structs**: With appropriate `tfsdk` tags
-5. **Implement schema**: With correct Required/Optional/Computed
+5. **Implement schema**: With correct Required/Optional/Computed; writable nested objects are blocks (see [Nested Objects Must Be Blocks](#nested-objects-must-be-blocks))
 6. **Implement all methods**: Create, Read, Update, Delete, ImportState (for resources)
 7. **Handle 429 errors**: Use `utils.RetryOn429`
 8. **Handle optional fields**: Check `IsNull()` and `IsUnknown()`

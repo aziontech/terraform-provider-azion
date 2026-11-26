@@ -197,6 +197,8 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 ## Resource Implementation
 
+**Schema:** `record` is a `SingleNestedBlock` (`record { ... }`, not `record = { ... }`) with `objectvalidator.IsRequired()` and a description starting with `Required.`, so Terraform rejects unknown or misplaced arguments with `Unsupported argument`. State is unchanged (same object shape). See "Nested Objects Must Be Blocks" in `AGENTS.md`.
+
 ### File Structure
 
 **File:** `internal/resource_record.go`
@@ -866,7 +868,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent DNS zone
 resource "azion_intelligent_dns_zone" "example" {
-  zone = {
+  zone {
     name    = "example.com"
     active  = true
     domain  = "example.com"
@@ -876,7 +878,7 @@ resource "azion_intelligent_dns_zone" "example" {
 # Then create the DNS record for that zone
 resource "azion_intelligent_dns_record" "example" {
   zone_id = azion_intelligent_dns_zone.example.id
-  record = {
+  record {
     type = "A"
     name = "site"
     rdata = [

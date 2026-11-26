@@ -8,17 +8,19 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -98,13 +100,11 @@ type MTLSConfigResourceModel struct {
 // Optional + Computed, so an omitted one resolves to whatever the API reports
 // instead of being forced to a value — sent and tracked only when declared.
 //
-// Every optional nested block still needs a default even when its contents are
-// not enforced. A Computed block without one is unknown in the plan whenever the
-// configuration omits it, and the nested objects here are read into pointer
-// fields that cannot hold unknown values, so a missing default breaks Create.
-// Inside such a default, a null leaf means "let the API decide": the leaf is
-// Computed, so the framework turns that null into an unknown and the response
-// fills it.
+// tls, protocols, protocols.http, mtls and mtls.config are blocks, which cannot
+// be Computed or carry a default. An omitted block is therefore null in the
+// plan; the request builders below substitute the defaults for it so the API
+// payload is the same as when these were Computed objects with defaults, and
+// keepDeclaredWorkloadBlocks keeps the omitted block null in state.
 const (
 	// 1 is Production (All Locations); 2 is Staging.
 	defaultWorkloadInfrastructure = int64(1)
@@ -119,66 +119,6 @@ var (
 	defaultWorkloadHTTPSPorts = []int64{443}
 )
 
-// Attribute types for the nested objects, needed to build object defaults whose
-// types must match the schema exactly.
-var (
-	workloadTLSAttrTypes = map[string]attr.Type{
-		"certificate":     types.Int64Type,
-		"ciphers":         types.Int64Type,
-		"minimum_version": types.StringType,
-	}
-
-	workloadHTTPAttrTypes = map[string]attr.Type{
-		"versions":    types.ListType{ElemType: types.StringType},
-		"http_ports":  types.ListType{ElemType: types.Int64Type},
-		"https_ports": types.ListType{ElemType: types.Int64Type},
-		"quic_ports":  types.ListType{ElemType: types.Int64Type},
-	}
-
-	workloadProtocolsAttrTypes = map[string]attr.Type{
-		"http": types.ObjectType{AttrTypes: workloadHTTPAttrTypes},
-	}
-
-	workloadMTLSConfigAttrTypes = map[string]attr.Type{
-		"certificate":  types.Int64Type,
-		"crl":          types.ListType{ElemType: types.Int64Type},
-		"verification": types.StringType,
-	}
-
-	workloadMTLSAttrTypes = map[string]attr.Type{
-		"enabled": types.BoolType,
-		"config":  types.ObjectType{AttrTypes: workloadMTLSConfigAttrTypes},
-	}
-)
-
-var (
-	// certificate and ciphers stay null: they are not enforced, so the API
-	// supplies them.
-	workloadTLSDefault = types.ObjectValueMust(workloadTLSAttrTypes, map[string]attr.Value{
-		"certificate":     types.Int64Null(),
-		"ciphers":         types.Int64Null(),
-		"minimum_version": types.StringValue(defaultWorkloadTLSMinimumVersion),
-	})
-
-	// versions and quic_ports stay null: the API decides them, and quic_ports is
-	// only meaningful when http3 is among the versions.
-	workloadHTTPDefault = types.ObjectValueMust(workloadHTTPAttrTypes, map[string]attr.Value{
-		"versions":    types.ListNull(types.StringType),
-		"http_ports":  int64ListValue(defaultWorkloadHTTPPorts),
-		"https_ports": int64ListValue(defaultWorkloadHTTPSPorts),
-		"quic_ports":  types.ListNull(types.Int64Type),
-	})
-
-	workloadProtocolsDefault = types.ObjectValueMust(workloadProtocolsAttrTypes, map[string]attr.Value{
-		"http": workloadHTTPDefault,
-	})
-
-	workloadMTLSDefault = types.ObjectValueMust(workloadMTLSAttrTypes, map[string]attr.Value{
-		"enabled": types.BoolValue(defaultWorkloadMTLSEnabled),
-		"config":  types.ObjectNull(workloadMTLSConfigAttrTypes),
-	})
-)
-
 func int64ListValue(values []int64) types.List {
 	elements := make([]attr.Value, 0, len(values))
 	for _, value := range values {
@@ -186,6 +126,36 @@ func int64ListValue(values []int64) types.List {
 	}
 
 	return types.ListValueMust(types.Int64Type, elements)
+}
+
+// defaultWorkloadTLS is what an omitted tls block stands for. certificate and
+// ciphers stay null: they are not enforced, so the API supplies them.
+func defaultWorkloadTLS() *TLSWorkloadResourceModel {
+	return &TLSWorkloadResourceModel{
+		Certificate:    types.Int64Null(),
+		Ciphers:        types.Int64Null(),
+		MinimumVersion: types.StringValue(defaultWorkloadTLSMinimumVersion),
+	}
+}
+
+// defaultWorkloadHTTP is what an omitted protocols or protocols.http block
+// stands for. versions and quic_ports stay null: the API decides them, and
+// quic_ports is only meaningful when http3 is among the versions.
+func defaultWorkloadHTTP() *HttpProtocolResourceModel {
+	return &HttpProtocolResourceModel{
+		Versions:   types.ListNull(types.StringType),
+		HttpPorts:  int64ListValue(defaultWorkloadHTTPPorts),
+		HttpsPorts: int64ListValue(defaultWorkloadHTTPSPorts),
+		QuicPorts:  types.ListNull(types.Int64Type),
+	}
+}
+
+// defaultWorkloadMTLS is what an omitted mtls block stands for: mTLS disabled,
+// no config sent.
+func defaultWorkloadMTLS() *MTLSResourceModel {
+	return &MTLSResourceModel{
+		Enabled: types.BoolValue(defaultWorkloadMTLSEnabled),
+	}
 }
 
 func (r *workloadResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -206,8 +176,13 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"workload": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"workload": schema.SingleNestedBlock{
+				Description: "Required. The workload settings.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The workload identifier.",
@@ -240,11 +215,30 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Computed:    true,
 						Default:     int64default.StaticInt64(defaultWorkloadInfrastructure),
 					},
-					"tls": schema.SingleNestedAttribute{
-						Description: "TLS configuration for the workload.",
+					"domains": schema.SetAttribute{
+						ElementType: types.StringType,
+						Description: "Set of domains associated with the workload.",
 						Optional:    true,
 						Computed:    true,
-						Default:     objectdefault.StaticValue(workloadTLSDefault),
+					},
+					"workload_domain_allow_access": schema.BoolAttribute{
+						Description: "Whether domain access is allowed.",
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(defaultWorkloadDomainAllowAccess),
+					},
+					"workload_domain": schema.StringAttribute{
+						Description: "The workload domain.",
+						Computed:    true,
+					},
+					"product_version": schema.StringAttribute{
+						Description: "Product version of the workload.",
+						Computed:    true,
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"tls": schema.SingleNestedBlock{
+						Description: "TLS configuration for the workload. When omitted, minimum_version is still reset to tls_1_3 on every apply, but drift is only detected while the block is declared.",
 						Attributes: map[string]schema.Attribute{
 							"certificate": schema.Int64Attribute{
 								Description: "Certificate ID for TLS. Supplied by the API when not declared.",
@@ -264,17 +258,11 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
-					"protocols": schema.SingleNestedAttribute{
-						Description: "Protocol configurations for the workload.",
-						Optional:    true,
-						Computed:    true,
-						Default:     objectdefault.StaticValue(workloadProtocolsDefault),
-						Attributes: map[string]schema.Attribute{
-							"http": schema.SingleNestedAttribute{
-								Description: "HTTP protocol configuration.",
-								Optional:    true,
-								Computed:    true,
-								Default:     objectdefault.StaticValue(workloadHTTPDefault),
+					"protocols": schema.SingleNestedBlock{
+						Description: "Protocol configurations for the workload. When omitted, the HTTP defaults are still sent on every apply, but drift is only detected while the block is declared.",
+						Blocks: map[string]schema.Block{
+							"http": schema.SingleNestedBlock{
+								Description: "HTTP protocol configuration. When omitted, http_ports [80] and https_ports [443] are sent.",
 								Attributes: map[string]schema.Attribute{
 									"versions": schema.ListAttribute{
 										ElementType: types.StringType,
@@ -306,11 +294,8 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							},
 						},
 					},
-					"mtls": schema.SingleNestedAttribute{
-						Description: "Mutual TLS configuration for the workload.",
-						Optional:    true,
-						Computed:    true,
-						Default:     objectdefault.StaticValue(workloadMTLSDefault),
+					"mtls": schema.SingleNestedBlock{
+						Description: "Mutual TLS configuration for the workload. When omitted, mTLS is still disabled on every apply, but drift is only detected while the block is declared.",
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: "Whether MTLS is enabled.",
@@ -318,11 +303,10 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Computed:    true,
 								Default:     booldefault.StaticBool(defaultWorkloadMTLSEnabled),
 							},
-							"config": schema.SingleNestedAttribute{
-								Description: "MTLS configuration. Declare it when enabling MTLS; it stays null while MTLS is disabled.",
-								Optional:    true,
-								Computed:    true,
-								Default:     objectdefault.StaticValue(types.ObjectNull(workloadMTLSConfigAttrTypes)),
+						},
+						Blocks: map[string]schema.Block{
+							"config": schema.SingleNestedBlock{
+								Description: "MTLS configuration. Declare it when enabling MTLS; leave it out while MTLS is disabled.",
 								Attributes: map[string]schema.Attribute{
 									"certificate": schema.Int64Attribute{
 										Description: "MTLS certificate ID.",
@@ -343,26 +327,6 @@ func (r *workloadResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								},
 							},
 						},
-					},
-					"domains": schema.SetAttribute{
-						ElementType: types.StringType,
-						Description: "Set of domains associated with the workload.",
-						Optional:    true,
-						Computed:    true,
-					},
-					"workload_domain_allow_access": schema.BoolAttribute{
-						Description: "Whether domain access is allowed.",
-						Optional:    true,
-						Computed:    true,
-						Default:     booldefault.StaticBool(defaultWorkloadDomainAllowAccess),
-					},
-					"workload_domain": schema.StringAttribute{
-						Description: "The workload domain.",
-						Computed:    true,
-					},
-					"product_version": schema.StringAttribute{
-						Description: "Product version of the workload.",
-						Computed:    true,
 					},
 				},
 			},
@@ -400,98 +364,23 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 		workload.SetWorkloadDomainAllowAccess(plan.Workload.WorkloadDomainAllowAccess.ValueBool())
 	}
 
-	// Handle TLS configuration
-	if plan.Workload.Tls != nil {
-		tls := azionapi.NewTLSWorkloadRequest()
-		if !plan.Workload.Tls.Certificate.IsNull() && !plan.Workload.Tls.Certificate.IsUnknown() {
-			tls.SetCertificate(plan.Workload.Tls.Certificate.ValueInt64())
-		}
-		if !plan.Workload.Tls.Ciphers.IsNull() && !plan.Workload.Tls.Ciphers.IsUnknown() {
-			tls.SetCiphers(plan.Workload.Tls.Ciphers.ValueInt64())
-		}
-		if !plan.Workload.Tls.MinimumVersion.IsNull() && !plan.Workload.Tls.MinimumVersion.IsUnknown() {
-			tls.SetMinimumVersion(plan.Workload.Tls.MinimumVersion.ValueString())
-		}
-		workload.SetTls(*tls)
+	// Omitted tls, protocols and mtls blocks send their defaults, so the payload
+	// does not depend on whether a block is declared.
+	workload.SetTls(workloadTLSRequest(plan.Workload.Tls))
+
+	protocols, diags := workloadProtocolsRequest(ctx, plan.Workload.Protocols)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+	workload.SetProtocols(protocols)
 
-	// Handle Protocols configuration
-	if plan.Workload.Protocols != nil && plan.Workload.Protocols.Http != nil {
-		protocols := azionapi.NewProtocolsRequest()
-		http := azionapi.NewHttpProtocolRequest()
-
-		if !plan.Workload.Protocols.Http.Versions.IsNull() && !plan.Workload.Protocols.Http.Versions.IsUnknown() {
-			var versions []string
-			diags := plan.Workload.Protocols.Http.Versions.ElementsAs(ctx, &versions, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			http.SetVersions(versions)
-		}
-
-		if !plan.Workload.Protocols.Http.HttpPorts.IsNull() && !plan.Workload.Protocols.Http.HttpPorts.IsUnknown() {
-			var httpPorts []int64
-			diags := plan.Workload.Protocols.Http.HttpPorts.ElementsAs(ctx, &httpPorts, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			http.SetHttpPorts(httpPorts)
-		}
-
-		if !plan.Workload.Protocols.Http.HttpsPorts.IsNull() && !plan.Workload.Protocols.Http.HttpsPorts.IsUnknown() {
-			var httpsPorts []int64
-			diags := plan.Workload.Protocols.Http.HttpsPorts.ElementsAs(ctx, &httpsPorts, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			http.SetHttpsPorts(httpsPorts)
-		}
-
-		if !plan.Workload.Protocols.Http.QuicPorts.IsNull() && !plan.Workload.Protocols.Http.QuicPorts.IsUnknown() {
-			var quicPorts []int64
-			diags := plan.Workload.Protocols.Http.QuicPorts.ElementsAs(ctx, &quicPorts, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			http.SetQuicPorts(quicPorts)
-		}
-
-		protocols.SetHttp(*http)
-		workload.SetProtocols(*protocols)
+	mtls, diags := workloadMTLSRequest(ctx, plan.Workload.Mtls)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-
-	// Handle MTLS configuration
-	if plan.Workload.Mtls != nil {
-		mtls := azionapi.NewMTLSRequest()
-		if !plan.Workload.Mtls.Enabled.IsNull() && !plan.Workload.Mtls.Enabled.IsUnknown() {
-			mtls.SetEnabled(plan.Workload.Mtls.Enabled.ValueBool())
-		}
-
-		if plan.Workload.Mtls.Config != nil {
-			config := azionapi.NewMTLSConfigRequest()
-			if !plan.Workload.Mtls.Config.Certificate.IsNull() && !plan.Workload.Mtls.Config.Certificate.IsUnknown() {
-				config.SetCertificate(plan.Workload.Mtls.Config.Certificate.ValueInt64())
-			}
-			if !plan.Workload.Mtls.Config.Crl.IsNull() && !plan.Workload.Mtls.Config.Crl.IsUnknown() {
-				var crl []int64
-				diags := plan.Workload.Mtls.Config.Crl.ElementsAs(ctx, &crl, false)
-				resp.Diagnostics.Append(diags...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-				config.SetCrl(crl)
-			}
-			if !plan.Workload.Mtls.Config.Verification.IsNull() && !plan.Workload.Mtls.Config.Verification.IsUnknown() {
-				config.SetVerification(plan.Workload.Mtls.Config.Verification.ValueString())
-			}
-			mtls.SetConfig(*config)
-		}
-		workload.SetMtls(*mtls)
-	}
+	workload.SetMtls(mtls)
 
 	// Handle Domains
 	if !plan.Workload.Domains.IsNull() && !plan.Workload.Domains.IsUnknown() {
@@ -532,7 +421,9 @@ func (r *workloadResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Populate the state from the response, preserving plan values for optional nested fields.
-	plan.Workload = populateWorkloadResults(ctx, createWorkload)
+	results := populateWorkloadResults(ctx, createWorkload)
+	keepDeclaredWorkloadBlocks(plan.Workload, results)
+	plan.Workload = results
 	plan.ID = types.StringValue(strconv.FormatInt(createWorkload.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -597,7 +488,9 @@ func (r *workloadResource) Read(ctx context.Context, req resource.ReadRequest, r
 		defer response.Body.Close()
 	}
 
-	state.Workload = populateWorkloadResults(ctx, getWorkload)
+	results := populateWorkloadResults(ctx, getWorkload)
+	keepDeclaredWorkloadBlocks(state.Workload, results)
+	state.Workload = results
 	state.ID = types.StringValue(strconv.FormatInt(getWorkload.Data.GetId(), 10))
 
 	diags = resp.State.Set(ctx, &state)
@@ -629,9 +522,10 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 	// does not model — those belong to azion_workload_deployment. A PUT would
 	// send none and wipe the workload's binding to its deployment.
 	//
-	// Enforcement is unaffected: every field this resource models carries a
-	// schema default, so the plan holds a concrete value and the request below
-	// always sends it. PATCH only spares what the provider does not model.
+	// Enforcement is unaffected: every enforced field carries a default (a
+	// schema default, or the request builders' default for an omitted block),
+	// so the request below always sends it. PATCH only spares what the provider
+	// does not model.
 	updateWorkloadRequest := azionapi.NewPatchedWorkloadRequest()
 
 	// Set optional fields
@@ -651,98 +545,23 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 		updateWorkloadRequest.SetWorkloadDomainAllowAccess(plan.Workload.WorkloadDomainAllowAccess.ValueBool())
 	}
 
-	// Handle TLS configuration
-	if plan.Workload.Tls != nil {
-		tls := azionapi.NewTLSWorkloadRequest()
-		if !plan.Workload.Tls.Certificate.IsNull() && !plan.Workload.Tls.Certificate.IsUnknown() {
-			tls.SetCertificate(plan.Workload.Tls.Certificate.ValueInt64())
-		}
-		if !plan.Workload.Tls.Ciphers.IsNull() && !plan.Workload.Tls.Ciphers.IsUnknown() {
-			tls.SetCiphers(plan.Workload.Tls.Ciphers.ValueInt64())
-		}
-		if !plan.Workload.Tls.MinimumVersion.IsNull() && !plan.Workload.Tls.MinimumVersion.IsUnknown() {
-			tls.SetMinimumVersion(plan.Workload.Tls.MinimumVersion.ValueString())
-		}
-		updateWorkloadRequest.SetTls(*tls)
+	// Omitted tls, protocols and mtls blocks send their defaults, so the payload
+	// does not depend on whether a block is declared.
+	updateWorkloadRequest.SetTls(workloadTLSRequest(plan.Workload.Tls))
+
+	protocols, diags := workloadProtocolsRequest(ctx, plan.Workload.Protocols)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+	updateWorkloadRequest.SetProtocols(protocols)
 
-	// Handle Protocols configuration
-	if plan.Workload.Protocols != nil && plan.Workload.Protocols.Http != nil {
-		protocols := azionapi.NewProtocolsRequest()
-		http := azionapi.NewHttpProtocolRequest()
-
-		if !plan.Workload.Protocols.Http.Versions.IsNull() && !plan.Workload.Protocols.Http.Versions.IsUnknown() {
-			var versions []string
-			diags := plan.Workload.Protocols.Http.Versions.ElementsAs(ctx, &versions, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			http.SetVersions(versions)
-		}
-
-		if !plan.Workload.Protocols.Http.HttpPorts.IsNull() && !plan.Workload.Protocols.Http.HttpPorts.IsUnknown() {
-			var httpPorts []int64
-			diags := plan.Workload.Protocols.Http.HttpPorts.ElementsAs(ctx, &httpPorts, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			http.SetHttpPorts(httpPorts)
-		}
-
-		if !plan.Workload.Protocols.Http.HttpsPorts.IsNull() && !plan.Workload.Protocols.Http.HttpsPorts.IsUnknown() {
-			var httpsPorts []int64
-			diags := plan.Workload.Protocols.Http.HttpsPorts.ElementsAs(ctx, &httpsPorts, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			http.SetHttpsPorts(httpsPorts)
-		}
-
-		if !plan.Workload.Protocols.Http.QuicPorts.IsNull() && !plan.Workload.Protocols.Http.QuicPorts.IsUnknown() {
-			var quicPorts []int64
-			diags := plan.Workload.Protocols.Http.QuicPorts.ElementsAs(ctx, &quicPorts, false)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			http.SetQuicPorts(quicPorts)
-		}
-
-		protocols.SetHttp(*http)
-		updateWorkloadRequest.SetProtocols(*protocols)
+	mtls, diags := workloadMTLSRequest(ctx, plan.Workload.Mtls)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-
-	// Handle MTLS configuration
-	if plan.Workload.Mtls != nil {
-		mtls := azionapi.NewMTLSRequest()
-		if !plan.Workload.Mtls.Enabled.IsNull() && !plan.Workload.Mtls.Enabled.IsUnknown() {
-			mtls.SetEnabled(plan.Workload.Mtls.Enabled.ValueBool())
-		}
-
-		if plan.Workload.Mtls.Config != nil {
-			config := azionapi.NewMTLSConfigRequest()
-			if !plan.Workload.Mtls.Config.Certificate.IsNull() && !plan.Workload.Mtls.Config.Certificate.IsUnknown() {
-				config.SetCertificate(plan.Workload.Mtls.Config.Certificate.ValueInt64())
-			}
-			if !plan.Workload.Mtls.Config.Crl.IsNull() && !plan.Workload.Mtls.Config.Crl.IsUnknown() {
-				var crl []int64
-				diags := plan.Workload.Mtls.Config.Crl.ElementsAs(ctx, &crl, false)
-				resp.Diagnostics.Append(diags...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-				config.SetCrl(crl)
-			}
-			if !plan.Workload.Mtls.Config.Verification.IsNull() && !plan.Workload.Mtls.Config.Verification.IsUnknown() {
-				config.SetVerification(plan.Workload.Mtls.Config.Verification.ValueString())
-			}
-			mtls.SetConfig(*config)
-		}
-		updateWorkloadRequest.SetMtls(*mtls)
-	}
+	updateWorkloadRequest.SetMtls(mtls)
 
 	// Handle Domains
 	if !plan.Workload.Domains.IsNull() && !plan.Workload.Domains.IsUnknown() {
@@ -782,7 +601,9 @@ func (r *workloadResource) Update(ctx context.Context, req resource.UpdateReques
 		defer response.Body.Close()
 	}
 
-	plan.Workload = populateWorkloadResults(ctx, updateWorkload)
+	results := populateWorkloadResults(ctx, updateWorkload)
+	keepDeclaredWorkloadBlocks(plan.Workload, results)
+	plan.Workload = results
 	plan.ID = types.StringValue(strconv.FormatInt(updateWorkload.Data.GetId(), 10))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
@@ -822,16 +643,136 @@ func (r *workloadResource) ImportState(ctx context.Context, req resource.ImportS
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-// Helper function to populate workload results from API response.
-// plan is used to preserve optional nested field values - if a nested field was null in the plan,
-// it stays null in the result to avoid "Provider produced inconsistent result after apply" errors.
-// When plan is nil (the post-import Read, where the prior state holds only the ID), every nested
-// block the API returned is populated so the imported state mirrors the remote resource.
-// populateWorkloadResults mirrors the API response into the resource model
-// without filtering. State has to match the remote workload for Terraform to
-// plan a revert when something was changed out-of-band; unconfigured fields do
-// not drift perpetually because every optional attribute is Computed, either
-// with a schema default or resolved from this response.
+// workloadTLSRequest builds the tls request, using the defaults when the block
+// is omitted.
+func workloadTLSRequest(model *TLSWorkloadResourceModel) azionapi.TLSWorkloadRequest {
+	if model == nil {
+		model = defaultWorkloadTLS()
+	}
+
+	tls := azionapi.NewTLSWorkloadRequest()
+	if isSet(model.Certificate) {
+		tls.SetCertificate(model.Certificate.ValueInt64())
+	}
+	if isSet(model.Ciphers) {
+		tls.SetCiphers(model.Ciphers.ValueInt64())
+	}
+	if isSet(model.MinimumVersion) {
+		tls.SetMinimumVersion(model.MinimumVersion.ValueString())
+	}
+
+	return *tls
+}
+
+// workloadProtocolsRequest builds the protocols request, using the HTTP
+// defaults when the protocols block or its http block is omitted.
+func workloadProtocolsRequest(ctx context.Context, model *ProtocolsResourceModel) (azionapi.ProtocolsRequest, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	httpModel := defaultWorkloadHTTP()
+	if model != nil && model.Http != nil {
+		httpModel = model.Http
+	}
+
+	http := azionapi.NewHttpProtocolRequest()
+
+	if isSet(httpModel.Versions) {
+		var versions []string
+		diags.Append(httpModel.Versions.ElementsAs(ctx, &versions, false)...)
+		http.SetVersions(versions)
+	}
+
+	if isSet(httpModel.HttpPorts) {
+		var httpPorts []int64
+		diags.Append(httpModel.HttpPorts.ElementsAs(ctx, &httpPorts, false)...)
+		http.SetHttpPorts(httpPorts)
+	}
+
+	if isSet(httpModel.HttpsPorts) {
+		var httpsPorts []int64
+		diags.Append(httpModel.HttpsPorts.ElementsAs(ctx, &httpsPorts, false)...)
+		http.SetHttpsPorts(httpsPorts)
+	}
+
+	if isSet(httpModel.QuicPorts) {
+		var quicPorts []int64
+		diags.Append(httpModel.QuicPorts.ElementsAs(ctx, &quicPorts, false)...)
+		http.SetQuicPorts(quicPorts)
+	}
+
+	protocols := azionapi.NewProtocolsRequest()
+	protocols.SetHttp(*http)
+
+	return *protocols, diags
+}
+
+// workloadMTLSRequest builds the mtls request, using the defaults (disabled, no
+// config) when the block is omitted. An omitted config block sends no config.
+func workloadMTLSRequest(ctx context.Context, model *MTLSResourceModel) (azionapi.MTLSRequest, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if model == nil {
+		model = defaultWorkloadMTLS()
+	}
+
+	mtls := azionapi.NewMTLSRequest()
+	if isSet(model.Enabled) {
+		mtls.SetEnabled(model.Enabled.ValueBool())
+	}
+
+	if model.Config != nil {
+		config := azionapi.NewMTLSConfigRequest()
+		if isSet(model.Config.Certificate) {
+			config.SetCertificate(model.Config.Certificate.ValueInt64())
+		}
+		if isSet(model.Config.Crl) {
+			var crl []int64
+			diags.Append(model.Config.Crl.ElementsAs(ctx, &crl, false)...)
+			config.SetCrl(crl)
+		}
+		if isSet(model.Config.Verification) {
+			config.SetVerification(model.Config.Verification.ValueString())
+		}
+		mtls.SetConfig(*config)
+	}
+
+	return *mtls, diags
+}
+
+// keepDeclaredWorkloadBlocks drops from the API result every optional block the
+// prior plan or state does not declare. Terraform rejects a block that is
+// planned as absent and comes back present, so an undeclared block must stay
+// null. Values inside a declared block keep mirroring the API, so drift there
+// is still detected. A nil prior (import) keeps everything.
+func keepDeclaredWorkloadBlocks(prior *workloadResourceResults, results *workloadResourceResults) {
+	if prior == nil || results == nil {
+		return
+	}
+
+	if prior.Tls == nil {
+		results.Tls = nil
+	}
+
+	if prior.Protocols == nil {
+		results.Protocols = nil
+	} else if prior.Protocols.Http == nil && results.Protocols != nil {
+		results.Protocols.Http = nil
+	}
+
+	if prior.Mtls == nil {
+		results.Mtls = nil
+	} else if prior.Mtls.Config == nil && results.Mtls != nil {
+		results.Mtls.Config = nil
+	}
+}
+
+// populateWorkloadResults mirrors the API response into the resource model.
+// Callers drop the blocks the configuration does not declare with
+// keepDeclaredWorkloadBlocks; inside a declared block every value comes from
+// the API, so Terraform plans a revert when something was changed out-of-band.
+// Unconfigured leaf fields do not drift perpetually because every optional
+// attribute is Computed, either with a schema default or resolved from this
+// response.
 func populateWorkloadResults(ctx context.Context, response *azionapi.WorkloadResponse) *workloadResourceResults {
 	result := &workloadResourceResults{
 		ID:             types.Int64Value(response.Data.GetId()),

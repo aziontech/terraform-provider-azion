@@ -10,7 +10,6 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
-	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -33,17 +32,23 @@ import (
 // the configuration — including deleting exceptions the configuration does not
 // declare.
 //
-// Exceptions are keyed by name. Names are not documented as unique per WAF, so
-// when the API holds several exceptions with the same name, only one can take the
-// name as its key; the rest are keyed "<name>#<exception_id>", which no
-// configuration declares, so the plan removes them.
+// Each exception is one `rule_set` block, identified by its `name`. Internally
+// the exceptions are handled as a map keyed by name. Names are not documented as
+// unique per WAF, so when the API holds several exceptions with the same name,
+// only one can take the name as its key; the rest are keyed (and shown in state
+// with the name) "<name>#<exception_id>", which no configuration declares, so
+// the plan removes them.
+//
+// Schema version 0 (v2.11.0) held the exceptions as a map nested attribute,
+// `rule_sets = { "<name>" = { ... } }`. Version 1 holds them as a set of
+// `rule_set` blocks; UpgradeState converts the old state (map key -> name).
 
 var (
-	_ resource.Resource                   = &wafRuleSetsResource{}
-	_ resource.ResourceWithConfigure      = &wafRuleSetsResource{}
-	_ resource.ResourceWithImportState    = &wafRuleSetsResource{}
-	_ resource.ResourceWithModifyPlan     = &wafRuleSetsResource{}
-	_ resource.ResourceWithValidateConfig = &wafRuleSetsResource{}
+	_ resource.Resource                 = &wafRuleSetsResource{}
+	_ resource.ResourceWithConfigure    = &wafRuleSetsResource{}
+	_ resource.ResourceWithImportState  = &wafRuleSetsResource{}
+	_ resource.ResourceWithModifyPlan   = &wafRuleSetsResource{}
+	_ resource.ResourceWithUpgradeState = &wafRuleSetsResource{}
 )
 
 const (
@@ -63,14 +68,15 @@ type wafRuleSetsResource struct {
 }
 
 type WafRuleSetsResourceModel struct {
-	ID          types.String                    `tfsdk:"id"`
-	WafID       types.Int64                     `tfsdk:"waf_id"`
-	LastUpdated types.String                    `tfsdk:"last_updated"`
-	RuleSets    map[string]WafRuleSetsItemModel `tfsdk:"rule_sets"`
+	ID          types.String           `tfsdk:"id"`
+	WafID       types.Int64            `tfsdk:"waf_id"`
+	LastUpdated types.String           `tfsdk:"last_updated"`
+	RuleSets    []WafRuleSetsItemModel `tfsdk:"rule_set"`
 }
 
-// WafRuleSetsItemModel is one exception. Its name is the map key.
+// WafRuleSetsItemModel is one exception, one `rule_set` block.
 type WafRuleSetsItemModel struct {
+	Name         types.String                        `tfsdk:"name"`
 	ExceptionID  types.Int64                         `tfsdk:"exception_id"`
 	RuleID       types.Int64                         `tfsdk:"rule_id"`
 	Path         types.String                        `tfsdk:"path"`
@@ -81,12 +87,44 @@ type WafRuleSetsItemModel struct {
 	LastModified types.String                        `tfsdk:"last_modified"`
 }
 
+// wafRuleSetsByName indexes the exceptions by name, the key reconcile works
+// with. The schema validator rejects duplicate names in configuration, and
+// buildWafRuleSetsState gives every exception read from the API a distinct
+// name, so no entry is lost.
+func wafRuleSetsByName(items []WafRuleSetsItemModel) map[string]WafRuleSetsItemModel {
+	result := make(map[string]WafRuleSetsItemModel, len(items))
+	for _, item := range items {
+		result[item.Name.ValueString()] = item
+	}
+	return result
+}
+
+// wafRuleSetsList is the inverse of wafRuleSetsByName, sorted by name so state
+// is written in a stable order. The name is taken from the key.
+func wafRuleSetsList(items map[string]WafRuleSetsItemModel) []WafRuleSetsItemModel {
+	names := make([]string, 0, len(items))
+	for name := range items {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	result := make([]WafRuleSetsItemModel, 0, len(items))
+	for _, name := range names {
+		item := items[name]
+		item.Name = types.StringValue(name)
+		result = append(result, item)
+	}
+	return result
+}
+
 func (r *wafRuleSetsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_waf_rule_sets"
 }
 
 func (r *wafRuleSetsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		// Version 1: rule_sets (map nested attribute) became rule_set blocks.
+		Version:     1,
 		Description: "Authoritatively manages every exception (rule set) of a WAF. Exceptions not declared in the configuration are deleted on apply.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -107,93 +145,129 @@ func (r *wafRuleSetsResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"rule_sets": schema.MapNestedAttribute{
-				Description: "Every exception of the WAF, keyed by exception name. An empty map deletes all exceptions.",
-				Required:    true,
-				Validators: []validator.Map{
-					mapvalidator.KeysAre(
+		},
+		Blocks: map[string]schema.Block{
+			"rule_set": wafRuleSetsBlock(),
+		},
+	}
+}
+
+// wafRuleSetsBlock is the repeated `rule_set` block. It is a set, not a list:
+// the exceptions of a WAF have no order (the API lists them by ID), so a list
+// would diff whenever the configuration order differs from the order state was
+// written in, and reordering blocks would plan changes that apply nothing.
+// Elements are matched by name (ModifyPlan, reconcile), not by position.
+func wafRuleSetsBlock() schema.SetNestedBlock {
+	return schema.SetNestedBlock{
+		Description: "One exception of the WAF. Every exception of the WAF must be declared: those without a `rule_set` block are deleted on apply, and declaring no `rule_set` block at all deletes every exception of the WAF. `name` must be unique.",
+		Validators: []validator.Set{
+			wafRuleSetsNamesValidator{},
+		},
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"name": schema.StringAttribute{
+					Description: "Name of the WAF exception. Identifies the exception, so it must be unique among the `rule_set` blocks.",
+					Required:    true,
+					Validators: []validator.String{
 						stringvalidator.LengthAtLeast(1),
-					),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						// No UseStateForUnknown here: it only skips resources with no
-						// state at all, so for a key added to an existing resource it
-						// copies that element's null prior value into the plan, and
-						// apply fails with "inconsistent result after apply". ModifyPlan
-						// carries the ID over for keys state already holds.
-						"exception_id": schema.Int64Attribute{
-							Description: "The ID of the WAF exception.",
-							Computed:    true,
-						},
-						"rule_id": schema.Int64Attribute{
-							Description: "The rule ID that this exception applies to. 0 means all rules. Supplied by the API when not declared.",
-							Optional:    true,
-							Computed:    true,
-						},
-						"path": schema.StringAttribute{
-							Description: "Path pattern for the exception. Supplied by the API when not declared.",
-							Optional:    true,
-							Computed:    true,
-						},
-						"conditions": schema.ListNestedAttribute{
-							Description: "Conditions for the WAF exception. Each item must contain a single `condition` object.",
-							Required:    true,
-							NestedObject: schema.NestedAttributeObject{
-								Attributes: map[string]schema.Attribute{
-									"condition": schema.SingleNestedAttribute{
-										Description: "A single condition for the WAF exception.",
-										Required:    true,
-										Attributes: map[string]schema.Attribute{
-											"match": schema.StringAttribute{
-												Description: "The match type for the condition.",
-												Required:    true,
-											},
-											"name": schema.StringAttribute{
-												Description: "The name for specific condition on name. Supplied by the API when not declared.",
-												Optional:    true,
-												Computed:    true,
-											},
-											"value": schema.StringAttribute{
-												Description: "The value for specific condition on value. Supplied by the API when not declared.",
-												Optional:    true,
-												Computed:    true,
-											},
-											"condition_type": schema.StringAttribute{
-												Description: "Type of condition: generic, specific_on_name, or specific_on_value.",
-												Required:    true,
-												Validators: []validator.String{
-													stringvalidator.OneOf("generic", "specific_on_name", "specific_on_value"),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						"operator": schema.StringAttribute{
-							Description: "The operator for the exception: regex or contains. Supplied by the API when not declared.",
-							Optional:    true,
-							Computed:    true,
-						},
-						"active": schema.BoolAttribute{
-							Description: "Whether the exception is active. Defaults to `true`.",
-							Optional:    true,
-							Computed:    true,
-							Default:     booldefault.StaticBool(defaultWAFRuleActive),
-						},
-						"last_editor": schema.StringAttribute{
-							Description: "Last editor of the exception.",
-							Computed:    true,
-						},
-						"last_modified": schema.StringAttribute{
-							Description: "Last modified timestamp.",
-							Computed:    true,
-						},
 					},
 				},
+				// No UseStateForUnknown here: it only skips resources with no
+				// state at all, so for an exception added to an existing
+				// resource it copies a null prior value into the plan, and apply
+				// fails with "inconsistent result after apply". ModifyPlan
+				// carries the ID over for names state already holds.
+				"exception_id": schema.Int64Attribute{
+					Description: "The ID of the WAF exception.",
+					Computed:    true,
+				},
+				"rule_id": schema.Int64Attribute{
+					Description: "The rule ID that this exception applies to. 0 means all rules. Supplied by the API when not declared.",
+					Optional:    true,
+					Computed:    true,
+				},
+				"path": schema.StringAttribute{
+					Description: "Path pattern for the exception. Supplied by the API when not declared.",
+					Optional:    true,
+					Computed:    true,
+				},
+				"operator": schema.StringAttribute{
+					Description: "The operator for the exception: regex or contains. Supplied by the API when not declared.",
+					Optional:    true,
+					Computed:    true,
+				},
+				"active": schema.BoolAttribute{
+					Description: "Whether the exception is active. Defaults to `true`.",
+					Optional:    true,
+					Computed:    true,
+					Default:     booldefault.StaticBool(defaultWAFRuleActive),
+				},
+				"last_editor": schema.StringAttribute{
+					Description: "Last editor of the exception.",
+					Computed:    true,
+				},
+				"last_modified": schema.StringAttribute{
+					Description: "Last modified timestamp.",
+					Computed:    true,
+				},
+			},
+			Blocks: map[string]schema.Block{
+				"conditions": wafExceptionConditionsBlock(
+					"Required. Conditions for the WAF exception, one `conditions` block per condition, each holding a single `condition` block. At least one is required.",
+					[]validator.String{
+						stringvalidator.OneOf("generic", "specific_on_name", "specific_on_value"),
+					},
+				),
 			},
 		},
+	}
+}
+
+// wafRuleSetsNamesValidator rejects two `rule_set` blocks with the same name,
+// and names using the "<name>#<exception_id>" form reserved for duplicate-named
+// exceptions read from the API, so a declared name can never collide with one.
+type wafRuleSetsNamesValidator struct{}
+
+func (wafRuleSetsNamesValidator) Description(_ context.Context) string {
+	return "rule_set names must be unique and must not have the form <name>#<number>"
+}
+
+func (v wafRuleSetsNamesValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (wafRuleSetsNamesValidator) ValidateSet(_ context.Context, req validator.SetRequest, resp *validator.SetResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	seen := make(map[string]bool)
+	for _, element := range req.ConfigValue.Elements() {
+		object, ok := element.(types.Object)
+		if !ok || object.IsNull() || object.IsUnknown() {
+			continue
+		}
+		name, ok := object.Attributes()["name"].(types.String)
+		if !ok || name.IsNull() || name.IsUnknown() {
+			continue
+		}
+		namePath := req.Path.AtSetValue(element).AtName("name")
+
+		if isWafRuleSetsDuplicateKey(name.ValueString()) {
+			resp.Diagnostics.AddAttributeError(
+				namePath,
+				"Reserved exception name",
+				fmt.Sprintf("%q matches the \"<name>%s<exception_id>\" form used for duplicate-named exceptions read from the API. Choose a different name.", name.ValueString(), wafRuleSetsDuplicateSeparator),
+			)
+		}
+		if seen[name.ValueString()] {
+			resp.Diagnostics.AddAttributeError(
+				namePath,
+				"Duplicate exception name",
+				fmt.Sprintf("More than one rule_set block is named %q. Each exception is identified by its name, so names must be unique.", name.ValueString()),
+			)
+		}
+		seen[name.ValueString()] = true
 	}
 }
 
@@ -204,73 +278,117 @@ func (r *wafRuleSetsResource) Configure(_ context.Context, req resource.Configur
 	r.client = req.ProviderData.(*apiClient)
 }
 
-// ValidateConfig rejects keys using the separator reserved for duplicate-named
-// exceptions read from the API, so a declared key can never collide with one.
-func (r *wafRuleSetsResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var ruleSets types.Map
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("rule_sets"), &ruleSets)...)
-	if resp.Diagnostics.HasError() || ruleSets.IsNull() || ruleSets.IsUnknown() {
-		return
-	}
-
-	for key := range ruleSets.Elements() {
-		if isWafRuleSetsDuplicateKey(key) {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("rule_sets").AtMapKey(key),
-				"Reserved exception name",
-				fmt.Sprintf("%q matches the \"<name>%s<exception_id>\" form used for duplicate-named exceptions read from the API. Choose a different name.", key, wafRuleSetsDuplicateSeparator),
-			)
-		}
-	}
-}
-
-// ModifyPlan keeps the plan to what actually changes. On any change, the
-// framework marks every computed attribute the configuration leaves null as
-// unknown — in every exception, not only the changed ones. An exception whose
-// declared fields match state is left untouched by apply, so its state is the
-// exact plan.
+// ModifyPlan keeps the plan to what actually changes, matching exceptions to
+// state by name.
+//
+// An exception whose declared fields match state is left untouched by apply, so
+// its state is the exact plan. One that apply creates or updates gets the values
+// the API supplies planned as unknown. The framework's own unknown marking cannot
+// be relied on here: in a set block it locates each element in the configuration
+// by value, and an element whose value differs from the configuration (a
+// default applied, a prior value filled in) is not found and keeps its nulls,
+// which apply would then contradict.
 func (r *wafRuleSetsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
+	if req.Plan.Raw.IsNull() {
 		return
 	}
 
-	var planRuleSets types.Map
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("rule_sets"), &planRuleSets)...)
-	if resp.Diagnostics.HasError() || planRuleSets.IsNull() || planRuleSets.IsUnknown() {
+	var planRuleSets types.Set
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("rule_set"), &planRuleSets)...)
+	if resp.Diagnostics.HasError() || planRuleSets.IsUnknown() {
 		return
 	}
 
-	var plan, state WafRuleSetsResourceModel
+	var plan, state, config WafRuleSetsResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if !req.State.Raw.IsNull() {
+		resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	for key, planned := range plan.RuleSets {
-		current, ok := state.RuleSets[key]
-		if !ok {
-			// Created by apply: the API assigns these.
-			planned.ExceptionID = types.Int64Unknown()
-			planned.LastEditor = types.StringUnknown()
-			planned.LastModified = types.StringUnknown()
-			plan.RuleSets[key] = planned
-			continue
+	// A name not known until apply cannot be matched to state.
+	for _, planned := range plan.RuleSets {
+		if planned.Name.IsUnknown() {
+			return
 		}
-		if wafRuleSetsItemNeedsUpdate(planned, current) {
-			planned.ExceptionID = current.ExceptionID
-			plan.RuleSets[key] = planned
-			continue
-		}
-		plan.RuleSets[key] = current
 	}
 
+	planned := wafRuleSetsByName(plan.RuleSets)
+	current := wafRuleSetsByName(state.RuleSets)
+	declared := wafRuleSetsByName(config.RuleSets)
+	for name, item := range planned {
+		// The framework applies active's default by finding the element in the
+		// configuration by value. A proposed element holding prior values is
+		// not equal to the configured one, so the lookup fails and a declared
+		// `active = false` is planned as the default. Take it by name instead.
+		if configured, ok := declared[name]; ok && !configured.Active.IsUnknown() {
+			item.Active = configured.Active
+			if item.Active.IsNull() {
+				item.Active = types.BoolValue(defaultWAFRuleActive)
+			}
+		}
+
+		held, ok := current[name]
+		switch {
+		case !ok:
+			// Created by apply: the API assigns the ID.
+			planned[name] = wafRuleSetsItemPlannedForApply(item, types.Int64Unknown())
+		case wafRuleSetsItemNeedsUpdate(item, held):
+			planned[name] = wafRuleSetsItemPlannedForApply(item, held.ExceptionID)
+		default:
+			planned[name] = held
+		}
+	}
+	plan.RuleSets = wafRuleSetsList(planned)
+
 	// Nothing to do: keep last_updated as well, so the plan is empty.
-	if !wafRuleSetsHasChanges(plan.RuleSets, state.RuleSets) && plan.WafID.Equal(state.WafID) {
+	if !req.State.Raw.IsNull() && !wafRuleSetsHasChanges(planned, current) && plan.WafID.Equal(state.WafID) {
 		plan.LastUpdated = state.LastUpdated
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
+}
+
+// wafRuleSetsItemPlannedForApply plans an exception that apply writes: what the
+// configuration leaves to the API, and what the API sets on every write, is
+// unknown until apply. A null planned value is one the configuration does not
+// declare: Optional+Computed attributes in a block are null only then.
+func wafRuleSetsItemPlannedForApply(item WafRuleSetsItemModel, exceptionID types.Int64) WafRuleSetsItemModel {
+	item.ExceptionID = exceptionID
+	item.LastEditor = types.StringUnknown()
+	item.LastModified = types.StringUnknown()
+	if item.RuleID.IsNull() {
+		item.RuleID = types.Int64Unknown()
+	}
+	if item.Path.IsNull() {
+		item.Path = types.StringUnknown()
+	}
+	if item.Operator.IsNull() {
+		item.Operator = types.StringUnknown()
+	}
+
+	conditions := make([]WafExceptionConditionWrapperModel, len(item.Conditions))
+	for i, wrapper := range item.Conditions {
+		if wrapper.Condition != nil {
+			condition := *wrapper.Condition
+			if condition.Name.IsNull() {
+				condition.Name = types.StringUnknown()
+			}
+			if condition.Value.IsNull() {
+				condition.Value = types.StringUnknown()
+			}
+			wrapper.Condition = &condition
+		}
+		conditions[i] = wrapper
+	}
+	if item.Conditions != nil {
+		item.Conditions = conditions
+	}
+
+	return item
 }
 
 func (r *wafRuleSetsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -280,6 +398,7 @@ func (r *wafRuleSetsResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 	wafID := plan.WafID.ValueInt64()
+	planned := wafRuleSetsByName(plan.RuleSets)
 
 	remote, _, err := r.listAllExceptions(ctx, wafID)
 	if err != nil {
@@ -295,19 +414,19 @@ func (r *wafRuleSetsResource) Create(ctx context.Context, req resource.CreateReq
 	adopted := make(map[string]WafRuleSetsItemModel)
 	var undeclared []string
 	for key, item := range existing {
-		if _, declared := plan.RuleSets[key]; declared {
+		if _, declared := planned[key]; declared {
 			adopted[key] = item
 		} else {
 			undeclared = append(undeclared, key)
 		}
 	}
 
-	result, diags := r.reconcile(ctx, wafID, plan.RuleSets, adopted)
+	result, diags := r.reconcile(ctx, wafID, planned, adopted)
 	resp.Diagnostics.Append(diags...)
 
 	// Saved even on a partial failure, so state holds what was applied.
 	plan.ID = types.StringValue(strconv.FormatInt(wafID, 10))
-	plan.RuleSets = result
+	plan.RuleSets = wafRuleSetsList(result)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 
@@ -315,7 +434,7 @@ func (r *wafRuleSetsResource) Create(ctx context.Context, req resource.CreateReq
 		sort.Strings(undeclared)
 		resp.Diagnostics.AddWarning(
 			"WAF has exceptions not declared in the configuration",
-			fmt.Sprintf("WAF %d already holds exceptions this configuration does not declare: %v. They were left in place; the next plan shows them for removal. Declare them in rule_sets to keep them.", wafID, undeclared),
+			fmt.Sprintf("WAF %d already holds exceptions this configuration does not declare: %v. They were left in place; the next plan shows them for removal. Declare them in rule_set blocks to keep them.", wafID, undeclared),
 		)
 	}
 }
@@ -338,16 +457,16 @@ func (r *wafRuleSetsResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	ruleSets, duplicates := buildWafRuleSetsState(remote, state.RuleSets)
+	ruleSets, duplicates := buildWafRuleSetsState(remote, wafRuleSetsByName(state.RuleSets))
 	if len(duplicates) > 0 {
 		resp.Diagnostics.AddWarning(
 			"WAF has exceptions with duplicate names",
-			fmt.Sprintf("WAF %d holds more than one exception with the same name. The extra ones are keyed %v and are planned for removal.", wafID, duplicates),
+			fmt.Sprintf("WAF %d holds more than one exception with the same name. The extra ones are named %v in state and are planned for removal.", wafID, duplicates),
 		)
 	}
 
 	state.ID = types.StringValue(strconv.FormatInt(wafID, 10))
-	state.RuleSets = ruleSets
+	state.RuleSets = wafRuleSetsList(ruleSets)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -359,12 +478,12 @@ func (r *wafRuleSetsResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	result, diags := r.reconcile(ctx, plan.WafID.ValueInt64(), plan.RuleSets, state.RuleSets)
+	result, diags := r.reconcile(ctx, plan.WafID.ValueInt64(), wafRuleSetsByName(plan.RuleSets), wafRuleSetsByName(state.RuleSets))
 	resp.Diagnostics.Append(diags...)
 
 	// Saved even on a partial failure, so state holds what was applied.
 	plan.ID = types.StringValue(strconv.FormatInt(plan.WafID.ValueInt64(), 10))
-	plan.RuleSets = result
+	plan.RuleSets = wafRuleSetsList(result)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -378,11 +497,11 @@ func (r *wafRuleSetsResource) Delete(ctx context.Context, req resource.DeleteReq
 		return
 	}
 
-	remaining, diags := r.reconcile(ctx, state.WafID.ValueInt64(), map[string]WafRuleSetsItemModel{}, state.RuleSets)
+	remaining, diags := r.reconcile(ctx, state.WafID.ValueInt64(), map[string]WafRuleSetsItemModel{}, wafRuleSetsByName(state.RuleSets))
 	resp.Diagnostics.Append(diags...)
 	if diags.HasError() {
 		// Keep the exceptions that could not be deleted in state.
-		state.RuleSets = remaining
+		state.RuleSets = wafRuleSetsList(remaining)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 	}
 }
@@ -397,6 +516,114 @@ func (r *wafRuleSetsResource) ImportState(ctx context.Context, req resource.Impo
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("waf_id"), wafID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+}
+
+// wafRuleSetsResourceModelV0 is the state of schema version 0 (v2.11.0), where
+// the exceptions were a map keyed by name.
+type wafRuleSetsResourceModelV0 struct {
+	ID          types.String                      `tfsdk:"id"`
+	WafID       types.Int64                       `tfsdk:"waf_id"`
+	LastUpdated types.String                      `tfsdk:"last_updated"`
+	RuleSets    map[string]wafRuleSetsItemModelV0 `tfsdk:"rule_sets"`
+}
+
+type wafRuleSetsItemModelV0 struct {
+	ExceptionID  types.Int64                         `tfsdk:"exception_id"`
+	RuleID       types.Int64                         `tfsdk:"rule_id"`
+	Path         types.String                        `tfsdk:"path"`
+	Conditions   []WafExceptionConditionWrapperModel `tfsdk:"conditions"`
+	Operator     types.String                        `tfsdk:"operator"`
+	Active       types.Bool                          `tfsdk:"active"`
+	LastEditor   types.String                        `tfsdk:"last_editor"`
+	LastModified types.String                        `tfsdk:"last_modified"`
+}
+
+// wafRuleSetsSchemaV0 is the schema version 0 shape, as far as decoding its
+// state needs: types and Required/Optional/Computed only.
+func wafRuleSetsSchemaV0() schema.Schema {
+	condition := schema.SingleNestedAttribute{
+		Required: true,
+		Attributes: map[string]schema.Attribute{
+			"match":          schema.StringAttribute{Required: true},
+			"name":           schema.StringAttribute{Optional: true, Computed: true},
+			"value":          schema.StringAttribute{Optional: true, Computed: true},
+			"condition_type": schema.StringAttribute{Required: true},
+		},
+	}
+
+	return schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"id":           schema.StringAttribute{Computed: true},
+			"waf_id":       schema.Int64Attribute{Required: true},
+			"last_updated": schema.StringAttribute{Computed: true},
+			"rule_sets": schema.MapNestedAttribute{
+				Required: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"exception_id": schema.Int64Attribute{Computed: true},
+						"rule_id":      schema.Int64Attribute{Optional: true, Computed: true},
+						"path":         schema.StringAttribute{Optional: true, Computed: true},
+						"conditions": schema.ListNestedAttribute{
+							Required: true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{"condition": condition},
+							},
+						},
+						"operator":      schema.StringAttribute{Optional: true, Computed: true},
+						"active":        schema.BoolAttribute{Optional: true, Computed: true},
+						"last_editor":   schema.StringAttribute{Computed: true},
+						"last_modified": schema.StringAttribute{Computed: true},
+					},
+				},
+			},
+		},
+	}
+}
+
+// UpgradeState converts version 0 state, `rule_sets = { "<name>" = {...} }`, to
+// `rule_set` blocks: each map key becomes the block's `name`, and every other
+// value is carried over unchanged, so a configuration rewritten to blocks plans
+// no changes.
+func (r *wafRuleSetsResource) UpgradeState(_ context.Context) map[int64]resource.StateUpgrader {
+	priorSchema := wafRuleSetsSchemaV0()
+
+	return map[int64]resource.StateUpgrader{
+		0: {
+			PriorSchema: &priorSchema,
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var prior wafRuleSetsResourceModelV0
+				resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				upgraded := upgradeWafRuleSetsStateV0(prior)
+				resp.Diagnostics.Append(resp.State.Set(ctx, &upgraded)...)
+			},
+		},
+	}
+}
+
+func upgradeWafRuleSetsStateV0(prior wafRuleSetsResourceModelV0) WafRuleSetsResourceModel {
+	items := make(map[string]WafRuleSetsItemModel, len(prior.RuleSets))
+	for name, item := range prior.RuleSets {
+		items[name] = WafRuleSetsItemModel{
+			ExceptionID:  item.ExceptionID,
+			RuleID:       item.RuleID,
+			Path:         item.Path,
+			Conditions:   item.Conditions,
+			Operator:     item.Operator,
+			Active:       item.Active,
+			LastEditor:   item.LastEditor,
+			LastModified: item.LastModified,
+		}
+	}
+
+	return WafRuleSetsResourceModel{
+		ID:          prior.ID,
+		WafID:       prior.WafID,
+		LastUpdated: prior.LastUpdated,
+		RuleSets:    wafRuleSetsList(items),
+	}
 }
 
 // reconcile converges the WAF from current to planned and returns the resulting
@@ -574,6 +801,7 @@ func isWafRuleSetsDuplicateKey(key string) bool {
 func wafRuleToItemModel(rule azionapi.WAFRule) WafRuleSetsItemModel {
 	single := transformWAFRuleToResourceModel(rule)
 	return WafRuleSetsItemModel{
+		Name:         single.Name,
 		ExceptionID:  single.ID,
 		RuleID:       single.RuleID,
 		Path:         single.Path,

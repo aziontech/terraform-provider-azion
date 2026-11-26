@@ -1,19 +1,19 @@
 resource "azion_firewall_main_setting" "example" {
-  data = {
+  data {
     name   = "New Firewall in terraform"
     active = true
     debug  = false
 
-    modules = {
-      functions = {
+    modules {
+      functions {
         enabled = true
       }
 
-      network_protection = {
+      network_protection {
         enabled = true
       }
 
-      waf = {
+      waf {
         enabled = true
       }
     }

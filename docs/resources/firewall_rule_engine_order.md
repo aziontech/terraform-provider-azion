@@ -23,7 +23,7 @@ This resource requires the parent rules to already exist; reference their IDs th
 
 ```terraform
 resource "azion_firewall_main_setting" "example" {
-  data = {
+  data {
     name   = "My Firewall"
     active = true
   }
@@ -31,57 +31,45 @@ resource "azion_firewall_main_setting" "example" {
 
 resource "azion_firewall_rule_engine" "first" {
   firewall_id = azion_firewall_main_setting.example.data.id
-  results = {
+  results {
     name = "Block /admin"
-    behaviors = [
-      {
-        behavior = {
-          type = "drop"
+    behaviors {
+      behavior {
+        type = "drop"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${request_uri}"
+          operator    = "matches"
+          conditional = "if"
+          argument    = "/admin.*"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${request_uri}"
-              operator    = "matches"
-              conditional = "if"
-              argument    = "/admin.*"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 
 resource "azion_firewall_rule_engine" "second" {
   firewall_id = azion_firewall_main_setting.example.data.id
-  results = {
+  results {
     name = "Block /internal"
-    behaviors = [
-      {
-        behavior = {
-          type = "drop"
+    behaviors {
+      behavior {
+        type = "drop"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${request_uri}"
+          operator    = "matches"
+          conditional = "if"
+          argument    = "/internal.*"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${request_uri}"
-              operator    = "matches"
-              conditional = "if"
-              argument    = "/internal.*"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 

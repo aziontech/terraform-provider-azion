@@ -17,7 +17,7 @@ Creates and manages DNS records in an Intelligent DNS zone.
 ```terraform
 # First, create the parent DNS zone
 resource "azion_intelligent_dns_zone" "example" {
-  zone = {
+  zone {
     name    = "example.com"
     active  = true
     domain  = "example.com"
@@ -27,7 +27,7 @@ resource "azion_intelligent_dns_zone" "example" {
 # Then create the DNS record for that zone
 resource "azion_intelligent_dns_record" "example" {
   zone_id = azion_intelligent_dns_zone.example.id
-  record = {
+  record {
     type = "A"
     name = "site"
     rdata = [
@@ -46,7 +46,7 @@ resource "azion_intelligent_dns_record" "example" {
 ```terraform
 resource "azion_intelligent_dns_record" "example" {
   zone_id = "12345"
-  record = {
+  record {
     type = "A"
     name = "site"
     rdata = [
@@ -71,13 +71,16 @@ terraform import azion_intelligent_dns_record.example "zone_id/record_id"
 ### Required
 
 * `zone_id` (String) The zone identifier to target for the resource.
-* `record` (Attributes) The record configuration. (see below for nested schema)
+
+### Optional
+
+* `record` (Block, Optional) Required. The record configuration. (see below for nested schema)
 
 ### Read-Only
 
 * `last_updated` (String) Timestamp of the last Terraform update.
 
-<a id="nestedatt--record"></a>
+<a id="nestedblock--record"></a>
 ### Nested Schema for `record`
 
 Required:

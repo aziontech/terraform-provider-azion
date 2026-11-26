@@ -141,11 +141,12 @@ Create does not re-read the resource afterwards — the create response already 
 
 ## Schema Definition Patterns
 
-Flat `SingleNestedAttribute`, no per-type blocks:
+Flat `SingleNestedBlock` (users write `template { ... }`, see "Nested Objects Must Be Blocks" in `AGENTS.md`), no per-type blocks. A block has no `Required` flag, so `objectvalidator.IsRequired()` keeps it mandatory:
 
 ```go
-"template": schema.SingleNestedAttribute{
-    Required: true,
+"template": schema.SingleNestedBlock{
+    Description: "Required. The template configuration.",
+    Validators:  []validator.Object{objectvalidator.IsRequired()},
     Attributes: map[string]schema.Attribute{
         "name":     schema.StringAttribute{Required: true},
         "data_set": schema.StringAttribute{Required: true},

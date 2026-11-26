@@ -10,11 +10,13 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -64,7 +66,8 @@ func (r *applicationDeviceGroupResource) Schema(_ context.Context, _ resource.Sc
 				Required:    true,
 			},
 			"id": schema.StringAttribute{
-				Computed: true,
+				Description: "The composite identifier of the resource (format: `application_id:device_group_id`).",
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -74,17 +77,23 @@ func (r *applicationDeviceGroupResource) Schema(_ context.Context, _ resource.Sc
 				Computed:    true,
 			},
 			"schema_version": schema.Int64Attribute{
-				Computed: true,
+				Description: "Schema Version.",
+				Computed:    true,
 			},
-			"device_group": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"device_group": schema.SingleNestedBlock{
+				Description: "Required. The device group configuration.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The device group identifier.",
 						Computed:    true,
 					},
 					"name": schema.StringAttribute{
-						Description: "Name of the device group.",
+						Description: "Name of the device group. Must contain only lowercase alphanumeric characters. Spaces, underscores, special characters, and uppercase letters are not allowed.",
 						Required:    true,
 					},
 					"user_agent": schema.StringAttribute{

@@ -8,6 +8,7 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -144,9 +146,13 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"result": schema.SingleNestedAttribute{
-				Description: "The WAF configuration.",
-				Required:    true,
+		},
+		Blocks: map[string]schema.Block{
+			"result": schema.SingleNestedBlock{
+				Description: "Required. The WAF configuration.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The ID of the WAF.",
@@ -182,9 +188,10 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 						Description: "The identifier of the current WAF version.",
 						Computed:    true,
 					},
-					"engine_settings": schema.SingleNestedAttribute{
+				},
+				Blocks: map[string]schema.Block{
+					"engine_settings": schema.SingleNestedBlock{
 						Description: "Engine settings for the WAF.",
-						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"engine_version": schema.StringAttribute{
 								Description: "Engine version for the WAF. Only `2021-Q3` is accepted.",
@@ -198,23 +205,27 @@ func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 								Computed:    true,
 								Default:     stringdefault.StaticString(defaultWAFEngineType),
 							},
-							"attributes": schema.SingleNestedAttribute{
+						},
+						Blocks: map[string]schema.Block{
+							"attributes": schema.SingleNestedBlock{
 								Description: "Attributes for the WAF engine settings.",
-								Optional:    true,
 								Attributes: map[string]schema.Attribute{
 									"rulesets": schema.ListAttribute{
 										Description: "List of ruleset IDs.",
 										Optional:    true,
 										ElementType: types.Int64Type,
 									},
-									"thresholds": schema.SetNestedAttribute{
-										Description: "Threshold configurations for the WAF. Order-insensitive; the API returns thresholds sorted alphabetically by threat.",
-										Optional:    true,
-										NestedObject: schema.NestedAttributeObject{
-											Attributes: map[string]schema.Attribute{
-												"threshold": schema.SingleNestedAttribute{
-													Description: "A single threshold configuration.",
-													Required:    true,
+								},
+								Blocks: map[string]schema.Block{
+									"thresholds": schema.SetNestedBlock{
+										Description: "Threshold configurations for the WAF, one `thresholds` block per threat. Order-insensitive; the API returns thresholds sorted alphabetically by threat.",
+										NestedObject: schema.NestedBlockObject{
+											Blocks: map[string]schema.Block{
+												"threshold": schema.SingleNestedBlock{
+													Description: "Required. A single threshold configuration.",
+													Validators: []validator.Object{
+														objectvalidator.IsRequired(),
+													},
 													Attributes: map[string]schema.Attribute{
 														"threat": schema.StringAttribute{
 															Description: "The threat type for the threshold.",
@@ -391,10 +402,14 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	state.Result = transformWAFToResourceModel(data)
 	state.ID = types.StringValue(strconv.FormatInt(wafID, 10))
 
-	// Only update engine_settings from API response if the state had it specified.
-	// This prevents Terraform from seeing an inconsistency when engine_settings was null in state.
-	if hasPriorResult && stateEngineSettings == nil && state.Result != nil {
-		state.Result.EngineSettings = nil
+	// Keep block presence as declared: engine_settings, attributes, rulesets and
+	// thresholds the prior state does not hold stay out of state, so an
+	// undeclared block does not diff on every plan. Values inside declared
+	// blocks mirror the API. After an import there is no prior result, so
+	// everything is kept and the first plan removes what the configuration
+	// does not declare.
+	if hasPriorResult && state.Result != nil {
+		state.Result.EngineSettings = alignWAFEngineSettings(stateEngineSettings, state.Result.EngineSettings)
 	}
 
 	diags = resp.State.Set(ctx, &state)

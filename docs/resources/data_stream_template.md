@@ -18,7 +18,7 @@ Azion ships built-in templates that every account can reference. Those are read-
 
 ```terraform
 resource "azion_data_stream_template" "example" {
-  template = {
+  template {
     name   = "My HTTP Events Template"
     active = true
     data_set = jsonencode({
@@ -39,7 +39,7 @@ The `render_template` transform takes the template's numeric ID, so it can be re
 
 ```terraform
 resource "azion_data_stream_template" "example" {
-  template = {
+  template {
     name     = "My HTTP Events Template"
     active   = true
     data_set = jsonencode({ time = "$time_iso8601", status = "$status" })
@@ -47,47 +47,41 @@ resource "azion_data_stream_template" "example" {
 }
 
 resource "azion_data_stream" "with_template" {
-  data_stream = {
+  data_stream {
     name   = "Rendered logs to HTTP endpoint"
     active = true
 
-    inputs = [
-      {
-        type = "raw_logs"
-        attributes = {
-          data_source = "workloads"
-        }
+    inputs {
+      type = "raw_logs"
+      attributes {
+        data_source = "workloads"
       }
-    ]
+    }
 
-    transform = [
-      # A no-op sampling entry: `render_template` cannot be the only transform,
-      # the API requires either sampling or filter_workloads alongside it.
-      {
-        type = "sampling"
-        sampling_attributes = {
-          rate = 100
-        }
-      },
-      {
-        type = "render_template"
-        render_template_attributes = {
-          template = azion_data_stream_template.example.template.id
-        }
+    # A no-op sampling entry: `render_template` cannot be the only transform,
+    # the API requires either sampling or filter_workloads alongside it.
+    transform {
+      type = "sampling"
+      sampling_attributes {
+        rate = 100
       }
-    ]
+    }
+    transform {
+      type = "render_template"
+      render_template_attributes {
+        template = azion_data_stream_template.example.template.id
+      }
+    }
 
-    outputs = [
-      {
-        type = "standard"
-        standard_attributes = {
-          url = "https://logs.example.com/ingest"
-          headers = {
-            "Authorization" = "Bearer my-token"
-          }
+    outputs {
+      type = "standard"
+      standard_attributes {
+        url = "https://logs.example.com/ingest"
+        headers = {
+          "Authorization" = "Bearer my-token"
         }
       }
-    ]
+    }
   }
 }
 ```
@@ -98,7 +92,7 @@ resource "azion_data_stream" "with_template" {
 
 ```terraform
 resource "azion_data_stream_template" "plain_text" {
-  template = {
+  template {
     name     = "My Plain Text Template"
     active   = true
     data_set = "$time_iso8601 $remote_addr $request_method $request_uri $status"
@@ -114,7 +108,7 @@ terraform import azion_data_stream_template.example 1234
 
 ## Argument Reference
 
-* `template` - (Required) The template configuration.
+* `template` - (Required, Block) The template configuration. Written as a `template { ... }` block, so a misspelled or misplaced argument is rejected with `Unsupported argument`.
   * `name` - (Required) Name of the template.
   * `active` - (Optional) Status of the template. Computed when omitted.
   * `data_set` - (Required) The payload template. A string holding the record layout with `$variable` placeholders. The API stores the content verbatim but strips leading and trailing whitespace — see the notes below.

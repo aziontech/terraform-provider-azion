@@ -556,8 +556,13 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
                 Description: "Timestamp of the last Terraform update of the resource.",
                 Computed:    true,
             },
-            "bucket": schema.SingleNestedAttribute{
-                Required: true,
+        },
+        Blocks: map[string]schema.Block{
+            "bucket": schema.SingleNestedBlock{
+                Description: "Required. The bucket settings.",
+                Validators: []validator.Object{
+                    objectvalidator.IsRequired(),
+                },
                 Attributes: map[string]schema.Attribute{
                     "name": schema.StringAttribute{
                         Description: "Name of the bucket. This field is immutable and cannot be updated after creation.",

@@ -38,40 +38,34 @@ output "azion_data_stream_first_output_type" {
 
 ```terraform
 resource "azion_data_stream" "example" {
-  data_stream = {
+  data_stream {
     name   = "Applications to HTTP endpoint"
     active = true
-    inputs = [
-      {
-        type = "raw_logs"
-        attributes = {
-          data_source = "workloads"
-        }
+    inputs {
+      type = "raw_logs"
+      attributes {
+        data_source = "workloads"
       }
-    ]
-    transform = [
-      {
-        type = "sampling"
-        sampling_attributes = {
-          rate = 100
-        }
-      },
-      {
-        type = "render_template"
-        render_template_attributes = {
-          template = 2
-        }
+    }
+    transform {
+      type = "sampling"
+      sampling_attributes {
+        rate = 100
       }
-    ]
-    outputs = [
-      {
-        type = "standard"
-        standard_attributes = {
-          url     = "https://logs.example.com/ingest"
-          headers = {}
-        }
+    }
+    transform {
+      type = "render_template"
+      render_template_attributes {
+        template = 2
       }
-    ]
+    }
+    outputs {
+      type = "standard"
+      standard_attributes {
+        url     = "https://logs.example.com/ingest"
+        headers = {}
+      }
+    }
   }
 }
 

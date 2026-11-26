@@ -940,6 +940,8 @@ func (r *functionInstanceResource) ImportState(ctx context.Context, req resource
 
 ### Resource Schema
 
+`data` is a `SingleNestedBlock` (`data { ... }`), not a nested attribute, so Terraform rejects unknown or misplaced arguments (see "Nested Objects Must Be Blocks" in `AGENTS.md`). Blocks have no `Required` flag: `objectvalidator.IsRequired()` plus a description starting with `Required.` take its place. The request payloads did not change.
+
 ```go
 func (r *functionInstanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
     resp.TypeName = req.ProviderTypeName + "_application_function_instance"
@@ -959,8 +961,13 @@ func (r *functionInstanceResource) Schema(_ context.Context, _ resource.SchemaRe
                 Description: "Timestamp of the last Terraform update of the resource.",
                 Computed:    true,
             },
-            "data": schema.SingleNestedAttribute{
-                Required: true,
+        },
+        Blocks: map[string]schema.Block{
+            "data": schema.SingleNestedBlock{
+                Description: "Required. The function instance configuration.",
+                Validators: []validator.Object{
+                    objectvalidator.IsRequired(),
+                },
                 Attributes: map[string]schema.Attribute{
                     "id": schema.Int64Attribute{
                         Description: "The function instance identifier.",
@@ -1074,11 +1081,11 @@ When updating documentation, always include:
 ```terraform
 # First, create the parent application with functions module enabled
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
-    modules = {
-      functions = {
+    modules {
+      functions {
         enabled = true
       }
     }
@@ -1088,7 +1095,7 @@ resource "azion_application_main_setting" "example" {
 # Then create the function instance for that application
 resource "azion_application_function_instance" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  data = {
+  data {
     name        = "Terraform Example"
     function_id = 12345
     active      = true
@@ -1105,7 +1112,7 @@ resource "azion_application_function_instance" "example" {
 ```terraform
 resource "azion_application_function_instance" "example" {
   application_id = 1234567890
-  data = {
+  data {
     name        = "Terraform Example"
     function_id = 12345
     active      = true
@@ -1250,7 +1257,7 @@ applicationID := ...
 # WRONG - will fail with 400 Bad Request
 resource "azion_application_function_instance" "example" {
   application_id = 1234567890
-  data = {
+  data {
     name        = "example"
     function_id = 12345
     active      = false  # This is not allowed during creation
@@ -1260,7 +1267,7 @@ resource "azion_application_function_instance" "example" {
 # CORRECT - omit active field, let API compute it
 resource "azion_application_function_instance" "example" {
   application_id = 1234567890
-  data = {
+  data {
     name        = "example"
     function_id = 12345
     # active is computed by API (always true for new instances)

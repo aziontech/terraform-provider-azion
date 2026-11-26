@@ -16,11 +16,11 @@ Creates a connector resource. Connectors are polymorphic and support different t
 
 ```hcl
 resource "azion_connector" "storage_connector" {
-  connector = {
+  connector {
     name   = "My Storage Connector"
     type   = "storage"
     active = true
-    storage_attributes = {
+    storage_attributes {
       bucket = "my-bucket"
       prefix = "path/to/files/"
     }
@@ -32,20 +32,18 @@ resource "azion_connector" "storage_connector" {
 
 ```hcl
 resource "azion_connector" "http_connector" {
-  connector = {
+  connector {
     name   = "My HTTP Connector"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          endpoint = {
-            address   = "192.168.1.100"
-            http_port = 80
-            active    = true
-          }
+    http_attributes {
+      addresses {
+        endpoint {
+          address   = "192.168.1.100"
+          http_port = 80
+          active    = true
         }
-      ]
+      }
     }
   }
 }
@@ -55,28 +53,26 @@ resource "azion_connector" "http_connector" {
 
 ```hcl
 resource "azion_connector" "http_connector_full" {
-  connector = {
+  connector {
     name   = "My HTTP Connector Full"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          endpoint = {
-            address    = "192.168.1.100"
-            http_port  = 80
-            https_port = 443
-            active     = true
-            modules = {
-              load_balancer = {
-                server_role = "primary"
-                weight      = 1
-              }
+    http_attributes {
+      addresses {
+        endpoint {
+          address    = "192.168.1.100"
+          http_port  = 80
+          https_port = 443
+          active     = true
+          modules {
+            load_balancer {
+              server_role = "primary"
+              weight      = 1
             }
           }
         }
-      ]
-      connection_options = {
+      }
+      connection_options {
         dns_resolution      = "both"
         following_redirect  = false
         host                = "$${host}"
@@ -86,17 +82,17 @@ resource "azion_connector" "http_connector_full" {
         real_port_header    = "X-Real-PORT"
         transport_policy    = "preserve"
       }
-      modules = {
-        load_balancer = {
+      modules {
+        load_balancer {
           enabled = true
-          config = {
-            method              = "round_robin"
-            max_retries         = 3
-            connection_timeout  = 60
-            read_write_timeout  = 120
+          config {
+            method             = "round_robin"
+            max_retries        = 3
+            connection_timeout = 60
+            read_write_timeout = 120
           }
         }
-        origin_shield = {
+        origin_shield {
           enabled = false
         }
       }
@@ -109,34 +105,32 @@ resource "azion_connector" "http_connector_full" {
 
 ```hcl
 resource "azion_connector" "s3_with_hmac" {
-  connector = {
+  connector {
     name   = "S3 Connector with HMAC"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          endpoint = {
-            address    = "my-bucket.s3.us-east-1.amazonaws.com"
-            http_port  = 80
-            https_port = 443
-            active     = true
-          }
+    http_attributes {
+      addresses {
+        endpoint {
+          address    = "my-bucket.s3.us-east-1.amazonaws.com"
+          http_port  = 80
+          https_port = 443
+          active     = true
         }
-      ]
-      connection_options = {
+      }
+      connection_options {
         host             = "my-bucket.s3.amazonaws.com"
         transport_policy = "force_https"
       }
-      modules = {
-        origin_shield = {
+      modules {
+        origin_shield {
           enabled = true
-          config = {
-            hmac = {
+          config {
+            hmac {
               enabled = true
-              config = {
+              config {
                 type = "aws4_hmac_sha256"
-                attributes = {
+                attributes {
                   region     = "us-east-1"
                   service    = "s3"
                   access_key = "YOUR_ACCESS_KEY"
@@ -172,6 +166,10 @@ terraform import azion_connector.example 12345
 
 ## Argument Reference
 
+Every nested object is a block (`http_attributes { ... }`), not an attribute (`http_attributes = { ... }`), so Terraform rejects a misspelled argument or one placed at the wrong level with `Unsupported argument`. `addresses` is a repeatable block: write one `addresses { endpoint { ... } }` per origin.
+
+An optional block you omit is not sent to the API and is not tracked in state, so changes made to it outside Terraform are not reported. Declare a block to manage it.
+
 ### Common Arguments
 
 * `connector` - (Required) The connector configuration block. Contains:
@@ -190,7 +188,7 @@ terraform import azion_connector.example 12345
 
 When `type = "storage"`, include `storage_attributes` inside the `connector` block:
 
-* `storage_attributes` - (Required) Attributes for storage type connectors:
+* `storage_attributes` - (Required for storage connectors) Block with the attributes for storage type connectors:
   * `bucket` - (Required) The name of the bucket.
   * `prefix` - (Optional) The prefix path within the bucket.
 
@@ -198,8 +196,8 @@ When `type = "storage"`, include `storage_attributes` inside the `connector` blo
 
 When `type = "http"`, include `http_attributes` inside the `connector` block:
 
-* `http_attributes` - (Required) Attributes for HTTP type connectors:
-  * `addresses` - (Required) List of origin endpoints. Each item must contain a single `endpoint` object:
+* `http_attributes` - (Required for HTTP connectors) Block with the attributes for HTTP type connectors:
+  * `addresses` - (Required) Repeatable block, one per origin endpoint; at least one is required. Each must contain a single `endpoint` block:
     * `endpoint` - (Required) A single origin endpoint configuration.
       * `address` - (Required) The origin address (IP or hostname).
       * `active` - (Optional) Whether the address is active.
@@ -209,7 +207,7 @@ When `type = "http"`, include `http_attributes` inside the `connector` block:
         * `load_balancer` - (Optional) Load balancer module:
           * `server_role` - (Optional) Role in load balancing (`primary` or `backup`).
           * `weight` - (Optional) Weight for load balancing strategy.
-  * `connection_options` - (Optional) HTTP connection options (Computed with API defaults):
+  * `connection_options` - (Optional) HTTP connection options:
     * `dns_resolution` - (Optional) DNS resolution strategy (`both` or `force_ipv4`).
     * `following_redirect` - (Optional) Whether to follow redirects.
     * `host` - (Optional) Host header value. Use `$${host}` for original host (escaped Terraform interpolation).
@@ -218,7 +216,7 @@ When `type = "http"`, include `http_attributes` inside the `connector` block:
     * `real_ip_header` - (Optional) Header for real IP.
     * `real_port_header` - (Optional) Header for real port.
     * `transport_policy` - (Optional) Transport policy.
-  * `modules` - (Optional) HTTP modules configuration (Computed with API defaults):
+  * `modules` - (Optional) HTTP modules configuration:
     * `load_balancer` - (Optional) Load balancer module:
       * `enabled` - (Optional) Whether load balancer is enabled.
       * `config` - (Optional) Load balancer configuration (required when `enabled = true`):
@@ -229,6 +227,8 @@ When `type = "http"`, include `http_attributes` inside the `connector` block:
     * `origin_shield` - (Optional) Origin shield module:
       * `enabled` - (Optional) Whether origin shield is enabled.
       * `config` - (Optional) Origin shield configuration:
+        * `origin_ip_acl` - (Optional) Origin IP ACL configuration:
+          * `enabled` - (Optional) Whether the origin IP ACL is enabled.
         * `hmac` - (Optional) HMAC configuration for origin shield:
           * `enabled` - (Required) Whether HMAC is enabled.
           * `config` - (Optional) AWS4 HMAC configuration:

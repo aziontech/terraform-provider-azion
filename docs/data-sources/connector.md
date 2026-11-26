@@ -23,18 +23,16 @@ data "azion_connector" "example" {
 ```terraform
 # Create a connector
 resource "azion_connector" "http_connector" {
-  connector = {
+  connector {
     name   = "My HTTP Connector"
     type   = "http"
     active = true
-    http_attributes = {
-      addresses = [
-        {
-          address   = "192.168.1.100"
-          http_port = 80
-          active    = true
-        }
-      ]
+    http_attributes {
+      addresses {
+        address   = "192.168.1.100"
+        http_port = 80
+        active    = true
+      }
     }
   }
 }

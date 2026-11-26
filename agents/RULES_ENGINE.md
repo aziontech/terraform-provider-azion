@@ -1019,6 +1019,12 @@ func (r *RulesEngineDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 The resource handles both request and response phase rules, as well as the special "default" rule.
 
+**Nested objects are blocks.** `results`, `behaviors` / `behavior` / `attributes` / `capture_attributes` and `criteria` / `entries` / `criterion` are blocks, never nested attributes, so Terraform rejects unknown or misplaced arguments (see "Nested Objects Must Be Blocks" in `AGENTS.md`). Each former list element is a repeated block (`behaviors { behavior { ... } }`). Names and nesting are unchanged, so the request payloads and the state shape are the same as before. Rules that follow from blocks:
+
+- Required single blocks (`results`, `behavior`, `criterion`) use `objectvalidator.IsRequired()`; required list blocks (`behaviors`, `entries`) use `listvalidator.IsRequired()`, because zero list blocks reach validators as a null list (so `SizeAtLeast(1)` alone would let a missing block through).
+- `criteria` is optional: the old schema accepted `criteria = []`, and a rule may have no criteria (for example the Default Rule). Zero `criteria` blocks plan as no change against a state holding either `null` or `[]`.
+- Inside the optional `attributes` / `capture_attributes` blocks the arguments are `Optional` and enforced by `objectvalidator.AlsoRequires(...)` on the block: the framework reports a `Required` argument of an optional block nested in a list block as missing even when the block is left out.
+
 ```go
 package provider
 
@@ -1128,8 +1134,13 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
                 Description: "Timestamp of the last Terraform update of the resource.",
                 Computed:    true,
             },
-            "results": schema.SingleNestedAttribute{
-                Required: true,
+        },
+        Blocks: map[string]schema.Block{
+            "results": schema.SingleNestedBlock{
+                Description: "Required. The rules engine rule.",
+                Validators: []validator.Object{
+                    objectvalidator.IsRequired(),
+                },
                 Attributes: map[string]schema.Attribute{
                     "id": schema.Int64Attribute{
                         Description: "The ID of the rules engine rule.",
@@ -1147,75 +1158,6 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
                         Description: "Whether the rule is active.",
                         Optional:    true,
                         Computed:    true,
-                    },
-                    "behaviors": schema.ListNestedAttribute{
-                        Required: true,
-                        NestedObject: schema.NestedAttributeObject{
-                            Attributes: map[string]schema.Attribute{
-                                "type": schema.StringAttribute{
-                                    Description: "The type of behavior.",
-                                    Required:    true,
-                                },
-                                "attributes": schema.SingleNestedAttribute{
-                                    Description: "Behavior attributes (for behaviors with args).",
-                                    Optional:    true,
-                                    Attributes: map[string]schema.Attribute{
-                                        "value": schema.StringAttribute{
-                                            Description: "Value for the behavior.",
-                                            Required:    true,
-                                        },
-                                    },
-                                },
-                                "capture_attributes": schema.SingleNestedAttribute{
-                                    Description: "Capture attributes (for capture_match_groups).",
-                                    Optional:    true,
-                                    Attributes: map[string]schema.Attribute{
-                                        "subject": schema.StringAttribute{
-                                            Description: "Subject for capture.",
-                                            Required:    true,
-                                        },
-                                        "regex": schema.StringAttribute{
-                                            Description: "Regex pattern.",
-                                            Required:    true,
-                                        },
-                                        "captured_array": schema.StringAttribute{
-                                            Description: "Captured array name.",
-                                            Required:    true,
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    "criteria": schema.ListNestedAttribute{
-                        Required: true,
-                        NestedObject: schema.NestedAttributeObject{
-                            Attributes: map[string]schema.Attribute{
-                                "entries": schema.ListNestedAttribute{
-                                    Required: true,
-                                    NestedObject: schema.NestedAttributeObject{
-                                        Attributes: map[string]schema.Attribute{
-                                            "conditional": schema.StringAttribute{
-                                                Description: "The conditional operator used in the rule's criteria (e.g., if, and, or).",
-                                                Required:    true,
-                                            },
-                                            "variable": schema.StringAttribute{
-                                                Description: "The variable used in the rule's criteria.",
-                                                Required:    true,
-                                            },
-                                            "operator": schema.StringAttribute{
-                                                Description: "The operator used in the rule's criteria.",
-                                                Required:    true,
-                                            },
-                                            "argument": schema.StringAttribute{
-                                                Description: "The argument used in the rule's criteria.",
-                                                Optional:    true,
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
                     },
                     "description": schema.StringAttribute{
                         Description: "The description of the rules engine rule.",
@@ -1237,6 +1179,114 @@ func (r *rulesEngineResource) Schema(_ context.Context, _ resource.SchemaRequest
                     "created_at": schema.StringAttribute{
                         Description: "The creation timestamp.",
                         Computed:    true,
+                    },
+                },
+                Blocks: map[string]schema.Block{
+                    "behaviors": schema.ListNestedBlock{
+                        Description: "Required. Behaviors for the rule: at least one `behaviors` block, each containing a single `behavior` block.",
+                        Validators: []validator.List{
+                            listvalidator.IsRequired(),
+                        },
+                        NestedObject: schema.NestedBlockObject{
+                            Blocks: map[string]schema.Block{
+                                "behavior": schema.SingleNestedBlock{
+                                    Description: "Required. A single behavior to apply on this rule.",
+                                    Validators: []validator.Object{
+                                        objectvalidator.IsRequired(),
+                                    },
+                                    Attributes: map[string]schema.Attribute{
+                                        "type": schema.StringAttribute{
+                                            Description: "The type of behavior. Valid values depend on the rule's `phase`. See [Supported Behaviors](#supported-behaviors) for the full list.",
+                                            Required:    true,
+                                        },
+                                    },
+                                    Blocks: map[string]schema.Block{
+                                        // The arguments of these optional blocks are Optional and
+                                        // enforced by AlsoRequires on the block: the framework
+                                        // reports a Required argument of an optional block nested
+                                        // in a list block as missing even when the block is left
+                                        // out.
+                                        "attributes": schema.SingleNestedBlock{
+                                            Description: "Behavior attributes for behaviors that require arguments.",
+                                            Validators: []validator.Object{
+                                                objectvalidator.AlsoRequires(path.MatchRelative().AtName("value")),
+                                            },
+                                            Attributes: map[string]schema.Attribute{
+                                                "value": schema.StringAttribute{
+                                                    Description: "Required. Value for the behavior.",
+                                                    Optional:    true,
+                                                },
+                                            },
+                                        },
+                                        "capture_attributes": schema.SingleNestedBlock{
+                                            Description: "Capture attributes for capture_match_groups behavior.",
+                                            Validators: []validator.Object{
+                                                objectvalidator.AlsoRequires(
+                                                    path.MatchRelative().AtName("subject"),
+                                                    path.MatchRelative().AtName("regex"),
+                                                    path.MatchRelative().AtName("captured_array"),
+                                                ),
+                                            },
+                                            Attributes: map[string]schema.Attribute{
+                                                "subject": schema.StringAttribute{
+                                                    Description: "Required. Subject for capture.",
+                                                    Optional:    true,
+                                                },
+                                                "regex": schema.StringAttribute{
+                                                    Description: "Required. Regex pattern.",
+                                                    Optional:    true,
+                                                },
+                                                "captured_array": schema.StringAttribute{
+                                                    Description: "Required. Captured array name.",
+                                                    Optional:    true,
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "criteria": schema.ListNestedBlock{
+                        Description: "Criteria for the rule. Each `criteria` block is a group of `entries`.",
+                        NestedObject: schema.NestedBlockObject{
+                            Blocks: map[string]schema.Block{
+                                "entries": schema.ListNestedBlock{
+                                    Description: "Required. Criteria entries: at least one `entries` block, each containing a single `criterion` block.",
+                                    Validators: []validator.List{
+                                        listvalidator.IsRequired(),
+                                    },
+                                    NestedObject: schema.NestedBlockObject{
+                                        Blocks: map[string]schema.Block{
+                                            "criterion": schema.SingleNestedBlock{
+                                                Description: "Required. A single criterion entry.",
+                                                Validators: []validator.Object{
+                                                    objectvalidator.IsRequired(),
+                                                },
+                                                Attributes: map[string]schema.Attribute{
+                                                    "conditional": schema.StringAttribute{
+                                                        Description: "The conditional operator used in the rule's criteria (e.g., if, and, or).",
+                                                        Required:    true,
+                                                    },
+                                                    "variable": schema.StringAttribute{
+                                                        Description: "The variable used in the rule's criteria.",
+                                                        Required:    true,
+                                                    },
+                                                    "operator": schema.StringAttribute{
+                                                        Description: "The operator used in the rule's criteria.",
+                                                        Required:    true,
+                                                    },
+                                                    "argument": schema.StringAttribute{
+                                                        Description: "The argument used in the rule's criteria.",
+                                                        Optional:    true,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
                     },
                 },
             },
@@ -1481,7 +1531,7 @@ Example Terraform configurations are located in:
 ```terraform
 # First, create the parent application
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
   }
@@ -1490,31 +1540,25 @@ resource "azion_application_main_setting" "example" {
 # Then create the rule engine for that application
 resource "azion_application_rule_engine" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  results = {
+  results {
     name        = "Terraform Example"
     phase       = "request"
     description = "My rule engine"
-    behaviors = [
-      {
-        behavior = {
-          type = "deliver"
+    behaviors {
+      behavior {
+        type = "deliver"
+      }
+    }
+    criteria {
+      entries {
+        criterion {
+          variable    = "$${uri}"
+          operator    = "is_equal"
+          conditional = "if"
+          argument    = "/"
         }
       }
-    ]
-    criteria = [
-      {
-        entries = [
-          {
-            criterion = {
-              variable    = "$${uri}"
-              operator    = "is_equal"
-              conditional = "if"
-              argument    = "/"
-            }
-          }
-        ]
-      }
-    ]
+    }
   }
 }
 ```

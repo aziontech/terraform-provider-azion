@@ -337,6 +337,8 @@ func (d *DigitalCertificatesDataSource) Read(ctx context.Context, req datasource
 
 ## Resource Implementation
 
+**Schema:** `results` is a `SingleNestedBlock` (`results { ... }`, not `results = { ... }`) with `objectvalidator.IsRequired()` and a description starting with `Required.`, so Terraform rejects unknown or misplaced arguments with `Unsupported argument`. State is unchanged (same object shape). See "Nested Objects Must Be Blocks" in `AGENTS.md`.
+
 For CRUD operations on Digital Certificates:
 
 **File:** `internal/resource_digitalcertificate.go`
@@ -669,10 +671,12 @@ SubjectName: schema.ListAttribute{
     ElementType: types.StringType,
 }
 
-// Nested object types
-Results: schema.SingleNestedAttribute{
-    Description: "The certificate details.",
-    Required:    true,
+// Nested object types: a block (in the schema's Blocks map), so unknown arguments are rejected
+Results: schema.SingleNestedBlock{
+    Description: "Required. The certificate details.",
+    Validators: []validator.Object{
+        objectvalidator.IsRequired(),
+    },
     Attributes: map[string]schema.Attribute{
         // nested attributes
     },

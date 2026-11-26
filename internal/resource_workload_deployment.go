@@ -10,8 +10,10 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -79,9 +81,13 @@ func (r *workloadDeploymentResource) Schema(_ context.Context, _ resource.Schema
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"deployment": schema.SingleNestedAttribute{
-				Required:    true,
-				Description: "The deployment configuration.",
+		},
+		Blocks: map[string]schema.Block{
+			"deployment": schema.SingleNestedBlock{
+				Description: "Required. The deployment configuration.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The deployment identifier.",
@@ -101,17 +107,37 @@ func (r *workloadDeploymentResource) Schema(_ context.Context, _ resource.Schema
 						Optional:    true,
 						Computed:    true,
 					},
-					"strategy": schema.SingleNestedAttribute{
-						Description: "Deployment strategy configuration.",
-						Required:    true,
+					"last_editor": schema.StringAttribute{
+						Description: "The last editor of the deployment.",
+						Computed:    true,
+					},
+					"last_modified": schema.StringAttribute{
+						Description: "Last modified timestamp of the deployment.",
+						Computed:    true,
+					},
+					"created_at": schema.StringAttribute{
+						Description: "Creation timestamp of the deployment.",
+						Computed:    true,
+					},
+				},
+				Blocks: map[string]schema.Block{
+					"strategy": schema.SingleNestedBlock{
+						Description: "Required. Deployment strategy configuration.",
+						Validators: []validator.Object{
+							objectvalidator.IsRequired(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Description: "Type of deployment strategy.",
 								Required:    true,
 							},
-							"attributes": schema.SingleNestedAttribute{
-								Description: "Strategy attributes.",
-								Required:    true,
+						},
+						Blocks: map[string]schema.Block{
+							"attributes": schema.SingleNestedBlock{
+								Description: "Required. Strategy attributes.",
+								Validators: []validator.Object{
+									objectvalidator.IsRequired(),
+								},
 								Attributes: map[string]schema.Attribute{
 									"application": schema.Int64Attribute{
 										Description: "Application ID for the deployment.",
@@ -128,18 +154,6 @@ func (r *workloadDeploymentResource) Schema(_ context.Context, _ resource.Schema
 								},
 							},
 						},
-					},
-					"last_editor": schema.StringAttribute{
-						Description: "The last editor of the deployment.",
-						Computed:    true,
-					},
-					"last_modified": schema.StringAttribute{
-						Description: "Last modified timestamp of the deployment.",
-						Computed:    true,
-					},
-					"created_at": schema.StringAttribute{
-						Description: "Creation timestamp of the deployment.",
-						Computed:    true,
 					},
 				},
 			},

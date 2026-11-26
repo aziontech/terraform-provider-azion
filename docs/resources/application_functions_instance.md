@@ -17,11 +17,11 @@ Provides a resource to manage Function Instances for an Application.
 ```terraform
 # First, create the parent application with functions module enabled
 resource "azion_application_main_setting" "example" {
-  application = {
+  application {
     name   = "My Application"
     active = true
-    modules = {
-      functions = {
+    modules {
+      functions {
         enabled = true
       }
     }
@@ -31,7 +31,7 @@ resource "azion_application_main_setting" "example" {
 # Then create the function instance for that application
 resource "azion_application_function_instance" "example" {
   application_id = azion_application_main_setting.example.application.application_id
-  data = {
+  data {
     name        = "Terraform Example"
     function_id = 12345
     active      = true
@@ -48,7 +48,7 @@ resource "azion_application_function_instance" "example" {
 ```terraform
 resource "azion_application_function_instance" "example" {
   application_id = 1234567890
-  data = {
+  data {
     name        = "Terraform Example"
     function_id = 12345
     active      = true
@@ -66,14 +66,17 @@ resource "azion_application_function_instance" "example" {
 ### Required
 
 - `application_id` (Number) The application identifier.
-- `data` (Attributes) The function instance configuration. (see [below for nested schema](#nestedatt--data))
+
+### Optional
+
+- `data` (Block, Optional) Required. The function instance configuration. (see [below for nested schema](#nestedblock--data))
 
 ### Read-Only
 
 - `id` (Number) The ID of this resource.
 - `last_updated` (String) Timestamp of the last Terraform update of the resource.
 
-<a id="nestedatt--data"></a>
+<a id="nestedblock--data"></a>
 ### Nested Schema for `data`
 
 Required:

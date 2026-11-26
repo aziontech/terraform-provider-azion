@@ -3,7 +3,7 @@
 # The resource supports Create, Read, Delete, and Import operations.
 # Update is not supported - any changes will require resource recreation.
 resource "azion_certificate_signing_request" "example" {
-  results = {
+  results {
     name               = "My Certificate CSR"
     common_name        = "example.com"
     country            = "US"

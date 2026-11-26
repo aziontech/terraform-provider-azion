@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
@@ -79,5 +80,25 @@ func TestFirewallFunctionsInstanceImportStateInvalidID(t *testing.T) {
 				t.Errorf("ImportState(%q) succeeded, want an error diagnostic", id)
 			}
 		})
+	}
+}
+
+// data is a block so Terraform rejects unknown arguments instead of dropping
+// them; it carries a validator because Terraform treats every block as optional.
+func TestFirewallFunctionsInstanceDataIsRequiredBlock(t *testing.T) {
+	ctx := context.Background()
+
+	schemaResp := &resource.SchemaResponse{}
+	NewFirewallFunctionsInstanceResource().Schema(ctx, resource.SchemaRequest{}, schemaResp)
+	if diags := schemaResp.Schema.ValidateImplementation(ctx); diags.HasError() {
+		t.Fatalf("invalid schema implementation: %v", diags)
+	}
+
+	data, ok := schemaResp.Schema.Blocks["data"].(schema.SingleNestedBlock)
+	if !ok {
+		t.Fatal("data: must be a single nested block")
+	}
+	if len(data.Validators) == 0 {
+		t.Error("data: must carry objectvalidator.IsRequired()")
 	}
 }

@@ -1,5 +1,5 @@
 resource "azion_certificate_request" "example" {
-  results = {
+  results {
     name        = "my-letsencrypt-certificate"
     common_name = "example.com"
     challenge   = "dns"

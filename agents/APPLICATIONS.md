@@ -741,7 +741,7 @@ func (e *ApplicationsDataSource) Read(ctx context.Context, req datasource.ReadRe
 | **File Name** | `data_source_application_main_settings.go` | `data_source_applications_main_settings.go` |
 | **Type Name** | `azion_application_main_settings` | `azion_applications_main_settings` |
 | **ID Field** | `Required` (user provides ID to look up) | `Computed` (set after reading) |
-| **Results** | `SingleNestedAttribute` (single object) | `ListNestedAttribute` (array of objects) |
+| **Results** | `SingleNestedAttribute` (single object, Computed) | `ListNestedAttribute` (array of objects, Computed) |
 | **Pagination** | No pagination fields | Has `page`, `page_size` (Optional) |
 | **Count Field** | Not applicable | `total_count` (Computed) |
 | **API Method** | `RetrieveApplication(ctx, id)` | `ListApplications(ctx).Page().PageSize()` |
@@ -844,72 +844,48 @@ func (r *applicationResource) Schema(_ context.Context, _ resource.SchemaRequest
                 Description: "Timestamp of the last Terraform update of the resource.",
                 Computed:    true,
             },
-            "application": schema.SingleNestedAttribute{
-                Required: true,
+        },
+        // Nested objects are blocks, not nested attributes: Terraform drops
+        // unknown arguments from a nested attribute value silently, but rejects
+        // them in a block. See "Nested Objects Are Blocks" below.
+        Blocks: map[string]schema.Block{
+            "application": schema.SingleNestedBlock{
+                Description: "Required. The Application settings.",
+                // Blocks cannot be Required; enforce it with a validator.
+                Validators: []validator.Object{
+                    objectvalidator.IsRequired(),
+                },
                 Attributes: map[string]schema.Attribute{
-                    "application_id": schema.Int64Attribute{
-                        Description: "The Application identifier.",
-                        Computed:    true,
-                    },
-                    "name": schema.StringAttribute{
-                        Description: "The name of the Application.",
-                        Required:    true,
-                    },
-                    "active": schema.BoolAttribute{
-                        Optional:    true,
-                        Computed:    true,
-                        Default:     booldefault.StaticBool(true),
-                        Description: "Indicates whether the Application is active.",
-                    },
-                    "debug": schema.BoolAttribute{
-                        Optional:    true,
-                        Computed:    true,
-                        Default:     booldefault.StaticBool(false),
-                        Description: "Indicates whether debug rules are enabled for the Application.",
-                    },
-                    "product_version": schema.StringAttribute{
-                        Computed:    true,
-                        Description: "The product version.",
-                    },
-                    "state": schema.StringAttribute{
-                        Computed:    true,
-                        Description: "The state of the current application version.",
-                    },
-                    "version_id": schema.StringAttribute{
-                        Computed:    true,
-                        Description: "The identifier of the current application version.",
-                    },
-                    "modules": schema.SingleNestedAttribute{
-                        Optional: true,
-                        Attributes: map[string]schema.Attribute{
-                            "cache": schema.SingleNestedAttribute{
-                                Optional: true,
-                                Attributes: map[string]schema.Attribute{
-                                    "enabled": schema.BoolAttribute{Optional: true},
-                                },
-                            },
-                            "functions": schema.SingleNestedAttribute{
-                                Optional: true,
-                                Attributes: map[string]schema.Attribute{
-                                    "enabled": schema.BoolAttribute{Optional: true},
-                                },
-                            },
-                            "application_accelerator": schema.SingleNestedAttribute{
-                                Optional: true,
-                                Attributes: map[string]schema.Attribute{
-                                    "enabled": schema.BoolAttribute{Optional: true},
-                                },
-                            },
-                            "image_processor": schema.SingleNestedAttribute{
-                                Optional: true,
-                                Attributes: map[string]schema.Attribute{
-                                    "enabled": schema.BoolAttribute{Optional: true},
-                                },
-                            },
+                    "application_id":  schema.Int64Attribute{Computed: true},
+                    "name":            schema.StringAttribute{Required: true},
+                    "active":          schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true)},
+                    "debug":           schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
+                    "product_version": schema.StringAttribute{Computed: true},
+                    "state":           schema.StringAttribute{Computed: true},
+                    "version_id":      schema.StringAttribute{Computed: true},
+                },
+                Blocks: map[string]schema.Block{
+                    // Blocks cannot be Computed or have a Default.
+                    "modules": schema.SingleNestedBlock{
+                        Blocks: map[string]schema.Block{
+                            "cache":                   moduleToggleBlock("Cache module.", true),
+                            "functions":               moduleToggleBlock("Functions module.", true),
+                            "application_accelerator": moduleToggleBlock("Application Accelerator module.", false),
+                            "image_processor":         moduleToggleBlock("Image Processor module.", false),
                         },
                     },
                 },
             },
+        },
+    }
+}
+
+// Each module block holds one Optional + Computed `enabled` flag with a default.
+func moduleToggleBlock(description string, enabled bool) schema.SingleNestedBlock {
+    return schema.SingleNestedBlock{
+        Description: description,
+        Attributes: map[string]schema.Attribute{
+            "enabled": schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(enabled)},
         },
     }
 }
@@ -1317,52 +1293,29 @@ func (r *applicationOriginResource) ImportState(ctx context.Context, req resourc
 
 ### transformModuleIntoRequest
 
-This function transforms the Terraform plan modules into the SDK request format:
+Always sends all four modules. A module whose block (or `enabled` flag) is left
+out of the configuration is sent with its default, so an omitted module is still
+reset on every apply, exactly as when `modules` was an attribute with an object
+default.
 
 ```go
-func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationModulesRequest {
-    modsRequest := sdk.ApplicationModulesRequest{}
-    if modsPlan != nil {
-        cachePlan := modsPlan.Cache
-        if cachePlan != nil && !cachePlan.Enabled.IsNull() {
-            enabled := cachePlan.Enabled
-            cacheReq := sdk.CacheModuleRequest{
-                Enabled: enabled.ValueBoolPointer(),
-            }
-            modsRequest.SetCache(cacheReq)
-        }
-
-        functionsPlan := modsPlan.Functions
-        if functionsPlan != nil && !functionsPlan.Enabled.IsNull() {
-            enabled := functionsPlan.Enabled
-            functionsReq := sdk.FunctionModuleRequest{
-                Enabled: enabled.ValueBoolPointer(),
-            }
-            modsRequest.SetFunctions(functionsReq)
-        }
-
-        applicationAcceleratorPlan := modsPlan.ApplicationAccelerator
-        if applicationAcceleratorPlan != nil && !applicationAcceleratorPlan.Enabled.IsNull() {
-            enabled := applicationAcceleratorPlan.Enabled
-            appAccReq := sdk.ApplicationAcceleratorModuleRequest{
-                Enabled: enabled.ValueBoolPointer(),
-            }
-            modsRequest.SetApplicationAccelerator(appAccReq)
-        }
-
-        imageProcessorPlan := modsPlan.ImageProcessor
-        if imageProcessorPlan != nil && !imageProcessorPlan.Enabled.IsNull() {
-            enabled := imageProcessorPlan.Enabled
-            imgProcReq := sdk.ImageProcessorModuleRequest{
-                Enabled: enabled.ValueBoolPointer(),
-            }
-            modsRequest.SetImageProcessor(imgProcReq)
-        }
+func moduleEnabled(enabled *types.Bool, fallback bool) *bool {
+    if enabled != nil && isSet(*enabled) {
+        return enabled.ValueBoolPointer()
     }
-
-    return modsRequest
+    return &fallback
 }
 ```
+
+### keepDeclaredModules
+
+Called on the API result in Create, Read and Update, with the plan (or prior
+state) as `prior`. It drops every module block that `prior` does not declare.
+Terraform core rejects a block that is planned as absent and comes back present
+("Provider produced inconsistent result"), and a block cannot be Computed, so an
+undeclared block must stay null in state. On import `prior` is nil and
+everything is kept; the first plan afterwards removes the undeclared blocks from
+state with an in-place update that sends the same defaults.
 
 ---
 
@@ -1374,13 +1327,22 @@ func transformModuleIntoRequest(modsPlan *ApplicationModules) sdk.ApplicationMod
 
 **Root cause:** Read unconditionally populated `state.Application.Modules` from the API response (which always echoes back submodule defaults). After refresh, state had submodules the user never configured; HCL had none → Terraform planned to null them. Update then preserved those nulls in state, but the next refresh re-populated from API → loop.
 
-**Superseded fix — do NOT reintroduce prior-state gating.** Gating Read on `previousModules.X != nil` did stop the perpetual drift, but it also made Read a state-preserving merge: the API response could never *introduce* a value, so a module toggled in Azion Console was invisible on every plan. The configuration is the desired state, so that silence is a compliance failure.
+**Superseded fix — do NOT reintroduce value-level prior-state gating.** Gating Read on `previousModules.X != nil` did stop the perpetual drift, but it also made Read a state-preserving merge: the API response could never *introduce* a value, so a module toggled in Azion Console was invisible on every plan. The configuration is the desired state, so that silence is a compliance failure.
 
-**Current fix:** Read mirrors the API response unconditionally via `transformApplicationResponseToModel`, and the perpetual drift is prevented in the *schema* instead — `modules`, each module block and each `enabled` flag are `Optional + Computed` with a `Default`. When the configuration omits a field, the plan resolves it to that default rather than to null, so plan and state agree and the diff is empty. A module toggled out-of-band now differs from the default and is reverted on the next apply.
+**Fix while modules were nested attributes:** Read mirrored the API response unconditionally, and `modules`, each module and each `enabled` flag were `Optional + Computed` with a `Default`, so an omitted field resolved to its default in the plan.
 
-Note that every optional attribute needs a default, nested blocks included. A `Computed` attribute without one is *unknown* in the plan whenever the configuration omits it, and `req.Plan.Get(ctx, &plan)` reads nested objects into `*Struct` fields, which cannot hold unknown values — the framework fails with "Received unknown value, however the target type cannot handle unknown values". A missing default therefore breaks Create, not just enforcement. Use `objectdefault.StaticValue` with a complete subtree; the object default is also required because defaults cannot be applied to children of a block that is null in the plan.
+**Current behavior (modules are blocks):** Blocks cannot be Computed or have a `Default`, so an omitted block is null in the plan and must stay null in state. Two rules now apply:
 
-Update must send the full object (`UpdateApplication`, a PUT) and write the API response into state — never the plan's modules — or a console change to an undeclared module survives the apply.
+1. **Block presence follows the configuration.** `keepDeclaredModules` drops undeclared module blocks from the API result. This is gating on *whether a block exists*, which Terraform core enforces; it is not the value-level gating above.
+2. **Values inside a declared block mirror the API.** `enabled` stays `Optional + Computed` with a `Default` and is read from the API unconditionally, so a module toggled in the console is still detected and reverted *while its block is declared*.
+
+An undeclared module is still sent with its default on every apply (`transformModuleIntoRequest`), but a console change to it does not show up in `terraform plan`. This trade-off was accepted when the nested objects were converted to blocks; it is documented on the resource page.
+
+Update must send the full object (`UpdateApplication`, a PUT) and write the API response (filtered by `keepDeclaredModules`) into state — never the plan's modules.
+
+### Nested Objects Are Blocks
+
+Every nested object a practitioner can write is a block (`application { ... }`), never a nested attribute (`application = { ... }`). Terraform converts a nested attribute value to the schema's object type and silently drops arguments the schema does not define, so a typo or an argument at the wrong level was ignored. Blocks are validated by Terraform and fail with "Unsupported argument". `TestResourceNestedObjectsAreBlocks` (in `internal/schema_blocks_test.go`) enforces this for every resource. Computed-only nested attributes are fine.
 
 ### Application Schema Fields
 

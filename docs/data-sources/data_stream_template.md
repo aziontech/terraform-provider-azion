@@ -36,7 +36,7 @@ output "azion_data_stream_template_data_set" {
 
 ```terraform
 resource "azion_data_stream_template" "example" {
-  template = {
+  template {
     name     = "My HTTP Events Template"
     active   = true
     data_set = jsonencode({ time = "$time_iso8601", status = "$status" })

@@ -777,56 +777,32 @@ func (r *firewallResource) ImportState(ctx context.Context, req resource.ImportS
 
 ### Modules Schema Pattern
 
-Firewall modules follow a consistent nested structure:
+In the **resource**, `data`, `modules` and every module are blocks (see
+"Nested objects are blocks" below). Each module is built by
+`firewallModuleBlock`; only the `enabled` leaf keeps `Optional + Computed +
+Default`:
 
 ```go
-"modules": schema.SingleNestedAttribute{
-    Description: "Modules configuration for the firewall.",
-    Computed:    true,
-    Attributes: map[string]schema.Attribute{
-        "ddos_protection": schema.SingleNestedAttribute{
-            Description: "DDoS protection module configuration.",
-            Computed:    true,
-            Attributes: map[string]schema.Attribute{
-                "enabled": schema.BoolAttribute{
-                    Description: "Whether DDoS protection is enabled.",
-                    Computed:    true,
-                },
-            },
-        },
-        "functions": schema.SingleNestedAttribute{
-            Description: "Functions module configuration.",
-            Computed:    true,
-            Attributes: map[string]schema.Attribute{
-                "enabled": schema.BoolAttribute{
-                    Description: "Whether functions are enabled.",
-                    Computed:    true,
-                },
-            },
-        },
-        "network_protection": schema.SingleNestedAttribute{
-            Description: "Network protection module configuration.",
-            Computed:    true,
-            Attributes: map[string]schema.Attribute{
-                "enabled": schema.BoolAttribute{
-                    Description: "Whether network protection is enabled.",
-                    Computed:    true,
-                },
-            },
-        },
-        "waf": schema.SingleNestedAttribute{
-            Description: "WAF module configuration.",
-            Computed:    true,
-            Attributes: map[string]schema.Attribute{
-                "enabled": schema.BoolAttribute{
-                    Description: "Whether WAF is enabled.",
-                    Computed:    true,
+Blocks: map[string]schema.Block{
+    "data": schema.SingleNestedBlock{
+        Description: "Required. The Firewall settings.",
+        Validators:  []validator.Object{objectvalidator.IsRequired()},
+        Attributes:  map[string]schema.Attribute{ /* name, active, debug, computed fields */ },
+        Blocks: map[string]schema.Block{
+            "modules": schema.SingleNestedBlock{
+                Blocks: map[string]schema.Block{
+                    "ddos_protection":    firewallModuleBlock("...", "...", defaultFirewallDdosProtection),
+                    "functions":          firewallModuleBlock("...", "...", defaultFirewallFunctions),
+                    "network_protection": firewallModuleBlock("...", "...", defaultFirewallNetworkProtection),
+                    "waf":                firewallModuleBlock("...", "...", defaultFirewallWAF),
                 },
             },
         },
     },
 },
 ```
+
+The **data sources** keep Computed-only nested attributes (`schema.SingleNestedAttribute{Computed: true}`); they are not writable, so they stay attributes.
 
 ### Module Struct Pattern
 
@@ -944,11 +920,14 @@ r.client.api.FirewallsAPI.UpdateFirewall(ctx, firewallID).FirewallRequest(firewa
 
 ### 8. Drift and enforcement
 
-Read mirrors the API response through `transformFirewallResponseToModel` without filtering, so a module toggled in Azion Console is reverted on the next apply instead of being silently kept. **Do not reintroduce the prior-state gating** (`priorModules.X != nil`) that Read used to perform: it made Read a state-preserving merge, so the API response could never introduce a value and out-of-band changes were invisible on every plan.
+Read mirrors the API response through `transformFirewallResponseToModel`, so a module toggled in Azion Console is reverted on the next apply instead of being silently kept. **Do not reintroduce value-level prior-state gating** (copying `enabled` from prior state instead of the API): it made Read a state-preserving merge, so the API response could never introduce a value and out-of-band changes were invisible on every plan.
 
-Perpetual drift is prevented in the schema instead — `modules`, each module block and each `enabled` flag are `Optional + Computed` with a `Default`. A field the configuration omits resolves to that default rather than to null.
+`data`, `modules` and each module are **blocks**, which cannot be Computed or have a `Default`. Two rules apply (same as `azion_application_main_setting`):
 
-Every optional nested block needs a default, not just the leaves. A `Computed` block without one is *unknown* in the plan whenever the configuration omits it, and `req.Plan.Get(ctx, &plan)` reads nested blocks into `*Struct` fields, which cannot hold unknown values — the framework fails with "Received unknown value, however the target type cannot handle unknown values". That breaks Create, not just enforcement.
+1. **Block presence follows the configuration.** `keepDeclaredFirewallModules` (called in Create, Read and Update with the plan or prior state) drops from the API result every module block the configuration does not declare. Terraform core rejects a block planned as absent that comes back present. On import the prior is nil, everything is kept, and the first plan removes the undeclared blocks with an in-place update that sends the same payload.
+2. **Values inside a declared block mirror the API.** `enabled`, `active` and `debug` stay `Optional + Computed + Default`, so drift is detected while the block is declared.
+
+`buildFirewallModulesRequest` always sends `functions`, `network_protection` and `waf`, using the default for any module whose block or flag is left out, so the request payload is the same as when `modules` was an attribute with an object default. The trade-off: a console change to an *undeclared* module does not show up in `terraform plan`.
 
 ### 9. `ddos_protection` is always `true` but must stay Optional
 
@@ -956,7 +935,11 @@ DDoS protection is always enabled and cannot be edited. `FirewallModulesRequest`
 
 **Do not mark it read-only.** Dropping `Optional` makes Terraform reject any configuration that declares the block with "Invalid Configuration for Read-Only Attribute", including on `terraform destroy`, which still evaluates the configuration. That breaks existing configurations for a field whose declared value was always inert.
 
-Keep it `Optional + Computed` with a `Default` of `true`: existing configurations keep working, and an omitted block resolves to the value the API always reports rather than drifting.
+Keep the `ddos_protection` block, with its `enabled` flag `Optional + Computed` and a `Default` of `true`: existing configurations keep working, and a declared block holds the value the API always reports rather than drifting. An omitted block stays null in state (`keepDeclaredFirewallModules`).
+
+### 10. Nested objects are blocks
+
+Every writable nested object in `azion_firewall_main_setting` is a block (`data { ... }`, `modules { waf { ... } }`), never a nested attribute (`data = { ... }`), so Terraform rejects unknown or misplaced arguments with "Unsupported argument". `data` is required through `objectvalidator.IsRequired()`. State written by the old nested-attribute schema has the same shape and is read unchanged.
 
 ---
 
@@ -975,3 +958,4 @@ When implementing Firewall data sources and resources:
 9. **Format time correctly**: Use `time.RFC3339`
 10. **Use PATCH for updates**: `PartialUpdateFirewall` with `PatchedFirewallRequest`
 11. **Register in provider.go**: Add to `DataSources()` and `Resources()` functions
+12. **Writable nested objects are blocks**: `data`, `modules` and each module; filter the API result with `keepDeclaredFirewallModules`

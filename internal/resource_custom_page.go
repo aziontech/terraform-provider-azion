@@ -8,12 +8,15 @@ import (
 
 	azionapi "github.com/aziontech/azionapi-v4-go-sdk-dev/azion-api"
 	"github.com/aziontech/terraform-provider-azion/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -109,8 +112,13 @@ func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "Timestamp of the last Terraform update of the resource.",
 				Computed:    true,
 			},
-			"custom_page": schema.SingleNestedAttribute{
-				Required: true,
+		},
+		Blocks: map[string]schema.Block{
+			"custom_page": schema.SingleNestedBlock{
+				Description: "Required. The custom page settings.",
+				Validators: []validator.Object{
+					objectvalidator.IsRequired(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.Int64Attribute{
 						Description: "The custom page identifier.",
@@ -150,37 +158,52 @@ func (r *customPageResource) Schema(_ context.Context, _ resource.SchemaRequest,
 						Description: "The identifier of the current custom page version.",
 						Computed:    true,
 					},
-					"pages": schema.ListNestedAttribute{
-						Description: "List of pages associated with the custom page.",
-						Required:    true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"entry": schema.SingleNestedAttribute{
-									Description: "A single page entry — pairs an HTTP status code with its connector configuration.",
-									Required:    true,
+				},
+				Blocks: map[string]schema.Block{
+					"pages": schema.ListNestedBlock{
+						Description: "Required. At least one `pages` block: the pages associated with the custom page.",
+						Validators: []validator.List{
+							listvalidator.IsRequired(),
+							listvalidator.SizeAtLeast(1),
+						},
+						NestedObject: schema.NestedBlockObject{
+							Blocks: map[string]schema.Block{
+								"entry": schema.SingleNestedBlock{
+									Description: "Required. A single page entry — pairs an HTTP status code with its connector configuration.",
+									Validators: []validator.Object{
+										objectvalidator.IsRequired(),
+									},
 									Attributes: map[string]schema.Attribute{
 										"code": schema.StringAttribute{
-											Description: "HTTP status code for the page.",
+											Description: "HTTP status code for the page. Valid values: `default`, `400`, `401`, `403`, `404`, `405`, `406`, `408`, `409`, `410`, `411`, `414`, `415`, `416`, `426`, `429`, `431`, `500`, `501`, `502`, `503`, `504`, `505`.",
 											Required:    true,
 										},
-										"page": schema.SingleNestedAttribute{
-											Description: "Page connector configuration.",
-											Required:    true,
+									},
+									Blocks: map[string]schema.Block{
+										"page": schema.SingleNestedBlock{
+											Description: "Required. Page connector configuration.",
+											Validators: []validator.Object{
+												objectvalidator.IsRequired(),
+											},
 											Attributes: map[string]schema.Attribute{
 												"type": schema.StringAttribute{
 													Description: "Type of the page connector.",
 													Required:    true,
 												},
-												"attributes": schema.SingleNestedAttribute{
-													Description: "Attributes of the page connector.",
-													Required:    true,
+											},
+											Blocks: map[string]schema.Block{
+												"attributes": schema.SingleNestedBlock{
+													Description: "Required. Attributes of the page connector.",
+													Validators: []validator.Object{
+														objectvalidator.IsRequired(),
+													},
 													Attributes: map[string]schema.Attribute{
 														"connector": schema.Int64Attribute{
-															Description: "Connector ID.",
+															Description: "Connector ID (Application ID).",
 															Required:    true,
 														},
 														"ttl": schema.Int64Attribute{
-															Description: "Time to live for the page.",
+															Description: "Time to live for the page (in seconds).",
 															Optional:    true,
 															Computed:    true,
 														},
