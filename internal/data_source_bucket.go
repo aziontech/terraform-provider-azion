@@ -135,11 +135,11 @@ func (d *BucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		Name: types.StringValue(bucketName.ValueString()),
 		ID:   types.StringValue(bucketName.ValueString()),
 		Data: BucketResultsModel{
-			Name:            types.StringValue(bucketResponse.Data.Name),
+			Name:            types.StringValue(bucketResponse.Data.GetName()),
 			WorkloadsAccess: types.StringValue(bucketResponse.Data.WorkloadsAccess),
-			LastEditor:      types.StringValue(bucketResponse.Data.LastEditor),
+			LastEditor:      types.StringValue(bucketResponse.Data.GetLastEditor()),
 			LastModified:    types.StringValue(bucketResponse.Data.GetLastModified().Format(time.RFC3339)),
-			ProductVersion:  types.StringValue(bucketResponse.Data.ProductVersion),
+			ProductVersion:  types.StringValue(bucketResponse.Data.GetProductVersion()),
 		},
 	}
 

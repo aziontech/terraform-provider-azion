@@ -823,27 +823,27 @@ func TestPopulateDataStreamOutputsPerEndpointType(t *testing.T) {
 // attributes at all.
 func TestDataStreamOutputEndpointCoversEveryVariant(t *testing.T) {
 	variants := map[string]azionapi.Output{
-		"standard": {HttpPostEndpointAttributes: &azionapi.HttpPostEndpointAttributes{
+		"standard": {OutputHttpPostEndpoint: &azionapi.OutputHttpPostEndpoint{
 			Type: "standard", Attributes: azionapi.HttpPostEndpoint{}}},
-		"kafka": {KafkaEndpointAttributes: &azionapi.KafkaEndpointAttributes{
+		"kafka": {OutputKafkaEndpoint: &azionapi.OutputKafkaEndpoint{
 			Type: "kafka", Attributes: azionapi.KafkaEndpoint{}}},
-		"s3": {S3EndpointAttributes: &azionapi.S3EndpointAttributes{
+		"s3": {OutputS3Endpoint: &azionapi.OutputS3Endpoint{
 			Type: "s3", Attributes: azionapi.S3Endpoint{}}},
-		"big_query": {BigQueryEndpointAttributes: &azionapi.BigQueryEndpointAttributes{
+		"big_query": {OutputBigQueryEndpoint: &azionapi.OutputBigQueryEndpoint{
 			Type: "big_query", Attributes: azionapi.BigQueryEndpoint{}}},
-		"elasticsearch": {ElasticsearchEndpointAttributes: &azionapi.ElasticsearchEndpointAttributes{
+		"elasticsearch": {OutputElasticsearchEndpoint: &azionapi.OutputElasticsearchEndpoint{
 			Type: "elasticsearch", Attributes: azionapi.ElasticsearchEndpoint{}}},
-		"splunk": {SplunkEndpointAttributes: &azionapi.SplunkEndpointAttributes{
+		"splunk": {OutputSplunkEndpoint: &azionapi.OutputSplunkEndpoint{
 			Type: "splunk", Attributes: azionapi.SplunkEndpoint{}}},
-		"datadog": {DatadogEndpointAttributes: &azionapi.DatadogEndpointAttributes{
+		"datadog": {OutputDatadogEndpoint: &azionapi.OutputDatadogEndpoint{
 			Type: "datadog", Attributes: azionapi.DatadogEndpoint{}}},
-		"aws_kinesis_firehose": {AWSKinesisFirehoseEndpointAttributes: &azionapi.AWSKinesisFirehoseEndpointAttributes{
+		"aws_kinesis_firehose": {OutputAWSKinesisFirehoseEndpoint: &azionapi.OutputAWSKinesisFirehoseEndpoint{
 			Type: "aws_kinesis_firehose", Attributes: azionapi.AWSKinesisFirehoseEndpoint{}}},
-		"qradar": {QRadarEndpointAttributes: &azionapi.QRadarEndpointAttributes{
+		"qradar": {OutputQRadarEndpoint: &azionapi.OutputQRadarEndpoint{
 			Type: "qradar", Attributes: azionapi.QRadarEndpoint{}}},
-		"azure_monitor": {AzureMonitorEndpointAttributes: &azionapi.AzureMonitorEndpointAttributes{
+		"azure_monitor": {OutputAzureMonitorEndpoint: &azionapi.OutputAzureMonitorEndpoint{
 			Type: "azure_monitor", Attributes: azionapi.AzureMonitorEndpoint{}}},
-		"azure_blob_storage": {AzureBlobStorageEndpointAttributes: &azionapi.AzureBlobStorageEndpointAttributes{
+		"azure_blob_storage": {OutputAzureBlobStorageEndpoint: &azionapi.OutputAzureBlobStorageEndpoint{
 			Type: "azure_blob_storage", Attributes: azionapi.AzureBlobStorageEndpoint{}}},
 	}
 

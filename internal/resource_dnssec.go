@@ -107,14 +107,14 @@ func (r *dnssecResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	dnssecReq := azionapi.NewDNSSECRequest(plan.Dnssec.IsEnabled.ValueBool())
 
-	_, response, err := r.client.api.DNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
+	_, response, err := r.client.api.EdgeDNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
 	if err != nil {
 		// Check if the error is due to JSON unmarshaling (unknown field) but HTTP request was successful
 		if response != nil && response.StatusCode >= 200 && response.StatusCode < 300 {
 			// HTTP request was successful, proceed to parse response manually
 		} else if response != nil && response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*azionapi.DNSSECResponse, *http.Response, error) {
-				return r.client.api.DNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
+				return r.client.api.EdgeDNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -195,7 +195,7 @@ func (r *dnssecResource) Read(
 		return
 	}
 
-	_, response, err := r.client.api.DNSDNSSECAPI.RetrieveDnssec(ctx, zoneId).Execute()
+	_, response, err := r.client.api.EdgeDNSDNSSECAPI.RetrieveDnssec(ctx, zoneId).Execute()
 	if err != nil {
 		// Check if the error is due to JSON unmarshaling (unknown field) but HTTP request was successful
 		if response != nil && response.StatusCode >= 200 && response.StatusCode < 300 {
@@ -205,7 +205,7 @@ func (r *dnssecResource) Read(
 			return
 		} else if response != nil && response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*azionapi.DNSSECResponse, *http.Response, error) {
-				return r.client.api.DNSDNSSECAPI.RetrieveDnssec(ctx, zoneId).Execute()
+				return r.client.api.EdgeDNSDNSSECAPI.RetrieveDnssec(ctx, zoneId).Execute()
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -287,14 +287,14 @@ func (r *dnssecResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	dnssecReq := azionapi.NewDNSSECRequest(plan.Dnssec.IsEnabled.ValueBool())
 
-	_, response, err := r.client.api.DNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
+	_, response, err := r.client.api.EdgeDNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
 	if err != nil {
 		// Check if the error is due to JSON unmarshaling (unknown field) but HTTP request was successful
 		if response != nil && response.StatusCode >= 200 && response.StatusCode < 300 {
 			// HTTP request was successful, proceed to parse response manually
 		} else if response != nil && response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*azionapi.DNSSECResponse, *http.Response, error) {
-				return r.client.api.DNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
+				return r.client.api.EdgeDNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
 			}, 5) // Maximum 5 retries
 
 			if response != nil {
@@ -378,7 +378,7 @@ func (r *dnssecResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	dnssecReq := azionapi.NewDNSSECRequest(false)
 
 	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DNSSECResponse, *http.Response, error) {
-		return r.client.api.DNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
+		return r.client.api.EdgeDNSDNSSECAPI.UpdateDnssec(ctx, zoneId).DNSSECRequest(*dnssecReq).Execute()
 	}, 5) // Maximum 5 retries
 	if response != nil {
 		defer response.Body.Close()

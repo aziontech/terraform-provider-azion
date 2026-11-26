@@ -110,11 +110,11 @@ func (d *ZoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	zoneResponse, response, err := d.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
+	zoneResponse, response, err := d.client.api.EdgeDNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
-				return d.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
+				return d.client.api.EdgeDNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 			}, 5)
 
 			if response != nil {

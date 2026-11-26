@@ -857,8 +857,8 @@ func buildStorageConnectorRequest(connector *connectorResourceResults) (azionapi
 
 	req := azionapi.NewConnectorStorageRequest(
 		connector.Name.ValueString(),
-		connector.Type.ValueString(),
 		attrs,
+		connector.Type.ValueString(),
 	)
 
 	if !connector.Active.IsNull() && !connector.Active.IsUnknown() {
@@ -886,8 +886,8 @@ func (r *connectorResource) buildHTTPConnectorRequest(_ context.Context, connect
 
 	req := azionapi.NewConnectorHTTPRequest(
 		connector.Name.ValueString(),
-		connector.Type.ValueString(),
 		*attrs,
+		connector.Type.ValueString(),
 	)
 
 	if !connector.Active.IsNull() && !connector.Active.IsUnknown() {

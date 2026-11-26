@@ -176,7 +176,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	// Build the API request.
-	listRequest := d.client.api.DNSRecordsAPI.ListDnsRecords(ctx, zoneId.ValueInt64()).
+	listRequest := d.client.api.EdgeDNSRecordsAPI.ListDnsRecords(ctx, zoneId.ValueInt64()).
 		Page(page.ValueInt64()).
 		PageSize(pageSize.ValueInt64())
 
@@ -185,7 +185,7 @@ func (d *RecordsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 429 {
 			recordsResponse, httpResp, err = utils.RetryOn429(func() (*azionapi.PaginatedRecordList, *http.Response, error) {
-				return d.client.api.DNSRecordsAPI.ListDnsRecords(ctx, zoneId.ValueInt64()).
+				return d.client.api.EdgeDNSRecordsAPI.ListDnsRecords(ctx, zoneId.ValueInt64()).
 					Page(page.ValueInt64()).
 					PageSize(pageSize.ValueInt64()).
 					Execute()
