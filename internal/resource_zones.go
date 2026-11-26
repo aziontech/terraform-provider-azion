@@ -122,12 +122,12 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		plan.Zone.Active.ValueBool(),
 	)
 
-	zoneResponse, response, err := r.client.api.DNSZonesAPI.CreateDnsZone(ctx).
+	zoneResponse, response, err := r.client.api.EdgeDNSZonesAPI.CreateDnsZone(ctx).
 		ZoneRequest(*zoneRequest).Execute()
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
-				return r.client.api.DNSZonesAPI.CreateDnsZone(ctx).
+				return r.client.api.EdgeDNSZonesAPI.CreateDnsZone(ctx).
 					ZoneRequest(*zoneRequest).Execute()
 			}, 5)
 
@@ -206,7 +206,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	zoneResponse, response, err := r.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
+	zoneResponse, response, err := r.client.api.EdgeDNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 	if err != nil {
 		if response != nil && response.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -214,7 +214,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		}
 		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
-				return r.client.api.DNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
+				return r.client.api.EdgeDNSZonesAPI.RetrieveDnsZone(ctx, zoneId).Execute()
 			}, 5)
 
 			if response != nil {
@@ -295,12 +295,12 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		plan.Zone.Active.ValueBool(),
 	)
 
-	zoneResponse, response, err := r.client.api.DNSZonesAPI.UpdateDnsZone(ctx, zoneId).
+	zoneResponse, response, err := r.client.api.EdgeDNSZonesAPI.UpdateDnsZone(ctx, zoneId).
 		UpdateZoneRequest(*updateRequest).Execute()
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.ZoneResponse, *http.Response, error) {
-				return r.client.api.DNSZonesAPI.UpdateDnsZone(ctx, zoneId).
+				return r.client.api.EdgeDNSZonesAPI.UpdateDnsZone(ctx, zoneId).
 					UpdateZoneRequest(*updateRequest).Execute()
 			}, 5)
 
@@ -379,7 +379,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	_, response, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
-		return r.client.api.DNSZonesAPI.DeleteDnsZone(ctx, zoneId).Execute()
+		return r.client.api.EdgeDNSZonesAPI.DeleteDnsZone(ctx, zoneId).Execute()
 	}, 5)
 	if response != nil {
 		defer response.Body.Close()

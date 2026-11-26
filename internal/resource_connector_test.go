@@ -62,9 +62,10 @@ func TestConnectorNestedObjectsAreBlocks(t *testing.T) {
 func testConnectorHTTPResponse() azionapi.Connector {
 	method := "round_robin"
 	dns := "both"
+	id := int64(42)
 	enabled := true
 	return azionapi.ConnectorHTTPAsConnector(&azionapi.ConnectorHTTP{
-		Id:   42,
+		Id:   &id,
 		Name: "origin",
 		Type: "http",
 		Attributes: azionapi.ConnectorHTTPAttributes{

@@ -310,7 +310,7 @@ func populateBucketResults(response *azionapi.BucketCreateResponse) *bucketResou
 	result := &bucketResourceResults{
 		Name:            types.StringValue(response.Data.Name),
 		WorkloadsAccess: types.StringValue(response.Data.WorkloadsAccess),
-		ProductVersion:  types.StringValue(response.Data.ProductVersion),
+		ProductVersion:  types.StringValue(response.Data.GetProductVersion()),
 	}
 	return result
 }

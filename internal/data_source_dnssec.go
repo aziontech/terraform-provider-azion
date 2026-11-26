@@ -171,14 +171,14 @@ func (d *dnssecDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	zoneId := getZoneId.ValueInt64()
 
-	_, response, err := d.client.api.DNSDNSSECAPI.RetrieveDnssec(ctx, zoneId).Execute()
+	_, response, err := d.client.api.EdgeDNSDNSSECAPI.RetrieveDnssec(ctx, zoneId).Execute()
 	if err != nil {
 		// Check if the error is due to JSON unmarshaling (unknown field) but HTTP request was successful
 		if response != nil && response.StatusCode >= 200 && response.StatusCode < 300 {
 			// HTTP request was successful, proceed to parse response manually
 		} else if response != nil && response.StatusCode == 429 {
 			_, response, err = utils.RetryOn429(func() (*azionapi.DNSSECResponse, *http.Response, error) {
-				return d.client.api.DNSDNSSECAPI.RetrieveDnssec(ctx, zoneId).Execute()
+				return d.client.api.EdgeDNSDNSSECAPI.RetrieveDnssec(ctx, zoneId).Execute()
 			}, 5)
 
 			if response != nil {

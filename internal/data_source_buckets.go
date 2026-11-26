@@ -164,11 +164,11 @@ func (d *BucketsDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		results := make([]BucketsResultsModel, len(bucketsResponse.Results))
 		for i, bucket := range bucketsResponse.Results {
 			results[i] = BucketsResultsModel{
-				Name:            types.StringValue(bucket.Name),
+				Name:            types.StringValue(bucket.GetName()),
 				WorkloadsAccess: types.StringValue(bucket.WorkloadsAccess),
-				LastEditor:      types.StringValue(bucket.LastEditor),
+				LastEditor:      types.StringValue(bucket.GetLastEditor()),
 				LastModified:    types.StringValue(bucket.GetLastModified().Format(time.RFC3339)),
-				ProductVersion:  types.StringValue(bucket.ProductVersion),
+				ProductVersion:  types.StringValue(bucket.GetProductVersion()),
 			}
 		}
 		bucketsState.Results = results

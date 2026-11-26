@@ -155,14 +155,14 @@ func (d *ZonesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		PageSize = types.Int64Value(10)
 	}
 
-	zoneResponse, response, err := d.client.api.DNSZonesAPI.ListDnsZones(ctx).
+	zoneResponse, response, err := d.client.api.EdgeDNSZonesAPI.ListDnsZones(ctx).
 		Page(Page.ValueInt64()).
 		PageSize(PageSize.ValueInt64()).
 		Execute()
 	if err != nil {
 		if response != nil && response.StatusCode == 429 {
 			zoneResponse, response, err = utils.RetryOn429(func() (*azionapi.PaginatedZoneList, *http.Response, error) {
-				return d.client.api.DNSZonesAPI.ListDnsZones(ctx).
+				return d.client.api.EdgeDNSZonesAPI.ListDnsZones(ctx).
 					Page(Page.ValueInt64()).
 					PageSize(PageSize.ValueInt64()).
 					Execute()

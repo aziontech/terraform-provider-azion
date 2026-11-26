@@ -928,8 +928,8 @@ func buildDataStreamOutputRequest(index int, outputType string, output DataStrea
 		if !attrs.MaxSize.IsNull() && !attrs.MaxSize.IsUnknown() {
 			endpoint.SetMaxSize(attrs.MaxSize.ValueInt64())
 		}
-		item := azionapi.NewHttpPostEndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.HttpPostEndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputHttpPostEndpointRequest(outputType, *endpoint)
+		return azionapi.OutputHttpPostEndpointRequestAsOutputRequest(item), nil
 
 	case "kafka":
 		if output.KafkaAttributes == nil {
@@ -941,8 +941,8 @@ func buildDataStreamOutputRequest(index int, outputType string, output DataStrea
 			attrs.KafkaTopic.ValueString(),
 			attrs.UseTLS.ValueBool(),
 		)
-		item := azionapi.NewKafkaEndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.KafkaEndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputKafkaEndpointRequest(outputType, *endpoint)
+		return azionapi.OutputKafkaEndpointRequestAsOutputRequest(item), nil
 
 	case "s3":
 		if output.S3Attributes == nil {
@@ -960,8 +960,8 @@ func buildDataStreamOutputRequest(index int, outputType string, output DataStrea
 		if !attrs.ObjectKeyPrefix.IsNull() && !attrs.ObjectKeyPrefix.IsUnknown() {
 			endpoint.SetObjectKeyPrefix(attrs.ObjectKeyPrefix.ValueString())
 		}
-		item := azionapi.NewS3EndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.S3EndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputS3EndpointRequest(outputType, *endpoint)
+		return azionapi.OutputS3EndpointRequestAsOutputRequest(item), nil
 
 	case "big_query":
 		if output.BigQueryAttributes == nil {
@@ -974,8 +974,8 @@ func buildDataStreamOutputRequest(index int, outputType string, output DataStrea
 			attrs.TableID.ValueString(),
 			attrs.ServiceAccountKey.ValueString(),
 		)
-		item := azionapi.NewBigQueryEndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.BigQueryEndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputBigQueryEndpointRequest(outputType, *endpoint)
+		return azionapi.OutputBigQueryEndpointRequestAsOutputRequest(item), nil
 
 	case "elasticsearch":
 		if output.ElasticsearchAttributes == nil {
@@ -983,8 +983,8 @@ func buildDataStreamOutputRequest(index int, outputType string, output DataStrea
 		}
 		attrs := output.ElasticsearchAttributes
 		endpoint := azionapi.NewElasticsearchEndpointRequest(attrs.URL.ValueString(), attrs.APIKey.ValueString())
-		item := azionapi.NewElasticsearchEndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.ElasticsearchEndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputElasticsearchEndpointRequest(outputType, *endpoint)
+		return azionapi.OutputElasticsearchEndpointRequestAsOutputRequest(item), nil
 
 	case "splunk":
 		if output.SplunkAttributes == nil {
@@ -992,8 +992,8 @@ func buildDataStreamOutputRequest(index int, outputType string, output DataStrea
 		}
 		attrs := output.SplunkAttributes
 		endpoint := azionapi.NewSplunkEndpointRequest(attrs.URL.ValueString(), attrs.APIKey.ValueString())
-		item := azionapi.NewSplunkEndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.SplunkEndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputSplunkEndpointRequest(outputType, *endpoint)
+		return azionapi.OutputSplunkEndpointRequestAsOutputRequest(item), nil
 
 	case "aws_kinesis_firehose":
 		if output.AWSKinesisFirehoseAttrs == nil {
@@ -1006,8 +1006,8 @@ func buildDataStreamOutputRequest(index int, outputType string, output DataStrea
 			attrs.Region.ValueString(),
 			attrs.SecretKey.ValueString(),
 		)
-		item := azionapi.NewAWSKinesisFirehoseEndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.AWSKinesisFirehoseEndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputAWSKinesisFirehoseEndpointRequest(outputType, *endpoint)
+		return azionapi.OutputAWSKinesisFirehoseEndpointRequestAsOutputRequest(item), nil
 
 	case "datadog":
 		if output.DatadogAttributes == nil {
@@ -1015,16 +1015,16 @@ func buildDataStreamOutputRequest(index int, outputType string, output DataStrea
 		}
 		attrs := output.DatadogAttributes
 		endpoint := azionapi.NewDatadogEndpointRequest(attrs.URL.ValueString(), attrs.APIKey.ValueString())
-		item := azionapi.NewDatadogEndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.DatadogEndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputDatadogEndpointRequest(outputType, *endpoint)
+		return azionapi.OutputDatadogEndpointRequestAsOutputRequest(item), nil
 
 	case "qradar":
 		if output.QRadarAttributes == nil {
 			return azionapi.OutputRequest{}, missingOutputAttrsErr(index, outputType, "qradar_attributes")
 		}
 		endpoint := azionapi.NewQRadarEndpointRequest(output.QRadarAttributes.URL.ValueString())
-		item := azionapi.NewQRadarEndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.QRadarEndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputQRadarEndpointRequest(outputType, *endpoint)
+		return azionapi.OutputQRadarEndpointRequestAsOutputRequest(item), nil
 
 	case "azure_monitor":
 		if output.AzureMonitorAttributes == nil {
@@ -1039,8 +1039,8 @@ func buildDataStreamOutputRequest(index int, outputType string, output DataStrea
 		if !attrs.TimeGeneratedField.IsNull() && !attrs.TimeGeneratedField.IsUnknown() {
 			endpoint.SetTimeGeneratedField(attrs.TimeGeneratedField.ValueString())
 		}
-		item := azionapi.NewAzureMonitorEndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.AzureMonitorEndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputAzureMonitorEndpointRequest(outputType, *endpoint)
+		return azionapi.OutputAzureMonitorEndpointRequestAsOutputRequest(item), nil
 
 	case "azure_blob_storage":
 		if output.AzureBlobStorageAttributes == nil {
@@ -1052,8 +1052,8 @@ func buildDataStreamOutputRequest(index int, outputType string, output DataStrea
 			attrs.ContainerName.ValueString(),
 			attrs.BlobSasToken.ValueString(),
 		)
-		item := azionapi.NewAzureBlobStorageEndpointAttributesRequest(outputType, *endpoint)
-		return azionapi.AzureBlobStorageEndpointAttributesRequestAsOutputRequest(item), nil
+		item := azionapi.NewOutputAzureBlobStorageEndpointRequest(outputType, *endpoint)
+		return azionapi.OutputAzureBlobStorageEndpointRequestAsOutputRequest(item), nil
 
 	default:
 		return azionapi.OutputRequest{}, fmt.Errorf(
@@ -1177,27 +1177,27 @@ func orderTransformsLikePrior(prior, actual []DataStreamTransformModel) []DataSt
 // there is no shared accessor to read them from.
 func dataStreamOutputEndpoint(output azionapi.Output) (string, interface{}) {
 	switch e := output.GetActualInstance().(type) {
-	case *azionapi.HttpPostEndpointAttributes:
+	case *azionapi.OutputHttpPostEndpoint:
 		return e.GetType(), &e.Attributes
-	case *azionapi.KafkaEndpointAttributes:
+	case *azionapi.OutputKafkaEndpoint:
 		return e.GetType(), &e.Attributes
-	case *azionapi.S3EndpointAttributes:
+	case *azionapi.OutputS3Endpoint:
 		return e.GetType(), &e.Attributes
-	case *azionapi.BigQueryEndpointAttributes:
+	case *azionapi.OutputBigQueryEndpoint:
 		return e.GetType(), &e.Attributes
-	case *azionapi.ElasticsearchEndpointAttributes:
+	case *azionapi.OutputElasticsearchEndpoint:
 		return e.GetType(), &e.Attributes
-	case *azionapi.SplunkEndpointAttributes:
+	case *azionapi.OutputSplunkEndpoint:
 		return e.GetType(), &e.Attributes
-	case *azionapi.AWSKinesisFirehoseEndpointAttributes:
+	case *azionapi.OutputAWSKinesisFirehoseEndpoint:
 		return e.GetType(), &e.Attributes
-	case *azionapi.DatadogEndpointAttributes:
+	case *azionapi.OutputDatadogEndpoint:
 		return e.GetType(), &e.Attributes
-	case *azionapi.QRadarEndpointAttributes:
+	case *azionapi.OutputQRadarEndpoint:
 		return e.GetType(), &e.Attributes
-	case *azionapi.AzureMonitorEndpointAttributes:
+	case *azionapi.OutputAzureMonitorEndpoint:
 		return e.GetType(), &e.Attributes
-	case *azionapi.AzureBlobStorageEndpointAttributes:
+	case *azionapi.OutputAzureBlobStorageEndpoint:
 		return e.GetType(), &e.Attributes
 	}
 	return "", nil

@@ -166,7 +166,7 @@ func TestPlanWAFRuleSetsOps(t *testing.T) {
 }
 
 func apiRule(id int64, name string) azionapi.WAFRule {
-	rule := azionapi.WAFRule{Id: id, Name: name}
+	rule := azionapi.WAFRule{Id: &id, Name: name}
 	generic := azionapi.NewWAFExceptionGenericCondition("any_url")
 	rule.Conditions = []azionapi.WAFExceptionCondition{azionapi.WAFExceptionGenericConditionAsWAFExceptionCondition(generic)}
 	return rule

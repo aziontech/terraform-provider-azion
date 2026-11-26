@@ -163,12 +163,12 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Execute create request.
-	createRecord, httpResponse, err := r.client.api.DNSRecordsAPI.CreateDnsRecord(ctx, zoneId).
+	createRecord, httpResponse, err := r.client.api.EdgeDNSRecordsAPI.CreateDnsRecord(ctx, zoneId).
 		RecordRequest(*recordReq).Execute() //nolint
 	if err != nil {
 		if httpResponse != nil && httpResponse.StatusCode == 429 {
 			createRecord, httpResponse, err = utils.RetryOn429(func() (*azionapi.RecordResponse, *http.Response, error) {
-				return r.client.api.DNSRecordsAPI.CreateDnsRecord(ctx, zoneId).
+				return r.client.api.EdgeDNSRecordsAPI.CreateDnsRecord(ctx, zoneId).
 					RecordRequest(*recordReq).Execute()
 			}, 5) // Maximum 5 retries
 
@@ -249,7 +249,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	// Retrieve the record.
-	recordResponse, httpResponse, err := r.client.api.DNSRecordsAPI.RetrieveDnsRecord(ctx, recordId, zoneId).Execute() //nolint
+	recordResponse, httpResponse, err := r.client.api.EdgeDNSRecordsAPI.RetrieveDnsRecord(ctx, recordId, zoneId).Execute() //nolint
 	if err != nil {
 		if httpResponse != nil && httpResponse.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -257,7 +257,7 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 		}
 		if httpResponse != nil && httpResponse.StatusCode == 429 {
 			recordResponse, httpResponse, err = utils.RetryOn429(func() (*azionapi.RecordResponse, *http.Response, error) {
-				return r.client.api.DNSRecordsAPI.RetrieveDnsRecord(ctx, recordId, zoneId).Execute()
+				return r.client.api.EdgeDNSRecordsAPI.RetrieveDnsRecord(ctx, recordId, zoneId).Execute()
 			}, 5) // Maximum 5 retries
 
 			if httpResponse != nil {
@@ -345,12 +345,12 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Execute update request.
-	updateRecord, httpResponse, err := r.client.api.DNSRecordsAPI.UpdateDnsRecord(ctx, recordId, zoneId).
+	updateRecord, httpResponse, err := r.client.api.EdgeDNSRecordsAPI.UpdateDnsRecord(ctx, recordId, zoneId).
 		RecordRequest(*recordReq).Execute() //nolint
 	if err != nil {
 		if httpResponse != nil && httpResponse.StatusCode == 429 {
 			updateRecord, httpResponse, err = utils.RetryOn429(func() (*azionapi.RecordResponse, *http.Response, error) {
-				return r.client.api.DNSRecordsAPI.UpdateDnsRecord(ctx, recordId, zoneId).
+				return r.client.api.EdgeDNSRecordsAPI.UpdateDnsRecord(ctx, recordId, zoneId).
 					RecordRequest(*recordReq).Execute()
 			}, 5) // Maximum 5 retries
 
@@ -408,7 +408,7 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	// Execute delete request.
 	_, httpResponse, err := utils.RetryOn429Delete(func() (*azionapi.DeleteResponse, *http.Response, error) {
-		return r.client.api.DNSRecordsAPI.DeleteDnsRecord(ctx, recordId, zoneId).Execute()
+		return r.client.api.EdgeDNSRecordsAPI.DeleteDnsRecord(ctx, recordId, zoneId).Execute()
 	}, 5) // Maximum 5 retries
 	if httpResponse != nil {
 		defer httpResponse.Body.Close()
